@@ -8,11 +8,11 @@ import { rl } from "/out/librl.js";
 
     const fontSize = 24;
     const smallFontSize = 16;
-    const modelPath = "models/gumshoe/gumshoe.glb";
-    const spritePath = "sprites/logo/wg-logo-bw-alpha.png";
+    const modelPath = "assets/models/gumshoe/gumshoe.glb";
+    const spritePath = "assets/sprites/logo/wg-logo-bw-alpha.png";
     const greyAlphaColor = rl.createColor(0, 0, 0, 128);
-    const komika = await rl.createFont("fonts/Komika/KOMIKAH_.ttf", fontSize);
-    const komikaSmall = await rl.createFont("fonts/Komika/KOMIKAH_.ttf", smallFontSize);
+    const komika = await rl.createFont("assets/fonts/Komika/KOMIKAH_.ttf", fontSize);
+    const komikaSmall = await rl.createFont("assets/fonts/Komika/KOMIKAH_.ttf", smallFontSize);
 
     const gumshoe = await rl.createModel(modelPath);
     const sprite = await rl.createSprite3D(spritePath);

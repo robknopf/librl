@@ -1,0 +1,5 @@
+obj/
+lib/
+out/
+deps/
+.vscode/

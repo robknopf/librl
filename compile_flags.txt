@@ -1,0 +1,6 @@
+-I.
+-Isrc
+-Iinclude
+-Ideps/libraylib/include
+-I${EMSDK}/upstream/emscripten/cache/sysroot/include
+-DPLATFORM_DESKTOP

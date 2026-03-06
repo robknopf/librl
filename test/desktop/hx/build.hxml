@@ -1,0 +1,11 @@
+-cp src
+--cwd test/desktop/hx
+
+--cpp out/cpp
+-D HXCPP_VERBOSE
+-D LIBRL_ROOT=/home/rknopf/projects/whirlinggizmo/experiments/raylib/librl
+-D HAXE_OUTPUT_FILE=Main
+--dce no
+--library hxcpp-debug-server
+--debug
+--main Main

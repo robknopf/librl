@@ -43,6 +43,16 @@ void rl_deinit() {
     rl_loader_deinit();
 }
 
+RL_KEEP
+int rl_set_asset_host(const char *asset_host) {
+    return rl_loader_set_asset_host(asset_host);
+}
+
+RL_KEEP
+const char *rl_get_asset_host(void) {
+    return rl_loader_get_asset_host();
+}
+
 /*
 RL_KEEP
 void resize_canvas(int newWidth, int newHeight)

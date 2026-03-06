@@ -5,8 +5,8 @@
 extern "C" {
 #endif
 
-int rl_loader_init(const char *mount_point);
-void rl_loader_deinit(void);
+int rl_loader_set_asset_host(const char *asset_host);
+const char *rl_loader_get_asset_host(void);
 
 #ifdef __cplusplus
 }

@@ -116,9 +116,10 @@ LDFLAGS_WASM = \
 	"_rl_sprite3d_create_from_texture", \
 	"_rl_sprite3d_draw", \
 	"_rl_sprite3d_destroy", \
-	"_rl_measure_text", \
-	"_rl_measure_text_ex" \
-]'
+		"_rl_measure_text", \
+		"_rl_measure_text_ex", \
+		"_rl_set_asset_host" \
+	]'
 
 CFLAGS_DESKTOP = -DPLATFORM_DESKTOP
 

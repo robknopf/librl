@@ -21,6 +21,8 @@ const
 
 proc rl_init*() {.importc, cdecl, header: "rl.h".}
 proc rl_deinit*() {.importc, cdecl, header: "rl.h".}
+proc rl_set_asset_host*(assetHost: cstring): cint {.importc, cdecl, header: "rl.h".}
+proc rl_get_asset_host*(): cstring {.importc, cdecl, header: "rl.h".}
 proc rl_update*() {.importc, cdecl, header: "rl.h".}
 proc rl_get_time*(): cdouble {.importc, cdecl, header: "rl.h".}
 proc rl_init_window*(width: cint, height: cint, title: cstring) {.importc, cdecl, header: "rl.h".}

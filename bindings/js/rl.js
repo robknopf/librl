@@ -20,6 +20,7 @@ const RL = {
         return RL._waitForIdbfsReady(timeoutMs);
     },
     init: async (opts) => {
+        let resolvedAssetHost = "";
         opts = opts || {};
         opts.env = opts.env || {};
         moduleOptions = {...opts};
@@ -51,6 +52,23 @@ const RL = {
         moduleInstance = await Module(moduleOptions.env);
 
         moduleInstance.initScratchArea();
+
+        if (typeof opts.assetHost === "string" && opts.assetHost.trim().length > 0) {
+            resolvedAssetHost = opts.assetHost.trim();
+        } else if (typeof window !== "undefined" && window.location && window.location.origin) {
+            resolvedAssetHost = window.location.origin;
+        }
+        if (resolvedAssetHost.length > 0) {
+            const setHostResult = moduleInstance.ccall(
+                "rl_set_asset_host",
+                "number",
+                ["string"],
+                [resolvedAssetHost]
+            );
+            if (setHostResult !== 0) {
+                throw new Error("Failed to set asset host.");
+            }
+        }
 
         moduleInstance.ccall('rl_init', null, [], []);
 

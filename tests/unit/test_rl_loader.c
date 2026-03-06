@@ -31,9 +31,12 @@ int test_rl_loader_run(void)
     unsigned char *data = NULL;
     const char glb_payload[] = "glb-from-remote";
     const char txt_payload[] = "txt-from-remote";
+    const char custom_host[] = "https://assets.example.test:8443";
 
     cleanup_loader_mount();
     fetch_url_stub_reset();
+    TEST_ASSERT(rl_loader_set_asset_host(custom_host) == 0);
+    TEST_ASSERT(strcmp(rl_loader_get_asset_host(), custom_host) == 0);
 
     TEST_ASSERT(rl_loader_init("cache_loader_test") == 0);
     TEST_ASSERT(test_raylib_callback_is_set());
@@ -70,8 +73,11 @@ int test_rl_loader_run(void)
     TEST_ASSERT(data != NULL);
     free(data);
     TEST_ASSERT(fetch_url_stub_get_call_count() == 3);
+    TEST_ASSERT(strcmp(fetch_url_stub_get_last_host(), custom_host) == 0);
+    TEST_ASSERT(strcmp(fetch_url_stub_get_last_path(), "assets/readme.txt") == 0);
 
     rl_loader_deinit();
+    TEST_ASSERT(rl_loader_set_asset_host(NULL) == 0);
     TEST_ASSERT(!test_raylib_callback_is_set());
 
     // Re-init should use local cache for the persisted .txt file.

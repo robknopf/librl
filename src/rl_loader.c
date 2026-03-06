@@ -12,14 +12,18 @@
 #include "lru_cache/lru_cache.h"
 
 #define RL_LOADER_DEFAULT_MOUNT_POINT "cache"
-#define RL_LOADER_DEFAULT_REMOTE_HOST "https://localhost:4444"
+#ifndef RL_LOADER_DEFAULT_ASSET_HOST
+#define RL_LOADER_DEFAULT_ASSET_HOST "https://localhost:4444"
+#endif
 #define RL_LOADER_DEFAULT_TIMEOUT_MS 5000
 #define RL_LOADER_CACHE_MAX_BYTES (32u * 1024u * 1024u)
 #define RL_LOADER_CACHE_MAX_ENTRIES 256u
 #define RL_LOADER_CACHE_MAX_ENTRY_BYTES (8u * 1024u * 1024u)
+#define RL_LOADER_MAX_ASSET_HOST_LENGTH 256u
 
 static bool rl_loader_initialized = false;
 static lru_cache_t *rl_loader_memory_cache = NULL;
+static char rl_loader_asset_host[RL_LOADER_MAX_ASSET_HOST_LENGTH] = RL_LOADER_DEFAULT_ASSET_HOST;
 
 static bool rl_loader_is_http_url(const char *path)
 {
@@ -135,9 +139,9 @@ static bool rl_loader_should_memory_cache_path(const char *resolved_path)
 static unsigned char *rl_loader_load_file_data_cb(const char *file_name, int *data_size)
 {
     fileio_read_result_t result = {0};
-    const char *resolved_host = RL_LOADER_DEFAULT_REMOTE_HOST;
+    const char *resolved_asset_host = rl_loader_asset_host;
     const char *resolved_path = NULL;
-    char parsed_host[256] = {0};
+    char parsed_asset_host[256] = {0};
     char parsed_path[512] = {0};
     bool should_cache_in_memory = false;
     size_t cached_size = 0;
@@ -151,12 +155,12 @@ static unsigned char *rl_loader_load_file_data_cb(const char *file_name, int *da
         return NULL;
     }
 
-    // Step 1: Resolve host/path. Explicit URL overrides default host.
+    // Step 1: Resolve host/path. Explicit URL overrides default asset host.
     if (rl_loader_is_http_url(file_name)) {
-        if (!rl_loader_split_url(file_name, parsed_host, sizeof(parsed_host), parsed_path, sizeof(parsed_path))) {
+        if (!rl_loader_split_url(file_name, parsed_asset_host, sizeof(parsed_asset_host), parsed_path, sizeof(parsed_path))) {
             return NULL;
         }
-        resolved_host = parsed_host;
+        resolved_asset_host = parsed_asset_host;
         resolved_path = parsed_path;
     } else {
         resolved_path = rl_loader_strip_leading_slash(file_name);
@@ -186,8 +190,8 @@ static unsigned char *rl_loader_load_file_data_cb(const char *file_name, int *da
             result.data = NULL;
         }
 
-        // Step 4: On miss, fetch from remote host and store into local cache.
-        result = fileio_read_url(resolved_host, resolved_path, RL_LOADER_DEFAULT_TIMEOUT_MS);
+        // Step 4: On miss, fetch from asset host and store into local cache.
+        result = fileio_read_url(resolved_asset_host, resolved_path, RL_LOADER_DEFAULT_TIMEOUT_MS);
     }
 
     // Step 5: If load still failed, signal raylib failure for this path.
@@ -211,6 +215,29 @@ static unsigned char *rl_loader_load_file_data_cb(const char *file_name, int *da
     }
 
     return result.data;
+}
+
+int rl_loader_set_asset_host(const char *asset_host)
+{
+    const char *next_asset_host = asset_host;
+    size_t asset_host_len = 0;
+
+    if (!next_asset_host || next_asset_host[0] == '\0') {
+        next_asset_host = RL_LOADER_DEFAULT_ASSET_HOST;
+    }
+
+    asset_host_len = strlen(next_asset_host);
+    if (asset_host_len + 1 > sizeof(rl_loader_asset_host)) {
+        return -1;
+    }
+
+    memcpy(rl_loader_asset_host, next_asset_host, asset_host_len + 1);
+    return 0;
+}
+
+const char *rl_loader_get_asset_host(void)
+{
+    return rl_loader_asset_host;
 }
 
 int rl_loader_init(const char *mount_point)

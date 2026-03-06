@@ -69,6 +69,12 @@ int fileio_init_common(const char *mount_point)
     return 0;
 }
 
+void fileio_deinit_common(void)
+{
+    fileio_mount_point[0] = '\0';
+    fileio_mount_point_initialized = false;
+}
+
 /**
  * Writes data to a file, ensuring that directories in the path exist.
  *
@@ -220,7 +226,10 @@ fileio_read_result_t fileio_read_url_common(const char *host, const char *path, 
 
     // success!
     // write the file to disk
-    fileio_write(path, result.data, result.size);
+    if (fileio_write(path, result.data, result.size) != 0)
+    {
+        fprintf(stderr, "ERROR: Failed to persist fetched file to cache: %s\n", path);
+    }
     free(result.data);
 
     return fileio_read(path);

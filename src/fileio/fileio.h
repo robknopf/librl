@@ -7,6 +7,7 @@
 #include "fileio_common.h"
 
 int fileio_init(const char *mount_point);
+void fileio_deinit(void);
 
 /**
  * Writes data to a file, ensuring that directories in the path exist.

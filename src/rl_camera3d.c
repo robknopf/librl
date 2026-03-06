@@ -9,6 +9,7 @@
 #include "internal/exports.h"
 #include "internal/rl_camera3d_store.h"
 #include "internal/rl_color_store.h"
+#include "internal/rl_handle_pool.h"
 
 // This module owns 3D camera tracking used by sprite3d and all simple lighting state.
 // Public API remains in rl.h; rl.c just delegates lifecycle via rl_camera3d_init/deinit.
@@ -34,9 +35,12 @@ typedef struct
 } rl_camera3d_entry_t;
 
 static rl_camera3d_entry_t rl_cameras[MAX_CAMERAS];
-static rl_handle_t rl_next_camera_handle = 1;
+static rl_handle_pool_t rl_camera3d_pool;
+static uint16_t rl_camera3d_free_indices[MAX_CAMERAS];
+static uint16_t rl_camera3d_generations[MAX_CAMERAS];
+static unsigned char rl_camera3d_occupied[MAX_CAMERAS];
 
-const rl_handle_t RL_CAMERA3D_DEFAULT = 1;
+const rl_handle_t RL_CAMERA3D_DEFAULT = RL_HANDLE_MAKE(1u, 1u);
 
 static Camera3D rl_camera3d_build(float position_x, float position_y, float position_z,
                                   float target_x, float target_y, float target_z,
@@ -54,30 +58,14 @@ static Camera3D rl_camera3d_build(float position_x, float position_y, float posi
 
 static rl_camera3d_entry_t *rl_camera3d_get_entry(rl_handle_t handle)
 {
-    if (handle == 0 || handle >= MAX_CAMERAS) {
+    uint16_t index = 0;
+    if (!rl_handle_pool_resolve(&rl_camera3d_pool, handle, &index)) {
         return NULL;
     }
-    if (!rl_cameras[handle].in_use) {
+    if (!rl_cameras[index].in_use) {
         return NULL;
     }
-    return &rl_cameras[handle];
-}
-
-static rl_handle_t rl_camera3d_find_free_handle(void)
-{
-    for (rl_handle_t i = rl_next_camera_handle; i < MAX_CAMERAS; i++) {
-        if (!rl_cameras[i].in_use) {
-            rl_next_camera_handle = i + 1;
-            return i;
-        }
-    }
-    for (rl_handle_t i = 1; i < rl_next_camera_handle; i++) {
-        if (!rl_cameras[i].in_use) {
-            rl_next_camera_handle = i + 1;
-            return i;
-        }
-    }
-    return 0;
+    return &rl_cameras[index];
 }
 
 static void rl_set_active_camera_internal(Camera3D camera, rl_handle_t handle)
@@ -203,17 +191,19 @@ rl_handle_t rl_camera3d_create(float position_x, float position_y, float positio
                                float up_x, float up_y, float up_z,
                                float fovy, int projection)
 {
-    rl_handle_t handle = rl_camera3d_find_free_handle();
+    rl_handle_t handle = rl_handle_pool_alloc(&rl_camera3d_pool);
+    uint16_t index = 0;
     if (handle == 0) {
         fprintf(stderr, "ERROR: MAX_CAMERAS reached (%d)\n", MAX_CAMERAS);
         return 0;
     }
+    rl_handle_pool_resolve(&rl_camera3d_pool, handle, &index);
 
-    rl_cameras[handle].in_use = true;
-    rl_cameras[handle].camera = rl_camera3d_build(position_x, position_y, position_z,
-                                                  target_x, target_y, target_z,
-                                                  up_x, up_y, up_z,
-                                                  fovy, projection);
+    rl_cameras[index].in_use = true;
+    rl_cameras[index].camera = rl_camera3d_build(position_x, position_y, position_z,
+                                                 target_x, target_y, target_z,
+                                                 up_x, up_y, up_z,
+                                                 fovy, projection);
     return handle;
 }
 
@@ -282,6 +272,7 @@ void rl_camera3d_destroy(rl_handle_t handle)
 
     entry->in_use = false;
     entry->camera = (Camera3D){0};
+    rl_handle_pool_free(&rl_camera3d_pool, handle);
 }
 
 RL_KEEP
@@ -377,19 +368,34 @@ void rl_camera3d_init(void)
     rl_light_ambient = 0.25f;
     rl_clear_active_camera();
 
+    rl_handle_pool_init(&rl_camera3d_pool,
+                        MAX_CAMERAS,
+                        rl_camera3d_free_indices,
+                        MAX_CAMERAS,
+                        rl_camera3d_generations,
+                        rl_camera3d_occupied);
+
     for (int i = 0; i < MAX_CAMERAS; i++) {
         rl_cameras[i].in_use = false;
         rl_cameras[i].camera = (Camera3D){0};
     }
 
-    rl_cameras[RL_CAMERA3D_DEFAULT].in_use = true;
-    rl_cameras[RL_CAMERA3D_DEFAULT].camera = rl_camera3d_build(
+    {
+        rl_handle_t default_handle = rl_handle_pool_alloc(&rl_camera3d_pool);
+        uint16_t default_index = 0;
+        if (default_handle != RL_CAMERA3D_DEFAULT ||
+            !rl_handle_pool_resolve(&rl_camera3d_pool, default_handle, &default_index)) {
+            fprintf(stderr, "ERROR: Failed to initialize default camera handle\n");
+            return;
+        }
+
+        rl_cameras[default_index].in_use = true;
+        rl_cameras[default_index].camera = rl_camera3d_build(
         4.0f, 4.0f, 4.0f,
         0.0f, 1.0f, 0.0f,
         0.0f, 1.0f, 0.0f,
         45.0f, CAMERA_PERSPECTIVE);
-
-    rl_next_camera_handle = RL_CAMERA3D_DEFAULT + 1;
+    }
 }
 
 void rl_camera3d_deinit(void)
@@ -410,5 +416,5 @@ void rl_camera3d_deinit(void)
         rl_cameras[i].in_use = false;
         rl_cameras[i].camera = (Camera3D){0};
     }
-    rl_next_camera_handle = 1;
+    rl_handle_pool_reset(&rl_camera3d_pool);
 }

@@ -3,6 +3,16 @@ var moduleInstance;
 var moduleOptions = {};
 
 const RL = {
+    _waitForIdbfsReady: async (timeoutMs = 2000) => {
+        const start = performance.now();
+        while (performance.now() - start < timeoutMs) {
+            if (moduleInstance && moduleInstance.fileio_idbfs_ready) {
+                return true;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 16));
+        }
+        return !!(moduleInstance && moduleInstance.fileio_idbfs_ready);
+    },
     init: async (opts) => {
         opts = opts || {};
         opts.env = opts.env || {};
@@ -37,6 +47,10 @@ const RL = {
         moduleInstance.initScratchArea();
 
         moduleInstance.ccall('rl_init', null, [], []);
+
+        // IDBFS restore is async in wasm init; wait briefly so first asset loads
+        // can hit local cache instead of racing into remote fetch.
+        await RL._waitForIdbfsReady(2000);
 
      
       

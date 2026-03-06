@@ -3,9 +3,9 @@
 ## Short Term
 
 - Handle system rewrite (first):
-  - replace monotonic IDs with generational handles (slot + generation)
-  - add free-list reuse so create/destroy cycles remain stable
-  - invalidate stale handles cleanly on destroy
+  - migrate all remaining subsystems to `rl_handle_pool` (slot + generation)
+  - remove legacy monotonic-ID code paths
+  - validate stale-handle behavior consistently across all destroy/set/get APIs
 - External ID mapping layer:
   - add optional `external_id -> internal_handle` mapping
   - allow caller-supplied IDs while preserving internal handle safety
@@ -19,12 +19,19 @@
   - add one-call submit path for per-frame draw state/commands
   - start with clear + camera + model/text/rect primitives
 - API/docs sync after recent camera/input refactor:
-  - document `rl_camera3d_*` flow + default camera behavior
-  - document `rl_begin_mode_3d()` active-camera semantics
-  - document mouse state access parity (`getMouseState` / `rl_get_mouse_state`)
+  - add minimal JS + Nim examples for `rl_camera3d_*` and `rl_begin_mode_3d()` active-camera semantics
+  - document mouse state parity (`rl_get_mouse_state`) plus per-field getters
 - URI/path follow-up:
   - add URL normalization examples to docs
   - decide whether cache keys should canonicalize host casing
+- Asset versioning + manifest:
+  - add per-asset version metadata so cached files can be upgraded/replaced safely
+  - define a manifest format (Babylon-style) listing assets, versions, hashes, and URLs
+  - on startup/load, compare manifest vs local cache and invalidate stale entries
+- IDBFS lifecycle hardening:
+  - keep a single sync path (`sync_to_idbfs`) and avoid duplicate inline `FS.syncfs` calls
+  - prevent overlapping sync calls and log sync failures clearly
+  - define init/deinit ready-state semantics (`fileio_idbfs_ready`) and document expected call timing
 
 ## Parking Lot
 

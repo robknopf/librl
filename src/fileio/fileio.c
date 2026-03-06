@@ -14,6 +14,11 @@ int fileio_init(const char *mount_point)
     return fileio_init_common(mount_point);
 }
 
+void fileio_deinit(void)
+{
+    fileio_deinit_common();
+}
+
 int fileio_write(const char *filename, void *data, size_t size)
 {
     return fileio_write_common(filename, data, size);

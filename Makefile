@@ -266,7 +266,6 @@ ensure_obj_dir:
 # Clean up
 clean:
 	rm -rf $(OUT_LIB_DIR)
-	rm -rf $(OUT_INC_DIR)
 	rm -rf $(OBJ_BASE_DIR)
 #	@$(MAKE) -C $(LIBRAYLIB_ROOT) clean
 

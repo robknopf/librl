@@ -16,6 +16,7 @@ typedef struct
 } fileio_read_result_t;
 
 int fileio_init_common(const char *mount_point);
+void fileio_deinit_common(void);
 
 /**
  * Writes data to a file.

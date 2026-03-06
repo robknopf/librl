@@ -247,5 +247,6 @@ void rl_loader_deinit(void)
     SetLoadFileDataCallback(NULL);
     lru_cache_destroy(rl_loader_memory_cache);
     rl_loader_memory_cache = NULL;
+    fileio_deinit();
     rl_loader_initialized = false;
 }

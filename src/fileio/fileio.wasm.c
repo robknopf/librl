@@ -9,6 +9,8 @@
 //#include <errno.h>
 #include <sys/stat.h>
 
+static void sync_to_idbfs(void);
+
 int fileio_init(const char *mount_point)
 {
     // create a local copy of the mount point so we can modify it
@@ -32,16 +34,32 @@ int fileio_init(const char *mount_point)
 
     // Mount IDBFS at the specified path
     EM_ASM({
+        Module.fileio_idbfs_ready = false;
         //FS.mkdir(UTF8ToString($0));
         FS.mount(IDBFS, {autoPersist:true}, UTF8ToString($0)); 
         // syncronize to us initially so our FS matches what was persisted in the IDBFS
         FS.syncfs(true, function(err) {
             if (err) {
                 console.error("Error mounting IDBFS: " + err);
+                Module.fileio_idbfs_ready = false;
+            } else {
+                Module.fileio_idbfs_ready = true;
             }
         }); }, fileio_mount_point);
 
     return 0;
+}
+
+void fileio_deinit(void)
+{
+    // Mark not-ready immediately so callers do not assume cache restore state
+    // remains valid after teardown starts.
+    EM_ASM({
+        Module.fileio_idbfs_ready = false;
+    });
+
+    sync_to_idbfs();
+    fileio_deinit_common();
 }
 
 /**
@@ -79,20 +97,26 @@ bool is_mount_point(const char *path)
 /**
  * Syncs the current state of the file system to persistent storage.
  */
-// semaphore to ensure only one sync operation is in progress at a time
-bool _is_syncing = false;
-void sync_to_idbfs()
+static void sync_to_idbfs(void)
 {
-    if (_is_syncing)
+    int started = EM_ASM_INT({
+        if (Module.fileio_idbfs_syncing) return 0;
+        Module.fileio_idbfs_syncing = true;
+        return 1;
+    });
+
+    if (!started)
     {
         return; // Skip if already syncing
     }
+
     EM_ASM({
         FS.syncfs(false, function(err) {
             if (err) {
                 console.error("Error syncing to IDBFS: " + err);
             }
-            _is_syncing = false; });
+            Module.fileio_idbfs_syncing = false;
+        });
     });
 }
 

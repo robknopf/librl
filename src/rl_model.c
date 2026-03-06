@@ -9,6 +9,7 @@
 
 #include "internal/exports.h"
 #include "internal/rl_color_store.h"
+#include "internal/rl_handle_pool.h"
 #include "path/path.h"
 
 #define MAX_MODELS 255
@@ -47,8 +48,11 @@ typedef struct
 
 static rl_model_asset_t rl_model_assets[MAX_MODEL_ASSETS];
 static rl_model_instance_t rl_model_instances[MAX_MODELS];
+static rl_handle_pool_t rl_model_instance_pool;
+static uint16_t rl_model_instance_free_indices[MAX_MODELS];
+static uint16_t rl_model_instance_generations[MAX_MODELS];
+static unsigned char rl_model_instance_occupied[MAX_MODELS];
 
-static rl_handle_t rl_next_model_handle = 1;
 static rl_handle_t rl_next_asset_handle = 1;
 
 static bool rl_model_is_valid_model(Model model)
@@ -108,31 +112,14 @@ static rl_model_asset_t *rl_model_asset_get(rl_handle_t handle)
 
 static rl_model_instance_t *rl_model_instance_get(rl_handle_t handle)
 {
-    if (handle == 0 || handle >= MAX_MODELS) {
+    uint16_t index = 0;
+    if (!rl_handle_pool_resolve(&rl_model_instance_pool, handle, &index)) {
         return NULL;
     }
-    if (!rl_model_instances[handle].in_use) {
+    if (!rl_model_instances[index].in_use) {
         return NULL;
     }
-    return &rl_model_instances[handle];
-}
-
-static rl_handle_t rl_model_find_free_instance_handle(void)
-{
-    // Reuse holes first; placeholder to wrapped scan to avoid unbounded growth.
-    for (rl_handle_t i = rl_next_model_handle; i < MAX_MODELS; i++) {
-        if (!rl_model_instances[i].in_use) {
-            rl_next_model_handle = i + 1;
-            return i;
-        }
-    }
-    for (rl_handle_t i = 1; i < rl_next_model_handle; i++) {
-        if (!rl_model_instances[i].in_use) {
-            rl_next_model_handle = i + 1;
-            return i;
-        }
-    }
-    return 0;
+    return &rl_model_instances[index];
 }
 
 static rl_handle_t rl_model_find_free_asset_handle(void)
@@ -248,9 +235,10 @@ static rl_handle_t rl_model_asset_create(Model model,
 
 static rl_handle_t rl_model_instance_create(rl_handle_t asset_handle)
 {
-    rl_handle_t handle = rl_model_find_free_instance_handle();
+    rl_handle_t handle = rl_handle_pool_alloc(&rl_model_instance_pool);
     rl_model_instance_t *instance = NULL;
     rl_model_asset_t *asset = rl_model_asset_get(asset_handle);
+    uint16_t index = 0;
 
     if (asset == NULL) {
         return 0;
@@ -260,8 +248,9 @@ static rl_handle_t rl_model_instance_create(rl_handle_t asset_handle)
         fprintf(stderr, "ERROR: MAX_MODELS reached (%d)\n", MAX_MODELS);
         return 0;
     }
+    rl_handle_pool_resolve(&rl_model_instance_pool, handle, &index);
 
-    instance = &rl_model_instances[handle];
+    instance = &rl_model_instances[index];
     rl_model_instance_reset(instance);
     instance->in_use = true;
     instance->asset_handle = asset_handle;
@@ -410,6 +399,7 @@ void rl_model_destroy(rl_handle_t handle)
 
     rl_model_asset_release(instance->asset_handle);
     rl_model_instance_reset(instance);
+    rl_handle_pool_free(&rl_model_instance_pool, handle);
 }
 
 RL_KEEP
@@ -668,6 +658,12 @@ bool rl_model_is_valid_strict(rl_handle_t handle)
 
 void rl_model_init(void)
 {
+    rl_handle_pool_init(&rl_model_instance_pool,
+                        MAX_MODELS,
+                        rl_model_instance_free_indices,
+                        MAX_MODELS,
+                        rl_model_instance_generations,
+                        rl_model_instance_occupied);
     for (int i = 0; i < MAX_MODEL_ASSETS; i++) {
         rl_model_asset_reset(&rl_model_assets[i]);
     }
@@ -677,16 +673,21 @@ void rl_model_init(void)
     }
 
     rl_next_asset_handle = 1;
-    rl_next_model_handle = 1;
 }
 
 void rl_model_deinit(void)
 {
     int assets_freed = 0;
 
-    for (rl_handle_t i = 1; i < MAX_MODELS; i++) {
-        if (rl_model_instances[i].in_use) {
-            rl_model_destroy(i);
+    for (uint16_t i = 1; i < MAX_MODELS; i++) {
+        if (!rl_model_instances[i].in_use) {
+            continue;
+        }
+        {
+            rl_handle_t handle = rl_handle_pool_handle_from_index(&rl_model_instance_pool, i);
+            if (handle != 0) {
+                rl_model_destroy(handle);
+            }
         }
     }
 
@@ -698,7 +699,7 @@ void rl_model_deinit(void)
     }
 
     rl_next_asset_handle = 1;
-    rl_next_model_handle = 1;
+    rl_handle_pool_reset(&rl_model_instance_pool);
 
     printf("rl_model_deinit: Freed %d model assets\n", assets_freed);
 }

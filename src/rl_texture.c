@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "internal/exports.h"
+#include "internal/rl_handle_pool.h"
 #include "internal/rl_texture_store.h"
 #include "path/path.h"
 
@@ -26,36 +27,28 @@ typedef struct
 // This avoids duplicate GPU allocations when multiple systems reuse a texture.
 
 static rl_texture_entry_t rl_textures[MAX_TEXTURES];
+static rl_handle_pool_t rl_texture_pool;
+static uint16_t rl_texture_free_indices[MAX_TEXTURES];
+static uint16_t rl_texture_generations[MAX_TEXTURES];
+static unsigned char rl_texture_occupied[MAX_TEXTURES];
 
 static rl_texture_entry_t *rl_texture_get_entry(rl_handle_t handle)
 {
-    if (handle == 0 || handle >= MAX_TEXTURES) {
+    uint16_t index = 0;
+    if (!rl_handle_pool_resolve(&rl_texture_pool, handle, &index)) {
         return NULL;
     }
-    if (!rl_textures[handle].in_use) {
-        return NULL;
-    }
-    return &rl_textures[handle];
-}
-
-static rl_handle_t rl_texture_find_free_slot(void)
-{
-    for (rl_handle_t i = 1; i < MAX_TEXTURES; i++) {
-        if (!rl_textures[i].in_use) {
-            return i;
-        }
-    }
-    return 0;
+    return &rl_textures[index];
 }
 
 static rl_handle_t rl_texture_find_by_path(const char *normalized_path)
 {
-    for (rl_handle_t i = 1; i < MAX_TEXTURES; i++) {
+    for (uint16_t i = 1; i < MAX_TEXTURES; i++) {
         if (!rl_textures[i].in_use) {
             continue;
         }
         if (strcmp(rl_textures[i].path, normalized_path) == 0) {
-            return i;
+            return rl_handle_pool_handle_from_index(&rl_texture_pool, i);
         }
     }
     return 0;
@@ -102,6 +95,7 @@ void rl_texture_release(rl_handle_t handle)
         entry->texture = (Texture2D){0};
         entry->in_use = false;
         entry->path[0] = '\0';
+        rl_handle_pool_free(&rl_texture_pool, handle);
     }
 }
 
@@ -111,6 +105,7 @@ rl_handle_t rl_texture_create(const char *filename)
     char normalized_path[256] = {0};
     rl_handle_t handle = 0;
     Texture2D texture = {0};
+    uint16_t index = 0;
 
     if (!filename || filename[0] == '\0') {
         return 0;
@@ -127,11 +122,12 @@ rl_handle_t rl_texture_create(const char *filename)
         return handle;
     }
 
-    handle = rl_texture_find_free_slot();
+    handle = rl_handle_pool_alloc(&rl_texture_pool);
     if (handle == 0) {
         fprintf(stderr, "ERROR: MAX_TEXTURES reached (%d)\n", MAX_TEXTURES);
         return 0;
     }
+    rl_handle_pool_resolve(&rl_texture_pool, handle, &index);
 
     texture = LoadTexture(normalized_path);
     if (!IsTextureValid(texture)) {
@@ -147,20 +143,21 @@ rl_handle_t rl_texture_create(const char *filename)
         texture = rl_texture_create_magenta_placeholder();
         if (!IsTextureValid(texture)) {
             fprintf(stderr, "ERROR: Failed to create magenta placeholder texture\n");
+            rl_handle_pool_free(&rl_texture_pool, handle);
             return 0;
         }
 
-        rl_textures[handle].texture = texture;
-        rl_textures[handle].ref_count = 1;
-        rl_textures[handle].in_use = true;
-        snprintf(rl_textures[handle].path, sizeof(rl_textures[handle].path), "%s", RL_TEXTURE_PLACEHOLDER_KEY);
+        rl_textures[index].texture = texture;
+        rl_textures[index].ref_count = 1;
+        rl_textures[index].in_use = true;
+        snprintf(rl_textures[index].path, sizeof(rl_textures[index].path), "%s", RL_TEXTURE_PLACEHOLDER_KEY);
         return handle;
     }
 
-    rl_textures[handle].texture = texture;
-    rl_textures[handle].ref_count = 1;
-    rl_textures[handle].in_use = true;
-    snprintf(rl_textures[handle].path, sizeof(rl_textures[handle].path), "%s", normalized_path);
+    rl_textures[index].texture = texture;
+    rl_textures[index].ref_count = 1;
+    rl_textures[index].in_use = true;
+    snprintf(rl_textures[index].path, sizeof(rl_textures[index].path), "%s", normalized_path);
     return handle;
 }
 
@@ -172,6 +169,12 @@ void rl_texture_destroy(rl_handle_t handle)
 
 void rl_texture_init(void)
 {
+    rl_handle_pool_init(&rl_texture_pool,
+                        MAX_TEXTURES,
+                        rl_texture_free_indices,
+                        MAX_TEXTURES,
+                        rl_texture_generations,
+                        rl_texture_occupied);
     for (int i = 0; i < MAX_TEXTURES; i++) {
         rl_textures[i].in_use = false;
         rl_textures[i].texture = (Texture2D){0};
@@ -194,5 +197,6 @@ void rl_texture_deinit(void)
         rl_textures[i].path[0] = '\0';
         unloaded++;
     }
+    rl_handle_pool_reset(&rl_texture_pool);
     printf("rl_texture_deinit: Freed %d textures\n", unloaded);
 }

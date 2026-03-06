@@ -3,10 +3,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "exports.h"
+#include "internal/exports.h"
 
 #define MAX_COLORS 255
 Color* colors[MAX_COLORS];
+
+// Color handles intentionally map to lightweight RGBA values.
+// Unlike textures/models, colors are tiny value objects and do not use
+// refcounted shared-asset semantics.
 
 // predefined colors
 const rl_handle_t RL_COLOR_DEFAULT = 0;

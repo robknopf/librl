@@ -2,10 +2,6 @@
 
 ## Short Term
 
-- Add `rl_sprite3d` system:
-  - handle-based sprite3d creation/draw/destroy API
-  - initial implementation as textured billboard for rapid prototyping
-  - bind through JS/Nim once C API is stable
 - Handle system rewrite (first):
   - replace monotonic IDs with generational handles (slot + generation)
   - add free-list reuse so create/destroy cycles remain stable
@@ -22,6 +18,13 @@
   - define a compact frame command/snapshot structure using `rl_handle_t`
   - add one-call submit path for per-frame draw state/commands
   - start with clear + camera + model/text/rect primitives
+- API/docs sync after recent camera/input refactor:
+  - document `rl_camera3d_*` flow + default camera behavior
+  - document `rl_begin_mode_3d()` active-camera semantics
+  - document mouse state access parity (`getMouseState` / `rl_get_mouse_state`)
+- URI/path follow-up:
+  - add URL normalization examples to docs
+  - decide whether cache keys should canonicalize host casing
 
 ## Parking Lot
 
@@ -60,14 +63,7 @@
 
 ### Follow-up Cleanup
 
-- Align `include/rl_model.h` with implementation names:
-  - `rl_model_set_animation_looping` vs `rl_model_set_animation_loop`
-  - remove stale `RL_MODEL_DEFAULT` declarations if fully deprecated
-  - remove stale `rl_model_get_default()` declaration if not implemented
 - Review all headers for stale declarations after recent refactors.
-- Sync Nim binding (`bindings/nim/rl.nim`) with current C headers:
-  - remove/import missing symbols that changed recently
-  - verify looping function name matches header/API
 - Expand `docs/API.md` to function-by-function docs:
   - call order expectations
   - return/error semantics

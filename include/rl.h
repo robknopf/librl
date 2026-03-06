@@ -1,6 +1,8 @@
 #ifndef RL_H
 #define RL_H
 
+#include <stdbool.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -90,6 +92,11 @@ float rl_get_monitor_position_y(int monitor);
 void rl_get_window_position();
 float rl_get_window_position_x();
 float rl_get_window_position_y();
+void rl_get_mouse();
+float rl_get_mouse_x();
+float rl_get_mouse_y();
+int rl_get_mouse_wheel();
+int rl_get_mouse_button(int button);
 void rl_set_window_position(int x, int y);
 void rl_close_window();
 void rl_begin_drawing();
@@ -102,10 +109,20 @@ void rl_draw_text(const char *text, int x, int y, int fontSize, rl_handle_t colo
 void rl_draw_text_ex(rl_handle_t font, const char *text, int x, int y, float fontSize, float spacing, rl_handle_t color);
 void rl_begin_mode_2d(rl_handle_t camera);
 void rl_end_mode_2d();
-void rl_begin_mode_3d(float position_x, float position_y, float position_z,
-                      float target_x, float target_y, float target_z,
-                      float up_x, float up_y, float up_z,
-                      float fovy, int projection);
+rl_handle_t rl_camera3d_create(float position_x, float position_y, float position_z,
+                               float target_x, float target_y, float target_z,
+                               float up_x, float up_y, float up_z,
+                               float fovy, int projection);
+rl_handle_t rl_camera3d_get_default(void);
+bool rl_camera3d_set(rl_handle_t handle,
+                     float position_x, float position_y, float position_z,
+                     float target_x, float target_y, float target_z,
+                     float up_x, float up_y, float up_z,
+                     float fovy, int projection);
+bool rl_camera3d_set_active(rl_handle_t handle);
+rl_handle_t rl_camera3d_get_active();
+void rl_camera3d_destroy(rl_handle_t handle);
+void rl_begin_mode_3d();
 void rl_end_mode_3d();
 void rl_enable_lighting();
 void rl_disable_lighting();

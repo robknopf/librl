@@ -108,7 +108,7 @@ Module.getRectangle = () => ({
 });
 
 // input fields
-Module.getMouse = () => ({
+Module.getMouseState = () => ({
     x: HEAP32[scratchAreaPtr + (scratchAreaOffsets.mouse.x >> 2)],
     y: HEAP32[scratchAreaPtr + (scratchAreaOffsets.mouse.y >> 2)],
     wheel: HEAP32[scratchAreaPtr + (scratchAreaOffsets.mouse.wheel >> 2)],
@@ -212,5 +212,4 @@ Module.getTouchpoint = (id) => {
 }
 //}
 //return scratchAreaWrapper;
-
 

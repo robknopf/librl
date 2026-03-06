@@ -1,119 +1,15 @@
 #include <stdio.h>
-#include <math.h>
 #include "rl.h"
-#include "exports.h"
+#include "internal/exports.h"
 #include "raylib.h"
-#include "rl_handle.h"
-#include "rl_color.h"
-#include "rl_font.h"
 #include "rl_loader.h"
-#include "rl_model.h"
 #include "rl_scratch.h"
+#include "internal/rl_color_store.h"
+#include "internal/rl_font_store.h"
+#include "internal/rl_subsystems.h"
 
 
 bool initialized = false;
-static bool rl_lighting_enabled = false;
-static bool rl_lighting_ready = false;
-static Shader rl_lighting_shader = {0};
-static int rl_light_dir_loc = -1;
-static int rl_light_ambient_loc = -1;
-static int rl_light_tint_loc = -1;
-static Vector3 rl_light_direction = { -0.6f, -1.0f, -0.5f };
-static float rl_light_ambient = 0.25f;
-
-Color rl_color_get(rl_handle_t color);
-Font rl_font_get(rl_handle_t handle) ;
-
-static Vector3 rl_vec3_normalized(Vector3 v) {
-    float length = sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
-    if (length <= 0.00001f) {
-        return (Vector3){0.0f, -1.0f, 0.0f};
-    }
-    float inv_length = 1.0f / length;
-    return (Vector3){v.x * inv_length, v.y * inv_length, v.z * inv_length};
-}
-
-static bool rl_lighting_try_init() {
-    if (rl_lighting_ready) {
-        return true;
-    }
-    if (!IsWindowReady()) {
-        return false;
-    }
-
-#if defined(PLATFORM_WEB)
-    const char *vertex_shader_source =
-        "attribute vec3 vertexPosition;\n"
-        "attribute vec3 vertexNormal;\n"
-        "uniform mat4 mvp;\n"
-        "varying vec3 fragNormal;\n"
-        "void main() {\n"
-        "  fragNormal = normalize(vertexNormal);\n"
-        "  gl_Position = mvp * vec4(vertexPosition, 1.0);\n"
-        "}\n";
-
-    const char *fragment_shader_source =
-        "precision mediump float;\n"
-        "varying vec3 fragNormal;\n"
-        "uniform vec3 lightDirection;\n"
-        "uniform float ambient;\n"
-        "uniform vec4 tintColor;\n"
-        "void main() {\n"
-        "  vec3 n = normalize(fragNormal);\n"
-        "  vec3 l = normalize(-lightDirection);\n"
-        "  float diffuse = max(dot(n, l), 0.0);\n"
-        "  float intensity = clamp(ambient + diffuse, 0.0, 1.0);\n"
-        "  gl_FragColor = vec4(tintColor.rgb * intensity, tintColor.a);\n"
-        "}\n";
-#else
-    const char *vertex_shader_source =
-        "#version 330\n"
-        "in vec3 vertexPosition;\n"
-        "in vec3 vertexNormal;\n"
-        "uniform mat4 mvp;\n"
-        "out vec3 fragNormal;\n"
-        "void main() {\n"
-        "  fragNormal = normalize(vertexNormal);\n"
-        "  gl_Position = mvp * vec4(vertexPosition, 1.0);\n"
-        "}\n";
-
-    const char *fragment_shader_source =
-        "#version 330\n"
-        "in vec3 fragNormal;\n"
-        "uniform vec3 lightDirection;\n"
-        "uniform float ambient;\n"
-        "uniform vec4 tintColor;\n"
-        "out vec4 finalColor;\n"
-        "void main() {\n"
-        "  vec3 n = normalize(fragNormal);\n"
-        "  vec3 l = normalize(-lightDirection);\n"
-        "  float diffuse = max(dot(n, l), 0.0);\n"
-        "  float intensity = clamp(ambient + diffuse, 0.0, 1.0);\n"
-        "  finalColor = vec4(tintColor.rgb * intensity, tintColor.a);\n"
-        "}\n";
-#endif
-
-    rl_lighting_shader = LoadShaderFromMemory(vertex_shader_source, fragment_shader_source);
-    if (rl_lighting_shader.id == 0) {
-        return false;
-    }
-
-    rl_light_dir_loc = GetShaderLocation(rl_lighting_shader, "lightDirection");
-    rl_light_ambient_loc = GetShaderLocation(rl_lighting_shader, "ambient");
-    rl_light_tint_loc = GetShaderLocation(rl_lighting_shader, "tintColor");
-    rl_lighting_ready = (rl_light_dir_loc >= 0 && rl_light_ambient_loc >= 0 && rl_light_tint_loc >= 0);
-
-    if (!rl_lighting_ready) {
-        UnloadShader(rl_lighting_shader);
-        rl_lighting_shader = (Shader){0};
-        rl_light_dir_loc = -1;
-        rl_light_ambient_loc = -1;
-        rl_light_tint_loc = -1;
-        return false;
-    }
-
-    return true;
-}
 
 RL_KEEP
 void rl_init() {
@@ -125,14 +21,9 @@ void rl_init() {
     rl_color_init();
     rl_font_init();
     rl_model_init();
-    rl_lighting_enabled = false;
-    rl_lighting_ready = false;
-    rl_lighting_shader = (Shader){0};
-    rl_light_dir_loc = -1;
-    rl_light_ambient_loc = -1;
-    rl_light_tint_loc = -1;
-    rl_light_direction = (Vector3){ -0.6f, -1.0f, -0.5f };
-    rl_light_ambient = 0.25f;
+    rl_camera3d_init();
+    rl_texture_init();
+    rl_sprite3d_init();
     initialized = true;
 }
 
@@ -141,16 +32,10 @@ void rl_deinit() {
     if (!initialized) {
         return;
     }
-    if (rl_lighting_ready) {
-        UnloadShader(rl_lighting_shader);
-    }
-    rl_lighting_enabled = false;
-    rl_lighting_ready = false;
-    rl_lighting_shader = (Shader){0};
-    rl_light_dir_loc = -1;
-    rl_light_ambient_loc = -1;
-    rl_light_tint_loc = -1;
+    rl_camera3d_deinit();
     initialized = false;
+    rl_sprite3d_deinit();
+    rl_texture_deinit();
     rl_model_deinit();
     rl_font_deinit();
     rl_color_deinit();
@@ -279,6 +164,39 @@ float rl_get_window_position_y() {
 }
 
 RL_KEEP
+void rl_get_mouse() {
+    const Vector2 pos = GetMousePosition();
+    rl_scratch_area_set_vector2(pos.x, pos.y);
+}
+
+RL_KEEP
+float rl_get_mouse_x() {
+    const Vector2 pos = GetMousePosition();
+    return pos.x;
+}
+
+RL_KEEP
+float rl_get_mouse_y() {
+    const Vector2 pos = GetMousePosition();
+    return pos.y;
+}
+
+RL_KEEP
+int rl_get_mouse_wheel() {
+    rl_mouse_t mouse = rl_scratch_area_get_mouse();
+    return mouse.wheel;
+}
+
+RL_KEEP
+int rl_get_mouse_button(int button) {
+    rl_mouse_t mouse = rl_scratch_area_get_mouse();
+    if (button < 0 || button >= RL_SCRATCH_AREA_MAX_NUM_MOUSE_BUTTONS) {
+        return 0;
+    }
+    return mouse.buttons[button];
+}
+
+RL_KEEP
 void rl_set_window_position(int x, int y) {
     SetWindowPosition(x, y);
 }
@@ -363,77 +281,6 @@ void rl_begin_mode_2d(rl_handle_t camera) {
 RL_KEEP
 void rl_end_mode_2d() {
     EndMode2D();
-}
-
-RL_KEEP
-void rl_begin_mode_3d(float position_x, float position_y, float position_z,
-                      float target_x, float target_y, float target_z,
-                      float up_x, float up_y, float up_z,
-                      float fovy, int projection) {
-    Camera3D camera = {0};
-    camera.position = (Vector3){position_x, position_y, position_z};
-    camera.target = (Vector3){target_x, target_y, target_z};
-    camera.up = (Vector3){up_x, up_y, up_z};
-    camera.fovy = fovy;
-    camera.projection = projection;
-    BeginMode3D(camera);
-}
-
-RL_KEEP
-void rl_end_mode_3d() {
-    EndMode3D();
-}
-
-RL_KEEP
-void rl_enable_lighting() {
-    rl_lighting_enabled = true;
-    rl_lighting_try_init();
-}
-
-RL_KEEP
-void rl_disable_lighting() {
-    rl_lighting_enabled = false;
-}
-
-RL_KEEP
-int rl_is_lighting_enabled() {
-    return rl_lighting_enabled ? 1 : 0;
-}
-
-RL_KEEP
-void rl_set_light_direction(float x, float y, float z) {
-    rl_light_direction = rl_vec3_normalized((Vector3){x, y, z});
-}
-
-RL_KEEP
-void rl_set_light_ambient(float ambient) {
-    if (ambient < 0.0f) {
-        ambient = 0.0f;
-    }
-    if (ambient > 1.0f) {
-        ambient = 1.0f;
-    }
-    rl_light_ambient = ambient;
-}
-
-RL_KEEP
-void rl_draw_cube(float position_x, float position_y, float position_z,
-                  float width, float height, float length, rl_handle_t color) {
-    Color c = rl_color_get(color);
-    if (!rl_lighting_enabled || !rl_lighting_try_init()) {
-        DrawCube((Vector3){position_x, position_y, position_z}, width, height, length, c);
-        return;
-    }
-
-    float direction[3] = { rl_light_direction.x, rl_light_direction.y, rl_light_direction.z };
-    float tint[4] = { c.r / 255.0f, c.g / 255.0f, c.b / 255.0f, c.a / 255.0f };
-    SetShaderValue(rl_lighting_shader, rl_light_dir_loc, direction, SHADER_UNIFORM_VEC3);
-    SetShaderValue(rl_lighting_shader, rl_light_ambient_loc, &rl_light_ambient, SHADER_UNIFORM_FLOAT);
-    SetShaderValue(rl_lighting_shader, rl_light_tint_loc, tint, SHADER_UNIFORM_VEC4);
-
-    BeginShaderMode(rl_lighting_shader);
-    DrawCube((Vector3){position_x, position_y, position_z}, width, height, length, WHITE);
-    EndShaderMode();
 }
 
 RL_KEEP

@@ -8,10 +8,6 @@ extern "C" {
 #include <stdbool.h>
 #include "rl.h"
 
-extern const rl_handle_t RL_MODEL_DEFAULT;
-
-
-rl_handle_t rl_model_get_next_handle() ;
 rl_handle_t rl_model_create(const char *filename) ;
 void rl_model_draw(rl_handle_t handle, float position_x, float position_y, float position_z, float scale, rl_handle_t tint);
 bool rl_model_is_valid(rl_handle_t handle);
@@ -21,13 +17,9 @@ int rl_model_animation_frame_count(rl_handle_t handle, int animation_index);
 void rl_model_animation_update(rl_handle_t handle, int animation_index, int frame);
 bool rl_model_set_animation(rl_handle_t handle, int animation_index);
 bool rl_model_set_animation_speed(rl_handle_t handle, float speed);
-bool rl_model_set_animation_looping(rl_handle_t handle, bool should_loop);
+bool rl_model_set_animation_loop(rl_handle_t handle, bool should_loop);
 bool rl_model_animate(rl_handle_t handle, float delta_seconds);
 void rl_model_destroy(rl_handle_t handle) ;
-rl_handle_t rl_model_get_default() ;
-
-void rl_model_init() ;
-void rl_model_deinit();
 
 
 #ifdef __cplusplus

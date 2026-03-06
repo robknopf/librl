@@ -9,13 +9,21 @@ import { rl } from "/out/librl.js";
     const fontSize = 24;
     const smallFontSize = 16;
     const modelPath = "models/gumshoe/gumshoe.glb";
+    const spritePath = "sprites/logo/wg-logo-bw-alpha.png";
     const greyAlphaColor = rl.createColor(0, 0, 0, 128);
     const komika = await rl.createFont("fonts/Komika/KOMIKAH_.ttf", fontSize);
     const komikaSmall = await rl.createFont("fonts/Komika/KOMIKAH_.ttf", smallFontSize);
 
-    console.log("BEFORE")
     const gumshoe = await rl.createModel(modelPath);
-    console.log("AFTER")
+    const sprite = await rl.createSprite3D(spritePath);
+    const camera = rl.createCamera3D(
+      12.0, 12.0, 12.0,
+      0.0, 1.0, 0.0,
+      0.0, 1.0, 0.0,
+      45.0, rl.CAMERA_PERSPECTIVE
+    );
+
+    rl.setActiveCamera3D(camera);
 
     rl.modelSetAnimation(gumshoe, 1);
     rl.modelSetAnimationSpeed(gumshoe, 1.0);
@@ -38,6 +46,7 @@ import { rl } from "/out/librl.js";
       }
       rl.disableLighting();
       rl.destroyModel(gumshoe);
+      rl.destroySprite3D(sprite);
       rl.destroyFont(komika);
       rl.destroyFont(komikaSmall);
       rl.destroyColor(greyAlphaColor);
@@ -60,17 +69,14 @@ import { rl } from "/out/librl.js";
 
       rl.update();
       const message = "Hello World!";
-      const mouse = rl.getMouse();
+      const mouse = rl.getMouseState();
       rl.beginDrawing();
       rl.clearBackground(rl.RAYWHITE);
-      rl.beginMode3D(
-        4.0, 4.0, 4.0, // camera position
-        0.0, 1.0, 0.0, // camera target
-        0.0, 1.0, 0.0, // camera up
-        45.0, rl.CAMERA_PERSPECTIVE
-      );
+      rl.beginMode3D();
       rl.modelAnimate(gumshoe, deltaTime);
       rl.drawModel(gumshoe, 0.0, 0.0, 0.0, 1.0, rl.RAYWHITE);
+
+      rl.drawSprite3D(sprite, 0, 0, 0, 1, rl.RAYWHITE)
       rl.endMode3D();
 
       const w = rl.getScreenWidth();

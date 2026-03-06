@@ -38,17 +38,8 @@ extern const rl_handle_t RL_COLOR_MAGENTA;
 extern const rl_handle_t RL_COLOR_RAYWHITE;
 
 
-rl_handle_t rl_color_get_next_handle() ;
 rl_handle_t rl_color_create(int r, int g, int b, int a) ;
-void rl_color_set(rl_handle_t handle, int r, int g, int b, int a) ;
-
-//Color rl_color_get(rl_handle_t handle) ;
-
 void rl_color_destroy(rl_handle_t handle) ;
-
-void rl_color_init() ;
-
-void rl_color_deinit();
 
 #ifdef __cplusplus
 }

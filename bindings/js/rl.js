@@ -1,4 +1,4 @@
-// appended to emscripten build with --extern-post-js bindings/js/rl_wrapper.js
+// appended to emscripten build with --extern-post-js bindings/js/rl.js
 var moduleInstance;
 var moduleOptions = {};
 
@@ -112,21 +112,50 @@ const RL = {
     endDrawing: () => {
         return moduleInstance.ccall('rl_end_drawing', null, [], []);
     },
-    beginMode3D: (
+    beginMode3D: () => {
+        return moduleInstance.ccall('rl_begin_mode_3d', null, [], []);
+    },
+    endMode3D: () => {
+        return moduleInstance.ccall('rl_end_mode_3d', null, [], []);
+    },
+    createCamera3D: (
         positionX, positionY, positionZ,
         targetX, targetY, targetZ,
         upX, upY, upZ,
         fovy, projection
     ) => {
         return moduleInstance.ccall(
-            'rl_begin_mode_3d',
-            null,
+            'rl_camera3d_create',
+            'number',
             ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'],
             [positionX, positionY, positionZ, targetX, targetY, targetZ, upX, upY, upZ, fovy, projection]
         );
     },
-    endMode3D: () => {
-        return moduleInstance.ccall('rl_end_mode_3d', null, [], []);
+    getDefaultCamera3D: () => {
+        return moduleInstance.ccall('rl_camera3d_get_default', 'number', [], []);
+    },
+    setCamera3D: (
+        camera,
+        positionX, positionY, positionZ,
+        targetX, targetY, targetZ,
+        upX, upY, upZ,
+        fovy, projection
+    ) => {
+        return moduleInstance.ccall(
+            'rl_camera3d_set',
+            'number',
+            ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'],
+            [camera, positionX, positionY, positionZ, targetX, targetY, targetZ, upX, upY, upZ, fovy, projection]
+        ) !== 0;
+    },
+    setActiveCamera3D: (camera) => {
+        return moduleInstance.ccall('rl_camera3d_set_active', 'number', ['number'], [camera]) !== 0;
+    },
+    getActiveCamera3D: () => {
+        return moduleInstance.ccall('rl_camera3d_get_active', 'number', [], []);
+    },
+    destroyCamera3D: (camera) => {
+        return moduleInstance.ccall('rl_camera3d_destroy', null, ['number'], [camera]);
     },
     enableLighting: () => {
         return moduleInstance.ccall('rl_enable_lighting', null, [], []);
@@ -154,9 +183,9 @@ const RL = {
             [positionX, positionY, positionZ, width, height, length, color]
         );
     },
-    getMouse: () => {
+    getMouseState: () => {
         // get the mouse position from the scratch area, it should be updated by the library every frame
-        return moduleInstance.getMouse();
+        return moduleInstance.getMouseState();
     },
     getKeyboard: () => {
         // get the mouse position from the scratch area, it should be updated by the library every frame
@@ -265,11 +294,26 @@ const RL = {
     modelAnimate: (model, deltaSeconds) => moduleInstance.ccall(
         "rl_model_animate", "number", ["number", "number"], [model, deltaSeconds]
     ) !== 0,
-    getDefaultModel: () => moduleInstance.ccall(
-        "rl_model_get_default", "number", [], []
-    ),
     destroyModel: (model) => moduleInstance.ccall(
         "rl_model_destroy", null, ["number"], [model]
+    ),
+    createTexture: (path) => moduleInstance.ccall(
+        "rl_texture_create", "number", ["string"], [path], { async: true }
+    ),
+    destroyTexture: (texture) => moduleInstance.ccall(
+        "rl_texture_destroy", null, ["number"], [texture]
+    ),
+    createSprite3D: (path) => moduleInstance.ccall(
+        "rl_sprite3d_create", "number", ["string"], [path], { async: true }
+    ),
+    createSprite3DFromTexture: (texture) => moduleInstance.ccall(
+        "rl_sprite3d_create_from_texture", "number", ["number"], [texture]
+    ),
+    drawSprite3D: (sprite, x, y, z, size, tint) => moduleInstance.ccall(
+        "rl_sprite3d_draw", null, ["number", "number", "number", "number", "number", "number"], [sprite, x, y, z, size, tint]
+    ),
+    destroySprite3D: (sprite) => moduleInstance.ccall(
+        "rl_sprite3d_destroy", null, ["number"], [sprite]
     ),
 
 }

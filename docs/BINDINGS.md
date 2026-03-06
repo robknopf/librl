@@ -9,7 +9,7 @@ This project currently maintains two primary bindings in a 'add as I need' cycle
 
 Files:
 
-- `bindings/js/rl_wrapper.js`
+- `bindings/js/rl.js`
 - `bindings/js/rl_scratch_area.js`
 - `bindings/js/rl_module_export.js`
 
@@ -28,6 +28,7 @@ Notes:
 
 - This is the primary browser-facing API layer.
 - It includes async-oriented wrappers for asset-backed calls like model/font creation.
+- Input state uses `getMouseState()` (x/y/wheel/buttons) and `getKeyboard()`.
 
 ## Nim Binding
 
@@ -49,6 +50,7 @@ Notes:
 
 - This binding is direct/low-level and close to the C surface.
 - Keep declarations synchronized with header changes in `include/`.
+- It now includes a small `RLMouse` record helper via `rl_get_mouse_state()`.
 
 ## Status and Scope
 
@@ -63,4 +65,3 @@ When public C headers change:
 3. Smoke test:
    - web: `test/web/index.js`
    - desktop Nim: `test/desktop/nim/src/main.nim`
-

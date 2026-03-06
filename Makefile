@@ -31,7 +31,7 @@ CFLAGS_WASM = \
 
 LDFLAGS_WASM = \
 	--post-js bindings/js/rl_scratch_area.js \
-	--extern-post-js bindings/js/rl_wrapper.js \
+	--extern-post-js bindings/js/rl.js \
 	--extern-post-js bindings/js/rl_module_export.js \
 	-s WASM=1 \
 	-lidbfs.js \
@@ -59,6 +59,11 @@ LDFLAGS_WASM = \
 	"_rl_get_window_position", \
 	"_rl_get_window_position_x", \
 	"_rl_get_window_position_y", \
+	"_rl_get_mouse", \
+	"_rl_get_mouse_x", \
+	"_rl_get_mouse_y", \
+	"_rl_get_mouse_wheel", \
+	"_rl_get_mouse_button", \
 	"_rl_get_screen_width", \
 	"_rl_get_screen_height", \
 	"_rl_set_target_fps", \
@@ -69,6 +74,12 @@ LDFLAGS_WASM = \
 	"_rl_end_mode_2d", \
 	"_rl_begin_mode_3d", \
 	"_rl_end_mode_3d", \
+	"_rl_camera3d_create", \
+	"_rl_camera3d_get_default", \
+	"_rl_camera3d_set", \
+	"_rl_camera3d_set_active", \
+	"_rl_camera3d_get_active", \
+	"_rl_camera3d_destroy", \
 	"_rl_enable_lighting", \
 	"_rl_disable_lighting", \
 	"_rl_is_lighting_enabled", \
@@ -97,6 +108,12 @@ LDFLAGS_WASM = \
 	"_rl_model_set_animation_loop", \
 	"_rl_model_animate", \
 	"_rl_model_destroy", \
+	"_rl_texture_create", \
+	"_rl_texture_destroy", \
+	"_rl_sprite3d_create", \
+	"_rl_sprite3d_create_from_texture", \
+	"_rl_sprite3d_draw", \
+	"_rl_sprite3d_destroy", \
 	"_rl_measure_text", \
 	"_rl_measure_text_ex" \
 ]'
@@ -125,6 +142,8 @@ LIBS_WASM = -L$(LIBRAYLIB_LIB) \
 # Source files
 SRC_DIR = src
 ALL_SRCS = $(call rwildcard,$(SRC_DIR)/,*.c)
+TEST_SRCS = $(call rwildcard,$(SRC_DIR)/,*_test.c)
+LIB_SRCS = $(filter-out $(TEST_SRCS), $(ALL_SRCS))
 
 # Include and library paths
 INCLUDES = -I. -I$(OUT_INC_DIR) -I$(LIBRAYLIB_INC) -I$(LIBRL_ROOT)/$(SRC_DIR)
@@ -139,9 +158,9 @@ WASM_OVERRIDES = $(call rwildcard,$(SRC_DIR)/,*.wasm.c)
 WASM_BASES = $(WASM_OVERRIDES:.wasm.c=.c)
 
 # Filter sources
-COMMON_SRCS = $(filter-out $(WASM_BASES), $(ALL_SRCS))  # Remove base files if overrides exist
+COMMON_SRCS = $(filter-out $(WASM_BASES), $(LIB_SRCS))  # Remove base files if overrides exist
 WASM_SRCS = $(sort $(COMMON_SRCS) $(WASM_OVERRIDES))    # Deduplicate combined sources
-DESKTOP_SRCS = $(sort $(filter-out $(WASM_OVERRIDES), $(ALL_SRCS))) # Deduplicate desktop sources
+DESKTOP_SRCS = $(sort $(filter-out $(WASM_OVERRIDES), $(LIB_SRCS))) # Deduplicate desktop sources
 DESKTOP_OBJS = $(patsubst $(SRC_DIR)/%.c,$(OBJ_DESKTOP_DIR)/%.o,$(DESKTOP_SRCS))
 WASM_OBJS = $(patsubst $(SRC_DIR)/%.c,$(OBJ_WASM_DIR)/%.o,$(WASM_SRCS))
 
@@ -219,6 +238,10 @@ desktop: libraylib_desktop ensure_out_dir ensure_obj_dir $(DESKTOP_OBJS)
 	mkdir -p $(OBJ_DESKTOP_DIR)/.raylib_unpack
 	cd $(OBJ_DESKTOP_DIR)/.raylib_unpack && ar x $(abspath $(LIBRAYLIB_DESKTOP_ARCHIVE))
 	ar rcs $(OUT_DESKTOP) $(DESKTOP_OBJS) $(OBJ_DESKTOP_DIR)/.raylib_unpack/*.o
+
+uri_test:
+	$(CC_DESKTOP) $(CFLAGS) $(INCLUDES) src/uri/uri_test.c src/uri/uri.c src/vendor/cwalk/cwalk.c -o /tmp/uri_test
+	/tmp/uri_test
 
 # Compile Desktop source files to object files
 $(OBJ_DESKTOP_DIR)/%.o: $(SRC_DIR)/%.c

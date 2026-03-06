@@ -128,7 +128,8 @@ static bool rl_loader_should_memory_cache_path(const char *resolved_path)
     return rl_loader_ext_eq(ext, ".glb") ||
            rl_loader_ext_eq(ext, ".gltf") ||
            rl_loader_ext_eq(ext, ".ttf") ||
-           rl_loader_ext_eq(ext, ".otf");
+           rl_loader_ext_eq(ext, ".otf") ||
+           rl_loader_ext_eq(ext, ".png");
 }
 
 static unsigned char *rl_loader_load_file_data_cb(const char *file_name, int *data_size)

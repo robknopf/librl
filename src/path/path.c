@@ -1,4 +1,5 @@
 #include "path.h"
+#include "../uri/uri.h"
 #include "../vendor/cwalk/cwalk.h"
 #include <stdarg.h>
 #include <string.h>
@@ -20,6 +21,10 @@ size_t _path_join(const char *base, const char *path, char *buffer, size_t buffe
 
 size_t path_normalize(const char *path, char *buffer, size_t buffer_size)
 {
+    if (uri_is_url(path)) {
+        return uri_normalize(path, buffer, buffer_size);
+    }
+
     return cwk_path_normalize(path, buffer, buffer_size);
 }
 

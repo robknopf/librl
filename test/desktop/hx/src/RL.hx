@@ -125,10 +125,7 @@ class RL {
 	extern public static function clearBackground(color:RLHandle):Void;
 
 	@:native("rl_begin_mode_3d")
-	extern public static function beginMode3D(positionX:Float, positionY:Float, positionZ:Float,
-		targetX:Float, targetY:Float, targetZ:Float,
-		upX:Float, upY:Float, upZ:Float,
-		fovy:Float, projection:Int):Void;
+	extern public static function beginMode3D():Void;
 
 	@:native("rl_end_mode_3d")
 	extern public static function endMode3D():Void;

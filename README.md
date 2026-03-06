@@ -13,7 +13,7 @@
 Key goals:
 
 - Handle-based APIs for resources:
-  - Colors, fonts, and models are exposed as `rl_handle_t` IDs instead of raw raylib structs.
+  - Colors, fonts, models, textures, sprite3d, and camera3d are exposed as `rl_handle_t` IDs instead of raw raylib structs.
   - This keeps bindings simpler and safer by avoiding direct pointer/struct lifetime management in host languages.
 - Cached asset systems:
   - Loader and resource subsystems are designed for reuse/caching instead of one-shot loads.
@@ -25,6 +25,9 @@ Key goals:
 - LRU-backed loader behavior:
   - `rl_loader` uses LRU cache infrastructure to reduce repeated decode/fetch work.
   - This is especially useful for wasm/browser workflows where fetch/decode churn can be costly.
+- URL/path normalization helpers:
+  - File and URL normalization now share one path utility flow.
+  - URL normalization preserves scheme/authority/query/fragment and normalizes URL path segments.
 
 ## Repository Layout
 

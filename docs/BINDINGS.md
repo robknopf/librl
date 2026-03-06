@@ -22,13 +22,17 @@ Role:
 
 Used by:
 
-- `test/web/index.js`
+- `examples/web/index.js`
 
 Notes:
 
 - This is the primary browser-facing API layer.
 - It includes async-oriented wrappers for asset-backed calls like model/font creation.
 - Input state uses `getMouseState()` (x/y/wheel/buttons) and `getKeyboard()`.
+- IDBFS readiness helpers:
+  - `RL.isIdbfsReady()` returns true only after wasm-side restore from IndexedDB completes.
+  - `RL.waitForIdbfsReady(timeoutMs)` polls readiness and resolves to a boolean.
+  - During `RL.deinit()`, wasm marks readiness false immediately before triggering a best-effort async flush to IndexedDB.
 
 ## Nim Binding
 
@@ -44,7 +48,7 @@ Role:
 
 Used by:
 
-- `test/desktop/nim/src/main.nim`
+- `examples/desktop/nim/src/main.nim`
 
 Notes:
 
@@ -63,5 +67,5 @@ When public C headers change:
 1. Update `include/*.h`.
 2. Update binding layers (`bindings/js/*`, `bindings/nim/rl.nim`) that expose affected functions.
 3. Smoke test:
-   - web: `test/web/index.js`
-   - desktop Nim: `test/desktop/nim/src/main.nim`
+   - web: `examples/web/index.js`
+   - desktop Nim: `examples/desktop/nim/src/main.nim`

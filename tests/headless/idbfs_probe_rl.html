@@ -1,0 +1,114 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>idbfs-probe-rl</title></head>
+<body>
+<canvas id="renderCanvas" width="64" height="64"></canvas>
+<pre id="out">running...</pre>
+<script type="module">
+import { rl } from '/lib/librl.js';
+
+function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+
+function openDb(name) {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(name);
+    req.onerror = () => reject(req.error || new Error('open failed'));
+    req.onsuccess = () => resolve(req.result);
+  });
+}
+
+function getAllKeys(db, storeName) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readonly');
+    const store = tx.objectStore(storeName);
+    const req = store.getAllKeys();
+    req.onerror = () => reject(req.error || new Error('getAllKeys failed'));
+    req.onsuccess = () => resolve(req.result || []);
+  });
+}
+
+async function scanIndexedDbForPath(pathNeedle) {
+  const result = [];
+  if (!indexedDB.databases) {
+    return { supported: false, hit: false, databases: result };
+  }
+
+  const dbList = await indexedDB.databases();
+  let hit = false;
+
+  for (const dbInfo of dbList) {
+    if (!dbInfo || !dbInfo.name) continue;
+    const db = await openDb(dbInfo.name);
+    const dbResult = { name: dbInfo.name, stores: [] };
+    for (const storeName of db.objectStoreNames) {
+      let keys = [];
+      try {
+        keys = await getAllKeys(db, storeName);
+      } catch (_err) {
+        keys = [];
+      }
+      const keyStrings = keys.map((k) => {
+        try { return typeof k === 'string' ? k : JSON.stringify(k); }
+        catch (_e) { return String(k); }
+      });
+      if (keyStrings.some((k) => k.includes(pathNeedle))) {
+        hit = true;
+      }
+      dbResult.stores.push({ name: storeName, keys: keyStrings.slice(0, 20) });
+    }
+    db.close();
+    result.push(dbResult);
+  }
+
+  return { supported: true, hit, databases: result };
+}
+
+async function run() {
+  const out = document.getElementById('out');
+  const targetPath = 'examples/web/fonts/Komika/KOMIKAH_.ttf';
+  const targetUrl = 'http://127.0.0.1:4444/' + targetPath;
+
+  const final = {
+    step: 'start',
+    fontHandle: 0,
+    idbReadyAtInit: false,
+    idbScan: null,
+    errors: []
+  };
+
+  try {
+    await rl.init();
+    final.step = 'init-window';
+    rl.initWindow(64, 64, 'idbfs-probe');
+
+    final.step = 'wait-ready';
+    final.idbReadyAtInit = await rl.waitForIdbfsReady(5000);
+
+    final.step = 'create-font';
+    final.fontHandle = await rl.createFont(targetUrl, 16);
+    if (!final.fontHandle) {
+      throw new Error('createFont returned 0');
+    }
+
+    final.step = 'deinit-sync';
+    rl.destroyFont(final.fontHandle);
+    rl.deinit();
+    rl.closeWindow();
+
+    await sleep(1200);
+
+    final.step = 'scan-indexeddb';
+    final.idbScan = await scanIndexedDbForPath('KOMIKAH_.ttf');
+    final.step = 'done';
+  } catch (err) {
+    final.errors.push(String(err && err.message ? err.message : err));
+  }
+
+  out.textContent = JSON.stringify(final);
+  document.title = final.errors.length ? 'FAIL' : 'OK';
+}
+
+run();
+</script>
+</body>
+</html>

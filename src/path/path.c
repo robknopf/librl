@@ -52,27 +52,38 @@ size_t _path_length(const char *base, ...)
 // Paths are passed as variadic arguments, terminated by NULL
 char *_path_join_alloc(const char *base, ...)
 {
+    const char *next_path = NULL;
+    size_t buffer_size = 0;
+    size_t total_len = 0;
     if (!base)
         return NULL;
 
     va_list args;
     va_start(args, base);
-
-    // Calculate buffer size using PATH_LENGTH
-    size_t buffer_size = path_length(base, args);
+    buffer_size = strlen(base) + 1;
+    while ((next_path = va_arg(args, const char *)) != NULL)
+    {
+        buffer_size += strlen(next_path) + 1;
+    }
     va_end(args);
 
     char *buf = malloc(buffer_size);
+    if (!buf)
+    {
+        return NULL;
+    }
     strcpy(buf, base);
 
-    // Second pass: join all paths
-    va_start(args, base); // Start fresh for second pass
-    //const char *next_path;
-    //while ((next_path = va_arg(args, const char *)) != NULL)
-    //{
-    //    path_join(buf, next_path, buf, buffer_size);
-    //}
-    _path_join(buf, va_arg(args, const char *), buf, buffer_size);
+    // Second pass: join all path components in order.
+    va_start(args, base);
+    while ((next_path = va_arg(args, const char *)) != NULL)
+    {
+        total_len = cwk_path_join(buf, next_path, buf, buffer_size);
+        if (total_len >= buffer_size)
+        {
+            break;
+        }
+    }
     va_end(args);
 
     return buf;

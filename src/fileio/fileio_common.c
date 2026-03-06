@@ -247,7 +247,7 @@ bool fileio_exists_common(const char *filename)
     if (!fileio_mount_point_initialized)
     {
         fprintf(stderr, "Error: mount point not initialized.\n");
-        return -1;
+        return false;
     }
 
     // prepend the mount point to the filename

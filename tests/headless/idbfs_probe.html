@@ -1,0 +1,132 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>idbfs-probe</title></head>
+<body>
+<pre id="out">running...</pre>
+<script type="module">
+import ModuleFactory from '/lib/librl.js';
+
+function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+
+async function waitForReady(mod, timeoutMs) {
+  const start = performance.now();
+  while (performance.now() - start < timeoutMs) {
+    if (mod.fileio_idbfs_ready) return true;
+    await sleep(20);
+  }
+  return !!mod.fileio_idbfs_ready;
+}
+
+function openDb(name) {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(name);
+    req.onerror = () => reject(req.error || new Error('open failed'));
+    req.onsuccess = () => resolve(req.result);
+  });
+}
+
+function getAllKeys(db, storeName) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readonly');
+    const store = tx.objectStore(storeName);
+    const req = store.getAllKeys();
+    req.onerror = () => reject(req.error || new Error('getAllKeys failed'));
+    req.onsuccess = () => resolve(req.result || []);
+  });
+}
+
+async function scanIndexedDbForPath(pathNeedle) {
+  const result = [];
+  if (!indexedDB.databases) {
+    return { supported: false, hit: false, databases: result };
+  }
+
+  const dbList = await indexedDB.databases();
+  let hit = false;
+
+  for (const dbInfo of dbList) {
+    if (!dbInfo || !dbInfo.name) continue;
+    const db = await openDb(dbInfo.name);
+    const dbResult = { name: dbInfo.name, stores: [] };
+    for (const storeName of db.objectStoreNames) {
+      let keys = [];
+      try {
+        keys = await getAllKeys(db, storeName);
+      } catch (_err) {
+        keys = [];
+      }
+      const keyStrings = keys.map((k) => {
+        try { return typeof k === 'string' ? k : JSON.stringify(k); }
+        catch (_e) { return String(k); }
+      });
+      if (keyStrings.some((k) => k.includes(pathNeedle))) {
+        hit = true;
+      }
+      dbResult.stores.push({ name: storeName, keys: keyStrings.slice(0, 20) });
+    }
+    db.close();
+    result.push(dbResult);
+  }
+
+  return { supported: true, hit, databases: result };
+}
+
+async function run() {
+  const out = document.getElementById('out');
+  const probePath = '/cache/headless/probe.txt';
+  const probeValue = 'headless-idbfs-ok';
+  const final = {
+    step: 'start',
+    fileWriteOk: false,
+    flushOk: false,
+    restoreOk: false,
+    readBack: null,
+    idbScan: null,
+    errors: []
+  };
+
+  try {
+    const mod = await ModuleFactory({ noInitialRun: true, print: () => {}, printErr: () => {} });
+    mod.ccall('rl_init', null, [], []);
+
+    final.step = 'wait-ready';
+    const ready = await waitForReady(mod, 5000);
+    if (!ready) throw new Error('fileio_idbfs_ready timeout');
+
+    const FSRef = (typeof FS !== 'undefined') ? FS : mod.FS;
+    if (!FSRef) throw new Error('FS handle unavailable');
+
+    final.step = 'write';
+    try { FSRef.mkdir('/cache/headless'); } catch (_e) {}
+    FSRef.writeFile(probePath, probeValue);
+    final.fileWriteOk = true;
+
+    final.step = 'flush';
+    await new Promise((resolve, reject) => FSRef.syncfs(false, (err) => err ? reject(err) : resolve()));
+    final.flushOk = true;
+
+    final.step = 'scan-indexeddb';
+    final.idbScan = await scanIndexedDbForPath('probe.txt');
+
+    final.step = 'restore-check';
+    FSRef.unlink(probePath);
+    await new Promise((resolve, reject) => FSRef.syncfs(true, (err) => err ? reject(err) : resolve()));
+    const bytes = FSRef.readFile(probePath);
+    const decoder = new TextDecoder();
+    final.readBack = decoder.decode(bytes);
+    final.restoreOk = (final.readBack === probeValue);
+
+    mod.ccall('rl_deinit', null, [], []);
+    final.step = 'done';
+  } catch (err) {
+    final.errors.push(String(err && err.message ? err.message : err));
+  }
+
+  out.textContent = JSON.stringify(final);
+  document.title = final.errors.length ? 'FAIL' : 'OK';
+}
+
+run();
+</script>
+</body>
+</html>

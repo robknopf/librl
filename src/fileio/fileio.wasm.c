@@ -9,7 +9,7 @@
 //#include <errno.h>
 #include <sys/stat.h>
 
-static void sync_to_idbfs(void);
+static void sync_to_idbfs(bool populate_from_idbfs, bool set_ready_on_success);
 
 int fileio_init(const char *mount_point)
 {
@@ -35,17 +35,14 @@ int fileio_init(const char *mount_point)
     // Mount IDBFS at the specified path
     EM_ASM({
         Module.fileio_idbfs_ready = false;
-        //FS.mkdir(UTF8ToString($0));
-        FS.mount(IDBFS, {autoPersist:true}, UTF8ToString($0)); 
-        // syncronize to us initially so our FS matches what was persisted in the IDBFS
-        FS.syncfs(true, function(err) {
-            if (err) {
-                console.error("Error mounting IDBFS: " + err);
-                Module.fileio_idbfs_ready = false;
-            } else {
-                Module.fileio_idbfs_ready = true;
-            }
-        }); }, fileio_mount_point);
+        if (typeof Module.fileio_idbfs_syncing === "undefined") {
+            Module.fileio_idbfs_syncing = false;
+        }
+        FS.mount(IDBFS, { autoPersist: true }, UTF8ToString($0));
+    }, fileio_mount_point);
+
+    // Restore the in-memory FS view from persisted IDBFS state.
+    sync_to_idbfs(true, true);
 
     return 0;
 }
@@ -58,7 +55,8 @@ void fileio_deinit(void)
         Module.fileio_idbfs_ready = false;
     });
 
-    sync_to_idbfs();
+    // Best-effort flush of in-memory FS changes to IDBFS.
+    sync_to_idbfs(false, false);
     fileio_deinit_common();
 }
 
@@ -97,7 +95,7 @@ bool is_mount_point(const char *path)
 /**
  * Syncs the current state of the file system to persistent storage.
  */
-static void sync_to_idbfs(void)
+static void sync_to_idbfs(bool populate_from_idbfs, bool set_ready_on_success)
 {
     int started = EM_ASM_INT({
         if (Module.fileio_idbfs_syncing) return 0;
@@ -107,17 +105,24 @@ static void sync_to_idbfs(void)
 
     if (!started)
     {
-        return; // Skip if already syncing
+        return;
     }
 
     EM_ASM({
-        FS.syncfs(false, function(err) {
+        var populate = ($0 != 0);
+        var set_ready = ($1 != 0);
+        FS.syncfs(populate, function(err) {
             if (err) {
-                console.error("Error syncing to IDBFS: " + err);
+                console.error((populate ? "Error restoring from IDBFS: " : "Error syncing to IDBFS: ") + err);
+                if (set_ready) {
+                    Module.fileio_idbfs_ready = false;
+                }
+            } else if (set_ready) {
+                Module.fileio_idbfs_ready = true;
             }
             Module.fileio_idbfs_syncing = false;
         });
-    });
+    }, populate_from_idbfs ? 1 : 0, set_ready_on_success ? 1 : 0);
 }
 
 /**

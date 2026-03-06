@@ -104,6 +104,16 @@ Notes:
 - URL and file-path normalization flow is centralized through `path_normalize()`.
 - URL normalization preserves scheme/authority/query/fragment and normalizes only URL path segments.
 
+## Wasm File I/O Lifecycle (IDBFS)
+
+Notes:
+
+- On wasm, `fileio_init()` mounts IDBFS and starts an async restore (`FS.syncfs(true, ...)`) through a single internal sync path.
+- `Module.fileio_idbfs_ready` is `false` from init start until restore succeeds.
+- `Module.fileio_idbfs_ready` is set back to `false` at deinit start before a best-effort async flush (`FS.syncfs(false, ...)`).
+- A sync-overlap guard (`Module.fileio_idbfs_syncing`) prevents concurrent sync operations.
+- JS callers that need cache-first behavior should wait for readiness before first asset-backed load.
+
 ## Scratch Area (`include/rl_scratch.h`)
 
 Main responsibilities:

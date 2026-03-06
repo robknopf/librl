@@ -28,10 +28,7 @@
   - add per-asset version metadata so cached files can be upgraded/replaced safely
   - define a manifest format (Babylon-style) listing assets, versions, hashes, and URLs
   - on startup/load, compare manifest vs local cache and invalidate stale entries
-- IDBFS lifecycle hardening:
-  - keep a single sync path (`sync_to_idbfs`) and avoid duplicate inline `FS.syncfs` calls
-  - prevent overlapping sync calls and log sync failures clearly
-  - define init/deinit ready-state semantics (`fileio_idbfs_ready`) and document expected call timing
+- IDBFS lifecycle hardening: done (single sync path + overlap guard + documented ready-state timing)
 
 ## Parking Lot
 
@@ -44,9 +41,7 @@
 
 ### Build / Tooling
 
-- Add a `make test` target (or equivalent smoke targets) for:
-  - desktop build + basic run
-  - wasm build artifact check
+- Build/test smoke target: done (`make test` now runs desktop + wasm unit tests, plus desktop `uri_test` and wasm artifact checks)
 - Consider formatting/lint guidance for C, JS, and Nim.
 
 ### Product Roadmap

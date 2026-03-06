@@ -1,0 +1,169 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>idbfs-probe-fileio</title></head>
+<body>
+<pre id="out">running...</pre>
+<script type="module">
+import ProbeFactory from '/tests/headless/fileio_probe.js';
+
+function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+
+function deleteDb(name) {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.deleteDatabase(name);
+    req.onerror = () => reject(req.error || new Error('deleteDatabase failed'));
+    req.onblocked = () => reject(new Error('deleteDatabase blocked'));
+    req.onsuccess = () => resolve();
+  });
+}
+
+function openDb(name) {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(name);
+    req.onerror = () => reject(req.error || new Error('open failed'));
+    req.onsuccess = () => resolve(req.result);
+  });
+}
+
+function getAllKeys(db, storeName) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readonly');
+    const store = tx.objectStore(storeName);
+    const req = store.getAllKeys();
+    req.onerror = () => reject(req.error || new Error('getAllKeys failed'));
+    req.onsuccess = () => resolve(req.result || []);
+  });
+}
+
+async function scanIndexedDbForPath(pathNeedle) {
+  const result = [];
+  if (!indexedDB.databases) {
+    return { supported: false, hit: false, databases: result };
+  }
+
+  const dbList = await indexedDB.databases();
+  let hit = false;
+
+  for (const dbInfo of dbList) {
+    if (!dbInfo || !dbInfo.name) continue;
+    const db = await openDb(dbInfo.name);
+    const dbResult = { name: dbInfo.name, stores: [] };
+    for (const storeName of db.objectStoreNames) {
+      let keys = [];
+      try {
+        keys = await getAllKeys(db, storeName);
+      } catch (_err) {
+        keys = [];
+      }
+      const keyStrings = keys.map((k) => {
+        try { return typeof k === 'string' ? k : JSON.stringify(k); }
+        catch (_e) { return String(k); }
+      });
+      if (keyStrings.some((k) => k.includes(pathNeedle))) {
+        hit = true;
+      }
+      dbResult.stores.push({ name: storeName, keys: keyStrings.slice(0, 30) });
+    }
+    db.close();
+    result.push(dbResult);
+  }
+
+  return { supported: true, hit, databases: result };
+}
+
+async function run() {
+  const out = document.getElementById('out');
+  const probeRelPath = 'headless/probe.txt';
+  const probeText = 'headless-idbfs-ok';
+
+  const final = {
+    step: 'start',
+    precleanOk: false,
+    readyBeforeInit: false,
+    readyAfterInit: false,
+    initOk: false,
+    writeOk: false,
+    existsAfterWrite: false,
+    readyAfterDeinit: false,
+    secondInitOk: false,
+    existsAfterRestore: false,
+    idbScan: null,
+    errors: []
+  };
+
+  try {
+    final.step = 'preclean';
+    await deleteDb('/cache');
+    final.precleanOk = true;
+
+    const mod = await ProbeFactory({ noInitialRun: true, print: () => {}, printErr: () => {} });
+    final.readyBeforeInit = !!mod.fileio_idbfs_ready;
+    final.step = 'init';
+    const initRc = mod.ccall('probe_fileio_init', 'number', [], []);
+    if (initRc !== 0) {
+      throw new Error('probe_fileio_init failed: ' + initRc);
+    }
+    final.initOk = true;
+
+    final.step = 'wait-ready';
+    const start = performance.now();
+    while (!mod.fileio_idbfs_ready && (performance.now() - start) < 5000) {
+      await sleep(20);
+    }
+    if (!mod.fileio_idbfs_ready) {
+      throw new Error('fileio_idbfs_ready timeout');
+    }
+    final.readyAfterInit = true;
+
+    final.step = 'write';
+    const writeRc = mod.ccall('probe_fileio_write_text', 'number', ['string', 'string'], [probeRelPath, probeText]);
+    if (writeRc !== 0) {
+      throw new Error('probe_fileio_write_text failed: ' + writeRc);
+    }
+    final.writeOk = true;
+
+    final.step = 'exists';
+    final.existsAfterWrite = mod.ccall('probe_fileio_exists', 'number', ['string'], [probeRelPath]) !== 0;
+
+    final.step = 'deinit-sync';
+    mod.ccall('probe_fileio_deinit', null, [], []);
+    final.readyAfterDeinit = !mod.fileio_idbfs_ready;
+    await sleep(1200);
+
+    final.step = 'second-init';
+    const mod2 = await ProbeFactory({ noInitialRun: true, print: () => {}, printErr: () => {} });
+    const initRc2 = mod2.ccall('probe_fileio_init', 'number', [], []);
+    if (initRc2 !== 0) {
+      throw new Error('second probe_fileio_init failed: ' + initRc2);
+    }
+    final.secondInitOk = true;
+
+    const start2 = performance.now();
+    while (!mod2.fileio_idbfs_ready && (performance.now() - start2) < 5000) {
+      await sleep(20);
+    }
+    if (!mod2.fileio_idbfs_ready) {
+      throw new Error('second fileio_idbfs_ready timeout');
+    }
+
+    final.step = 'second-exists';
+    final.existsAfterRestore = mod2.ccall('probe_fileio_exists', 'number', ['string'], [probeRelPath]) !== 0;
+
+    mod2.ccall('probe_fileio_deinit', null, [], []);
+    await sleep(400);
+
+    final.step = 'scan-indexeddb';
+    final.idbScan = await scanIndexedDbForPath('headless/probe.txt');
+    final.step = 'done';
+  } catch (err) {
+    final.errors.push(String(err && err.message ? err.message : err));
+  }
+
+  out.textContent = JSON.stringify(final);
+  document.title = final.errors.length ? 'FAIL' : 'OK';
+}
+
+run();
+</script>
+</body>
+</html>

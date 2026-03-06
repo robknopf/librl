@@ -6,4 +6,4 @@ deps/
 tests/headless/fileio_probe.js
 tests/headless/fileio_probe.wasm
 
-examples/desktop/c/cache/
+examples/**/cache/

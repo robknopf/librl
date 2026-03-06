@@ -15,22 +15,15 @@ const char *rl_get_asset_host(void);
 void rl_init_window(int width, int height, const char *title);
 void rl_set_window_title(const char *title);
 void rl_set_window_size(int width, int height);
-int rl_get_screen_width();
-int rl_get_screen_height();
+vec2_t rl_get_screen_size(void);
 int rl_get_monitor_count();
 int rl_get_current_monitor();
 void rl_set_window_monitor(int monitor);
-void rl_get_monitor_position_to_scratch(int monitor);
-float rl_get_monitor_position_x(int monitor);
-float rl_get_monitor_position_y(int monitor);
-void rl_get_window_position_to_scratch();
-float rl_get_window_position_x();
-float rl_get_window_position_y();
-void rl_get_mouse_position_to_scratch();
-float rl_get_mouse_x();
-float rl_get_mouse_y();
-int rl_get_mouse_wheel_from_scratch();
-int rl_get_mouse_button_from_scratch(int button);
+vec2_t rl_get_monitor_position(int monitor);
+vec2_t rl_get_window_position(void);
+vec2_t rl_get_mouse_position(void);
+int rl_get_mouse_wheel();
+int rl_get_mouse_button(int button);
 void rl_set_window_position(int x, int y);
 void rl_close_window();
 void rl_begin_drawing();
@@ -66,10 +59,10 @@ void rl_set_light_ambient(float ambient);
 void rl_draw_cube(float position_x, float position_y, float position_z,
                   float width, float height, float length, rl_handle_t color);
 void rl_draw_rectangle(int x, int y, int width, int height, rl_handle_t color);
-void rl_update_scratch();
+void rl_update(void);
 double rl_get_time();
 int rl_measure_text(const char *text, int fontSize) ;
-void rl_measure_text_ex_to_scratch(rl_handle_t font, const char *text, float fontSize, float spacing);
+vec2_t rl_measure_text_ex(rl_handle_t font, const char *text, float fontSize, float spacing);
 
 
 

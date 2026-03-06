@@ -65,7 +65,6 @@ proc main() =
     if countdownTimer <= 0:
       break
 
-    rl_update_scratch()
     rl_begin_drawing()
     rl_clear_background(RL_RAYWHITE)
     rl_begin_mode_3d()
@@ -74,9 +73,10 @@ proc main() =
     rl_sprite3d_draw(sprite, 0.0, 0.0, 0.0, 1.0, RL_RAYWHITE)
     rl_end_mode_3d()
 
-    let w = rl_get_screen_width()
-    let h = rl_get_screen_height()
-    let textSize = rl_measure_text_ex_to_scratch(komika, message.cstring, fontSize.cfloat, 0)
+    let screen = rl_get_screen_size()
+    let w = cint(screen.x)
+    let h = cint(screen.y)
+    let textSize = rl_measure_text_ex(komika, message.cstring, fontSize.cfloat, 0)
     let textX = cint((w.float32 - textSize.x) / 2)
     let textY = cint((h.float32 - textSize.y) / 2)
     rl_draw_text_ex(komika, message.cstring, textX, textY, fontSize.cfloat, 1.0, RL_BLUE)

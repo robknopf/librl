@@ -5,7 +5,6 @@
 #include "rl_color.h"
 #include "rl_font.h"
 #include "rl_model.h"
-#include "rl_scratch.h"
 #include "rl_sprite3d.h"
 
 #include <stdbool.h>
@@ -66,7 +65,6 @@ int main(void)
         int text_x = 0;
         int text_y = 0;
 
-        rl_update_scratch();
         (void)rl_model_animate(gumshoe, dt);
 
         BeginDrawing();
@@ -77,8 +75,7 @@ int main(void)
         rl_sprite3d_draw(sprite, 0.0f, 0.0f, 0.0f, 1.0f, RL_COLOR_WHITE);
         rl_end_mode_3d();
 
-        rl_measure_text_ex_to_scratch(komika, message, font_size, 1.0f);
-        message_size = rl_scratch_get_vector2();
+        message_size = rl_measure_text_ex(komika, message, font_size, 1.0f);
         text_x = (int)((screen_w - message_size.x) * 0.5f);
         text_y = (int)((screen_h - message_size.y) * 0.5f);
 

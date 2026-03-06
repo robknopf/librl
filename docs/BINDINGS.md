@@ -19,10 +19,22 @@ Role:
 - Calls C exports via `ccall`.
 - Initializes and reads the scratch area bridge for vectors/input state.
 - Provides browser-oriented runtime setup helpers (`canvas`, output wiring, resize handling).
+- Exposes a single per-frame update entrypoint (`RL.update()`) that maps to `rl_update_to_scratch()` for wasm input snapshot refresh.
+
+Scratch design goals:
+
+- Use explicit bridge naming at the C/wasm boundary:
+  - `*_to_scratch`: C writes result data into shared scratch memory for JS to read.
+  - `*_from_scratch`: C reads host-provided data from scratch memory (used where needed).
+- Keep JS-facing APIs abstracted from scratch internals:
+  - JS wrappers expose normal methods (`getWindowPosition()`, `measureTextEx()`, etc.).
+  - Internally, wrappers may call a `*_to_scratch` bridge and then read via `rl_scratch.js`.
+- Reduce boundary overhead:
+  - For vec/struct-like return values, one wasm call + one scratch read is preferred over many scalar calls.
 
 Used by:
 
-- `examples/web/index.js`
+- `examples/wasm/index.js`
 
 Notes:
 
@@ -54,12 +66,12 @@ Notes:
 
 - This binding is direct/low-level and close to the C surface.
 - Keep declarations synchronized with header changes in `include/`.
-- It now includes a small `RLMouse` record helper via `rl_get_mouse_state()`.
+- It includes a small `RLMouse` helper record built from `rl_get_mouse_position()/rl_get_mouse_wheel()/rl_get_mouse_button()`.
 
 ## Status and Scope
 
 - Active: JavaScript, Nim
-- Not treated as a primary binding surface: generated/auxiliary JS artifacts used for Haxe interop in this repo
+- Not treated as a primary binding surface: generated/auxiliary artifacts
 
 ## Sync Guidance (Mostly for myself)
 When public C headers change:
@@ -67,5 +79,5 @@ When public C headers change:
 1. Update `include/*.h`.
 2. Update binding layers (`bindings/js/*`, `bindings/nim/rl.nim`) that expose affected functions.
 3. Smoke test:
-   - web: `examples/web/index.js`
+   - web: `examples/wasm/index.js`
    - desktop Nim: `examples/desktop/nim/src/main.nim`

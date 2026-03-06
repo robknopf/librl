@@ -31,7 +31,8 @@ Main responsibilities:
 
 Header note:
 
-- `rl.h` is the primary/core header and defines shared base types (`rl_handle_t`, math/data structs) plus core runtime/window/draw APIs.
+- `rl.h` is the primary/core header for runtime/window/draw APIs.
+- Shared base types (`rl_handle_t`, math/data structs) live in `rl_types.h`.
 - For many integrations, including only `rl.h` is enough.
 - If you need subsystem-specific APIs (model/font/color/loader/scratch), include their corresponding headers explicitly.
 
@@ -124,6 +125,21 @@ Main responsibilities:
 - Direct pointer access (`rl_scratch_get`)
 - Layout metadata (`rl_scratch_get_offsets`) for JS/wasm interop
 - Set/get helpers and update/clear functions
+
+Wasm/JS boundary conventions:
+
+- Scratch bridge entrypoints follow explicit naming:
+  - `*_to_scratch`: write computed data into scratch (for JS to read through `rl_scratch.js`).
+  - `*_from_scratch`: read host-provided scratch data (where applicable).
+- JS bindings keep scratch abstracted:
+  - `bindings/js/rl.js` exposes high-level methods.
+  - Scratch-backed methods are grouped and implemented through bridge calls + `rl_scratch.js` reads.
+- `rl_update()` exists for cross-platform API parity and is currently a no-op.
+- Wasm scratch refresh is explicit via `rl_update_to_scratch()`.
+- Most vec-return helpers used by JS follow this bridge pattern:
+  - C computes native value return (`vec2_t`, etc.)
+  - wasm bridge writes to scratch (`*_to_scratch`)
+  - JS wrapper reads from `rl_scratch.js`
 
 ---
 

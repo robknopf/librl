@@ -8,7 +8,7 @@
 
 ## Purpose
 
-`librl` was created to be a wrapper for RayLib to help accelerate my prototype development efforts.  It is a binding-oriented runtime layer that provides stable handles, cross-platform asset loading, and shared-state plumbing for non-C hosts (currently JS/Nim/Haxe).  Note that it is not complete and very much a work in progress.
+`librl` was created to be a wrapper for RayLib to help accelerate my prototype development efforts.  It is a binding-oriented runtime layer that provides stable handles, cross-platform asset loading, and shared-state plumbing for non-C hosts (currently JS/Nim).  Note that it is not complete and very much a work in progress.
 
 Key goals:
 
@@ -34,7 +34,7 @@ Key goals:
 - `src/` implementation
 - `include/` public headers
 - `bindings/` JS/Nim binding helpers
-- `test/` desktop and web test harnesses
+- `tests/` desktop and web test harnesses
 
 ## Prerequisites
 

@@ -48,7 +48,7 @@ LDFLAGS_WASM = \
 	-s EXPORTED_FUNCTIONS='[ \
 	"_rl_init", \
 	"_rl_deinit", \
-	"_rl_update_scratch", \
+	"_rl_update_to_scratch", \
 	"_rl_get_time", \
 	"_rl_init_window", \
 	"_rl_set_window_title", \
@@ -57,17 +57,11 @@ LDFLAGS_WASM = \
 	"_rl_scratch_get", \
 	"_rl_scratch_update", \
 	"_rl_scratch_get_offsets", \
+	"_rl_get_monitor_position_to_scratch", \
 	"_rl_set_window_position", \
 	"_rl_get_window_position_to_scratch", \
-	"_rl_get_window_position_x", \
-	"_rl_get_window_position_y", \
 	"_rl_get_mouse_position_to_scratch", \
-	"_rl_get_mouse_x", \
-	"_rl_get_mouse_y", \
-	"_rl_get_mouse_wheel_from_scratch", \
-	"_rl_get_mouse_button_from_scratch", \
-	"_rl_get_screen_width", \
-	"_rl_get_screen_height", \
+	"_rl_get_screen_size_to_scratch", \
 	"_rl_set_target_fps", \
 	"_rl_begin_drawing", \
 	"_rl_end_drawing", \

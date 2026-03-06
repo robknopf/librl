@@ -84,14 +84,15 @@ void rl_set_window_size(int width, int height) {
     SetWindowSize(width, height);
 }
 
-RL_KEEP
-int rl_get_screen_width() {
-    return GetScreenWidth();
+vec2_t rl_get_screen_size() {
+    return (vec2_t){(float)GetScreenWidth(), (float)GetScreenHeight()};
 }
 
+// Internal wasm/js bridge: keep one boundary crossing for Vector2 return values.
 RL_KEEP
-int rl_get_screen_height() {
-    return GetScreenHeight();
+void rl_get_screen_size_to_scratch() {
+    vec2_t size = rl_get_screen_size();
+    rl_scratch_set_vector2(size.x, size.y);
 }
 
 RL_KEEP
@@ -121,89 +122,68 @@ void rl_set_window_monitor(int monitor) {
 #endif
 }
 
+vec2_t rl_get_monitor_position(int monitor) {
+#if defined(PLATFORM_DESKTOP)
+    const Vector2 pos = GetMonitorPosition(monitor);
+    return (vec2_t){pos.x, pos.y};
+#else
+    (void)monitor;
+    return (vec2_t){0.0f, 0.0f};
+#endif
+}
+
+// Internal wasm/js bridge: keep one boundary crossing for Vector2 return values.
 RL_KEEP
 void rl_get_monitor_position_to_scratch(int monitor) {
-#if defined(PLATFORM_DESKTOP)
-    const Vector2 pos = GetMonitorPosition(monitor);
+    vec2_t pos = rl_get_monitor_position(monitor);
     rl_scratch_set_vector2(pos.x, pos.y);
-#else
-    (void)monitor;
-    rl_scratch_set_vector2(0.0f, 0.0f);
-#endif
 }
 
-RL_KEEP
-float rl_get_monitor_position_x(int monitor) {
-#if defined(PLATFORM_DESKTOP)
-    const Vector2 pos = GetMonitorPosition(monitor);
-    return pos.x;
-#else
-    (void)monitor;
-    return 0.0f;
-#endif
+vec2_t rl_get_window_position() {
+    const Vector2 pos = GetWindowPosition();
+    return (vec2_t){pos.x, pos.y};
 }
 
-RL_KEEP
-float rl_get_monitor_position_y(int monitor) {
-#if defined(PLATFORM_DESKTOP)
-    const Vector2 pos = GetMonitorPosition(monitor);
-    return pos.y;
-#else
-    (void)monitor;
-    return 0.0f;
-#endif
-}
-
+// Internal wasm/js bridge: keep one boundary crossing for Vector2 return values.
 RL_KEEP
 void rl_get_window_position_to_scratch() {
-    const Vector2 pos = GetWindowPosition();
+    vec2_t pos = rl_get_window_position();
     rl_scratch_set_vector2(pos.x, pos.y);
-    //return pos;
 }
 
-RL_KEEP
-float rl_get_window_position_x() {
-    const Vector2 pos = GetWindowPosition();
-    return pos.x;
+vec2_t rl_get_mouse_position() {
+    const Vector2 pos = GetMousePosition();
+    return (vec2_t){pos.x, pos.y};
 }
 
-RL_KEEP
-float rl_get_window_position_y() {
-    const Vector2 pos = GetWindowPosition();
-    return pos.y;
-}
-
+// Internal wasm/js bridge: keep one boundary crossing for Vector2 return values.
 RL_KEEP
 void rl_get_mouse_position_to_scratch() {
-    const Vector2 pos = GetMousePosition();
+    vec2_t pos = rl_get_mouse_position();
     rl_scratch_set_vector2(pos.x, pos.y);
 }
 
+
 RL_KEEP
-float rl_get_mouse_x() {
-    const Vector2 pos = GetMousePosition();
-    return pos.x;
+int rl_get_mouse_wheel() {
+    return (int)GetMouseWheelMove();
 }
 
 RL_KEEP
-float rl_get_mouse_y() {
-    const Vector2 pos = GetMousePosition();
-    return pos.y;
-}
-
-RL_KEEP
-int rl_get_mouse_wheel_from_scratch() {
-    rl_mouse_t mouse = rl_scratch_get_mouse();
-    return mouse.wheel;
-}
-
-RL_KEEP
-int rl_get_mouse_button_from_scratch(int button) {
-    rl_mouse_t mouse = rl_scratch_get_mouse();
+int rl_get_mouse_button(int button) {
     if (button < 0 || button >= RL_SCRATCH_MAX_NUM_MOUSE_BUTTONS) {
         return 0;
     }
-    return mouse.buttons[button];
+    if (IsMouseButtonPressed(button)) {
+        return 1;
+    }
+    if (IsMouseButtonDown(button)) {
+        return 2;
+    }
+    if (IsMouseButtonReleased(button)) {
+        return 3;
+    }
+    return 0;
 }
 
 RL_KEEP
@@ -294,23 +274,31 @@ void rl_end_mode_2d() {
 }
 
 RL_KEEP
-void rl_update_scratch() {
+void rl_update_to_scratch() {
     rl_scratch_update();
+}
+
+void rl_update(void) {
+    // Intentionally a no-op for API parity on non-wasm hosts.
 }
 
 RL_KEEP
 double rl_get_time() {
     return GetTime();
 }
- 
+
+RL_KEEP
 int rl_measure_text(const char *text, int fontSize) {
     return MeasureText(text, fontSize);
 }
 
-void rl_measure_text_ex_to_scratch(rl_handle_t font, const char *text, float fontSize, float spacing) {
-    //fprintf(stderr, "MeasureTextEx: %d, %s, %f, %f\n", font, text, fontSize, spacing);
+vec2_t rl_measure_text_ex(rl_handle_t font, const char *text, float fontSize, float spacing) {
     Vector2 result = MeasureTextEx(rl_font_get(font), text, fontSize, spacing);
-    //fprintf(stderr, "MeasureTextEx: (%f, %f)\n", result.x, result.y);
+    return (vec2_t){result.x, result.y};
+}
+
+RL_KEEP
+void rl_measure_text_ex_to_scratch(rl_handle_t font, const char *text, float fontSize, float spacing) {
+    vec2_t result = rl_measure_text_ex(font, text, fontSize, spacing);
     rl_scratch_set_vector2(result.x, result.y);
-    return;
 }

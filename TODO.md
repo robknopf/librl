@@ -19,8 +19,9 @@
   - add one-call submit path for per-frame draw state/commands
   - start with clear + camera + model/text/rect primitives
 - API/docs sync after recent camera/input refactor:
-  - add minimal JS + Nim examples for `rl_camera3d_*` and `rl_begin_mode_3d()` active-camera semantics
-  - document mouse state parity (`rl_get_mouse_state`) plus per-field getters
+  - status: mostly done
+  - keep examples current when scratch bridge functions are renamed/removed
+  - add a short "wasm-only bridge API" table in docs (`*_to_scratch` functions + JS wrapper names)
 - URI/path follow-up:
   - add URL normalization examples to docs
   - decide whether cache keys should canonicalize host casing
@@ -65,7 +66,7 @@
 
 ### Follow-up Cleanup
 
-- Review all headers for stale declarations after recent refactors.
+- Review all headers for stale declarations after recent refactors: ongoing
 - Expand `docs/API.md` to function-by-function docs:
   - call order expectations
   - return/error semantics

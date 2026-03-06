@@ -1,4 +1,4 @@
-import { rl } from "/out/librl.js";
+import { rl } from "/lib/librl.js";
 
 (async function () {
   try {

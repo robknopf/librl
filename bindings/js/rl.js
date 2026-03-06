@@ -80,7 +80,7 @@ const RL = {
       
     },
     update: () => {
-        moduleInstance.ccall('rl_update_scratch', null, [], []);
+        moduleInstance.ccall('rl_update_to_scratch', null, [], []);
     },
     getTime: () => {
         return moduleInstance.ccall('rl_get_time', 'number', [], []);
@@ -130,19 +130,8 @@ const RL = {
     setWindowSize: (width, height) => {
         return moduleInstance.ccall('rl_set_window_size', null, ['number', 'number'], [width, height]);
     },
-    getScreenWidth: () => {
-        return moduleInstance.ccall('rl_get_screen_width', 'number', [], []);
-    },
-    getScreenHeight: () => {
-        return moduleInstance.ccall('rl_get_screen_height', 'number', [], []);
-    },
     setWindowPosition: (x, y) => {
         return moduleInstance.ccall('rl_set_window_position', null, ['number', 'number'], [x, y]);
-    },
-    getWindowPosition: () => {
-        moduleInstance.ccall('rl_get_window_position_to_scratch', 'number', [], []);
-        // get the vector2 result from the scratch area
-        return moduleInstance.getVector2();
     },
     beginDrawing: () => {
         return moduleInstance.ccall('rl_begin_drawing', null, [], []);
@@ -221,14 +210,6 @@ const RL = {
             [positionX, positionY, positionZ, width, height, length, color]
         );
     },
-    getMouseState: () => {
-        // get the mouse position from the scratch area, it should be updated by the library every frame
-        return moduleInstance.getMouseState();
-    },
-    getKeyboard: () => {
-        // get the mouse position from the scratch area, it should be updated by the library every frame
-        return moduleInstance.getKeyboard();
-    },
     drawFPS: (x, y) => {
         return moduleInstance.ccall('rl_draw_fps', null, ['number', 'number'], [x, y]);
     },
@@ -244,10 +225,46 @@ const RL = {
     measureText: (text, fontSize) => {
         return moduleInstance.ccall('rl_measure_text', 'number', ['string', 'number'], [text, fontSize]);
     },
+
+    // Begin Scratch-backed wrappers
+    // The following are wrappers that use the global scratch area to reduce js->wasm/wasm->js boundry calls
+    // They either read scratch directly or via a *_to_scratch bridge.
+    // We provide a uniform calling so js isn't aware of the intermediate scratch area use, 
+    // while desktop gets the return structure directly
+    getMouseState: () => {
+        return moduleInstance.getMouseState();
+    },
+    getKeyboard: () => {
+        return moduleInstance.getKeyboard();
+    },
+    getScreenSize: () => {
+        moduleInstance.ccall('rl_get_screen_size_to_scratch', null, [], []);
+        return moduleInstance.getVector2();
+    },
+    getScreenWidth: () => {
+        return RL.getScreenSize().x;
+    },
+    getScreenHeight: () => {
+        return RL.getScreenSize().y;
+    },
+    getWindowPosition: () => {
+        moduleInstance.ccall('rl_get_window_position_to_scratch', null, [], []);
+        return moduleInstance.getVector2();
+    },
+    getMonitorPosition: (monitor = 0) => {
+        moduleInstance.ccall('rl_get_monitor_position_to_scratch', null, ['number'], [monitor]);
+        return moduleInstance.getVector2();
+    },
+    getMousePosition: () => {
+        moduleInstance.ccall('rl_get_mouse_position_to_scratch', null, [], []);
+        return moduleInstance.getVector2();
+    },
     measureTextEx: (font, text, fontSize, spacing = 1) => {
         moduleInstance.ccall('rl_measure_text_ex_to_scratch', 'number', ['number', 'string', 'number', 'number'], [font, text, fontSize, spacing]);
         return moduleInstance.getVector2();
     },
+    // End Scratch-backed wrappers
+
     //color: {
         // Predefined Colors
         DEFAULT: 0,

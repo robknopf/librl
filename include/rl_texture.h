@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-#include "rl.h"
+#include "rl_types.h"
 
 rl_handle_t rl_texture_create(const char *filename);
 void rl_texture_destroy(rl_handle_t handle);

@@ -1,6 +1,7 @@
 #include "test_rl_loader.h"
 
 #include "rl_loader.h"
+#include "internal/rl_subsystems.h"
 #include "fetch_url_stub.h"
 #include "raylib_loader_stub.h"
 #include "test_common.h"

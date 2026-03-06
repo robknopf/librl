@@ -23,7 +23,7 @@ proc rl_init*() {.importc, cdecl, header: "rl.h".}
 proc rl_deinit*() {.importc, cdecl, header: "rl.h".}
 proc rl_set_asset_host*(assetHost: cstring): cint {.importc, cdecl, header: "rl.h".}
 proc rl_get_asset_host*(): cstring {.importc, cdecl, header: "rl.h".}
-proc rl_update*() {.importc, cdecl, header: "rl.h".}
+proc rl_update_scratch*() {.importc, cdecl, header: "rl.h".}
 proc rl_get_time*(): cdouble {.importc, cdecl, header: "rl.h".}
 proc rl_init_window*(width: cint, height: cint, title: cstring) {.importc, cdecl, header: "rl.h".}
 proc rl_get_monitor_count*(): cint {.importc, cdecl, header: "rl.h".}
@@ -31,24 +31,24 @@ proc rl_get_current_monitor*(): cint {.importc, cdecl, header: "rl.h".}
 proc rl_set_window_monitor*(monitor: cint) {.importc, cdecl, header: "rl.h".}
 proc rl_get_screen_width*(): cint {.importc, cdecl, header: "rl.h".}
 proc rl_get_screen_height*(): cint {.importc, cdecl, header: "rl.h".}
-proc rl_get_monitor_position*(monitor: cint) {.importc, cdecl, header: "rl.h".}
+proc rl_get_monitor_position_to_scratch*(monitor: cint) {.importc, cdecl, header: "rl.h".}
 proc rl_get_monitor_position_x*(monitor: cint): cfloat {.importc, cdecl, header: "rl.h".}
 proc rl_get_monitor_position_y*(monitor: cint): cfloat {.importc, cdecl, header: "rl.h".}
-proc rl_get_mouse*() {.importc, cdecl, header: "rl.h".}
+proc rl_get_mouse_position_to_scratch*() {.importc, cdecl, header: "rl.h".}
 proc rl_get_mouse_x_raw*(): cfloat {.importc: "rl_get_mouse_x", cdecl, header: "rl.h".}
 proc rl_get_mouse_y_raw*(): cfloat {.importc: "rl_get_mouse_y", cdecl, header: "rl.h".}
-proc rl_get_mouse_wheel*(): cint {.importc, cdecl, header: "rl.h".}
-proc rl_get_mouse_button*(button: cint): cint {.importc, cdecl, header: "rl.h".}
+proc rl_get_mouse_wheel_from_scratch*(): cint {.importc, cdecl, header: "rl.h".}
+proc rl_get_mouse_button_from_scratch*(button: cint): cint {.importc, cdecl, header: "rl.h".}
 proc rl_get_mouse_x*(): cint = cint(rl_get_mouse_x_raw())
 proc rl_get_mouse_y*(): cint = cint(rl_get_mouse_y_raw())
 proc rl_get_mouse_state*(): RLMouse =
   RLMouse(
     x: rl_get_mouse_x(),
     y: rl_get_mouse_y(),
-    wheel: rl_get_mouse_wheel(),
-    left: rl_get_mouse_button(0),
-    right: rl_get_mouse_button(1),
-    middle: rl_get_mouse_button(2)
+    wheel: rl_get_mouse_wheel_from_scratch(),
+    left: rl_get_mouse_button_from_scratch(0),
+    right: rl_get_mouse_button_from_scratch(1),
+    middle: rl_get_mouse_button_from_scratch(2)
   )
 proc rl_close_window*() {.importc, cdecl, header: "rl.h".}
 proc rl_begin_drawing*() {.importc, cdecl, header: "rl.h".}
@@ -86,11 +86,11 @@ proc rl_clear_background*(color: RLHandle) {.importc, cdecl, header: "rl.h".}
 proc rl_set_target_fps*(fps: cint) {.importc, cdecl, header: "rl.h".}
 proc rl_draw_text*(text: cstring, x: cint, y: cint, fontSize: cint, color: RLHandle) {.importc, cdecl, header: "rl.h".}
 proc rl_draw_text_ex*(font: RLHandle, text: cstring, x: cint, y: cint, fontSize: cfloat, spacing: cfloat, color: RLHandle) {.importc, cdecl, header: "rl.h".}
-proc rl_measure_text_ex_raw*(font: RLHandle, text: cstring, fontSize: cfloat, spacing: cfloat) {.importc: "rl_measure_text_ex", cdecl, header: "rl.h".}
-proc rl_scratch_area_get_vector2*(): Vec2 {.importc, cdecl, header: "rl_scratch.h".}
-proc rl_measure_text_ex*(font: RLHandle, text: cstring, fontSize: cfloat, spacing: cfloat): Vec2 =
+proc rl_measure_text_ex_raw*(font: RLHandle, text: cstring, fontSize: cfloat, spacing: cfloat) {.importc: "rl_measure_text_ex_to_scratch", cdecl, header: "rl.h".}
+proc rl_scratch_get_vector2*(): Vec2 {.importc, cdecl, header: "rl_scratch.h".}
+proc rl_measure_text_ex_to_scratch*(font: RLHandle, text: cstring, fontSize: cfloat, spacing: cfloat): Vec2 =
   rl_measure_text_ex_raw(font, text, fontSize, spacing)
-  rl_scratch_area_get_vector2()
+  rl_scratch_get_vector2()
 proc rl_draw_fps_ex*(font: RLHandle, x: cint, y: cint, fontSize: cint, color: RLHandle) {.importc, cdecl, header: "rl.h".}
 proc rl_color_create*(r: cint, g: cint, b: cint, a: cint): RLHandle {.importc, cdecl, header: "rl_color.h".}
 proc rl_color_destroy*(color: RLHandle) {.importc, cdecl, header: "rl_color.h".}

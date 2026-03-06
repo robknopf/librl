@@ -80,7 +80,7 @@ const RL = {
       
     },
     update: () => {
-        moduleInstance.ccall('rl_update', null, [], []);
+        moduleInstance.ccall('rl_update_scratch', null, [], []);
     },
     getTime: () => {
         return moduleInstance.ccall('rl_get_time', 'number', [], []);
@@ -137,10 +137,10 @@ const RL = {
         return moduleInstance.ccall('rl_get_screen_height', 'number', [], []);
     },
     setWindowPosition: (x, y) => {
-        return moduleInstance.ccall('rl_get_window_position', null, ['number', 'number'], [x, y]);
+        return moduleInstance.ccall('rl_set_window_position', null, ['number', 'number'], [x, y]);
     },
     getWindowPosition: () => {
-        moduleInstance.ccall('rl_get_window_position', 'number', [], []);
+        moduleInstance.ccall('rl_get_window_position_to_scratch', 'number', [], []);
         // get the vector2 result from the scratch area
         return moduleInstance.getVector2();
     },
@@ -245,7 +245,7 @@ const RL = {
         return moduleInstance.ccall('rl_measure_text', 'number', ['string', 'number'], [text, fontSize]);
     },
     measureTextEx: (font, text, fontSize, spacing = 1) => {
-        moduleInstance.ccall('rl_measure_text_ex', 'number', ['number', 'string', 'number', 'number'], [font, text, fontSize, spacing]);
+        moduleInstance.ccall('rl_measure_text_ex_to_scratch', 'number', ['number', 'string', 'number', 'number'], [font, text, fontSize, spacing]);
         return moduleInstance.getVector2();
     },
     //color: {

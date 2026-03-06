@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-#include "rl.h"
+#include "rl_types.h"
 
 extern const rl_handle_t RL_FONT_DEFAULT;
 

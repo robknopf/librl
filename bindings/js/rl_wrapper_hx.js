@@ -236,7 +236,7 @@ Object.assign(IntIterator.prototype, {
 Math.__name__ = "Math";
 class RL {
 	static measureTextEx(font,text,fontSize,spacing) {
-		RL.rl_measure_text_ex(font,text,fontSize,spacing);
+		RL.rl_measure_text_ex_to_scratch(font,text,fontSize,spacing);
 		return RL.getVector2();
 	}
 }

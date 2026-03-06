@@ -6,7 +6,7 @@ extern "C" {
 #endif
 
 //#include <raylib.h>
-#include "rl.h"
+#include "rl_types.h"
 
 
 extern const rl_handle_t RL_COLOR_DEFAULT;

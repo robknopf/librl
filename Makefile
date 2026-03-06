@@ -32,7 +32,7 @@ CFLAGS_WASM = \
 	-DPLATFORM_WEB
 
 LDFLAGS_WASM = \
-	--post-js bindings/js/rl_scratch_area.js \
+	--post-js bindings/js/rl_scratch.js \
 	--extern-post-js bindings/js/rl.js \
 	--extern-post-js bindings/js/rl_module_export.js \
 	-s WASM=1 \
@@ -48,24 +48,24 @@ LDFLAGS_WASM = \
 	-s EXPORTED_FUNCTIONS='[ \
 	"_rl_init", \
 	"_rl_deinit", \
-	"_rl_update", \
+	"_rl_update_scratch", \
 	"_rl_get_time", \
 	"_rl_init_window", \
 	"_rl_set_window_title", \
 	"_rl_set_window_size", \
 	"_rl_close_window", \
-	"_rl_scratch_area_get", \
-	"_rl_scratch_area_update", \
-	"_rl_scratch_area_get_offsets", \
+	"_rl_scratch_get", \
+	"_rl_scratch_update", \
+	"_rl_scratch_get_offsets", \
 	"_rl_set_window_position", \
-	"_rl_get_window_position", \
+	"_rl_get_window_position_to_scratch", \
 	"_rl_get_window_position_x", \
 	"_rl_get_window_position_y", \
-	"_rl_get_mouse", \
+	"_rl_get_mouse_position_to_scratch", \
 	"_rl_get_mouse_x", \
 	"_rl_get_mouse_y", \
-	"_rl_get_mouse_wheel", \
-	"_rl_get_mouse_button", \
+	"_rl_get_mouse_wheel_from_scratch", \
+	"_rl_get_mouse_button_from_scratch", \
 	"_rl_get_screen_width", \
 	"_rl_get_screen_height", \
 	"_rl_set_target_fps", \
@@ -117,7 +117,7 @@ LDFLAGS_WASM = \
 	"_rl_sprite3d_draw", \
 	"_rl_sprite3d_destroy", \
 		"_rl_measure_text", \
-		"_rl_measure_text_ex", \
+		"_rl_measure_text_ex_to_scratch", \
 		"_rl_set_asset_host" \
 	]'
 

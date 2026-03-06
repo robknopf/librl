@@ -2,79 +2,11 @@
 #define RL_H
 
 #include <stdbool.h>
+#include "rl_types.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-typedef unsigned int rl_handle_t;
-
-typedef struct
-{
-    float x;
-    float y;
-} vec2_t;
-
-typedef struct
-{
-    float x;
-    float y;
-    float z;
-} vec3_t;
-
-typedef struct
-{
-    float x;
-    float y;
-    float z;
-    float w;
-} vec4_t;
-
-typedef struct
-{
-    float m0;
-    float m4;
-    float m8;
-    float m12;
-    float m1;
-    float m5;
-    float m9;
-    float m13;
-    float m2;
-    float m6;
-    float m10;
-    float m14;
-    float m3;
-    float m7;
-    float m11;
-    float m15;
-} matrix_t;
-
-typedef struct
-{
-    float x;
-    float y;
-    float z;
-    float w;
-} quat_t;
-
-typedef struct
-{
-    float r;
-    float g;
-    float b;
-    float a;
-} color_t;
-
-typedef struct
-{
-    float x;
-    float y;
-    float width;
-    float height;
-} rect_t;
-
-
 
 void rl_init();
 void rl_deinit();
@@ -88,17 +20,17 @@ int rl_get_screen_height();
 int rl_get_monitor_count();
 int rl_get_current_monitor();
 void rl_set_window_monitor(int monitor);
-void rl_get_monitor_position(int monitor);
+void rl_get_monitor_position_to_scratch(int monitor);
 float rl_get_monitor_position_x(int monitor);
 float rl_get_monitor_position_y(int monitor);
-void rl_get_window_position();
+void rl_get_window_position_to_scratch();
 float rl_get_window_position_x();
 float rl_get_window_position_y();
-void rl_get_mouse();
+void rl_get_mouse_position_to_scratch();
 float rl_get_mouse_x();
 float rl_get_mouse_y();
-int rl_get_mouse_wheel();
-int rl_get_mouse_button(int button);
+int rl_get_mouse_wheel_from_scratch();
+int rl_get_mouse_button_from_scratch(int button);
 void rl_set_window_position(int x, int y);
 void rl_close_window();
 void rl_begin_drawing();
@@ -134,10 +66,10 @@ void rl_set_light_ambient(float ambient);
 void rl_draw_cube(float position_x, float position_y, float position_z,
                   float width, float height, float length, rl_handle_t color);
 void rl_draw_rectangle(int x, int y, int width, int height, rl_handle_t color);
-void rl_update();
+void rl_update_scratch();
 double rl_get_time();
 int rl_measure_text(const char *text, int fontSize) ;
-void rl_measure_text_ex(rl_handle_t font, const char *text, float fontSize, float spacing);
+void rl_measure_text_ex_to_scratch(rl_handle_t font, const char *text, float fontSize, float spacing);
 
 
 

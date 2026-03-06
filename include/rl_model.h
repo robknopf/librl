@@ -6,7 +6,7 @@ extern "C" {
 #endif
 
 #include <stdbool.h>
-#include "rl.h"
+#include "rl_types.h"
 
 rl_handle_t rl_model_create(const char *filename) ;
 void rl_model_draw(rl_handle_t handle, float position_x, float position_y, float position_z, float scale, rl_handle_t tint);

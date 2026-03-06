@@ -1,0 +1,79 @@
+#ifndef RL_TYPES_H
+#define RL_TYPES_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef unsigned int rl_handle_t;
+
+typedef struct
+{
+    float x;
+    float y;
+} vec2_t;
+
+typedef struct
+{
+    float x;
+    float y;
+    float z;
+} vec3_t;
+
+typedef struct
+{
+    float x;
+    float y;
+    float z;
+    float w;
+} vec4_t;
+
+typedef struct
+{
+    float m0;
+    float m4;
+    float m8;
+    float m12;
+    float m1;
+    float m5;
+    float m9;
+    float m13;
+    float m2;
+    float m6;
+    float m10;
+    float m14;
+    float m3;
+    float m7;
+    float m11;
+    float m15;
+} matrix_t;
+
+typedef struct
+{
+    float x;
+    float y;
+    float z;
+    float w;
+} quat_t;
+
+typedef struct
+{
+    float r;
+    float g;
+    float b;
+    float a;
+} color_t;
+
+typedef struct
+{
+    float x;
+    float y;
+    float width;
+    float height;
+} rect_t;
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif // RL_TYPES_H

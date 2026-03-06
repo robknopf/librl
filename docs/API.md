@@ -121,8 +121,8 @@ Main responsibilities:
 - Shared memory struct for high-frequency data exchange with host runtimes:
   - vectors, matrices, quaternions, colors, rectangles
   - mouse/keyboard/gamepad/touch state
-- Direct pointer access (`rl_scratch_area_get`)
-- Layout metadata (`rl_scratch_area_get_offsets`) for JS/wasm interop
+- Direct pointer access (`rl_scratch_get`)
+- Layout metadata (`rl_scratch_get_offsets`) for JS/wasm interop
 - Set/get helpers and update/clear functions
 
 ---

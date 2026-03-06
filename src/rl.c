@@ -17,7 +17,7 @@ void rl_init() {
         return;
     }    
     rl_loader_init("cache");
-    rl_scratch_area_init();
+    rl_scratch_init();
     rl_color_init();
     rl_font_init();
     rl_model_init();
@@ -39,7 +39,7 @@ void rl_deinit() {
     rl_model_deinit();
     rl_font_deinit();
     rl_color_deinit();
-    rl_scratch_area_deinit();
+    rl_scratch_deinit();
     rl_loader_deinit();
 }
 
@@ -122,13 +122,13 @@ void rl_set_window_monitor(int monitor) {
 }
 
 RL_KEEP
-void rl_get_monitor_position(int monitor) {
+void rl_get_monitor_position_to_scratch(int monitor) {
 #if defined(PLATFORM_DESKTOP)
     const Vector2 pos = GetMonitorPosition(monitor);
-    rl_scratch_area_set_vector2(pos.x, pos.y);
+    rl_scratch_set_vector2(pos.x, pos.y);
 #else
     (void)monitor;
-    rl_scratch_area_set_vector2(0.0f, 0.0f);
+    rl_scratch_set_vector2(0.0f, 0.0f);
 #endif
 }
 
@@ -155,9 +155,9 @@ float rl_get_monitor_position_y(int monitor) {
 }
 
 RL_KEEP
-void rl_get_window_position() {
+void rl_get_window_position_to_scratch() {
     const Vector2 pos = GetWindowPosition();
-    rl_scratch_area_set_vector2(pos.x, pos.y);
+    rl_scratch_set_vector2(pos.x, pos.y);
     //return pos;
 }
 
@@ -174,9 +174,9 @@ float rl_get_window_position_y() {
 }
 
 RL_KEEP
-void rl_get_mouse() {
+void rl_get_mouse_position_to_scratch() {
     const Vector2 pos = GetMousePosition();
-    rl_scratch_area_set_vector2(pos.x, pos.y);
+    rl_scratch_set_vector2(pos.x, pos.y);
 }
 
 RL_KEEP
@@ -192,15 +192,15 @@ float rl_get_mouse_y() {
 }
 
 RL_KEEP
-int rl_get_mouse_wheel() {
-    rl_mouse_t mouse = rl_scratch_area_get_mouse();
+int rl_get_mouse_wheel_from_scratch() {
+    rl_mouse_t mouse = rl_scratch_get_mouse();
     return mouse.wheel;
 }
 
 RL_KEEP
-int rl_get_mouse_button(int button) {
-    rl_mouse_t mouse = rl_scratch_area_get_mouse();
-    if (button < 0 || button >= RL_SCRATCH_AREA_MAX_NUM_MOUSE_BUTTONS) {
+int rl_get_mouse_button_from_scratch(int button) {
+    rl_mouse_t mouse = rl_scratch_get_mouse();
+    if (button < 0 || button >= RL_SCRATCH_MAX_NUM_MOUSE_BUTTONS) {
         return 0;
     }
     return mouse.buttons[button];
@@ -294,8 +294,8 @@ void rl_end_mode_2d() {
 }
 
 RL_KEEP
-void rl_update() {
-    rl_scratch_area_update();
+void rl_update_scratch() {
+    rl_scratch_update();
 }
 
 RL_KEEP
@@ -307,10 +307,10 @@ int rl_measure_text(const char *text, int fontSize) {
     return MeasureText(text, fontSize);
 }
 
-void rl_measure_text_ex(rl_handle_t font, const char *text, float fontSize, float spacing) {
+void rl_measure_text_ex_to_scratch(rl_handle_t font, const char *text, float fontSize, float spacing) {
     //fprintf(stderr, "MeasureTextEx: %d, %s, %f, %f\n", font, text, fontSize, spacing);
     Vector2 result = MeasureTextEx(rl_font_get(font), text, fontSize, spacing);
     //fprintf(stderr, "MeasureTextEx: (%f, %f)\n", result.x, result.y);
-    rl_scratch_area_set_vector2(result.x, result.y);
+    rl_scratch_set_vector2(result.x, result.y);
     return;
 }

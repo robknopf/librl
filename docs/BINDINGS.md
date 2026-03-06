@@ -10,7 +10,7 @@ This project currently maintains two primary bindings in a 'add as I need' cycle
 Files:
 
 - `bindings/js/rl.js`
-- `bindings/js/rl_scratch_area.js`
+- `bindings/js/rl_scratch.js`
 - `bindings/js/rl_module_export.js`
 
 Role:

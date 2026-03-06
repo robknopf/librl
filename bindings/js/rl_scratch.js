@@ -15,8 +15,8 @@ var scratchAreaOffsets = {};
 Module.initScratchArea = () => {
 
     // Fetch scratch area pointer and offsets pointer (called once during initialization)
-    scratchAreaPtr = Module.ccall("rl_scratch_area_get", "number", [], []) >> 2; // Convert to 32-bit index
-    const scratchAreaOffsetsPtr = Module.ccall("rl_scratch_area_get_offsets", "number", [], []) >> 2; // Convert to 32-bit index
+    scratchAreaPtr = Module.ccall("rl_scratch_get", "number", [], []) >> 2; // Convert to 32-bit index
+    const scratchAreaOffsetsPtr = Module.ccall("rl_scratch_get_offsets", "number", [], []) >> 2; // Convert to 32-bit index
 
 
     // Precompute offsets (static throughout the application lifecycle)

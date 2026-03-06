@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-#include "rl.h"
+#include "rl_types.h"
 
 rl_handle_t rl_sprite3d_create(const char *filename);
 rl_handle_t rl_sprite3d_create_from_texture(rl_handle_t texture);

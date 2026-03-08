@@ -30,6 +30,10 @@
   - define a manifest format (Babylon-style) listing assets, versions, hashes, and URLs
   - on startup/load, compare manifest vs local cache and invalidate stale entries
 - IDBFS lifecycle hardening: done (single sync path + overlap guard + documented ready-state timing)
+- FileIO logging cleanup: done
+  - standardized FileIO message style and capitalization
+  - switched FileIO logging calls to shared `logger/log` API
+  - moved logger implementation from `src/vendor/logger` to `src/logger`
 
 ## Parking Lot
 
@@ -43,6 +47,7 @@
 ### Build / Tooling
 
 - Build/test smoke target: done (`make test` now runs desktop + wasm unit tests, plus desktop `uri_test` and wasm artifact checks)
+- C example wasm target naming cleanup: done (`wasm-debug-smap` merged into `wasm-debug`)
 - Consider formatting/lint guidance for C, JS, and Nim.
 
 ### Product Roadmap

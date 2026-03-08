@@ -103,7 +103,7 @@ make clean
 
 ## TODO
 
-- So, so many things.  See the TODO document for the list of things I'm playing around with.
+- So, so many things. See [TODO.md](TODO.md) for the list of things I'm playing around with.
 
 ## License
 

@@ -7,7 +7,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Show wasm source map source entries.")
     parser.add_argument(
         "--wasm",
-        default="../examples/desktop/c/out/main.debug.smap.wasm",
+        default="../examples/c/out/main.debug.smap.wasm",
         help="Path to wasm file, relative to this script directory unless absolute.",
     )
     parser.add_argument(

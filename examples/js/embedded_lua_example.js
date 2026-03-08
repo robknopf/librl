@@ -1,7 +1,7 @@
 // Testing C->Wasm example
 // Live Server mounts         ["/examples", "./examples"],
-// For c->wasm build: cd examples/desktop/c && make wasm-debug-smap
-import createExampleModule from "/examples/desktop/c/out/main.debug.smap.js";
+// For c->wasm build: cd examples/c && make wasm-debug
+import createExampleModule from "/examples/c/out/main.debug.js";
 
 (async function () {
   try {

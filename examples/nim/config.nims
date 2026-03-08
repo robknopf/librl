@@ -4,11 +4,11 @@ import std/os
 
 when declared(switch):
   switch("path", "src")
-  switch("path", "../../../bindings/nim")
+  switch("path", "../../bindings/nim")
   switch("hints", "off")
 
 const
-  librlRoot = absolutePath("../../..", getCurrentDir())
+  librlRoot = absolutePath("../..", getCurrentDir())
   includeDir = librlRoot / "include"
   libDir = librlRoot / "lib"
   outDir = getCurrentDir() / "out"

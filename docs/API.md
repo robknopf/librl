@@ -115,10 +115,18 @@ Notes:
 - A sync-overlap guard (`Module.fileio_idbfs_syncing`) prevents concurrent sync operations.
 - JS callers that need cache-first behavior should wait for readiness before first asset-backed load.
 
+## Logging
+
+Notes:
+- Logging goes through the shared logger (`src/logger/log.h`), not direct `fprintf`/`printf`.
+- Log level is carried by the logger call (`log_error`, `log_warn`, `log_info`, `log_debug`).
+- Log messages should a subsystem scope prefix in message text. e.g. `FILEIO: ...`.
+
 ## Scratch Area (`include/rl_scratch.h`)
 
-Main responsibilities:
+This provides a method of avoiding the expensive data exchange between JS and wasm (aka: "Border Tax").  It is a shared memory block with known offsets so each system can read/write to that shared memory and not invoke another boundry call.  It's especially useful when trying to share structures that are constantly being mutated (like keyboard, mouse info, etc).
 
+Main responsibilities:
 - Shared memory struct for high-frequency data exchange with host runtimes:
   - vectors, matrices, quaternions, colors, rectangles
   - mouse/keyboard/gamepad/touch state
@@ -143,4 +151,4 @@ Wasm/JS boundary conventions:
 
 ---
 
-If you want, this can be expanded into a full function-by-function reference with argument semantics, expected call ordering, and error behavior per API.
+

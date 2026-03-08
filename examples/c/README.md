@@ -9,13 +9,23 @@ This example intentionally mixes:
 ## Build
 
 ```bash
-make -C examples/desktop/c build
+make -C examples/c desktop
 ```
+
+## Build (Wasm)
+
+```bash
+make -C examples/c wasm
+make -C examples/c wasm-debug
+```
+
+- `wasm` outputs `examples/c/out/main.js`
+- `wasm-debug` outputs `examples/c/out/main.debug.js` (debug checks + source maps)
 
 ## Run
 
 ```bash
-make -C examples/desktop/c run
+make -C examples/c run
 ```
 
 By default, assets are fetched from:
@@ -25,5 +35,5 @@ By default, assets are fetched from:
 Override with:
 
 ```bash
-RL_ASSET_HOST=http://localhost:4444/assets make -C examples/desktop/c run
+RL_ASSET_HOST=http://localhost:4444/assets make -C examples/c run
 ```

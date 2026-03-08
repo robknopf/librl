@@ -24,6 +24,8 @@ static const char *get_asset_host(void)
 
 int main(void)
 {
+    SetTraceLogLevel(LOG_WARNING);
+
     const char *asset_host = get_asset_host();
     const char *font_path = "assets/fonts/Komika/KOMIKAH_.ttf";
     const char *model_path = "assets/models/gumshoe/gumshoe.glb";

@@ -2,6 +2,7 @@
 
 #include "fileio.h"
 #include "fileio_common.h"
+#include "logger/log.h"
 #include <emscripten.h>
 #include <stdbool.h>
 #include <string.h>
@@ -102,7 +103,7 @@ bool is_mount_point(const char *path)
     // ensure we have initialized the mount point
     if (!fileio_mount_point_initialized)
     {
-        fprintf(stderr, "Error: mount point not initialized.\n");
+        log_error("FILEIO: Mount point not initialized.");
         return false;
     }
 

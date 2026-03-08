@@ -1,5 +1,6 @@
 #include "fileio_common.h"
 #include "fileio.h"
+#include "logger/log.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,28 +27,28 @@ int fileio_init_common(const char *mount_point)
     // check to see if we've already initialized the mount point
     if (fileio_mount_point_initialized)
     {
-        fprintf(stderr, "Error: mount point already initialized (%s).\n", fileio_mount_point);
+        log_error("FILEIO: Mount point already initialized (%s).", fileio_mount_point);
         return -1;
     }
 
     // null check
     if (!mount_point)
     {
-        fprintf(stderr, "Error: mount point is NULL.\n");
+        log_error("FILEIO: Mount point is NULL.");
         return -1;
     }
 
     // the mount point can't be the root directory
     if (strcmp(mount_point, "/") == 0)
     {
-        fprintf(stderr, "Error: mount point '%s' can't be the root directory.\n", mount_point);
+        log_error("FILEIO: Mount point '%s' cannot be the root directory.", mount_point);
         return -1;
     }
 
     // make sure the mount point isn't too long (including the null terminator)
     if (strlen(mount_point) >= FILEIO_MAX_PATH_LENGTH - 1)
     {
-        fprintf(stderr, "Error: mount point '%s' is too long.\n", mount_point);
+        log_error("FILEIO: Mount point '%s' is too long.", mount_point);
         return -1;
     }
 
@@ -62,11 +63,11 @@ int fileio_init_common(const char *mount_point)
     bool ok = (mkdir(mount_point, 0777) == 0) || (errno == EEXIST);
     if (!ok)
     {
-        fprintf(stderr, "Error: failed to create mount point directory '%s'.\n", mount_point);
+        log_error("FILEIO: Failed to create mount point directory '%s'.", mount_point);
         return -1;
     }
 
-    printf("Initialized file I/O with mount point '%s'.\n", mount_point);
+    log_info("FILEIO: Initialized file I/O with mount point '%s'.", mount_point);
     return 0;
 }
 
@@ -88,12 +89,12 @@ int fileio_write_common(const char *filename, void *data, size_t size)
     // make sure we've initialized the mount point
     if (!fileio_mount_point_initialized)
     {
-        fprintf(stderr, "Error: mount point not initialized.\n");
+        log_error("FILEIO: Mount point not initialized.");
         return -1;
     }
     if (!fileio_wait_for_ready(fileio_ready_wait_timeout_ms))
     {
-        fprintf(stderr, "Error: timed out waiting for fileio readiness before write.\n");
+        log_error("FILEIO: Timed out waiting for fileio readiness before write.");
         return -1;
     }
     char full_path[FILEIO_MAX_PATH_LENGTH * 2];
@@ -111,14 +112,14 @@ int fileio_write_common(const char *filename, void *data, size_t size)
     FILE *file = fopen(full_path, "wb");
     if (!file)
     {
-        fprintf(stderr, "Error opening file for writing: %s\n", full_path);
+        log_error("FILEIO: Failed to open file for writing: %s", full_path);
         return -1;
     }
 
     // Write data to the file
     if (fwrite(data, 1, size, file) != size)
     {
-        fprintf(stderr, "Error writing to file: %s\n", full_path);
+        log_error("FILEIO: Failed to write file: %s", full_path);
         fclose(file);
         return -1;
     }
@@ -141,13 +142,13 @@ fileio_read_result_t fileio_read_common(const char *filename)
     // make sure we've initialized the mount point
     if (!fileio_mount_point_initialized)
     {
-        fprintf(stderr, "Error: mount point not initialized.\n");
+        log_error("FILEIO: Mount point not initialized.");
         result.error = -1;
         return result;
     }
     if (!fileio_wait_for_ready(fileio_ready_wait_timeout_ms))
     {
-        fprintf(stderr, "Error: timed out waiting for fileio readiness before read.\n");
+        log_error("FILEIO: Timed out waiting for fileio readiness before read.");
         result.error = -1;
         return result;
     }
@@ -160,14 +161,14 @@ fileio_read_result_t fileio_read_common(const char *filename)
     FILE *file = fopen(full_path, "rb");
     if (!file)
     {
-        fprintf(stderr, "WARNING: Failed to open file: %s\n", full_path);
+        log_warn("FILEIO: Failed to open file: %s", full_path);
         result.error = -1;
         return result;
     }
 
     if (fseek(file, 0, SEEK_END) != 0)
     {
-        fprintf(stderr, "Error seeking file: %s\n", full_path);
+        log_error("FILEIO: Failed to seek file: %s", full_path);
         fclose(file);
         result.error = -1;
         return result;
@@ -176,7 +177,7 @@ fileio_read_result_t fileio_read_common(const char *filename)
     long file_size_long = ftell(file);
     if (file_size_long < 0)
     {
-        fprintf(stderr, "Error telling file size: %s\n", full_path);
+        log_error("FILEIO: Failed to get file size: %s", full_path);
         fclose(file);
         result.error = -1;
         return result;
@@ -185,7 +186,7 @@ fileio_read_result_t fileio_read_common(const char *filename)
     size_t filesize = (size_t)file_size_long;
     if (filesize > (SIZE_MAX - 1))
     {
-        fprintf(stderr, "File too large to allocate safely: %s\n", full_path);
+        log_error("FILEIO: File too large to allocate safely: %s", full_path);
         fclose(file);
         result.error = -1;
         return result;
@@ -195,7 +196,7 @@ fileio_read_result_t fileio_read_common(const char *filename)
     unsigned char *buffer = (unsigned char *)malloc(filesize + 1);
     if (!buffer)
     {
-        fprintf(stderr, "Memory allocation failed");
+        log_error("FILEIO: Memory allocation failed.");
         fclose(file);
         result.error = -1;
         return result;
@@ -203,7 +204,7 @@ fileio_read_result_t fileio_read_common(const char *filename)
 
     if (fread(buffer, 1, filesize, file) != filesize)
     {
-        fprintf(stderr, "Error reading file: %s\n", full_path);
+        log_error("FILEIO: Failed to read file: %s", full_path);
         free(buffer);
         fclose(file);
         result.error = -2;
@@ -218,12 +219,13 @@ fileio_read_result_t fileio_read_common(const char *filename)
 }
 
 fileio_read_result_t fileio_read_url_common(const char *host, const char *path, int timeout_ms) {
+    log_debug("FILEIO: Fetching %s/%s", host, path);
     fetch_url_result_t result = fetch_url_with_path(host, path, timeout_ms);
 
     // if unsuccessful, return an empty fileio_read_result_t
     if (result.code != 200)
     {
-        fprintf(stderr, "ERROR: Failed to fetch file from %s/%s: %d\n", host, path, result.code);
+        log_error("FILEIO: Failed to fetch file from %s/%s: %d", host, path, result.code);
         if (result.data)
         {
             free(result.data);
@@ -240,7 +242,7 @@ fileio_read_result_t fileio_read_url_common(const char *host, const char *path, 
     // write the file to disk
     if (fileio_write(path, result.data, result.size) != 0)
     {
-        fprintf(stderr, "ERROR: Failed to persist fetched file to cache: %s\n", path);
+        log_error("FILEIO: Failed to persist fetched file to cache: %s", path);
     }
     free(result.data);
 
@@ -258,7 +260,7 @@ bool fileio_exists_common(const char *filename)
     // make sure we've initialized the mount point
     if (!fileio_mount_point_initialized)
     {
-        fprintf(stderr, "Error: mount point not initialized.\n");
+        log_error("FILEIO: Mount point not initialized.");
         return false;
     }
 
@@ -282,7 +284,7 @@ int fileio_mkdir_common(const char *path)
     // make sure we've initialized the mount point
     if (!fileio_mount_point_initialized)
     {
-        fprintf(stderr, "Error: mount point not initialized.\n");
+        log_error("FILEIO: Mount point not initialized.");
         return -1;
     }
 
@@ -299,7 +301,7 @@ int fileio_mkdir_common(const char *path)
         *p = '\0';
         if (mkdir(full_path, 0777) && errno != EEXIST)
         {
-            fprintf(stderr, "Error creating directory: %s\n", full_path);
+            log_error("FILEIO: Failed to create directory: %s", full_path);
             return -1;
         }
         *p = '/';

@@ -5,7 +5,7 @@ import path from "path";
 import os from "os";
 
 dotenv.config({
-  quiet:true
+  quiet: true,
 });
 const homeDir = os.homedir();
 
@@ -37,36 +37,10 @@ function getSSLKeysPath(): { certPath: string; privKeyPath: string } | null {
 const sslKeysPaths = getSSLKeysPath();
 console.log(`Will use ${sslKeysPaths ? "SSL" : "non-SSL"} connection`);
 
-function contentTypeFor(filePath: string): string {
-  const ext = path.extname(filePath).toLowerCase();
-  switch (ext) {
-    case ".html":
-      return "text/html; charset=utf-8";
-    case ".js":
-    case ".mjs":
-      return "application/javascript; charset=utf-8";
-    case ".css":
-      return "text/css; charset=utf-8";
-    case ".json":
-      return "application/json; charset=utf-8";
-    case ".svg":
-      return "image/svg+xml";
-    case ".png":
-      return "image/png";
-    case ".jpg":
-    case ".jpeg":
-      return "image/jpeg";
-    case ".wasm":
-      return "application/wasm";
-    default:
-      return "application/octet-stream";
-  }
-}
-
 export default defineConfig({
   publicDir: "public",
-  root:"./examples/www",
-  base:'',
+  root: "./examples/www",
+  base: "",
   assetsInclude: ["**/*.glb", "**/*.gltf"],
   build: {
     assetsDir: "bundles",
@@ -88,9 +62,9 @@ export default defineConfig({
         const mountPrefix = "/examples/";
         const examplesRoot = path.resolve(__dirname, "examples");
 
-        server.middlewares.use((req, res, next) => {
+        server.middlewares.use((req, _res, next) => {
           const reqUrl = req.url || "";
-          const cleanUrl = reqUrl.split("?")[0].split("#")[0];
+          const [cleanUrl, query = ""] = reqUrl.split("?");
           if (!cleanUrl.startsWith(mountPrefix)) {
             next();
             return;
@@ -100,19 +74,12 @@ export default defineConfig({
           const fullPath = path.resolve(examplesRoot, relativePath);
 
           // Prevent path traversal outside the examples directory.
-          if (!fullPath.startsWith(examplesRoot + path.sep)) {
-            res.statusCode = 403;
-            res.end("Forbidden");
+          if (!(fullPath === examplesRoot || fullPath.startsWith(examplesRoot + path.sep))) {
             return;
           }
 
-          if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isFile()) {
-            next();
-            return;
-          }
-
-          res.setHeader("Content-Type", contentTypeFor(fullPath));
-          fs.createReadStream(fullPath).pipe(res);
+          req.url = `/@fs/${fullPath.replace(/\\/g, "/")}${query ? `?${query}` : ""}`;
+          next();
         });
       },
     },

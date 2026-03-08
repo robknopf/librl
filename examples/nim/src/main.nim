@@ -2,6 +2,7 @@ import std/[strformat, os, strutils]
 import rl
 
 proc main() =
+  const asset_host = "https://localhost:4444"
   let fontSize = 24
   let smallFontSize = 16
   let modelPath = "assets/models/gumshoe/gumshoe.glb"
@@ -14,7 +15,9 @@ proc main() =
   var lastTime = 0.0
   var currentTime = 0.0
 
+
   rl_init()
+  discard rl_set_asset_host(asset_host)
   rl_init_window(800.cint, 600.cint, "Hello, World! (Nim)")
   let monitorOverride = getEnv("RL_MONITOR", "")
   if monitorOverride.len > 0:

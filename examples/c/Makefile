@@ -1,4 +1,4 @@
-ROOT := ../../..
+ROOT := ../..
 CC_WASM ?= emcc
 CC ?= gcc
 CFLAGS ?= -Wall -Wextra -O2
@@ -33,14 +33,13 @@ OUT_DIR := out
 BIN := $(OUT_DIR)/main
 WASM_JS := $(OUT_DIR)/main.js
 WASM_DEBUG_JS := $(OUT_DIR)/main.debug.js
-WASM_DEBUG_SMAP_JS := $(OUT_DIR)/main.debug.smap.js
 SRC := main.c lua_interop.c
 
 INCLUDES := -I$(ROOT)/include -I$(ROOT)/src -I$(ROOT)/deps/libraylib/include -I$(ROOT)/deps/lua/include
 LIBS := -L$(ROOT)/lib -lrl -lcurl -lm -lpthread -ldl -lX11
 WASM_LIBS := $(ROOT)/lib/librl.wasm.a -lm
 
-.PHONY: all desktop run wasm wasm-debug wasm-debug-smap clean
+.PHONY: all desktop run wasm wasm-debug clean
 
 all: desktop wasm
 
@@ -48,7 +47,6 @@ desktop: $(BIN)
 
 wasm: $(WASM_JS)
 wasm-debug: $(WASM_DEBUG_JS)
-wasm-debug-smap: $(WASM_DEBUG_SMAP_JS)
 
 $(BIN): $(SRC) | $(OUT_DIR)
 	@$(MAKE) -C $(ROOT) desktop
@@ -60,11 +58,7 @@ $(WASM_JS): $(SRC) | $(OUT_DIR)
 
 $(WASM_DEBUG_JS): $(SRC) | $(OUT_DIR)
 	@$(MAKE) -C $(ROOT) wasm_archive
-	$(CC_WASM) $(DEBUG_CFLAGS_WASM) $(INCLUDES) $(SRC) $(WASM_LIBS) $(DEBUG_LDFLAGS_WASM) -o $(WASM_DEBUG_JS)
-
-$(WASM_DEBUG_SMAP_JS): $(SRC) | $(OUT_DIR)
-	@$(MAKE) -C $(ROOT) wasm_archive
-	$(CC_WASM) $(DEBUG_CFLAGS_WASM) $(INCLUDES) $(SRC) $(WASM_LIBS) $(DEBUG_SOURCEMAP_LDFLAGS_WASM) -o $(WASM_DEBUG_SMAP_JS)
+	$(CC_WASM) $(DEBUG_CFLAGS_WASM) $(INCLUDES) $(SRC) $(WASM_LIBS) $(DEBUG_SOURCEMAP_LDFLAGS_WASM) -o $(WASM_DEBUG_JS)
 
 $(OUT_DIR):
 	mkdir -p $(OUT_DIR)

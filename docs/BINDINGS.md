@@ -34,7 +34,7 @@ Scratch design goals:
 
 Used by:
 
-- `examples/wasm/index.js`
+- `examples/js/simple_example.js`
 
 Notes:
 
@@ -60,7 +60,7 @@ Role:
 
 Used by:
 
-- `examples/desktop/nim/src/main.nim`
+- `examples/nim/src/main.nim`
 
 Notes:
 
@@ -79,5 +79,5 @@ When public C headers change:
 1. Update `include/*.h`.
 2. Update binding layers (`bindings/js/*`, `bindings/nim/rl.nim`) that expose affected functions.
 3. Smoke test:
-   - web: `examples/wasm/index.js`
-   - desktop Nim: `examples/desktop/nim/src/main.nim`
+   - web: `examples/js/simple_example.js`
+   - desktop Nim: `examples/nim/src/main.nim`

@@ -2,5 +2,6 @@
 -Isrc
 -Iinclude
 -Ideps/libraylib/include
+-Ideps/lua/include
 -I${EMSDK}/upstream/emscripten/cache/sysroot/include
 -DPLATFORM_DESKTOP

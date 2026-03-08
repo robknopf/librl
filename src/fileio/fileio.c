@@ -19,6 +19,12 @@ void fileio_deinit(void)
     fileio_deinit_common();
 }
 
+bool fileio_wait_for_ready(int timeout_ms)
+{
+    (void)timeout_ms;
+    return true;
+}
+
 int fileio_write(const char *filename, void *data, size_t size)
 {
     return fileio_write_common(filename, data, size);

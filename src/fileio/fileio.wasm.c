@@ -60,6 +60,37 @@ void fileio_deinit(void)
     fileio_deinit_common();
 }
 
+bool fileio_wait_for_ready(int timeout_ms)
+{
+    int waited_ms = 0;
+    const int poll_ms = 16;
+    if (timeout_ms < 0) {
+        timeout_ms = 0;
+    }
+
+    while (waited_ms <= timeout_ms)
+    {
+        int ready = EM_ASM_INT({
+            return !!(Module && Module.fileio_idbfs_ready);
+        });
+        if (ready != 0) {
+            return true;
+        }
+
+        if (waited_ms == timeout_ms) {
+            break;
+        }
+
+        emscripten_sleep(poll_ms);
+        waited_ms += poll_ms;
+        if (waited_ms > timeout_ms) {
+            waited_ms = timeout_ms;
+        }
+    }
+
+    return false;
+}
+
 /**
  * Checks if the given path is a mount point.
  *

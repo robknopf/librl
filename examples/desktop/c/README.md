@@ -4,6 +4,7 @@ This example intentionally mixes:
 
 - direct raylib runtime calls (`InitWindow`, `BeginDrawing`, `BeginMode3D`, `DrawText`, etc.)
 - `librl` handle-based helpers for assets (`rl_font_create`, `rl_model_create`, `rl_sprite3d_create`, etc.)
+- simple Lua VM interop via `lua_interop.c` using raylib `LoadFileData` (through `rl_loader`) to load `lua_demo.lua`
 
 ## Build
 

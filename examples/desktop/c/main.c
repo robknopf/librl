@@ -6,6 +6,7 @@
 #include "rl_font.h"
 #include "rl_model.h"
 #include "rl_sprite3d.h"
+#include "lua_interop.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -20,6 +21,7 @@ static const char *get_asset_host(void)
     return "https://localhost:4444";
 }
 
+
 int main(void)
 {
     const char *asset_host = get_asset_host();
@@ -28,6 +30,7 @@ int main(void)
     const char *sprite_path = "assets/sprites/logo/wg-logo-bw-alpha.png";
     const float font_size = 24.0f;
     const float small_font_size = 16.0f;
+    lua_interop_vm_t lua_vm = {0};
 
     rl_init();
     if (rl_set_asset_host(asset_host) != 0) {
@@ -49,6 +52,12 @@ int main(void)
         0.0f, 1.0f, 0.0f,
         0.0f, 1.0f, 0.0f,
         45.0f, CAMERA_PERSPECTIVE);
+
+    if (lua_interop_init(&lua_vm, "assets/scripts") == 0) {
+        (void)lua_interop_run_file(&lua_vm, "lua_demo.lua");
+    } else {
+        fprintf(stderr, "Lua interop init failed\n");
+    }
 
     (void)rl_camera3d_set_active(camera);
     (void)rl_model_set_animation(gumshoe, 1);
@@ -81,8 +90,9 @@ int main(void)
 
         rl_draw_text_ex(komika, message, text_x + 2, text_y + 2, font_size, 1.0f, text_shadow);
         rl_draw_text_ex(komika, message, text_x, text_y, font_size, 1.0f, RL_COLOR_BLUE);
-        DrawText(TextFormat("assetHost: %s", asset_host), 10, 10, 16, DARKGRAY);
-        DrawText("Set RL_ASSET_HOST to override", 10, 30, 16, GRAY);
+        rl_draw_text_ex(komika_small, TextFormat("assetHost: %s", asset_host), 10, 10, small_font_size, 1.0, RL_COLOR_DARKGRAY);
+        rl_draw_text_ex(komika_small, "Set RL_ASSET_HOST to override", 10, 30, small_font_size, 1.0, RL_COLOR_GRAY);
+        //DrawText("Set RL_ASSET_HOST to override", 10, 30, 16, GRAY);
         rl_draw_fps_ex(komika_small, 10, 52, (int)small_font_size, RL_COLOR_BLACK);
 
         EndDrawing();
@@ -94,6 +104,7 @@ int main(void)
     rl_font_destroy(komika);
     rl_font_destroy(komika_small);
     rl_color_destroy(text_shadow);
+    lua_interop_deinit(&lua_vm);
     rl_deinit();
     CloseWindow();
     return 0;

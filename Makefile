@@ -26,6 +26,13 @@ LIBRAYLIB_WASM_ARCHIVE = $(LIBRAYLIB_LIB)/libraylib.wasm.a
 LIBRAYLIB_DESKTOP_ARCHIVE = $(LIBRAYLIB_ROOT)/obj/desktop/release/libraylib.a
 endif
 
+# Lua dependency (builder repo, same pattern as libraylib)
+LIBLUA_REPO ?= git@github.com:robknopf/liblua-builder.git
+LIBLUA_ROOT ?= $(LIBRL_ROOT)/deps/lua
+LIBLUA_INC = $(LIBLUA_ROOT)/include
+LIBLUA_WASM_ARCHIVE = $(LIBLUA_ROOT)/lib/liblua.wasm.a
+LIBLUA_DESKTOP_ARCHIVE = $(LIBLUA_ROOT)/lib/liblua.a
+
 CFLAGS = -Wall -Wextra -fdiagnostics-color=always -Isrc
 
 CFLAGS_WASM = \
@@ -215,10 +222,33 @@ deps:
 	fi
 	@echo "Running make in $(LIBRAYLIB_ROOT)"
 	@$(MAKE) -C "$(LIBRAYLIB_ROOT)" DEV=$(DEV) CUSTOM_CFLAGS="$(LIBRAYLIB_CUSTOM_CFLAGS)"
+	@if [ ! -d "$(LIBLUA_ROOT)" ]; then \
+		if [ -z "$(LIBLUA_REPO)" ]; then \
+			echo "Error: LIBLUA_REPO is not set and $(LIBLUA_ROOT) does not exist."; \
+			echo "Set LIBLUA_REPO to your lua-builder repo (or pre-populate $(LIBLUA_ROOT))."; \
+			exit 1; \
+		fi; \
+		echo "Cloning lua builder from $(LIBLUA_REPO) into $(LIBLUA_ROOT)"; \
+		mkdir -p "$$(dirname "$(LIBLUA_ROOT)")"; \
+		git clone $(LIBLUA_REPO) $(LIBLUA_ROOT); \
+	else \
+		echo "Updating existing lua builder directory: $(LIBLUA_ROOT)"; \
+		git -C "$(LIBLUA_ROOT)" pull --ff-only; \
+	fi
+	@if [ ! -f "$(LIBLUA_ROOT)/Makefile" ]; then \
+		echo "Error: missing Lua dependency makefile at $(LIBLUA_ROOT)/Makefile"; \
+		exit 1; \
+	fi
+	@echo "Running make in $(LIBLUA_ROOT)"
+	@$(MAKE) -C "$(LIBLUA_ROOT)" wasm desktop
 
 ensure_deps:
 	@if [ ! -f "$(LIBRAYLIB_ROOT)/Makefile" ]; then \
 		echo "Missing dependencies at $(LIBRAYLIB_ROOT). Run 'make deps' first."; \
+		exit 1; \
+	fi
+	@if [ ! -f "$(LIBLUA_ROOT)/Makefile" ]; then \
+		echo "Missing dependencies at $(LIBLUA_ROOT). Run 'make deps' first."; \
 		exit 1; \
 	fi
 
@@ -238,32 +268,58 @@ libraylib_desktop: ensure_deps
 		$(MAKE) -C $(LIBRAYLIB_ROOT) DEV=$(DEV) CUSTOM_CFLAGS="$(LIBRAYLIB_CUSTOM_CFLAGS)" desktop; \
 	fi
 
+liblua_wasm: ensure_deps
+	@if [ -f "$(LIBLUA_WASM_ARCHIVE)" ]; then \
+		echo "Using existing lua wasm archive: $(LIBLUA_WASM_ARCHIVE)"; \
+	else \
+		echo "Missing lua wasm archive: $(LIBLUA_WASM_ARCHIVE)"; \
+		$(MAKE) -C "$(LIBLUA_ROOT)" wasm; \
+	fi
+
+liblua_desktop: ensure_deps
+	@if [ -f "$(LIBLUA_DESKTOP_ARCHIVE)" ]; then \
+		echo "Using existing lua desktop archive: $(LIBLUA_DESKTOP_ARCHIVE)"; \
+	else \
+		echo "Missing lua desktop archive: $(LIBLUA_DESKTOP_ARCHIVE)"; \
+		$(MAKE) -C "$(LIBLUA_ROOT)" desktop; \
+	fi
+
 # WebAssembly static build
-wasm: libraylib_wasm ensure_out_dir
+wasm: libraylib_wasm liblua_wasm ensure_out_dir
 	$(info Building WASM with sources: $(WASM_SRCS))
 	$(info LDFLAGS_WASM: $(LDFLAGS_WASM))
 	$(info CFLAGS: $(CFLAGS))
 	$(CC_WASM) -o $(OUT_WASM) $(WASM_SRCS) $(LDFLAGS_WASM) $(CFLAGS_WASM) $(CFLAGS) $(INCLUDES) $(LIBS_WASM)
 
 # WebAssembly static library build
-wasm_archive: libraylib_wasm ensure_out_dir ensure_obj_dir $(WASM_OBJS)
+wasm_archive: libraylib_wasm liblua_wasm ensure_out_dir ensure_obj_dir $(WASM_OBJS)
 	$(info Building WASM archive with objects: $(WASM_OBJS))
 	$(info Adding raylib wasm archive: $(LIBRAYLIB_WASM_ARCHIVE))
+	$(info Adding lua wasm archive: $(LIBLUA_WASM_ARCHIVE))
 	@test -f "$(LIBRAYLIB_WASM_ARCHIVE)" || (echo "Missing raylib wasm archive: $(LIBRAYLIB_WASM_ARCHIVE)" && exit 1)
+	@test -f "$(LIBLUA_WASM_ARCHIVE)" || (echo "Missing lua wasm archive: $(LIBLUA_WASM_ARCHIVE)" && exit 1)
 	rm -rf $(OBJ_WASM_DIR)/.raylib_unpack
 	mkdir -p $(OBJ_WASM_DIR)/.raylib_unpack
 	cd $(OBJ_WASM_DIR)/.raylib_unpack && emar x $(abspath $(LIBRAYLIB_WASM_ARCHIVE))
-	emar rcs $(OUT_WASM_ARCHIVE) $(WASM_OBJS) $(OBJ_WASM_DIR)/.raylib_unpack/*.o
+	rm -rf $(OBJ_WASM_DIR)/.lua_unpack
+	mkdir -p $(OBJ_WASM_DIR)/.lua_unpack
+	cd $(OBJ_WASM_DIR)/.lua_unpack && emar x $(abspath $(LIBLUA_WASM_ARCHIVE))
+	emar rcs $(OUT_WASM_ARCHIVE) $(WASM_OBJS) $(OBJ_WASM_DIR)/.raylib_unpack/*.o $(OBJ_WASM_DIR)/.lua_unpack/*.o
 
 # Desktop static library build
-desktop: libraylib_desktop ensure_out_dir ensure_obj_dir $(DESKTOP_OBJS)
+desktop: libraylib_desktop liblua_desktop ensure_out_dir ensure_obj_dir $(DESKTOP_OBJS)
 	$(info Building Desktop (static) with sources: $(DESKTOP_SRCS))
 	$(info Adding raylib archive: $(LIBRAYLIB_DESKTOP_ARCHIVE))
+	$(info Adding lua archive: $(LIBLUA_DESKTOP_ARCHIVE))
 	@test -f "$(LIBRAYLIB_DESKTOP_ARCHIVE)" || (echo "Missing raylib archive: $(LIBRAYLIB_DESKTOP_ARCHIVE)" && exit 1)
+	@test -f "$(LIBLUA_DESKTOP_ARCHIVE)" || (echo "Missing lua archive: $(LIBLUA_DESKTOP_ARCHIVE)" && exit 1)
 	rm -rf $(OBJ_DESKTOP_DIR)/.raylib_unpack
 	mkdir -p $(OBJ_DESKTOP_DIR)/.raylib_unpack
 	cd $(OBJ_DESKTOP_DIR)/.raylib_unpack && ar x $(abspath $(LIBRAYLIB_DESKTOP_ARCHIVE))
-	ar rcs $(OUT_DESKTOP) $(DESKTOP_OBJS) $(OBJ_DESKTOP_DIR)/.raylib_unpack/*.o
+	rm -rf $(OBJ_DESKTOP_DIR)/.lua_unpack
+	mkdir -p $(OBJ_DESKTOP_DIR)/.lua_unpack
+	cd $(OBJ_DESKTOP_DIR)/.lua_unpack && ar x $(abspath $(LIBLUA_DESKTOP_ARCHIVE))
+	ar rcs $(OUT_DESKTOP) $(DESKTOP_OBJS) $(OBJ_DESKTOP_DIR)/.raylib_unpack/*.o $(OBJ_DESKTOP_DIR)/.lua_unpack/*.o
 
 uri_test:
 	$(CC_DESKTOP) $(CFLAGS) $(INCLUDES) src/uri/uri_test.c src/uri/uri.c src/vendor/cwalk/cwalk.c -o /tmp/uri_test
@@ -340,7 +396,7 @@ clean:
 #	@$(MAKE) -C $(LIBRAYLIB_ROOT) clean
 
 
-.PHONY: all deps ensure_deps clean ensure_out_dir ensure_obj_dir libraylib_wasm libraylib_desktop wasm wasm_archive desktop test test_desktop test_wasm unit_test_desktop unit_test_wasm check_node check_chrome check_probe_python probe_idbfs_build probe_idbfs
+.PHONY: all deps ensure_deps clean ensure_out_dir ensure_obj_dir libraylib_wasm libraylib_desktop liblua_wasm liblua_desktop wasm wasm_archive desktop test test_desktop test_wasm unit_test_desktop unit_test_wasm check_node check_chrome check_probe_python probe_idbfs_build probe_idbfs
 # 	"_RL_COLOR_BLACK", \
 # 	"_RL_COLOR_BLANK", \
 # 	"_RL_COLOR_MAGENTA", \

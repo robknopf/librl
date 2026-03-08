@@ -10,6 +10,17 @@ int fileio_init(const char *mount_point);
 void fileio_deinit(void);
 
 /**
+ * Waits until file I/O backend is ready for cache reads.
+ *
+ * On wasm this waits for IDBFS restore completion (or timeout).
+ * On non-wasm this is an immediate success no-op.
+ *
+ * @param timeout_ms Max time to wait in milliseconds.
+ * @return true if ready, false on timeout.
+ */
+bool fileio_wait_for_ready(int timeout_ms);
+
+/**
  * Writes data to a file, ensuring that directories in the path exist.
  *
  * @param filename The name of the file to write to.

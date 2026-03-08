@@ -12,6 +12,7 @@
 char fileio_mount_point[FILEIO_MAX_PATH_LENGTH];
 
 bool fileio_mount_point_initialized = false;
+static const int fileio_ready_wait_timeout_ms = 2000;
 
 /**
  * Initializes the file I/O system.
@@ -90,6 +91,11 @@ int fileio_write_common(const char *filename, void *data, size_t size)
         fprintf(stderr, "Error: mount point not initialized.\n");
         return -1;
     }
+    if (!fileio_wait_for_ready(fileio_ready_wait_timeout_ms))
+    {
+        fprintf(stderr, "Error: timed out waiting for fileio readiness before write.\n");
+        return -1;
+    }
     char full_path[FILEIO_MAX_PATH_LENGTH * 2];
     // prepend the mount point to the filename
     snprintf(full_path, sizeof(full_path), "%s/%s", fileio_mount_point, filename);
@@ -136,6 +142,12 @@ fileio_read_result_t fileio_read_common(const char *filename)
     if (!fileio_mount_point_initialized)
     {
         fprintf(stderr, "Error: mount point not initialized.\n");
+        result.error = -1;
+        return result;
+    }
+    if (!fileio_wait_for_ready(fileio_ready_wait_timeout_ms))
+    {
+        fprintf(stderr, "Error: timed out waiting for fileio readiness before read.\n");
         result.error = -1;
         return result;
     }

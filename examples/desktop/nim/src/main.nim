@@ -4,9 +4,9 @@ import rl
 proc main() =
   let fontSize = 24
   let smallFontSize = 16
-  let modelPath = "models/gumshoe/gumshoe.glb"
-  let spritePath = "sprites/logo/wg-logo-bw-alpha.png"
-  let fontPath = "fonts/Komika/KOMIKAH_.ttf"
+  let modelPath = "assets/models/gumshoe/gumshoe.glb"
+  let spritePath = "assets/sprites/logo/wg-logo-bw-alpha.png"
+  let fontPath = "assets/fonts/Komika/KOMIKAH_.ttf"
   let message = "Hello World!"
   var countdownTimer = 5.0
   var totalTime = 0.0

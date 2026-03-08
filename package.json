@@ -1,0 +1,18 @@
+{
+  "name": "librl",
+  "private": true,
+  "scripts": {
+    "dev": "npm-run-all --parallel serve watch:wasm",
+    "serve": "vite",
+    "build:wasm": "make -C examples/desktop/c wasm-debug-smap",
+    "watch:wasm": "onchange \"src/**/*.c\" \"src/**/*.h\" \"include/**/*.h\" \"examples/desktop/c/**/*.c\" \"examples/desktop/c/**/*.h\" -- npm run build:wasm",
+    "gen:chrome-devtools-workspace": "python3 tools/generate_devtools_workspace.py",
+    "install": "npm run gen:chrome-devtools-workspace"
+  },
+  "devDependencies": {
+    "dotenv": "^17.3.1",
+    "npm-run-all": "^4.1.5",
+    "onchange": "^7.1.0",
+    "vite": "^7.3.1"
+  }
+}

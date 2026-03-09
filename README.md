@@ -31,7 +31,8 @@ Key goals:
 
 ## Repository Layout
 
-- `src/` implementation
+- `src/` librl runtime and integration code
+- `deps/wgutils/` shared C utility/runtime modules (path/fileio/fetch/etc.)
 - `include/` public headers
 - `bindings/` JS/Nim binding helpers
 - `tests/` desktop and web test harnesses

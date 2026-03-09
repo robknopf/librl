@@ -10,6 +10,9 @@ CHROME ?= $(shell command -v google-chrome 2>/dev/null || command -v chromium-br
 # destination directories and names
 LIBRL_ROOT ?= .
 LIBRL_BASENAME = librl
+WGUTILS_REPO ?= https://github.com/whirlinggizmo/wgutils-c.git
+WGUTILS_ROOT ?= $(LIBRL_ROOT)/deps/wgutils
+WG_CORE_DIR ?= $(WGUTILS_ROOT)
 
 # Raylib paths and names
 LIBRAYLIB_REPO ?= git@github.com:robknopf/raylib-builder.git
@@ -26,14 +29,7 @@ LIBRAYLIB_WASM_ARCHIVE = $(LIBRAYLIB_LIB)/libraylib.wasm.a
 LIBRAYLIB_DESKTOP_ARCHIVE = $(LIBRAYLIB_ROOT)/obj/desktop/release/libraylib.a
 endif
 
-# Lua dependency (builder repo, same pattern as libraylib)
-LIBLUA_REPO ?= git@github.com:robknopf/liblua-builder.git
-LIBLUA_ROOT ?= $(LIBRL_ROOT)/deps/lua
-LIBLUA_INC = $(LIBLUA_ROOT)/include
-LIBLUA_WASM_ARCHIVE = $(LIBLUA_ROOT)/lib/liblua.wasm.a
-LIBLUA_DESKTOP_ARCHIVE = $(LIBLUA_ROOT)/lib/liblua.a
-
-CFLAGS = -Wall -Wextra -fdiagnostics-color=always -Isrc
+CFLAGS = -Wall -Wextra -fdiagnostics-color=always -Isrc -I$(WG_CORE_DIR)
 
 CFLAGS_WASM = \
 	-DPLATFORM_WEB
@@ -145,8 +141,9 @@ LIBS_WASM = -L$(LIBRAYLIB_LIB) \
 
 # Source files
 SRC_DIR = src
-ALL_SRCS = $(call rwildcard,$(SRC_DIR)/,*.c)
-TEST_SRCS = $(call rwildcard,$(SRC_DIR)/,*_test.c)
+CORE_DIR = $(WG_CORE_DIR)
+ALL_SRCS = $(call rwildcard,$(SRC_DIR)/,*.c) $(call rwildcard,$(CORE_DIR)/,*.c)
+TEST_SRCS = $(call rwildcard,$(SRC_DIR)/,*_test.c) $(call rwildcard,$(CORE_DIR)/,*_test.c)
 LIB_SRCS = $(filter-out $(TEST_SRCS), $(ALL_SRCS))
 
 UNIT_TEST_DIR = tests/unit
@@ -161,15 +158,15 @@ UNIT_TEST_SRCS = \
 	$(UNIT_TEST_DIR)/test_rl_handle_pool.c \
 	$(UNIT_TEST_DIR)/test_rl_loader.c
 UNIT_TEST_LIB_SRCS = \
-	src/fileio/fileio.c \
-	src/fileio/fileio_common.c \
-	src/lru_cache/lru_cache.c \
-	src/path/path.c \
+	$(CORE_DIR)/fileio/fileio.c \
+	$(CORE_DIR)/fileio/fileio_common.c \
+	$(CORE_DIR)/lru_cache/lru_cache.c \
+	$(CORE_DIR)/path/path.c \
 	src/rl_handle_pool.c \
 	src/rl_loader.c
 UNIT_TEST_EXTRA_LIB_SRCS = \
-	src/uri/uri.c \
-	src/vendor/cwalk/cwalk.c
+	$(CORE_DIR)/uri/uri.c \
+	$(CORE_DIR)/vendor/cwalk/cwalk.c
 UNIT_TEST_DESKTOP_BIN = /tmp/librl_unit_tests
 UNIT_TEST_WASM_JS = /tmp/librl_unit_tests.js
 
@@ -179,7 +176,7 @@ HEADLESS_PROBE_HTML = tests/headless/idbfs_probe_fileio.html
 HEADLESS_PROBE_RUNNER = tests/headless/run_idbfs_probe.py
 
 # Include and library paths
-INCLUDES = -I. -I$(OUT_INC_DIR) -I$(LIBRAYLIB_INC) -I$(LIBRL_ROOT)/$(SRC_DIR)
+INCLUDES = -I. -I$(OUT_INC_DIR) -I$(LIBRAYLIB_INC) -I$(LIBRL_ROOT)/$(SRC_DIR) -I$(LIBRL_ROOT)/$(CORE_DIR)
 
 # Object files
 OBJ_BASE_DIR = obj
@@ -187,15 +184,15 @@ OBJ_WASM_DIR = $(OBJ_BASE_DIR)/wasm
 OBJ_DESKTOP_DIR = $(OBJ_BASE_DIR)/desktop
 
 # Find override files and base files
-WASM_OVERRIDES = $(call rwildcard,$(SRC_DIR)/,*.wasm.c)
+WASM_OVERRIDES = $(filter %.wasm.c,$(LIB_SRCS))
 WASM_BASES = $(WASM_OVERRIDES:.wasm.c=.c)
 
 # Filter sources
 COMMON_SRCS = $(filter-out $(WASM_BASES), $(LIB_SRCS))  # Remove base files if overrides exist
 WASM_SRCS = $(sort $(COMMON_SRCS) $(WASM_OVERRIDES))    # Deduplicate combined sources
 DESKTOP_SRCS = $(sort $(filter-out $(WASM_OVERRIDES), $(LIB_SRCS))) # Deduplicate desktop sources
-DESKTOP_OBJS = $(patsubst $(SRC_DIR)/%.c,$(OBJ_DESKTOP_DIR)/%.o,$(DESKTOP_SRCS))
-WASM_OBJS = $(patsubst $(SRC_DIR)/%.c,$(OBJ_WASM_DIR)/%.o,$(WASM_SRCS))
+DESKTOP_OBJS = $(addprefix $(OBJ_DESKTOP_DIR)/,$(DESKTOP_SRCS:.c=.o))
+WASM_OBJS = $(addprefix $(OBJ_WASM_DIR)/,$(WASM_SRCS:.c=.o))
 
 # Output directories
 OUT_LIB_DIR = lib
@@ -221,34 +218,27 @@ deps:
 		exit 1; \
 	fi
 	@echo "Running make in $(LIBRAYLIB_ROOT)"
-	@$(MAKE) -C "$(LIBRAYLIB_ROOT)" DEV=$(DEV) CUSTOM_CFLAGS="$(LIBRAYLIB_CUSTOM_CFLAGS)"
-	@if [ ! -d "$(LIBLUA_ROOT)" ]; then \
-		if [ -z "$(LIBLUA_REPO)" ]; then \
-			echo "Error: LIBLUA_REPO is not set and $(LIBLUA_ROOT) does not exist."; \
-			echo "Set LIBLUA_REPO to your lua-builder repo (or pre-populate $(LIBLUA_ROOT))."; \
-			exit 1; \
-		fi; \
-		echo "Cloning lua builder from $(LIBLUA_REPO) into $(LIBLUA_ROOT)"; \
-		mkdir -p "$$(dirname "$(LIBLUA_ROOT)")"; \
-		git clone $(LIBLUA_REPO) $(LIBLUA_ROOT); \
+	@$(MAKE) -C "$(LIBRAYLIB_ROOT)" DEV=$(DEV) CUSTOM_CFLAGS="$(LIBRAYLIB_CUSTOM_CFLAGS)" desktop wasm
+	@if [ ! -d "$(WGUTILS_ROOT)" ]; then \
+		echo "Cloning wgutils from $(WGUTILS_REPO) into $(WGUTILS_ROOT)"; \
+		mkdir -p "$$(dirname "$(WGUTILS_ROOT)")"; \
+		git clone $(WGUTILS_REPO) $(WGUTILS_ROOT); \
 	else \
-		echo "Updating existing lua builder directory: $(LIBLUA_ROOT)"; \
-		git -C "$(LIBLUA_ROOT)" pull --ff-only; \
+		echo "Updating existing wgutils directory: $(WGUTILS_ROOT)"; \
+		git -C "$(WGUTILS_ROOT)" pull --ff-only; \
 	fi
-	@if [ ! -f "$(LIBLUA_ROOT)/Makefile" ]; then \
-		echo "Error: missing Lua dependency makefile at $(LIBLUA_ROOT)/Makefile"; \
+	@if [ ! -d "$(WGUTILS_ROOT)/path" ]; then \
+		echo "Error: $(WGUTILS_ROOT) does not look like wgutils source."; \
 		exit 1; \
 	fi
-	@echo "Running make in $(LIBLUA_ROOT)"
-	@$(MAKE) -C "$(LIBLUA_ROOT)" wasm desktop
 
 ensure_deps:
 	@if [ ! -f "$(LIBRAYLIB_ROOT)/Makefile" ]; then \
 		echo "Missing dependencies at $(LIBRAYLIB_ROOT). Run 'make deps' first."; \
 		exit 1; \
 	fi
-	@if [ ! -f "$(LIBLUA_ROOT)/Makefile" ]; then \
-		echo "Missing dependencies at $(LIBLUA_ROOT). Run 'make deps' first."; \
+	@if [ ! -d "$(WGUTILS_ROOT)/path" ]; then \
+		echo "Missing dependencies at $(WGUTILS_ROOT). Run 'make deps' first."; \
 		exit 1; \
 	fi
 
@@ -268,61 +258,35 @@ libraylib_desktop: ensure_deps
 		$(MAKE) -C $(LIBRAYLIB_ROOT) DEV=$(DEV) CUSTOM_CFLAGS="$(LIBRAYLIB_CUSTOM_CFLAGS)" desktop; \
 	fi
 
-liblua_wasm: ensure_deps
-	@if [ -f "$(LIBLUA_WASM_ARCHIVE)" ]; then \
-		echo "Using existing lua wasm archive: $(LIBLUA_WASM_ARCHIVE)"; \
-	else \
-		echo "Missing lua wasm archive: $(LIBLUA_WASM_ARCHIVE)"; \
-		$(MAKE) -C "$(LIBLUA_ROOT)" wasm; \
-	fi
-
-liblua_desktop: ensure_deps
-	@if [ -f "$(LIBLUA_DESKTOP_ARCHIVE)" ]; then \
-		echo "Using existing lua desktop archive: $(LIBLUA_DESKTOP_ARCHIVE)"; \
-	else \
-		echo "Missing lua desktop archive: $(LIBLUA_DESKTOP_ARCHIVE)"; \
-		$(MAKE) -C "$(LIBLUA_ROOT)" desktop; \
-	fi
-
 # WebAssembly static build
-wasm: libraylib_wasm liblua_wasm ensure_out_dir
+wasm: libraylib_wasm ensure_out_dir
 	$(info Building WASM with sources: $(WASM_SRCS))
 	$(info LDFLAGS_WASM: $(LDFLAGS_WASM))
 	$(info CFLAGS: $(CFLAGS))
 	$(CC_WASM) -o $(OUT_WASM) $(WASM_SRCS) $(LDFLAGS_WASM) $(CFLAGS_WASM) $(CFLAGS) $(INCLUDES) $(LIBS_WASM)
 
 # WebAssembly static library build
-wasm_archive: libraylib_wasm liblua_wasm ensure_out_dir ensure_obj_dir $(WASM_OBJS)
+wasm_archive: libraylib_wasm ensure_out_dir ensure_obj_dir $(WASM_OBJS)
 	$(info Building WASM archive with objects: $(WASM_OBJS))
 	$(info Adding raylib wasm archive: $(LIBRAYLIB_WASM_ARCHIVE))
-	$(info Adding lua wasm archive: $(LIBLUA_WASM_ARCHIVE))
 	@test -f "$(LIBRAYLIB_WASM_ARCHIVE)" || (echo "Missing raylib wasm archive: $(LIBRAYLIB_WASM_ARCHIVE)" && exit 1)
-	@test -f "$(LIBLUA_WASM_ARCHIVE)" || (echo "Missing lua wasm archive: $(LIBLUA_WASM_ARCHIVE)" && exit 1)
 	rm -rf $(OBJ_WASM_DIR)/.raylib_unpack
 	mkdir -p $(OBJ_WASM_DIR)/.raylib_unpack
 	cd $(OBJ_WASM_DIR)/.raylib_unpack && emar x $(abspath $(LIBRAYLIB_WASM_ARCHIVE))
-	rm -rf $(OBJ_WASM_DIR)/.lua_unpack
-	mkdir -p $(OBJ_WASM_DIR)/.lua_unpack
-	cd $(OBJ_WASM_DIR)/.lua_unpack && emar x $(abspath $(LIBLUA_WASM_ARCHIVE))
-	emar rcs $(OUT_WASM_ARCHIVE) $(WASM_OBJS) $(OBJ_WASM_DIR)/.raylib_unpack/*.o $(OBJ_WASM_DIR)/.lua_unpack/*.o
+	emar rcs $(OUT_WASM_ARCHIVE) $(WASM_OBJS) $(OBJ_WASM_DIR)/.raylib_unpack/*.o
 
 # Desktop static library build
-desktop: libraylib_desktop liblua_desktop ensure_out_dir ensure_obj_dir $(DESKTOP_OBJS)
+desktop: libraylib_desktop ensure_out_dir ensure_obj_dir $(DESKTOP_OBJS)
 	$(info Building Desktop (static) with sources: $(DESKTOP_SRCS))
 	$(info Adding raylib archive: $(LIBRAYLIB_DESKTOP_ARCHIVE))
-	$(info Adding lua archive: $(LIBLUA_DESKTOP_ARCHIVE))
 	@test -f "$(LIBRAYLIB_DESKTOP_ARCHIVE)" || (echo "Missing raylib archive: $(LIBRAYLIB_DESKTOP_ARCHIVE)" && exit 1)
-	@test -f "$(LIBLUA_DESKTOP_ARCHIVE)" || (echo "Missing lua archive: $(LIBLUA_DESKTOP_ARCHIVE)" && exit 1)
 	rm -rf $(OBJ_DESKTOP_DIR)/.raylib_unpack
 	mkdir -p $(OBJ_DESKTOP_DIR)/.raylib_unpack
 	cd $(OBJ_DESKTOP_DIR)/.raylib_unpack && ar x $(abspath $(LIBRAYLIB_DESKTOP_ARCHIVE))
-	rm -rf $(OBJ_DESKTOP_DIR)/.lua_unpack
-	mkdir -p $(OBJ_DESKTOP_DIR)/.lua_unpack
-	cd $(OBJ_DESKTOP_DIR)/.lua_unpack && ar x $(abspath $(LIBLUA_DESKTOP_ARCHIVE))
-	ar rcs $(OUT_DESKTOP) $(DESKTOP_OBJS) $(OBJ_DESKTOP_DIR)/.raylib_unpack/*.o $(OBJ_DESKTOP_DIR)/.lua_unpack/*.o
+	ar rcs $(OUT_DESKTOP) $(DESKTOP_OBJS) $(OBJ_DESKTOP_DIR)/.raylib_unpack/*.o
 
 uri_test:
-	$(CC_DESKTOP) $(CFLAGS) $(INCLUDES) src/uri/uri_test.c src/uri/uri.c src/vendor/cwalk/cwalk.c -o /tmp/uri_test
+	$(CC_DESKTOP) $(CFLAGS) $(INCLUDES) $(CORE_DIR)/uri/uri_test.c $(CORE_DIR)/uri/uri.c $(CORE_DIR)/vendor/cwalk/cwalk.c -o /tmp/uri_test
 	/tmp/uri_test
 
 test_desktop: desktop uri_test unit_test_desktop
@@ -349,13 +313,14 @@ unit_test_wasm: check_node
 probe_idbfs_build:
 	$(CC_WASM) -o $(HEADLESS_PROBE_JS) \
 		$(HEADLESS_PROBE_C) \
-		src/fileio/fileio.wasm.c \
-		src/fileio/fileio_common.c \
-		src/fetch_url/fetch_url.wasm.c \
-		src/path/path.c \
-		src/uri/uri.c \
-		src/vendor/cwalk/cwalk.c \
+		$(CORE_DIR)/fileio/fileio.wasm.c \
+		$(CORE_DIR)/fileio/fileio_common.c \
+		$(CORE_DIR)/fetch_url/fetch_url.wasm.c \
+		$(CORE_DIR)/path/path.c \
+		$(CORE_DIR)/uri/uri.c \
+		$(CORE_DIR)/vendor/cwalk/cwalk.c \
 		-Isrc \
+		-I$(CORE_DIR) \
 		-s WASM=1 \
 		-lidbfs.js \
 		-s FETCH \
@@ -370,12 +335,12 @@ probe_idbfs: probe_idbfs_build check_chrome check_probe_python
 	@CHROME_BIN="$(CHROME)" python3 $(HEADLESS_PROBE_RUNNER)
 
 # Compile Desktop source files to object files
-$(OBJ_DESKTOP_DIR)/%.o: $(SRC_DIR)/%.c
+$(OBJ_DESKTOP_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC_DESKTOP) $(CFLAGS_DESKTOP) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 # Compile WASM source files to object files
-$(OBJ_WASM_DIR)/%.o: $(SRC_DIR)/%.c
+$(OBJ_WASM_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC_WASM) $(CFLAGS_WASM) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
@@ -396,7 +361,7 @@ clean:
 #	@$(MAKE) -C $(LIBRAYLIB_ROOT) clean
 
 
-.PHONY: all deps ensure_deps clean ensure_out_dir ensure_obj_dir libraylib_wasm libraylib_desktop liblua_wasm liblua_desktop wasm wasm_archive desktop test test_desktop test_wasm unit_test_desktop unit_test_wasm check_node check_chrome check_probe_python probe_idbfs_build probe_idbfs
+.PHONY: all deps ensure_deps clean ensure_out_dir ensure_obj_dir libraylib_wasm libraylib_desktop wasm wasm_archive desktop test test_desktop test_wasm unit_test_desktop unit_test_wasm check_node check_chrome check_probe_python probe_idbfs_build probe_idbfs
 # 	"_RL_COLOR_BLACK", \
 # 	"_RL_COLOR_BLANK", \
 # 	"_RL_COLOR_MAGENTA", \

@@ -12,6 +12,8 @@ This example intentionally mixes:
 make -C examples/c desktop
 ```
 
+The C example manages its own Lua dependency (`examples/c/deps/lua`) and will clone/build it on demand.
+
 ## Build (Wasm)
 
 ```bash

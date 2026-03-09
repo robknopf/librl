@@ -1,10 +1,13 @@
 obj/
 lib/
 out/
-deps/
+deps/*
+!deps/.gitkeep
+examples/c/deps/*
+!examples/c/deps/.gitkeep
 .vscode/
 tests/headless/fileio_probe.js
 tests/headless/fileio_probe.wasm
 .well-known/
 examples/**/cache/
-node_modules
+node_modules/

@@ -1,8 +1,9 @@
 obj/
 lib/
 out/
-deps/*
-!deps/.gitkeep
+#deps/*
+#!deps/.gitkeep
+#!deps/wgutils
 examples/c/deps/*
 !examples/c/deps/.gitkeep
 .vscode/

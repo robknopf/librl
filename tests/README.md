@@ -39,8 +39,7 @@ make -C tests test_wasm
 
 ## Individual Targets
 
-- `uri_test`: runs wgutils URI test executable.
-- `unit_test_desktop`: runs desktop unit tests.
-- `unit_test_wasm`: runs wasm unit tests under Node.
+- `unit_test_desktop`: runs librl desktop unit tests.
+- `unit_test_wasm`: runs librl wasm unit tests under Node.
 - `probe_idbfs_build`: builds headless IDBFS probe wasm/js.
 - `probe_idbfs`: executes headless browser IDBFS persistence probe.

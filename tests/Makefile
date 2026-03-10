@@ -15,14 +15,9 @@ OUT_WASM := $(ROOT_DIR)/lib/librl.js
 UNIT_TEST_MAIN := $(UNIT_TEST_DIR)/tests_main.c
 UNIT_TEST_SRCS := \
 	$(UNIT_TEST_DIR)/fetch_url_stub.c \
-	$(UNIT_TEST_DIR)/fileio_test.c \
 	$(UNIT_TEST_DIR)/raylib_loader_stub.c \
-	$(UNIT_TEST_DIR)/test_fileio_api.c \
-	$(UNIT_TEST_DIR)/test_fileio_common.c \
-	$(UNIT_TEST_DIR)/test_lru_cache.c \
-	$(UNIT_TEST_DIR)/test_path.c \
-	$(UNIT_TEST_DIR)/test_rl_handle_pool.c \
-	$(UNIT_TEST_DIR)/test_rl_loader.c
+	$(UNIT_TEST_DIR)/rl_handle_pool_test.c \
+	$(UNIT_TEST_DIR)/rl_loader_test.c
 UNIT_TEST_LIB_SRCS := \
 	$(CORE_DIR)/fileio/fileio.c \
 	$(CORE_DIR)/fileio/fileio_common.c \
@@ -54,13 +49,12 @@ WASM_COMMON_LDFLAGS ?= \
 CFLAGS ?= -Wall -Wextra -fdiagnostics-color=always -Isrc -I$(CORE_DIR) -O2
 INCLUDES := -I$(ROOT_DIR) -I$(ROOT_DIR)/include -I$(ROOT_DIR)/deps/libraylib/include -I$(ROOT_DIR)/src -I$(CORE_DIR)
 
-.PHONY: test test_desktop test_wasm uri_test unit_test_desktop unit_test_wasm probe_idbfs_build probe_idbfs check_node check_chrome check_probe_python
+.PHONY: test test_desktop test_wasm unit_test_desktop unit_test_wasm probe_idbfs_build probe_idbfs check_node check_chrome check_probe_python
 
 test_desktop:
 	@$(MAKE) -C $(ROOT_DIR) desktop
-	@$(MAKE) uri_test
 	@$(MAKE) unit_test_desktop
-	@echo "Desktop smoke test passed (build + uri_test run)."
+	@echo "Desktop smoke test passed (build + librl unit tests)."
 
 test_wasm:
 	@$(MAKE) -C $(ROOT_DIR) wasm
@@ -72,10 +66,6 @@ test_wasm:
 
 test: test_desktop test_wasm
 	@echo "All smoke tests passed."
-
-uri_test:
-	$(CC_DESKTOP) $(CFLAGS) $(INCLUDES) $(CORE_DIR)/uri/uri_test.c $(CORE_DIR)/uri/uri.c $(CORE_DIR)/vendor/cwalk/cwalk.c -o /tmp/uri_test
-	/tmp/uri_test
 
 unit_test_desktop:
 	$(CC_DESKTOP) $(CFLAGS) $(INCLUDES) -I$(UNIT_TEST_DIR) $(UNIT_TEST_MAIN) $(UNIT_TEST_SRCS) $(UNIT_TEST_LIB_SRCS) $(UNIT_TEST_EXTRA_LIB_SRCS) -o $(UNIT_TEST_DESKTOP_BIN)

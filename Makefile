@@ -180,7 +180,8 @@ LIBS_WASM = -L$(LIBRAYLIB_LIB) \
 # Source files
 SRC_DIR = src
 CORE_DIR = $(WG_CORE_DIR)
-ALL_SRCS = $(call rwildcard,$(SRC_DIR)/,*.c) $(call rwildcard,$(CORE_DIR)/,*.c)
+CORE_EXCLUDED_SRCS = $(call rwildcard,$(CORE_DIR)/tests/,*.c)
+ALL_SRCS = $(call rwildcard,$(SRC_DIR)/,*.c) $(filter-out $(CORE_EXCLUDED_SRCS),$(call rwildcard,$(CORE_DIR)/,*.c))
 TEST_SRCS = $(call rwildcard,$(SRC_DIR)/,*_test.c) $(call rwildcard,$(CORE_DIR)/,*_test.c)
 LIB_SRCS = $(filter-out $(TEST_SRCS), $(ALL_SRCS))
 

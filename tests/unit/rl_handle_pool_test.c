@@ -1,4 +1,4 @@
-#include "test_rl_handle_pool.h"
+#include "rl_handle_pool_test.h"
 
 #include "internal/rl_handle_pool.h"
 #include "test_common.h"

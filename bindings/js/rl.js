@@ -345,6 +345,36 @@ const RL = {
     destroyModel: (model) => moduleInstance.ccall(
         "rl_model_destroy", null, ["number"], [model]
     ),
+    createMusic: (path) => moduleInstance.ccall(
+        "rl_music_create", "number", ["string"], [path], { async: true }
+    ),
+    destroyMusic: (music) => moduleInstance.ccall(
+        "rl_music_destroy", null, ["number"], [music]
+    ),
+    playMusic: (music) => moduleInstance.ccall(
+        "rl_music_play", "number", ["number"], [music]
+    ) !== 0,
+    pauseMusic: (music) => moduleInstance.ccall(
+        "rl_music_pause", "number", ["number"], [music]
+    ) !== 0,
+    stopMusic: (music) => moduleInstance.ccall(
+        "rl_music_stop", "number", ["number"], [music]
+    ) !== 0,
+    setMusicLoop: (music, shouldLoop) => moduleInstance.ccall(
+        "rl_music_set_loop", "number", ["number", "number"], [music, shouldLoop ? 1 : 0]
+    ) !== 0,
+    setMusicVolume: (music, volume) => moduleInstance.ccall(
+        "rl_music_set_volume", "number", ["number", "number"], [music, volume]
+    ) !== 0,
+    isMusicPlaying: (music) => moduleInstance.ccall(
+        "rl_music_is_playing", "number", ["number"], [music]
+    ) !== 0,
+    updateMusic: (music) => moduleInstance.ccall(
+        "rl_music_update", "number", ["number"], [music]
+    ) !== 0,
+    updateAllMusic: () => moduleInstance.ccall(
+        "rl_music_update_all", null, [], []
+    ),
     createTexture: (path) => moduleInstance.ccall(
         "rl_texture_create", "number", ["string"], [path], { async: true }
     ),

@@ -5,6 +5,7 @@
 #include "rl_color.h"
 #include "rl_font.h"
 #include "rl_model.h"
+#include "rl_music.h"
 #include "rl_sprite3d.h"
 #include "lua_interop.h"
 #include "logger/log.h"
@@ -70,8 +71,10 @@ int main(void)
     const char *font_path = "assets/fonts/Komika/KOMIKAH_.ttf";
     const char *model_path = "assets/models/gumshoe/gumshoe.glb";
     const char *sprite_path = "assets/sprites/logo/wg-logo-bw-alpha.png";
+    const char *music_path = "assets/music/punchy.mp3";
     const float font_size = 24.0f;
     const float small_font_size = 16.0f;
+    rl_handle_t music = 0;
     lua_interop_vm_t lua_vm = {0};
 
     rl_init();
@@ -103,6 +106,14 @@ int main(void)
         fprintf(stderr, "Lua interop init failed\n");
     }
 
+    music = rl_music_create(music_path);
+    if (music != 0) {
+        (void)rl_music_set_loop(music, true);
+        (void)rl_music_play(music);
+    } else {
+        log_warn("Failed to load music stream from %s", music_path);
+    }
+
     (void)rl_camera3d_set_active(camera);
     (void)rl_model_set_animation(gumshoe, 1);
     (void)rl_model_set_animation_speed(gumshoe, 1.0f);
@@ -117,6 +128,10 @@ int main(void)
         vec2_t message_size = {0};
         int text_x = 0;
         int text_y = 0;
+
+        if (music != 0) {
+            (void)rl_music_update(music);
+        }
 
         (void)rl_model_animate(gumshoe, dt);
 
@@ -148,6 +163,9 @@ int main(void)
     rl_font_destroy(komika);
     rl_font_destroy(komika_small);
     rl_color_destroy(text_shadow);
+    if (music != 0) {
+        rl_music_destroy(music);
+    }
     lua_interop_deinit(&lua_vm);
     rl_deinit();
     CloseWindow();

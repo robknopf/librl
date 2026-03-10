@@ -22,6 +22,7 @@ void rl_init() {
     rl_color_init();
     rl_font_init();
     rl_model_init();
+    rl_music_init();
     rl_camera3d_init();
     rl_texture_init();
     rl_sprite3d_init();
@@ -38,6 +39,7 @@ void rl_deinit() {
     rl_sprite3d_deinit();
     rl_texture_deinit();
     rl_model_deinit();
+    rl_music_deinit();
     rl_font_deinit();
     rl_color_deinit();
     rl_scratch_deinit();

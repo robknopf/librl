@@ -13,6 +13,7 @@ This document summarizes the current public C API exposed by `include/*.h`.  As 
 - Not all handle-backed resources use the same storage/lifetime policy.
 - Colors are lightweight value handles (RGBA) and are not refcounted shared GPU assets.
 - Textures are shared GPU assets with path-based deduplication and internal refcounting.
+- Music streams are handle-backed runtime resources; each handle owns its decoded stream/data until destroyed.
 - This difference is intentional: textures are expensive to allocate/upload, colors are cheap values.
 
 ## Core (`include/rl.h`)
@@ -78,6 +79,20 @@ Notes:
 - `rl_model_create()` requires a ready window/graphics context.
 - On model load failure, the implementation substitutes a visible placeholder cube.
 
+## Music (`include/rl_music.h`)
+
+Main responsibilities:
+
+- Music stream creation/destruction by filename
+- Playback control (`play`, `pause`, `stop`)
+- Runtime control (`set_loop`, `set_volume`)
+- Status/update (`is_playing`, `update`, `update_all`)
+
+Notes:
+
+- Music loading uses the same loader/file callback flow as other assets.
+- `rl_music_update()` (or `rl_music_update_all()`) should be called each frame while playing.
+
 ## Textures (`include/rl_texture.h`)
 
 Main responsibilities:
@@ -118,9 +133,9 @@ Notes:
 ## Logging
 
 Notes:
-- Logging goes through the shared logger (`src/logger/log.h`), not direct `fprintf`/`printf`.
-- Log level is carried by the logger call (`log_error`, `log_warn`, `log_info`, `log_debug`).
-- Log messages should a subsystem scope prefix in message text. e.g. `FILEIO: ...`.
+- Logging goes through the shared wrapper logger (`deps/wgutils/logger/log.h`), not direct `fprintf`/`printf`.
+- Log level is carried by logger calls (`log_error`, `log_warn`, `log_info`, `log_debug`) or explicit `log_message(...)`.
+- Log messages should include a subsystem scope prefix in message text, e.g. `FILEIO: ...`.
 
 ## Scratch Area (`include/rl_scratch.h`)
 
@@ -150,5 +165,4 @@ Wasm/JS boundary conventions:
   - JS wrapper reads from `rl_scratch.js`
 
 ---
-
 

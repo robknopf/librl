@@ -99,6 +99,16 @@ proc rl_model_set_animation_speed*(model: RLHandle, speed: cfloat): bool {.impor
 proc rl_model_set_animation_loop*(model: RLHandle, shouldLoop: bool): bool {.importc, cdecl, header: "rl_model.h".}
 proc rl_model_animate*(model: RLHandle, deltaSeconds: cfloat): bool {.importc, cdecl, header: "rl_model.h".}
 proc rl_model_destroy*(model: RLHandle) {.importc, cdecl, header: "rl_model.h".}
+proc rl_music_create*(filename: cstring): RLHandle {.importc, cdecl, header: "rl_music.h".}
+proc rl_music_destroy*(music: RLHandle) {.importc, cdecl, header: "rl_music.h".}
+proc rl_music_play*(music: RLHandle): bool {.importc, cdecl, header: "rl_music.h".}
+proc rl_music_pause*(music: RLHandle): bool {.importc, cdecl, header: "rl_music.h".}
+proc rl_music_stop*(music: RLHandle): bool {.importc, cdecl, header: "rl_music.h".}
+proc rl_music_set_loop*(music: RLHandle, shouldLoop: bool): bool {.importc, cdecl, header: "rl_music.h".}
+proc rl_music_set_volume*(music: RLHandle, volume: cfloat): bool {.importc, cdecl, header: "rl_music.h".}
+proc rl_music_is_playing*(music: RLHandle): bool {.importc, cdecl, header: "rl_music.h".}
+proc rl_music_update*(music: RLHandle): bool {.importc, cdecl, header: "rl_music.h".}
+proc rl_music_update_all*() {.importc, cdecl, header: "rl_music.h".}
 proc rl_texture_create*(filename: cstring): RLHandle {.importc, cdecl, header: "rl_texture.h".}
 proc rl_texture_destroy*(texture: RLHandle) {.importc, cdecl, header: "rl_texture.h".}
 proc rl_sprite3d_create*(filename: cstring): RLHandle {.importc, cdecl, header: "rl_sprite3d.h".}

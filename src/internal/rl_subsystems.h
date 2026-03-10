@@ -12,6 +12,9 @@ void rl_font_deinit(void);
 void rl_model_init(void);
 void rl_model_deinit(void);
 
+void rl_music_init(void);
+void rl_music_deinit(void);
+
 void rl_camera3d_init(void);
 void rl_camera3d_deinit(void);
 

@@ -113,6 +113,16 @@ LDFLAGS_WASM = \
 	"_rl_model_set_animation_loop", \
 	"_rl_model_animate", \
 	"_rl_model_destroy", \
+	"_rl_music_create", \
+	"_rl_music_destroy", \
+	"_rl_music_play", \
+	"_rl_music_pause", \
+	"_rl_music_stop", \
+	"_rl_music_set_loop", \
+	"_rl_music_set_volume", \
+	"_rl_music_is_playing", \
+	"_rl_music_update", \
+	"_rl_music_update_all", \
 	"_rl_texture_create", \
 	"_rl_texture_destroy", \
 	"_rl_sprite3d_create", \

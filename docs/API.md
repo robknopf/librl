@@ -85,12 +85,14 @@ Notes:
 Main responsibilities:
 
 - Model picking from screen-space mouse coordinates with camera + model handles
+- Sprite3D billboard picking from screen-space mouse coordinates with camera + sprite handles
 - Return collision details (`hit`, `distance`, world-space `point` and `normal`)
-- Wasm bridge helper for JS (`rl_pick_model_to_scratch`)
+- Wasm bridge helpers for JS (`rl_pick_model_to_scratch`, `rl_pick_sprite3d_to_scratch`)
 
 Notes:
 
 - `rl_pick_model(...)` currently targets one model handle at a time.
+- `rl_pick_sprite3d(...)` targets one sprite handle at a time and uses billboard-quad collision.
 - Transform inputs mirror the current model draw style (position + uniform scale).
 - `rl_pick_model_to_scratch(...)` writes:
   - hit point into scratch `vector3`

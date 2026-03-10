@@ -115,6 +115,8 @@ LDFLAGS_WASM = \
 	"_rl_model_destroy", \
 	"_rl_pick_model", \
 	"_rl_pick_model_to_scratch", \
+	"_rl_pick_sprite3d", \
+	"_rl_pick_sprite3d_to_scratch", \
 	"_rl_music_create", \
 	"_rl_music_destroy", \
 	"_rl_music_play", \

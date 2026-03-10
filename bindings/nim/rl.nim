@@ -113,6 +113,16 @@ proc rl_pick_model*(
   positionZ: cfloat,
   scale: cfloat
 ): RLPickResult {.importc, cdecl, header: "rl_pick.h".}
+proc rl_pick_sprite3d*(
+  camera: RLHandle,
+  sprite3d: RLHandle,
+  mouseX: cfloat,
+  mouseY: cfloat,
+  positionX: cfloat,
+  positionY: cfloat,
+  positionZ: cfloat,
+  size: cfloat
+): RLPickResult {.importc, cdecl, header: "rl_pick.h".}
 proc rl_music_create*(filename: cstring): RLHandle {.importc, cdecl, header: "rl_music.h".}
 proc rl_music_destroy*(music: RLHandle) {.importc, cdecl, header: "rl_music.h".}
 proc rl_music_play*(music: RLHandle): bool {.importc, cdecl, header: "rl_music.h".}

@@ -34,6 +34,24 @@ bool rl_pick_model_to_scratch(rl_handle_t camera,
                               float position_z,
                               float scale);
 
+rl_pick_result_t rl_pick_sprite3d(rl_handle_t camera,
+                                  rl_handle_t sprite3d,
+                                  float mouse_x,
+                                  float mouse_y,
+                                  float position_x,
+                                  float position_y,
+                                  float position_z,
+                                  float size);
+
+bool rl_pick_sprite3d_to_scratch(rl_handle_t camera,
+                                 rl_handle_t sprite3d,
+                                 float mouse_x,
+                                 float mouse_y,
+                                 float position_x,
+                                 float position_y,
+                                 float position_z,
+                                 float size);
+
 #ifdef __cplusplus
 }
 #endif

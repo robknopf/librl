@@ -1,14 +1,17 @@
 #include "rl_sprite3d.h"
 
 #include <raylib.h>
+#include <raymath.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "internal/exports.h"
 #include "internal/rl_camera3d_store.h"
 #include "internal/rl_color_store.h"
 #include "internal/rl_handle_pool.h"
+#include "internal/rl_sprite3d_store.h"
 #include "logger/log.h"
 #include "rl_texture.h"
 #include "internal/rl_texture_store.h"
@@ -125,6 +128,68 @@ void rl_sprite3d_destroy(rl_handle_t handle)
     sprite->texture = 0;
     sprite->in_use = false;
     rl_handle_pool_free(&rl_sprite3d_pool, handle);
+}
+
+bool rl_sprite3d_get_ray_collision(rl_handle_t handle,
+                                   Camera3D camera,
+                                   Ray ray,
+                                   float position_x,
+                                   float position_y,
+                                   float position_z,
+                                   float size,
+                                   RayCollision *collision)
+{
+    rl_sprite3d_t *sprite = rl_sprite3d_get(handle);
+    Texture2D *texture = NULL;
+    Vector2 billboard_size = {0};
+    Vector3 up = {0.0f, 1.0f, 0.0f};
+    Vector2 origin = {0};
+    Matrix mat_view = {0};
+    Vector3 right = {0};
+    Vector3 up_scaled = {0};
+    Vector3 origin3d = {0};
+    Vector3 position = {position_x, position_y, position_z};
+    Vector3 points[4] = {0};
+
+    if (collision == NULL) {
+        return false;
+    }
+    *collision = (RayCollision){0};
+
+    if (sprite == NULL) {
+        return false;
+    }
+
+    texture = rl_texture_get_ptr(sprite->texture);
+    if (texture == NULL || texture->height == 0 || fabsf(size) <= 0.00001f) {
+        return false;
+    }
+
+    billboard_size = (Vector2){size * fabsf((float)texture->width / (float)texture->height), size};
+    origin = Vector2Scale(billboard_size, 0.5f);
+
+    mat_view = MatrixLookAt(camera.position, camera.target, camera.up);
+    right = (Vector3){mat_view.m0, mat_view.m4, mat_view.m8};
+    right = Vector3Scale(right, billboard_size.x);
+    up_scaled = Vector3Scale(up, billboard_size.y);
+
+    origin3d = Vector3Add(
+        Vector3Scale(Vector3Normalize(right), origin.x),
+        Vector3Scale(Vector3Normalize(up_scaled), origin.y)
+    );
+
+    points[0] = Vector3Zero();
+    points[1] = right;
+    points[2] = Vector3Add(up_scaled, right);
+    points[3] = up_scaled;
+
+    for (int i = 0; i < 4; i++) {
+        points[i] = Vector3Subtract(points[i], origin3d);
+        points[i] = Vector3Add(points[i], position);
+    }
+
+    *collision = GetRayCollisionQuad(ray, points[0], points[1], points[2], points[3]);
+    return true;
 }
 
 void rl_sprite3d_init(void)

@@ -10,6 +10,8 @@ import { rl } from "/lib/librl.js";
     const smallFontSize = 16;
     const modelPath = "assets/models/gumshoe/gumshoe.glb";
     const spritePath = "assets/sprites/logo/wg-logo-bw-alpha.png";
+    const spritePos = { x: 5.0, y: 0.0, z: 0.0 };
+    const spriteSize = 1.0;
 
     const komika = await rl.createFont("assets/fonts/Komika/KOMIKAH_.ttf", fontSize);
     const komikaSmall = await rl.createFont("assets/fonts/Komika/KOMIKAH_.ttf", smallFontSize);
@@ -55,7 +57,28 @@ import { rl } from "/lib/librl.js";
       rl.update();
       const mouse = rl.getMouseState();
       if (mouse.left === rl.BUTTON_PRESSED) {
-        lastPick = rl.pickModel(camera, gumshoe, mouse.x, mouse.y, 0, 0, 0, 1);
+        const modelPick = rl.pickModel(camera, gumshoe, mouse.x, mouse.y, 0, 0, 0, 1);
+        const spritePick = rl.pickSprite3D(
+          camera,
+          sprite,
+          mouse.x,
+          mouse.y,
+          spritePos.x,
+          spritePos.y,
+          spritePos.z,
+          spriteSize
+        );
+        if (modelPick.hit && spritePick.hit) {
+          lastPick = modelPick.distance <= spritePick.distance
+            ? { ...modelPick, target: "model" }
+            : { ...spritePick, target: "sprite3d" };
+        } else if (modelPick.hit) {
+          lastPick = { ...modelPick, target: "model" };
+        } else if (spritePick.hit) {
+          lastPick = { ...spritePick, target: "sprite3d" };
+        } else {
+          lastPick = { hit: false, target: "none" };
+        }
       }
 
       rl.beginDrawing();
@@ -64,7 +87,7 @@ import { rl } from "/lib/librl.js";
       rl.beginMode3D();
       rl.modelAnimate(gumshoe, dt);
       rl.drawModel(gumshoe, 0.0, 0.0, 0.0, 1.0, rl.RAYWHITE);
-      rl.drawSprite3D(sprite, 0.0, 0.0, 0.0, 1.0, rl.RAYWHITE);
+      rl.drawSprite3D(sprite, spritePos.x, spritePos.y, spritePos.z, spriteSize, rl.RAYWHITE);
       rl.endMode3D();
 
       const title = "Click model to test pick";
@@ -81,7 +104,7 @@ import { rl } from "/lib/librl.js";
         if (lastPick.hit) {
           rl.drawTextEx(
             komikaSmall,
-            `Pick hit d=${lastPick.distance.toFixed(2)} @ (${lastPick.point.x.toFixed(2)}, ${lastPick.point.y.toFixed(2)}, ${lastPick.point.z.toFixed(2)})`,
+            `Pick ${lastPick.target} hit d=${lastPick.distance.toFixed(2)} @ (${lastPick.point.x.toFixed(2)}, ${lastPick.point.y.toFixed(2)}, ${lastPick.point.z.toFixed(2)})`,
             10, 66, smallFontSize, 1, rl.DARKGREEN
           );
         } else {

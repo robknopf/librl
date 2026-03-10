@@ -378,6 +378,26 @@ const RL = {
             }
         };
     },
+    pickSprite3D: (camera, sprite3d, mouseX, mouseY, x = 0, y = 0, z = 0, size = 1) => {
+        const hit = moduleInstance.ccall(
+            "rl_pick_sprite3d_to_scratch",
+            "number",
+            ["number", "number", "number", "number", "number", "number", "number", "number"],
+            [camera, sprite3d, mouseX, mouseY, x, y, z, size]
+        ) !== 0;
+        const point = moduleInstance.getVector3();
+        const normalDistance = moduleInstance.getVector4();
+        return {
+            hit,
+            distance: normalDistance.w,
+            point,
+            normal: {
+                x: normalDistance.x,
+                y: normalDistance.y,
+                z: normalDistance.z
+            }
+        };
+    },
     createMusic: (path) => moduleInstance.ccall(
         "rl_music_create", "number", ["string"], [path], { async: true }
     ),

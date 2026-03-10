@@ -1,6 +1,7 @@
 #include "rl_model.h"
 
 #include <math.h>
+#include <float.h>
 #include <raylib.h>
 #include <raymath.h>
 #include <stdbool.h>
@@ -35,6 +36,8 @@ typedef struct
     unsigned int ref_count;
     char source_path[256];
     bool has_source_path;
+    BoundingBox local_bounds;
+    bool has_local_bounds;
 } rl_model_asset_t;
 
 typedef struct
@@ -85,6 +88,37 @@ static void rl_model_asset_reset(rl_model_asset_t *asset)
     asset->ref_count = 0;
     asset->source_path[0] = '\0';
     asset->has_source_path = false;
+    asset->local_bounds = (BoundingBox){0};
+    asset->has_local_bounds = false;
+}
+
+static BoundingBox rl_model_transform_bounding_box(BoundingBox box, Matrix transform)
+{
+    Vector3 corners[8] = {
+        {box.min.x, box.min.y, box.min.z},
+        {box.max.x, box.min.y, box.min.z},
+        {box.min.x, box.max.y, box.min.z},
+        {box.max.x, box.max.y, box.min.z},
+        {box.min.x, box.min.y, box.max.z},
+        {box.max.x, box.min.y, box.max.z},
+        {box.min.x, box.max.y, box.max.z},
+        {box.max.x, box.max.y, box.max.z}
+    };
+    BoundingBox out = {0};
+    out.min = (Vector3){FLT_MAX, FLT_MAX, FLT_MAX};
+    out.max = (Vector3){-FLT_MAX, -FLT_MAX, -FLT_MAX};
+
+    for (int i = 0; i < 8; i++) {
+        Vector3 p = Vector3Transform(corners[i], transform);
+        if (p.x < out.min.x) out.min.x = p.x;
+        if (p.y < out.min.y) out.min.y = p.y;
+        if (p.z < out.min.z) out.min.z = p.z;
+        if (p.x > out.max.x) out.max.x = p.x;
+        if (p.y > out.max.y) out.max.y = p.y;
+        if (p.z > out.max.z) out.max.z = p.z;
+    }
+
+    return out;
 }
 
 static void rl_model_instance_reset(rl_model_instance_t *instance)
@@ -232,6 +266,9 @@ static rl_handle_t rl_model_asset_create(Model model,
         snprintf(asset->source_path, sizeof(asset->source_path), "%s", normalized_path);
         asset->has_source_path = true;
     }
+
+    asset->local_bounds = GetModelBoundingBox(model);
+    asset->has_local_bounds = true;
 
     return handle;
 }
@@ -621,17 +658,27 @@ void rl_model_draw(rl_handle_t handle, float position_x, float position_y, float
     DrawModel(*(asset->model), (Vector3){position_x, position_y, position_z}, scale, rl_color_get(tint));
 }
 
-bool rl_model_get_ray_collision(rl_handle_t handle, Ray ray, Matrix transform, RayCollision *collision)
+bool rl_model_get_ray_collision_ex(rl_handle_t handle,
+                                   Ray ray,
+                                   Matrix transform,
+                                   RayCollision *collision,
+                                   bool *broadphase_tested,
+                                   bool *broadphase_rejected,
+                                   bool *narrowphase_ran)
 {
     rl_model_instance_t *instance = rl_model_instance_get(handle);
     rl_model_asset_t *asset = NULL;
     Matrix model_transform = {0};
+    BoundingBox world_bounds = {0};
     bool found_hit = false;
     float closest_distance = 0.0f;
 
     if (collision == NULL) {
         return false;
     }
+    if (broadphase_tested != NULL) *broadphase_tested = false;
+    if (broadphase_rejected != NULL) *broadphase_rejected = false;
+    if (narrowphase_ran != NULL) *narrowphase_ran = false;
 
     *collision = (RayCollision){0};
     if (instance == NULL) {
@@ -644,6 +691,18 @@ bool rl_model_get_ray_collision(rl_handle_t handle, Ray ray, Matrix transform, R
     }
 
     model_transform = MatrixMultiply(asset->model->transform, transform);
+    if (asset->has_local_bounds) {
+        RayCollision broad_hit = {0};
+        if (broadphase_tested != NULL) *broadphase_tested = true;
+        world_bounds = rl_model_transform_bounding_box(asset->local_bounds, model_transform);
+        broad_hit = GetRayCollisionBox(ray, world_bounds);
+        if (!broad_hit.hit) {
+            if (broadphase_rejected != NULL) *broadphase_rejected = true;
+            return true;
+        }
+    }
+
+    if (narrowphase_ran != NULL) *narrowphase_ran = true;
     for (int i = 0; i < asset->model->meshCount; i++) {
         RayCollision mesh_hit = GetRayCollisionMesh(ray, asset->model->meshes[i], model_transform);
         if (!mesh_hit.hit) {
@@ -657,6 +716,11 @@ bool rl_model_get_ray_collision(rl_handle_t handle, Ray ray, Matrix transform, R
     }
 
     return true;
+}
+
+bool rl_model_get_ray_collision(rl_handle_t handle, Ray ray, Matrix transform, RayCollision *collision)
+{
+    return rl_model_get_ray_collision_ex(handle, ray, transform, collision, NULL, NULL, NULL);
 }
 
 RL_KEEP

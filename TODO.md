@@ -49,6 +49,9 @@
   - confirm warning behavior is once-per-instance
   - document/validate missing-normal-VBO fallback behavior
 - Consider caching animation GPU-state readiness per model instance to avoid per-frame mesh scans.
+- Picking follow-up:
+  - broad-phase checks before narrow-phase ray tests: done (model world-AABB and sprite billboard-sphere early reject)
+  - add a scene-level "what's under the mouse" API that returns closest hit target + hit data
 
 ### Build / Tooling
 

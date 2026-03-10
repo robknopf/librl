@@ -117,6 +117,11 @@ LDFLAGS_WASM = \
 	"_rl_pick_model_to_scratch", \
 	"_rl_pick_sprite3d", \
 	"_rl_pick_sprite3d_to_scratch", \
+	"_rl_pick_reset_stats", \
+	"_rl_pick_get_broadphase_tests", \
+	"_rl_pick_get_broadphase_rejects", \
+	"_rl_pick_get_narrowphase_tests", \
+	"_rl_pick_get_narrowphase_hits", \
 	"_rl_music_create", \
 	"_rl_music_destroy", \
 	"_rl_music_play", \

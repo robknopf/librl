@@ -398,6 +398,17 @@ const RL = {
             }
         };
     },
+    resetPickStats: () => {
+        moduleInstance.ccall("rl_pick_reset_stats", null, [], []);
+    },
+    getPickStats: () => {
+        return {
+            broadphaseTests: moduleInstance.ccall("rl_pick_get_broadphase_tests", "number", [], []),
+            broadphaseRejects: moduleInstance.ccall("rl_pick_get_broadphase_rejects", "number", [], []),
+            narrowphaseTests: moduleInstance.ccall("rl_pick_get_narrowphase_tests", "number", [], []),
+            narrowphaseHits: moduleInstance.ccall("rl_pick_get_narrowphase_hits", "number", [], [])
+        };
+    },
     createMusic: (path) => moduleInstance.ccall(
         "rl_music_create", "number", ["string"], [path], { async: true }
     ),

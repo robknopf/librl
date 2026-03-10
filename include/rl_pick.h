@@ -16,6 +16,14 @@ typedef struct
     vec3_t normal;
 } rl_pick_result_t;
 
+typedef struct
+{
+    int broadphase_tests;
+    int broadphase_rejects;
+    int narrowphase_tests;
+    int narrowphase_hits;
+} rl_pick_stats_t;
+
 rl_pick_result_t rl_pick_model(rl_handle_t camera,
                                rl_handle_t model,
                                float mouse_x,
@@ -51,6 +59,12 @@ bool rl_pick_sprite3d_to_scratch(rl_handle_t camera,
                                  float position_y,
                                  float position_z,
                                  float size);
+
+void rl_pick_reset_stats(void);
+int rl_pick_get_broadphase_tests(void);
+int rl_pick_get_broadphase_rejects(void);
+int rl_pick_get_narrowphase_tests(void);
+int rl_pick_get_narrowphase_hits(void);
 
 #ifdef __cplusplus
 }

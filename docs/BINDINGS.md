@@ -40,7 +40,18 @@ Notes:
 
 - This is the primary browser-facing API layer.
 - It includes async-oriented wrappers for asset-backed calls like model/font creation.
-- Input state uses `getMouseState()` (x/y/wheel/buttons) and `getKeyboard()`.
+- Input state uses `getMouseState()` (x/y/wheel/left/right/middle/buttons) and `getKeyboard()`.
+  - button states use shared constants exposed on `rl`:
+    - `rl.BUTTON_UP`
+    - `rl.BUTTON_PRESSED`
+    - `rl.BUTTON_DOWN`
+    - `rl.BUTTON_RELEASED`
+- Picking helpers available in JS:
+  - `pickModel(...)`
+  - `pickSprite3D(...)`
+  - telemetry helpers:
+    - `resetPickStats()`
+    - `getPickStats()`
 - IDBFS readiness helpers:
   - `RL.isIdbfsReady()` returns true only after wasm-side restore from IndexedDB completes.
   - `RL.waitForIdbfsReady(timeoutMs)` polls readiness and resolves to a boolean.
@@ -66,7 +77,15 @@ Notes:
 
 - This binding is direct/low-level and close to the C surface.
 - Keep declarations synchronized with header changes in `include/`.
-- It includes a small `RLMouse` helper record built from `rl_get_mouse_position()/rl_get_mouse_wheel()/rl_get_mouse_button()`.
+- It maps `RLMouse` directly to `rl_mouse_state_t` via `rl_get_mouse_state()`.
+- Mouse button states use shared constants:
+  - `RL_BUTTON_UP`
+  - `RL_BUTTON_PRESSED`
+  - `RL_BUTTON_DOWN`
+  - `RL_BUTTON_RELEASED`
+- Picking helpers available in Nim:
+  - `rl_pick_model(...)`
+  - `rl_pick_sprite3d(...)`
 
 ## Status and Scope
 

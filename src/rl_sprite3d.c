@@ -130,14 +130,17 @@ void rl_sprite3d_destroy(rl_handle_t handle)
     rl_handle_pool_free(&rl_sprite3d_pool, handle);
 }
 
-bool rl_sprite3d_get_ray_collision(rl_handle_t handle,
-                                   Camera3D camera,
-                                   Ray ray,
-                                   float position_x,
-                                   float position_y,
-                                   float position_z,
-                                   float size,
-                                   RayCollision *collision)
+bool rl_sprite3d_get_ray_collision_ex(rl_handle_t handle,
+                                      Camera3D camera,
+                                      Ray ray,
+                                      float position_x,
+                                      float position_y,
+                                      float position_z,
+                                      float size,
+                                      RayCollision *collision,
+                                      bool *broadphase_tested,
+                                      bool *broadphase_rejected,
+                                      bool *narrowphase_ran)
 {
     rl_sprite3d_t *sprite = rl_sprite3d_get(handle);
     Texture2D *texture = NULL;
@@ -154,6 +157,9 @@ bool rl_sprite3d_get_ray_collision(rl_handle_t handle,
     if (collision == NULL) {
         return false;
     }
+    if (broadphase_tested != NULL) *broadphase_tested = false;
+    if (broadphase_rejected != NULL) *broadphase_rejected = false;
+    if (narrowphase_ran != NULL) *narrowphase_ran = false;
     *collision = (RayCollision){0};
 
     if (sprite == NULL) {
@@ -166,6 +172,18 @@ bool rl_sprite3d_get_ray_collision(rl_handle_t handle,
     }
 
     billboard_size = (Vector2){size * fabsf((float)texture->width / (float)texture->height), size};
+    {
+        float half_width = fabsf(billboard_size.x) * 0.5f;
+        float half_height = fabsf(billboard_size.y) * 0.5f;
+        float radius = sqrtf((half_width * half_width) + (half_height * half_height));
+        if (broadphase_tested != NULL) *broadphase_tested = true;
+        RayCollision broad_hit = GetRayCollisionSphere(ray, position, radius);
+        if (!broad_hit.hit) {
+            if (broadphase_rejected != NULL) *broadphase_rejected = true;
+            return true;
+        }
+    }
+
     origin = Vector2Scale(billboard_size, 0.5f);
 
     mat_view = MatrixLookAt(camera.position, camera.target, camera.up);
@@ -188,8 +206,31 @@ bool rl_sprite3d_get_ray_collision(rl_handle_t handle,
         points[i] = Vector3Add(points[i], position);
     }
 
+    if (narrowphase_ran != NULL) *narrowphase_ran = true;
     *collision = GetRayCollisionQuad(ray, points[0], points[1], points[2], points[3]);
     return true;
+}
+
+bool rl_sprite3d_get_ray_collision(rl_handle_t handle,
+                                   Camera3D camera,
+                                   Ray ray,
+                                   float position_x,
+                                   float position_y,
+                                   float position_z,
+                                   float size,
+                                   RayCollision *collision)
+{
+    return rl_sprite3d_get_ray_collision_ex(handle,
+                                            camera,
+                                            ray,
+                                            position_x,
+                                            position_y,
+                                            position_z,
+                                            size,
+                                            collision,
+                                            NULL,
+                                            NULL,
+                                            NULL);
 }
 
 void rl_sprite3d_init(void)

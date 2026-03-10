@@ -94,9 +94,18 @@ Notes:
 - `rl_pick_model(...)` currently targets one model handle at a time.
 - `rl_pick_sprite3d(...)` targets one sprite handle at a time and uses billboard-quad collision.
 - Transform inputs mirror the current model draw style (position + uniform scale).
+- Picking now uses broad-phase culling before narrow-phase tests:
+  - models: world-space AABB ray test
+  - sprite3d billboards: bounding-sphere ray test
 - `rl_pick_model_to_scratch(...)` writes:
   - hit point into scratch `vector3`
   - hit normal + distance into scratch `vector4` (`x,y,z = normal`, `w = distance`)
+- Pick telemetry helpers:
+  - `rl_pick_reset_stats()`
+  - `rl_pick_get_broadphase_tests()`
+  - `rl_pick_get_broadphase_rejects()`
+  - `rl_pick_get_narrowphase_tests()`
+  - `rl_pick_get_narrowphase_hits()`
 
 ## Music (`include/rl_music.h`)
 
@@ -169,6 +178,15 @@ Notes:
 - Logging goes through the shared wrapper logger (`deps/wgutils/logger/log.h`), not direct `fprintf`/`printf`.
 - Log level is carried by logger calls (`log_error`, `log_warn`, `log_info`, `log_debug`) or explicit `log_message(...)`.
 - Log messages should include a subsystem scope prefix in message text, e.g. `FILEIO: ...`.
+
+## Input Button States (`include/rl_types.h`)
+
+Mouse button state values are shared across C/JS/Nim:
+
+- `RL_BUTTON_UP` (`0`)
+- `RL_BUTTON_PRESSED` (`1`)
+- `RL_BUTTON_DOWN` (`2`)
+- `RL_BUTTON_RELEASED` (`3`)
 
 ## Scratch Area (`include/rl_scratch.h`)
 

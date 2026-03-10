@@ -28,6 +28,7 @@ import { rl } from "/lib/librl.js";
     rl.modelSetAnimation(gumshoe, 1);
     rl.modelSetAnimationSpeed(gumshoe, 1.0);
     rl.modelSetAnimationLoop(gumshoe, true);
+    rl.resetPickStats();
 
     let lastTime = rl.getTime();
     let lastPick = null;
@@ -99,6 +100,23 @@ import { rl } from "/lib/librl.js";
         `Mouse: (${mouse.x}, ${mouse.y})`,
         10, 46, smallFontSize, 1, rl.BLACK
       );
+      const pickStats = rl.getPickStats();
+      const skippedNarrowphase = pickStats.broadphaseRejects;
+      rl.drawTextEx(
+        komikaSmall,
+        `Pick broad: ${pickStats.broadphaseTests} tests, ${pickStats.broadphaseRejects} rejects`,
+        10, 86, smallFontSize, 1, rl.DARKGRAY
+      );
+      rl.drawTextEx(
+        komikaSmall,
+        `Pick narrow: ${pickStats.narrowphaseTests} tests, ${pickStats.narrowphaseHits} hits`,
+        10, 106, smallFontSize, 1, rl.DARKGRAY
+      );
+      rl.drawTextEx(
+        komikaSmall,
+        `Narrow-phase skipped: ${skippedNarrowphase}`,
+        10, 126, smallFontSize, 1, rl.DARKGREEN
+      );
 
       if (lastPick) {
         if (lastPick.hit) {
@@ -114,7 +132,7 @@ import { rl } from "/lib/librl.js";
         rl.drawTextEx(komikaSmall, "No pick yet", 10, 66, smallFontSize, 1, rl.GRAY);
       }
 
-      rl.drawFPSEx(komikaSmall, 10, 88, smallFontSize, rl.BLACK);
+      rl.drawFPSEx(komikaSmall, 10, 148, smallFontSize, rl.BLACK);
       rl.endDrawing();
       animationFrameId = window.requestAnimationFrame(mainLoop);
     };

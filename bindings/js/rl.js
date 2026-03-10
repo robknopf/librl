@@ -375,6 +375,36 @@ const RL = {
     updateAllMusic: () => moduleInstance.ccall(
         "rl_music_update_all", null, [], []
     ),
+    createSound: (path) => moduleInstance.ccall(
+        "rl_sound_create", "number", ["string"], [path], { async: true }
+    ),
+    destroySound: (sound) => moduleInstance.ccall(
+        "rl_sound_destroy", null, ["number"], [sound]
+    ),
+    playSound: (sound) => moduleInstance.ccall(
+        "rl_sound_play", "number", ["number"], [sound]
+    ) !== 0,
+    pauseSound: (sound) => moduleInstance.ccall(
+        "rl_sound_pause", "number", ["number"], [sound]
+    ) !== 0,
+    resumeSound: (sound) => moduleInstance.ccall(
+        "rl_sound_resume", "number", ["number"], [sound]
+    ) !== 0,
+    stopSound: (sound) => moduleInstance.ccall(
+        "rl_sound_stop", "number", ["number"], [sound]
+    ) !== 0,
+    setSoundVolume: (sound, volume) => moduleInstance.ccall(
+        "rl_sound_set_volume", "number", ["number", "number"], [sound, volume]
+    ) !== 0,
+    setSoundPitch: (sound, pitch) => moduleInstance.ccall(
+        "rl_sound_set_pitch", "number", ["number", "number"], [sound, pitch]
+    ) !== 0,
+    setSoundPan: (sound, pan) => moduleInstance.ccall(
+        "rl_sound_set_pan", "number", ["number", "number"], [sound, pan]
+    ) !== 0,
+    isSoundPlaying: (sound) => moduleInstance.ccall(
+        "rl_sound_is_playing", "number", ["number"], [sound]
+    ) !== 0,
     createTexture: (path) => moduleInstance.ccall(
         "rl_texture_create", "number", ["string"], [path], { async: true }
     ),

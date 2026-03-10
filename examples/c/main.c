@@ -6,6 +6,7 @@
 #include "rl_font.h"
 #include "rl_model.h"
 #include "rl_music.h"
+#include "rl_sound.h"
 #include "rl_sprite3d.h"
 #include "lua_interop.h"
 #include "logger/log.h"
@@ -72,9 +73,11 @@ int main(void)
     const char *model_path = "assets/models/gumshoe/gumshoe.glb";
     const char *sprite_path = "assets/sprites/logo/wg-logo-bw-alpha.png";
     const char *music_path = "assets/music/ethernight_club.mp3";
+    const char *click_sound_path = "assets/sounds/click_004.ogg";
     const float font_size = 24.0f;
     const float small_font_size = 16.0f;
     rl_handle_t music = 0;
+    rl_handle_t click_sound = 0;
     lua_interop_vm_t lua_vm = {0};
 
     rl_init();
@@ -103,7 +106,7 @@ int main(void)
     if (lua_interop_init(&lua_vm, "assets/scripts") == 0) {
         (void)lua_interop_run_file(&lua_vm, "lua_demo.lua");
     } else {
-        log_error(stderr, "Lua interop init failed\n");
+        log_error("Lua interop init failed");
     }
 
     music = rl_music_create(music_path);
@@ -113,6 +116,11 @@ int main(void)
         (void)rl_music_play(music);
     } else {
         log_warn("Failed to load music stream from %s", music_path);
+    }
+
+    click_sound = rl_sound_create(click_sound_path);
+    if (click_sound == 0) {
+        log_warn("Failed to load click sound from %s", click_sound_path);
     }
 
     (void)rl_camera3d_set_active(camera);
@@ -132,6 +140,9 @@ int main(void)
 
         if (music != 0) {
             (void)rl_music_update(music);
+        }
+        if (click_sound != 0 && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+            (void)rl_sound_play(click_sound);
         }
 
         (void)rl_model_animate(gumshoe, dt);
@@ -164,6 +175,9 @@ int main(void)
     rl_font_destroy(komika);
     rl_font_destroy(komika_small);
     rl_color_destroy(text_shadow);
+    if (click_sound != 0) {
+        rl_sound_destroy(click_sound);
+    }
     if (music != 0) {
         rl_music_destroy(music);
     }

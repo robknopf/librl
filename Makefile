@@ -123,6 +123,16 @@ LDFLAGS_WASM = \
 	"_rl_music_is_playing", \
 	"_rl_music_update", \
 	"_rl_music_update_all", \
+	"_rl_sound_create", \
+	"_rl_sound_destroy", \
+	"_rl_sound_play", \
+	"_rl_sound_pause", \
+	"_rl_sound_resume", \
+	"_rl_sound_stop", \
+	"_rl_sound_set_volume", \
+	"_rl_sound_set_pitch", \
+	"_rl_sound_set_pan", \
+	"_rl_sound_is_playing", \
 	"_rl_texture_create", \
 	"_rl_texture_destroy", \
 	"_rl_sprite3d_create", \

@@ -27,7 +27,6 @@ static rl_handle_pool_t rl_music_pool;
 static uint16_t rl_music_free_indices[MAX_MUSIC];
 static uint16_t rl_music_generations[MAX_MUSIC];
 static unsigned char rl_music_occupied[MAX_MUSIC];
-static bool rl_music_audio_owned = false;
 
 static rl_music_entry_t *rl_music_get_entry(rl_handle_t handle)
 {
@@ -66,7 +65,6 @@ static bool rl_music_ensure_audio_device(void)
         return false;
     }
 
-    rl_music_audio_owned = true;
     return true;
 }
 
@@ -272,11 +270,6 @@ void rl_music_deinit(void)
         }
     }
     rl_handle_pool_reset(&rl_music_pool);
-
-    if (rl_music_audio_owned && IsAudioDeviceReady()) {
-        CloseAudioDevice();
-        rl_music_audio_owned = false;
-    }
 
     if (unloaded > 0) {
         log_info("rl_music_deinit: Freed %d music streams", unloaded);

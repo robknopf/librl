@@ -14,6 +14,7 @@ This document summarizes the current public C API exposed by `include/*.h`.  As 
 - Colors are lightweight value handles (RGBA) and are not refcounted shared GPU assets.
 - Textures are shared GPU assets with path-based deduplication and internal refcounting.
 - Music streams are handle-backed runtime resources; each handle owns its decoded stream/data until destroyed.
+- Sounds are handle-backed runtime resources intended for short one-shot SFX.
 - This difference is intentional: textures are expensive to allocate/upload, colors are cheap values.
 
 ## Core (`include/rl.h`)
@@ -93,6 +94,20 @@ Notes:
 - Music loading uses the same loader/file callback flow as other assets.
 - `rl_music_update()` (or `rl_music_update_all()`) should be called each frame while playing.
 
+## Sound (`include/rl_sound.h`)
+
+Main responsibilities:
+
+- Sound creation/destruction by filename
+- Playback control (`play`, `pause`, `resume`, `stop`)
+- Runtime control (`set_volume`, `set_pitch`, `set_pan`)
+- Status query (`is_playing`)
+
+Notes:
+
+- Sounds are intended for short SFX and do not require a per-frame update call.
+- Sound loading uses the same loader/file callback flow as other assets.
+
 ## Textures (`include/rl_texture.h`)
 
 Main responsibilities:
@@ -165,4 +180,3 @@ Wasm/JS boundary conventions:
   - JS wrapper reads from `rl_scratch.js`
 
 ---
-

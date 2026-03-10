@@ -5,6 +5,7 @@
 #include "raylib.h"
 #include "rl.h"
 #include "rl_camera3d.h"
+#include "logger/log.h"
 //#include "rl_color.h"
 #include "internal/exports.h"
 #include "internal/rl_camera3d_store.h"
@@ -194,7 +195,7 @@ rl_handle_t rl_camera3d_create(float position_x, float position_y, float positio
     rl_handle_t handle = rl_handle_pool_alloc(&rl_camera3d_pool);
     uint16_t index = 0;
     if (handle == 0) {
-        fprintf(stderr, "ERROR: MAX_CAMERAS reached (%d)\n", MAX_CAMERAS);
+        log_error("MAX_CAMERAS reached (%d)", MAX_CAMERAS);
         return 0;
     }
     rl_handle_pool_resolve(&rl_camera3d_pool, handle, &index);
@@ -282,7 +283,7 @@ void rl_begin_mode_3d(void)
     {
         rl_camera3d_entry_t *default_entry = rl_camera3d_get_entry(RL_CAMERA3D_DEFAULT);
         if (default_entry == NULL) {
-            fprintf(stderr, "ERROR: Missing default camera entry\n");
+            log_error("Missing default camera entry");
             return;
         }
         rl_set_active_camera_internal(default_entry->camera, RL_CAMERA3D_DEFAULT);
@@ -385,7 +386,7 @@ void rl_camera3d_init(void)
         uint16_t default_index = 0;
         if (default_handle != RL_CAMERA3D_DEFAULT ||
             !rl_handle_pool_resolve(&rl_camera3d_pool, default_handle, &default_index)) {
-            fprintf(stderr, "ERROR: Failed to initialize default camera handle\n");
+            log_error("Failed to initialize default camera handle");
             return;
         }
 

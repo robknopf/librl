@@ -21,35 +21,44 @@ import { rl } from "/lib/librl.js";
 // Testing C->Wasm example
 // This assumes vite/Live Server has mounted /examples and
 // For c->wasm build: cd examples/c && make wasm (or wasm-debug)
-import createExampleModule from "/examples/c/out/main.js";
+import { createOutputLogger, ensureOutputElement } from "/examples/js/ansi_output.js";
 
-function getEnv() {
-  var env = {}
-
-  env.canvas = document.getElementById('renderCanvas');
-
-  var output = document.getElementById('output');
-  if (!output) {
-    const output = document.createElement("textarea");
-    output.id = "output";
-    output.style.width = "100%";
-    output.style.height = "100px";
-    document.body.appendChild(output);
+async function loadExampleModuleFactory(maxAttempts = 120, delayMs = 500) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      // Cache-bust retries so a prior missing-module fetch does not stick.
+      const mod = await import(`/examples/c/out/main.js?t=${Date.now()}`);
+      return mod.default;
+    } catch (err) {
+      if (attempt === maxAttempts) {
+        throw err;
+      }
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
   }
 
-  env.print = function () {
-    var e = document.getElementById("output");
-    return e && (e.value = ""), function (n) {
-      arguments.length > 1 && (n = Array.prototype.slice.call(arguments).join(" ")), console.log(n), e && (e.value += n + "\n", e.scrollTop = e.scrollHeight)
-    }
-  }();
+  throw new Error("Unable to load /examples/c/out/main.js");
+}
 
-  env.printErr = function () {
-    var e = document.getElementById("output");
-    return e && (e.value = ""), function (n) {
-      arguments.length > 1 && (n = Array.prototype.slice.call(arguments).join(" ")), console.error(n), e && (e.value += n + "\n", e.scrollTop = e.scrollHeight)
-    }
-  }();
+function getEnv() {
+  var env = {};
+
+  env.canvas = document.getElementById('renderCanvas');
+  var output = ensureOutputElement();
+  output.textContent = "";
+  var outputLog = createOutputLogger(output);
+
+  env.print = function (...args) {
+    const line = args.length > 1 ? args.join(" ") : String(args[0] ?? "");
+    console.log(line);
+    outputLog(line);
+  };
+
+  env.printErr = function (...args) {
+    const line = args.length > 1 ? args.join(" ") : String(args[0] ?? "");
+    console.error(line);
+    outputLog(line);
+  };
 
   return env;
 }
@@ -89,6 +98,7 @@ function addWindowResizeListener(moduleInstance, idealWidth, idealHeight) {
 (async function () {
   try {
     const canvas = document.getElementById("renderCanvas");
+    const createExampleModule = await loadExampleModuleFactory();
     const mod = await createExampleModule(getEnv());
 
     console.log("WASM module initialized:", mod);

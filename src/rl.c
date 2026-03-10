@@ -4,6 +4,7 @@
 #include "raylib.h"
 #include "rl_loader.h"
 #include "rl_scratch.h"
+#include "logger/log.h"
 #include "internal/rl_color_store.h"
 #include "internal/rl_font_store.h"
 #include "internal/rl_subsystems.h"
@@ -67,7 +68,7 @@ void resize_canvas(int newWidth, int newHeight)
 RL_KEEP
 void rl_init_window(int width, int height, const char *title) {
     if (!initialized) {
-        fprintf(stderr, "Error: rl_init_window() called before rl_init()\n");
+        log_error("rl_init_window() called before rl_init()");
         return;
     }
     //rl_init();

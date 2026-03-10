@@ -9,6 +9,7 @@
 #include "internal/rl_camera3d_store.h"
 #include "internal/rl_color_store.h"
 #include "internal/rl_handle_pool.h"
+#include "logger/log.h"
 #include "rl_texture.h"
 #include "internal/rl_texture_store.h"
 
@@ -51,7 +52,7 @@ rl_handle_t rl_sprite3d_create(const char *filename)
     handle = rl_handle_pool_alloc(&rl_sprite3d_pool);
     if (handle == 0)
     {
-        fprintf(stderr, "ERROR: MAX_SPRITE3D reached (%u)\n", MAX_SPRITE3D);
+        log_error("MAX_SPRITE3D reached (%u)", MAX_SPRITE3D);
         rl_texture_destroy(texture);
         return 0;
     }
@@ -69,13 +70,13 @@ rl_handle_t rl_sprite3d_create_from_texture(rl_handle_t texture)
     rl_handle_t handle = 0;
     uint16_t index = 0;
     if (!rl_texture_retain(texture)) {
-        fprintf(stderr, "ERROR: Invalid texture handle (%u) for rl_sprite3d_create_from_texture\n", texture);
+        log_error("Invalid texture handle (%u) for rl_sprite3d_create_from_texture", texture);
         return 0;
     }
 
     handle = rl_handle_pool_alloc(&rl_sprite3d_pool);
     if (handle == 0) {
-        fprintf(stderr, "ERROR: MAX_SPRITE3D reached (%u)\n", MAX_SPRITE3D);
+        log_error("MAX_SPRITE3D reached (%u)", MAX_SPRITE3D);
         rl_texture_release(texture);
         return 0;
     }
@@ -95,17 +96,17 @@ void rl_sprite3d_draw(rl_handle_t handle, float position_x, float position_y,
     Camera3D camera = {0};
     if (sprite == NULL)
     {
-        fprintf(stderr, "ERROR: Invalid sprite3d handle (%u)\n", handle);
+        log_error("Invalid sprite3d handle (%u)", handle);
         return;
     }
     texture = rl_texture_get_ptr(sprite->texture);
     if (texture == NULL) {
-        fprintf(stderr, "ERROR: Missing texture for sprite3d handle (%u)\n", handle);
+        log_error("Missing texture for sprite3d handle (%u)", handle);
         return;
     }
     if (!rl_camera3d_get_active_camera(&camera))
     {
-        fprintf(stderr, "ERROR: rl_sprite3d_draw() requires an active 3D camera (call rl_begin_mode_3d first)\n");
+        log_error("rl_sprite3d_draw() requires an active 3D camera (call rl_begin_mode_3d first)");
         return;
     }
 
@@ -159,5 +160,5 @@ void rl_sprite3d_deinit(void)
         }
     }
     rl_handle_pool_reset(&rl_sprite3d_pool);
-    printf("rl_sprite3d_deinit: Freed %d sprite3d textures\n", unloaded);
+    log_info("rl_sprite3d_deinit: Freed %d sprite3d textures", unloaded);
 }

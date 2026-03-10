@@ -1,5 +1,6 @@
 #include "rl_color.h"
 #include "raylib.h"
+#include "logger/log.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -45,7 +46,7 @@ rl_handle_t next_color_handle = 27;
 
 rl_handle_t rl_color_get_next_handle() {
     if (next_color_handle >= MAX_COLORS) {
-        fprintf(stderr, "ERROR: MAX_COLORS reached (%d)\n", next_color_handle);
+        log_error("MAX_COLORS reached (%d)", next_color_handle);
         return 0;
     }
     return next_color_handle++;
@@ -67,7 +68,7 @@ RL_KEEP
 void rl_color_destroy(rl_handle_t handle) {
     Color* color = colors[handle];
     if (!color) {
-        fprintf(stderr, "ERROR: Invalid color handle (%d)\n", handle);
+        log_error("Invalid color handle (%d)", handle);
         return;
     }
     free(color);
@@ -88,7 +89,7 @@ void rl_color_set(rl_handle_t handle, int r, int g, int b, int a) {
 
 Color rl_color_get(rl_handle_t handle) {
     if (!colors[handle]) {
-        fprintf(stderr, "ERROR: Invalid color handle (%d)\n", handle);
+        log_error("Invalid color handle (%d)", handle);
         return MAGENTA;
     }
     return *colors[handle];
@@ -145,5 +146,5 @@ void rl_color_deinit() {
     }
     next_color_handle = 0;
 
-    printf("rl_color_deinit: Freed %d colors\n", rl_colors_freed);
+    log_info("rl_color_deinit: Freed %d colors", rl_colors_freed);
 }

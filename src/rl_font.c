@@ -8,6 +8,7 @@
 
 #include "internal/exports.h"
 #include "internal/rl_handle_pool.h"
+#include "logger/log.h"
 #include "path/path.h"
 
 #define MAX_FONTS 255
@@ -115,7 +116,7 @@ rl_handle_t rl_font_create(const char *filename, float fontSize)
     font_data = LoadFileData(normalized_path, &font_data_size);
     if (font_data == NULL || font_data_size <= 0)
     {
-        fprintf(stderr, "ERROR: Failed to load font data (%s)\n", normalized_path);
+        log_error("Failed to load font data (%s)", normalized_path);
         return 0;
     }
 
@@ -133,14 +134,14 @@ rl_handle_t rl_font_create(const char *filename, float fontSize)
 
     if (!IsFontValid(loaded_font))
     {
-        fprintf(stderr, "ERROR: Failed to load font (%s)\n", normalized_path);
+        log_error("Failed to load font (%s)", normalized_path);
         return 0;
     }
 
     handle = rl_handle_pool_alloc(&rl_font_pool);
     if (handle == 0)
     {
-        fprintf(stderr, "ERROR: MAX_FONTS reached (%d)\n", MAX_FONTS);
+        log_error("MAX_FONTS reached (%d)", MAX_FONTS);
         UnloadFont(loaded_font);
         return 0;
     }
@@ -193,7 +194,7 @@ Font rl_font_get(rl_handle_t handle)
     rl_font_entry_t *entry = rl_font_get_entry(handle);
     if (entry == NULL)
     {
-        fprintf(stderr, "ERROR: Invalid font handle (%d)\n", handle);
+        log_error("Invalid font handle (%d)", handle);
         return rl_fonts[RL_FONT_DEFAULT].font;
     }
 
@@ -264,5 +265,5 @@ void rl_font_deinit(void)
     rl_fonts[RL_FONT_DEFAULT].path[0] = '\0';
     rl_handle_pool_reset(&rl_font_pool);
 
-    printf("rl_font_deinit: Freed %d fonts\n", fonts_freed);
+    log_info("rl_font_deinit: Freed %d fonts", fonts_freed);
 }

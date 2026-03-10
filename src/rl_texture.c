@@ -8,6 +8,7 @@
 #include "internal/exports.h"
 #include "internal/rl_handle_pool.h"
 #include "internal/rl_texture_store.h"
+#include "logger/log.h"
 #include "path/path.h"
 
 #define MAX_TEXTURES 1024
@@ -111,7 +112,7 @@ rl_handle_t rl_texture_create(const char *filename)
         return 0;
     }
     if (!IsWindowReady()) {
-        fprintf(stderr, "ERROR: rl_texture_create(%s) called before window/context is ready\n", filename);
+        log_error("rl_texture_create(%s) called before window/context is ready", filename);
         return 0;
     }
 
@@ -124,7 +125,7 @@ rl_handle_t rl_texture_create(const char *filename)
 
     handle = rl_handle_pool_alloc(&rl_texture_pool);
     if (handle == 0) {
-        fprintf(stderr, "ERROR: MAX_TEXTURES reached (%d)\n", MAX_TEXTURES);
+        log_error("MAX_TEXTURES reached (%d)", MAX_TEXTURES);
         return 0;
     }
     rl_handle_pool_resolve(&rl_texture_pool, handle, &index);
@@ -133,7 +134,7 @@ rl_handle_t rl_texture_create(const char *filename)
     if (!IsTextureValid(texture)) {
         rl_handle_t placeholder_handle = rl_texture_find_by_path(RL_TEXTURE_PLACEHOLDER_KEY);
 
-        fprintf(stderr, "ERROR: Failed to load texture (%s). Using magenta placeholder.\n", normalized_path);
+        log_error("Failed to load texture (%s). Using magenta placeholder.", normalized_path);
 
         if (placeholder_handle != 0) {
             rl_texture_retain(placeholder_handle);
@@ -142,7 +143,7 @@ rl_handle_t rl_texture_create(const char *filename)
 
         texture = rl_texture_create_magenta_placeholder();
         if (!IsTextureValid(texture)) {
-            fprintf(stderr, "ERROR: Failed to create magenta placeholder texture\n");
+            log_error("Failed to create magenta placeholder texture");
             rl_handle_pool_free(&rl_texture_pool, handle);
             return 0;
         }
@@ -198,5 +199,5 @@ void rl_texture_deinit(void)
         unloaded++;
     }
     rl_handle_pool_reset(&rl_texture_pool);
-    printf("rl_texture_deinit: Freed %d textures\n", unloaded);
+    log_info("rl_texture_deinit: Freed %d textures", unloaded);
 }

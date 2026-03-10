@@ -61,6 +61,11 @@ export default defineConfig({
       configureServer(server) {
         const mountPrefix = "/examples/";
         const examplesRoot = path.resolve(__dirname, "examples");
+        const libRoot = path.resolve(__dirname, "lib");
+
+        // Ensure files outside `root` that are imported via aliases (e.g. /lib/*)
+        // are watched for HMR/full-reload updates.
+        server.watcher.add(path.join(libRoot, "**/*"));
 
         server.middlewares.use((req, _res, next) => {
           const reqUrl = req.url || "";

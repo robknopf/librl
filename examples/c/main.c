@@ -23,10 +23,47 @@ static const char *get_asset_host(void)
     return "https://localhost:4444";
 }
 
+void reroute_raylib_log(int log_level, const char *text, va_list args)
+{
+    char msg[2048];
+    va_list copy;
+    int level = LOG_LEVEL_INFO;
+
+    va_copy(copy, args);
+    vsnprintf(msg, sizeof(msg), text, copy);
+    va_end(copy);
+
+    switch (log_level) {
+        case LOG_TRACE:
+            level = LOG_LEVEL_TRACE;
+            break;
+        case LOG_DEBUG:
+            level = LOG_LEVEL_DEBUG;
+            break;
+        case LOG_INFO:
+            level = LOG_LEVEL_INFO;
+            break;
+        case LOG_WARNING:
+            level = LOG_LEVEL_WARN;
+            break;
+        case LOG_ERROR:
+            level = LOG_LEVEL_ERROR;
+            break;
+        case LOG_FATAL:
+            level = LOG_LEVEL_FATAL;
+            break;
+        default:
+            level = LOG_LEVEL_INFO;
+    
+    }
+
+    log_message(level, "raylib", 0, "%s", msg);
+}
 
 int main(void)
 {
-    SetTraceLogLevel(LOG_WARNING);   
+    SetTraceLogCallback(reroute_raylib_log);
+    SetTraceLogLevel(LOG_TRACE);   
     log_set_log_level(LOG_LEVEL_INFO);
 
     const char *asset_host = get_asset_host();

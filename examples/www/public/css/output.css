@@ -41,9 +41,12 @@
     height: 200px;
     border: none;
     resize: none;
+    margin: 0;
     padding: 10px;
     box-sizing: border-box;
     font-family: monospace;
+    white-space: pre-wrap;
+    overflow-y: auto;
     background-color: #ffffffd0;
   }
 

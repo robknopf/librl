@@ -10,6 +10,7 @@
 #include "internal/exports.h"
 #include "internal/rl_color_store.h"
 #include "internal/rl_handle_pool.h"
+#include "logger/log.h"
 #include "path/path.h"
 
 #define MAX_MODELS 255
@@ -62,12 +63,12 @@ static bool rl_model_is_valid_model(Model model)
 
 static void rl_model_log_invalid_details(const char *filename, Model model)
 {
-    fprintf(stderr, "Model validity check failed for %s\n", filename ? filename : "(null)");
-    fprintf(stderr, "  model.meshes != NULL: %s\n", model.meshes ? "true" : "false");
-    fprintf(stderr, "  model.materials != NULL: %s\n", model.materials ? "true" : "false");
-    fprintf(stderr, "  model.meshMaterial != NULL: %s\n", model.meshMaterial ? "true" : "false");
-    fprintf(stderr, "  model.meshCount: %d\n", model.meshCount);
-    fprintf(stderr, "  model.materialCount: %d\n", model.materialCount);
+    log_error("Model validity check failed for %s", filename ? filename : "(null)");
+    log_error("  model.meshes != NULL: %s", model.meshes ? "true" : "false");
+    log_error("  model.materials != NULL: %s", model.materials ? "true" : "false");
+    log_error("  model.meshMaterial != NULL: %s", model.meshMaterial ? "true" : "false");
+    log_error("  model.meshCount: %d", model.meshCount);
+    log_error("  model.materialCount: %d", model.materialCount);
 }
 
 static void rl_model_asset_reset(rl_model_asset_t *asset)
@@ -197,7 +198,7 @@ static rl_handle_t rl_model_asset_create(Model model,
     rl_model_asset_t *asset = NULL;
 
     if (handle == 0) {
-        fprintf(stderr, "ERROR: MAX_MODEL_ASSETS reached (%d)\n", MAX_MODEL_ASSETS);
+        log_error("MAX_MODEL_ASSETS reached (%d)", MAX_MODEL_ASSETS);
         if (animations != NULL && animation_count > 0) {
             UnloadModelAnimations(animations, animation_count);
         }
@@ -211,7 +212,7 @@ static rl_handle_t rl_model_asset_create(Model model,
     asset->model = malloc(sizeof(Model));
     if (asset->model == NULL)
     {
-        fprintf(stderr, "ERROR: Failed to allocate model asset storage\n");
+        log_error("Failed to allocate model asset storage");
         if (animations != NULL && animation_count > 0) {
             UnloadModelAnimations(animations, animation_count);
         }
@@ -245,7 +246,7 @@ static rl_handle_t rl_model_instance_create(rl_handle_t asset_handle)
     }
 
     if (handle == 0) {
-        fprintf(stderr, "ERROR: MAX_MODELS reached (%d)\n", MAX_MODELS);
+        log_error("MAX_MODELS reached (%d)", MAX_MODELS);
         return 0;
     }
     rl_handle_pool_resolve(&rl_model_instance_pool, handle, &index);
@@ -285,8 +286,7 @@ static bool rl_model_prepare_animation_gpu_state(rl_model_instance_t *instance, 
         {
             if (!instance->animation_gpu_warning_emitted)
             {
-                fprintf(stderr,
-                        "WARNING: Skipping model animation, missing position VBO for handle %u mesh %d\n",
+                log_warn("Skipping model animation, missing position VBO for handle %u mesh %d",
                         handle, m);
                 instance->animation_gpu_warning_emitted = true;
             }
@@ -297,8 +297,7 @@ static bool rl_model_prepare_animation_gpu_state(rl_model_instance_t *instance, 
         {
             if (!instance->animation_gpu_warning_emitted)
             {
-                fprintf(stderr,
-                        "WARNING: Model animation normals disabled for handle %u mesh %d (missing normal VBO)\n",
+                log_warn("Model animation normals disabled for handle %u mesh %d (missing normal VBO)",
                         handle, m);
                 instance->animation_gpu_warning_emitted = true;
             }
@@ -325,7 +324,7 @@ rl_handle_t rl_model_create(const char *filename)
     }
 
     if (!IsWindowReady()) {
-        fprintf(stderr, "ERROR: rl_model_create(%s) called before window/context is ready\n", filename);
+        log_error("rl_model_create(%s) called before window/context is ready", filename);
         return 0;
     }
 
@@ -347,14 +346,14 @@ rl_handle_t rl_model_create(const char *filename)
     if (!rl_model_is_valid_model(loaded_model))
     {
         rl_model_log_invalid_details(normalized_path, loaded_model);
-        fprintf(stderr, "ERROR: Failed to load model (%s). Substituting placeholder.\n", normalized_path);
+        log_error("Failed to load model (%s). Substituting placeholder.", normalized_path);
         if (loaded_model.meshCount > 0 || loaded_model.materialCount > 0) {
             UnloadModel(loaded_model);
         }
 
         loaded_model = LoadModelFromMesh(GenMeshCube(1.0f, 1.0f, 1.0f));
         if (!rl_model_is_valid_model(loaded_model)) {
-            fprintf(stderr, "ERROR: Failed to create placeholder model for (%s)\n", normalized_path);
+            log_error("Failed to create placeholder model for (%s)", normalized_path);
             return 0;
         }
         using_placeholder = true; // Placeholder instance; caller can still render something visible.
@@ -607,13 +606,13 @@ void rl_model_draw(rl_handle_t handle, float position_x, float position_y, float
     rl_model_asset_t *asset = NULL;
 
     if (instance == NULL) {
-        fprintf(stderr, "ERROR: Invalid model handle (%d)\n", handle);
+        log_error("Invalid model handle (%d)", handle);
         return;
     }
 
     asset = rl_model_asset_get(instance->asset_handle);
     if (asset == NULL || asset->model == NULL) {
-        fprintf(stderr, "ERROR: Missing model asset for handle (%d)\n", handle);
+        log_error("Missing model asset for handle (%d)", handle);
         return;
     }
 
@@ -701,5 +700,5 @@ void rl_model_deinit(void)
     rl_next_asset_handle = 1;
     rl_handle_pool_reset(&rl_model_instance_pool);
 
-    printf("rl_model_deinit: Freed %d model assets\n", assets_freed);
+    log_info("rl_model_deinit: Freed %d model assets", assets_freed);
 }

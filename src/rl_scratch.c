@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include "rl_scratch.h"
 #include <stddef.h>
+#include "logger/log.h"
 
 RL_KEEP
 static rl_scratch_offsets_t rl_scratch_offsets;
@@ -268,7 +269,7 @@ void rl_scratch_update()
         int num_axis = GetGamepadAxisCount(id);
         if (num_axis < RL_SCRATCH_MAX_NUM_GAMEPAD_AXIS)
         {
-            fprintf(stderr, "Gamepad %d has %d axis, more than we allocated for (%d)\n", id, GetGamepadAxisCount(id), RL_SCRATCH_MAX_NUM_GAMEPAD_AXIS);
+            log_warn("Gamepad %d has %d axis, more than we allocated for (%d)", id, GetGamepadAxisCount(id), RL_SCRATCH_MAX_NUM_GAMEPAD_AXIS);
             continue;
         }
 

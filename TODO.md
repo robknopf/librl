@@ -21,7 +21,7 @@
 - API/docs sync after recent camera/input refactor:
   - status: mostly done
   - keep examples current when scratch bridge functions are renamed/removed
-  - add a short "wasm-only bridge API" table in docs (`*_to_scratch` functions + JS wrapper names)
+  - add/maintain a short "wasm-only bridge API" table in docs (`*_to_scratch` functions + JS wrapper names)
 - URI/path follow-up:
   - add URL normalization examples to docs
   - decide whether cache keys should canonicalize host casing
@@ -34,6 +34,12 @@
   - standardized FileIO message style and capitalization
   - switched FileIO logging calls to shared `logger/log` API
   - moved logger implementation from `src/vendor/logger` to `src/logger`
+- Audio support baseline: done
+  - added `rl_music` (streaming BGM) and `rl_sound` (SFX) subsystems
+  - wired lifecycle into `rl_init()` / `rl_deinit()`
+  - exported APIs in C + JS + Nim bindings and documented in `docs/API.md`
+  - C example now includes BGM + click SFX playback
+- Developer handoff docs: done (`docs/DEV_NOTES.md`)
 
 ## Parking Lot
 
@@ -59,9 +65,10 @@
 - Flush out API for bindings:
   - formalize a stable binding-oriented API surface
   - ensure JS/Nim wrappers map cleanly to all intended features
-- Audio support:
-  - SFX playback API
-  - BGM stream support (play/pause/seek/loop/volume)
+- Audio polish:
+  - evaluate seek/time query APIs for music streams
+  - consider fade in/out helpers and optional grouped volume controls
+  - validate browser decode/runtime behavior across larger audio assets
 - Input I/O hooks/callbacks:
   - mouse callbacks/events
   - keyboard callbacks/events
@@ -76,4 +83,7 @@
   - call order expectations
   - return/error semantics
   - platform-specific notes (desktop vs web)
+- Include source-of-truth pointers in docs for build/runtime internals:
+  - public usage in `README.md`
+  - maintainer internals in `docs/DEV_NOTES.md`
 - Expand `docs/BINDINGS.md` with minimal usage examples for JS and Nim.

@@ -203,6 +203,9 @@ WASM_OBJS = $(addprefix $(OBJ_WASM_DIR)/,$(WASM_SRCS:.c=.o))
 # Output directories
 OUT_LIB_DIR = lib
 OUT_INC_DIR = include
+TYPES_DIR = types
+TYPE_LIBRL_DECL = $(TYPES_DIR)/librl.d.ts
+OUT_LIBRL_DECL = $(OUT_LIB_DIR)/librl.d.ts
 OUT_WASM ?= $(OUT_LIB_DIR)/$(LIBRL_BASENAME).js
 OUT_WASM_ARCHIVE ?= $(OUT_LIB_DIR)/$(LIBRL_BASENAME)$(DEV_SUFFIX).wasm.a
 OUT_DESKTOP ?= $(OUT_LIB_DIR)/$(LIBRL_BASENAME)$(DEV_SUFFIX).a
@@ -313,6 +316,8 @@ $(OBJ_WASM_DIR)/%.o: %.c
 ensure_out_dir:
 	mkdir -p $(OUT_LIB_DIR)
 	mkdir -p $(OUT_INC_DIR)
+	@test -f "$(TYPE_LIBRL_DECL)" || (echo "Missing type declaration: $(TYPE_LIBRL_DECL)" && exit 1)
+	cp "$(TYPE_LIBRL_DECL)" "$(OUT_LIBRL_DECL)"
 
 # Ensure the object directory exists
 ensure_obj_dir:

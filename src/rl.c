@@ -18,6 +18,7 @@ void rl_init() {
     if (initialized) {
         return;
     }    
+    rl_logger_init();
     rl_loader_init("cache");
     rl_scratch_init();
     rl_color_init();
@@ -49,6 +50,7 @@ void rl_deinit() {
     rl_color_deinit();
     rl_scratch_deinit();
     rl_loader_deinit();
+    rl_logger_deinit();
     if (IsAudioDeviceReady()) {
         CloseAudioDevice();
     }

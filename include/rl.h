@@ -2,9 +2,21 @@
 #define RL_H
 
 #include <stdbool.h>
-#include "rl_types.h"
-#include "rl_pick.h"
+#include "rl_addon.h"
+#include "rl_camera3d.h"
+#include "rl_color.h"
 #include "rl_event.h"
+#include "rl_font.h"
+#include "rl_loader.h"
+#include "rl_logger.h"
+#include "rl_model.h"
+#include "rl_music.h"
+#include "rl_pick.h"
+#include "rl_scratch.h"
+#include "rl_sound.h"
+#include "rl_sprite3d.h"
+#include "rl_texture.h"
+#include "rl_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,41 +52,8 @@ void rl_draw_text(const char *text, int x, int y, int fontSize, rl_handle_t colo
 void rl_draw_text_ex(rl_handle_t font, const char *text, int x, int y, float fontSize, float spacing, rl_handle_t color);
 void rl_begin_mode_2d(rl_handle_t camera);
 void rl_end_mode_2d();
-rl_handle_t rl_camera3d_create(float position_x, float position_y, float position_z,
-                               float target_x, float target_y, float target_z,
-                               float up_x, float up_y, float up_z,
-                               float fovy, int projection);
-rl_handle_t rl_camera3d_get_default(void);
-bool rl_camera3d_set(rl_handle_t handle,
-                     float position_x, float position_y, float position_z,
-                     float target_x, float target_y, float target_z,
-                     float up_x, float up_y, float up_z,
-                     float fovy, int projection);
-bool rl_camera3d_set_active(rl_handle_t handle);
-rl_handle_t rl_camera3d_get_active();
-void rl_camera3d_destroy(rl_handle_t handle);
 void rl_begin_mode_3d();
 void rl_end_mode_3d();
-rl_handle_t rl_music_create(const char *filename);
-void rl_music_destroy(rl_handle_t handle);
-bool rl_music_play(rl_handle_t handle);
-bool rl_music_pause(rl_handle_t handle);
-bool rl_music_stop(rl_handle_t handle);
-bool rl_music_set_loop(rl_handle_t handle, bool loop);
-bool rl_music_set_volume(rl_handle_t handle, float volume);
-bool rl_music_is_playing(rl_handle_t handle);
-bool rl_music_update(rl_handle_t handle);
-void rl_music_update_all(void);
-rl_handle_t rl_sound_create(const char *filename);
-void rl_sound_destroy(rl_handle_t handle);
-bool rl_sound_play(rl_handle_t handle);
-bool rl_sound_pause(rl_handle_t handle);
-bool rl_sound_resume(rl_handle_t handle);
-bool rl_sound_stop(rl_handle_t handle);
-bool rl_sound_set_volume(rl_handle_t handle, float volume);
-bool rl_sound_set_pitch(rl_handle_t handle, float pitch);
-bool rl_sound_set_pan(rl_handle_t handle, float pan);
-bool rl_sound_is_playing(rl_handle_t handle);
 void rl_enable_lighting();
 void rl_disable_lighting();
 int rl_is_lighting_enabled();

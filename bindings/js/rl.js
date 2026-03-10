@@ -237,7 +237,7 @@ const RL = {
             buttons: mouse.buttons
         };
     },
-    getKeyboard: () => {
+    getKeyboardState: () => {
         return moduleInstance.getKeyboard();
     },
     getScreenSize: () => {

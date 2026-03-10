@@ -111,6 +111,7 @@ make clean
 
 - Desktop archive: `lib/librl.a` (or `lib/librl_d.a` with `DEV=1`)
 - Wasm JS loader: `lib/librl.js`
+- Type declarations for JS tooling: `lib/librl.d.ts` (copied from `types/librl.d.ts` during build)
 - Wasm archive: `lib/librl.wasm.a` (or `lib/librl_d.wasm.a` with `DEV=1`)
 
 ## Notes

@@ -26,7 +26,7 @@ Main responsibilities:
 - Frame lifecycle (`rl_begin_drawing`, `rl_end_drawing`, `rl_update`)
 - Basic drawing (text, rectangles, cubes, fps helpers)
 - 2D/3D mode switching
-- Mouse position/state helpers (`rl_get_mouse*`)
+- Mouse/keyboard input helpers (`rl_get_mouse*`, `rl_get_keyboard_state`)
 - Basic lighting toggles and parameters
 - Timing helpers (`rl_get_time`)
 - Text measurement helpers

@@ -52,6 +52,7 @@
 - Picking follow-up:
   - broad-phase checks before narrow-phase ray tests: done (model world-AABB and sprite billboard-sphere early reject)
   - add a scene-level "what's under the mouse" API that returns closest hit target + hit data
+  - determine ownership of scene graph/state (host app vs librl) for scene-level picking and related queries
 
 ### Build / Tooling
 

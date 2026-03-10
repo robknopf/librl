@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include "rl.h"
 #include "internal/exports.h"
 #include "raylib.h"
@@ -207,6 +208,20 @@ rl_mouse_state_t rl_get_mouse_state(void)
     state.left = rl_get_mouse_button(0);
     state.right = rl_get_mouse_button(1);
     state.middle = rl_get_mouse_button(2);
+    return state;
+}
+
+RL_KEEP
+rl_keyboard_state_t rl_get_keyboard_state(void)
+{
+    rl_keyboard_t keyboard = rl_scratch_get_keyboard();
+    rl_keyboard_state_t state = {0};
+
+    state.max_num_keys = keyboard.max_num_keys;
+    memcpy(state.keys, keyboard.keys, sizeof(state.keys));
+    state.last_key = keyboard.last_key;
+    state.last_char = keyboard.last_char;
+
     return state;
 }
 

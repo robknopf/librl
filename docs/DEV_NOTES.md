@@ -22,6 +22,7 @@ make DEV=1 wasm
 make -C tests test_desktop
 make -C tests test_wasm
 make clean
+cd examples/nim && nim clean
 ```
 
 ## Build and Flag Conventions

@@ -31,6 +31,16 @@ typedef struct
     int middle;
 } rl_mouse_state_t;
 
+#define RL_KEYBOARD_MAX_KEYS 512
+
+typedef struct
+{
+    int max_num_keys;
+    int keys[RL_KEYBOARD_MAX_KEYS];
+    int last_key;
+    int last_char;
+} rl_keyboard_state_t;
+
 typedef struct
 {
     float x;

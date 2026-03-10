@@ -12,13 +12,18 @@ type
     distance*: cfloat
     point*: Vec3
     normal*: Vec3
-  RLMouse* {.importc: "rl_mouse_state_t", header: "rl.h", bycopy.} = object
+  RLMouseState* {.importc: "rl_mouse_state_t", header: "rl.h", bycopy.} = object
     x*: cint
     y*: cint
     wheel*: cint
     left*: cint
     right*: cint
     middle*: cint
+  RLKeyboardState* {.importc: "rl_keyboard_state_t", header: "rl.h", bycopy.} = object
+    max_num_keys*: cint
+    keys*: array[512, cint]
+    last_key*: cint
+    last_char*: cint
 
 const
   RL_GRAY* = RLHandle(2)
@@ -49,7 +54,8 @@ proc rl_get_window_position*(): Vec2 {.importc, cdecl, header: "rl.h".}
 proc rl_get_mouse_position*(): Vec2 {.importc, cdecl, header: "rl.h".}
 proc rl_get_mouse_wheel*(): cint {.importc, cdecl, header: "rl.h".}
 proc rl_get_mouse_button*(button: cint): cint {.importc, cdecl, header: "rl.h".}
-proc rl_get_mouse_state*(): RLMouse {.importc, cdecl, header: "rl.h".}
+proc rl_get_mouse_state*(): RLMouseState {.importc, cdecl, header: "rl.h".}
+proc rl_get_keyboard_state*(): RLKeyboardState {.importc, cdecl, header: "rl.h".}
 proc rl_close_window*() {.importc, cdecl, header: "rl.h".}
 proc rl_begin_drawing*() {.importc, cdecl, header: "rl.h".}
 proc rl_end_drawing*() {.importc, cdecl, header: "rl.h".}

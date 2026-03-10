@@ -24,13 +24,7 @@ typedef struct
     int buttons[3]; // left, right, middle
 } rl_mouse_t;
 
-typedef struct
-{
-    int max_num_keys;
-    int keys[RL_SCRATCH_MAX_NUM_KEYBOARD_KEYS];
-    int last_key;
-    int last_char;
-} rl_keyboard_t;
+typedef rl_keyboard_state_t rl_keyboard_t;
 
 typedef struct
 {

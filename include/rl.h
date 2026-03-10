@@ -26,6 +26,7 @@ vec2_t rl_get_mouse_position(void);
 int rl_get_mouse_wheel();
 int rl_get_mouse_button(int button);
 rl_mouse_state_t rl_get_mouse_state(void);
+rl_keyboard_state_t rl_get_keyboard_state(void);
 void rl_set_window_position(int x, int y);
 void rl_close_window();
 void rl_begin_drawing();

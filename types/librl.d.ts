@@ -116,7 +116,7 @@ export interface RLApi {
   measureTextEx(font: RLHandle, text: string, fontSize: number, spacing?: number): RLVector2;
 
   getMouseState(): RLMouseState;
-  getKeyboard(): RLKeyboardState;
+  getKeyboardState(): RLKeyboardState;
   getScreenSize(): RLVector2;
   getScreenWidth(): number;
   getScreenHeight(): number;

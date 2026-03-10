@@ -30,3 +30,10 @@ task build, "Build desktop Nim test binary":
     " --passL:-ldl" &
     " --passL:-lX11" &
     " " & entry
+
+task clean, "Clean Nim build outputs":
+  let cacheDir = getCurrentDir() / "cache"
+  if dirExists(outDir):
+    rmDir(outDir)
+  if dirExists(cacheDir):
+    rmDir(cacheDir)

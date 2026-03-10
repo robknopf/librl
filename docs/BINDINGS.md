@@ -40,7 +40,7 @@ Notes:
 
 - This is the primary browser-facing API layer.
 - It includes async-oriented wrappers for asset-backed calls like model/font creation.
-- Input state uses `getMouseState()` (x/y/wheel/left/right/middle/buttons) and `getKeyboard()`.
+- Input state uses `getMouseState()` (x/y/wheel/left/right/middle/buttons) and `getKeyboardState()`.
   - button states use shared constants exposed on `rl`:
     - `rl.BUTTON_UP`
     - `rl.BUTTON_PRESSED`
@@ -79,7 +79,8 @@ Notes:
 
 - This binding is direct/low-level and close to the C surface.
 - Keep declarations synchronized with header changes in `include/`.
-- It maps `RLMouse` directly to `rl_mouse_state_t` via `rl_get_mouse_state()`.
+- It maps `RLMouseState` directly to `rl_mouse_state_t` via `rl_get_mouse_state()`.
+- It maps `RLKeyboardState` directly to `rl_keyboard_state_t` via `rl_get_keyboard_state()`.
 - Mouse button states use shared constants:
   - `RL_BUTTON_UP`
   - `RL_BUTTON_PRESSED`

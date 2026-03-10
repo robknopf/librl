@@ -8,7 +8,7 @@
 
 ## Purpose
 
-`librl` was created to be a wrapper for RayLib to help accelerate my prototype development efforts.  It is a binding-oriented runtime layer that provides stable handles, cross-platform asset loading, and shared-state plumbing for non-C hosts (currently JS/Nim).  Note that it is not complete and very much a work in progress.
+`librl` is a binding-oriented runtime layer around raylib that provides stable handles, cross-platform asset loading, and shared-state plumbing for non-C hosts (currently JS/Nim). It is still an active work in progress.
 
 Key goals:
 
@@ -42,7 +42,7 @@ Key goals:
 - `make`
 - Desktop C toolchain (`gcc`, `ar`)
 - Emscripten SDK on `PATH` (`emcc`, `emar`) for wasm builds
-- Access to raylib-builder repo: `git@github.com:robknopf/raylib-builder.git`
+- raylib dependency source compatible with this project (fetched by `make deps`)
 
 ## Build
 
@@ -87,9 +87,7 @@ make lua_addon_test_desktop
 
 ## Test
 
-Project test orchestration now lives in `tests/Makefile`.
-
-Run full test suite from repo root (delegates to `tests/Makefile`):
+Run full test suite from repo root:
 
 ```bash
 make test

@@ -8,6 +8,7 @@
 #include "rl_sprite3d.h"
 #include "lua_interop.h"
 
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,7 +25,7 @@ static const char *get_asset_host(void)
 
 int main(void)
 {
-    SetTraceLogLevel(LOG_WARNING);
+    SetTraceLogLevel(LOG_WARNING);   
 
     const char *asset_host = get_asset_host();
     const char *font_path = "assets/fonts/Komika/KOMIKAH_.ttf";
@@ -41,7 +42,9 @@ int main(void)
         return 1;
     }
 
-    InitWindow(800, 600, "librl + raylib (C example)");
+    //SetConfigFlags(FLAG_MSAA_4X_HINT);
+
+    InitWindow(800, 600, "librl + raylib + lua(C example)");
     SetTargetFPS(60);
 
     rl_handle_t komika = rl_font_create(font_path, font_size);

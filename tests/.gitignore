@@ -1,0 +1,6 @@
+obj/
+lib/
+out/
+.vscode/
+node_modules/
+!.gitkeep

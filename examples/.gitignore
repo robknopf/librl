@@ -1,9 +1,8 @@
 obj/
 lib/
 out/
-examples/c/deps/*
-.vscode/
+deps/
 .well-known/
-examples/**/cache/
+cache/
 node_modules/
 !.gitkeep

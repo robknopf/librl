@@ -71,13 +71,6 @@ const RL = {
         }
 
         moduleInstance.ccall('rl_init', null, [], []);
-
-        // IDBFS restore is async in wasm init; wait briefly so first asset loads
-        // can hit local cache instead of racing into remote fetch.
-        await RL.waitForIdbfsReady(2000);
-
-     
-      
     },
     update: () => {
         moduleInstance.ccall('rl_update_to_scratch', null, [], []);

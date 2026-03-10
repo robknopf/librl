@@ -4,7 +4,7 @@
   "scripts": {
     "dev": "npm-run-all --parallel serve watch:wasm",
     "serve": "vite",
-    "build:wasm": "make -C examples/c wasm-debug",
+    "build:wasm": "make -C examples/c wasm",
     "watch:wasm": "onchange \"src/**/*.c\" \"src/**/*.h\" \"include/**/*.h\" \"examples/c/**/*.c\" \"examples/c/**/*.h\" -- npm run build:wasm",
     "gen:chrome-devtools-workspace": "python3 tools/generate_devtools_workspace.py",
     "install": "npm run gen:chrome-devtools-workspace"

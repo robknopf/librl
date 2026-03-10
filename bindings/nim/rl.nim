@@ -27,6 +27,7 @@ const
   RL_RAYWHITE* = RLHandle(26)
   RL_CAMERA_PERSPECTIVE* = 0.cint
   RL_CAMERA_ORTHOGRAPHIC* = 1.cint
+  RL_FLAG_MSAA_4X_HINT* = 32.cint
   RL_BUTTON_UP* = 0.cint
   RL_BUTTON_PRESSED* = 1.cint
   RL_BUTTON_DOWN* = 2.cint
@@ -38,7 +39,7 @@ proc rl_set_asset_host*(assetHost: cstring): cint {.importc, cdecl, header: "rl.
 proc rl_get_asset_host*(): cstring {.importc, cdecl, header: "rl.h".}
 proc rl_update*() {.importc, cdecl, header: "rl.h".}
 proc rl_get_time*(): cdouble {.importc, cdecl, header: "rl.h".}
-proc rl_init_window*(width: cint, height: cint, title: cstring) {.importc, cdecl, header: "rl.h".}
+proc rl_init_window*(width: cint, height: cint, title: cstring, flags: cint) {.importc, cdecl, header: "rl.h".}
 proc rl_get_monitor_count*(): cint {.importc, cdecl, header: "rl.h".}
 proc rl_get_current_monitor*(): cint {.importc, cdecl, header: "rl.h".}
 proc rl_set_window_monitor*(monitor: cint) {.importc, cdecl, header: "rl.h".}

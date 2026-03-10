@@ -18,7 +18,7 @@ proc main() =
 
   rl_init()
   discard rl_set_asset_host(asset_host)
-  rl_init_window(800.cint, 600.cint, "Hello, World! (Nim)")
+  rl_init_window(800.cint, 600.cint, "Hello, World! (Nim)", RL_FLAG_MSAA_4X_HINT)
   let monitorOverride = getEnv("RL_MONITOR", "")
   if monitorOverride.len > 0:
     try:

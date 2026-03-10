@@ -82,7 +82,8 @@ const RL = {
         moduleInstance.ccall('rl_deinit', null, [], []);
     },
 
-    initWindow: (width, height, title) => {
+    initWindow: (width, height, title, flags = 0) => {
+        let windowFlags = Number.isInteger(flags) ? flags : 0;
 
         // we default to keeping the canvas the same aspect ratio as the ideal dimensions
         var idealWidth = moduleOptions.idealWidth || 1024;
@@ -113,7 +114,7 @@ const RL = {
         });
 
 
-        moduleInstance.ccall('rl_init_window', null, ['number', 'number', 'string'], [width, height, title]);
+        moduleInstance.ccall('rl_init_window', null, ['number', 'number', 'string', 'number'], [width, height, title, windowFlags]);
         // force an initial resize event
         window.dispatchEvent(new Event('resize'));
     },
@@ -298,6 +299,7 @@ const RL = {
         RAYWHITE: 26,
         CAMERA_PERSPECTIVE: 0,
         CAMERA_ORTHOGRAPHIC: 1,
+        FLAG_MSAA_4X_HINT: 32,
         BUTTON_UP: 0,
         BUTTON_PRESSED: 1,
         BUTTON_DOWN: 2,

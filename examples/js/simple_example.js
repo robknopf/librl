@@ -3,7 +3,7 @@ import { rl } from "/lib/librl.js";
 (async function () {
   try {
     await rl.init({ idealWidth: 1024, idealHeight: 1280 });
-    rl.initWindow(800, 600, "Hello, World! (Web)");
+    rl.initWindow(800, 600, "Hello, World! (Web)", rl.FLAG_MSAA_4X_HINT);
     rl.setTargetFPS(60);
 
     const fontSize = 24;

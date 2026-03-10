@@ -52,6 +52,8 @@ Notes:
   - telemetry helpers:
     - `resetPickStats()`
     - `getPickStats()`
+- JS `initWindow(width, height, title, flags)` maps directly to C flags.
+  - Example: `rl.initWindow(800, 600, "Title", rl.FLAG_MSAA_4X_HINT)`
 - IDBFS readiness helpers:
   - `RL.isIdbfsReady()` returns true only after wasm-side restore from IndexedDB completes.
   - `RL.waitForIdbfsReady(timeoutMs)` polls readiness and resolves to a boolean.
@@ -86,6 +88,9 @@ Notes:
 - Picking helpers available in Nim:
   - `rl_pick_model(...)`
   - `rl_pick_sprite3d(...)`
+- Window config flags are exposed in Nim:
+  - `rl_init_window(width, height, title, flags)`
+  - `RL_FLAG_MSAA_4X_HINT`
 
 ## Status and Scope
 

@@ -13,7 +13,7 @@ void rl_init();
 void rl_deinit();
 int rl_set_asset_host(const char *asset_host);
 const char *rl_get_asset_host(void);
-void rl_init_window(int width, int height, const char *title);
+void rl_init_window(int width, int height, const char *title, int flags);
 void rl_set_window_title(const char *title);
 void rl_set_window_size(int width, int height);
 vec2_t rl_get_screen_size(void);

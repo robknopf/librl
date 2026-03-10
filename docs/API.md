@@ -22,7 +22,7 @@ This document summarizes the current public C API exposed by `include/*.h`.  As 
 Main responsibilities:
 
 - Runtime lifecycle (`rl_init`, `rl_deinit`)
-- Window management (`rl_init_window`, size/position/title helpers)
+- Window management (`rl_init_window(width, height, title, flags)`, size/position/title helpers)
 - Frame lifecycle (`rl_begin_drawing`, `rl_end_drawing`, `rl_update`)
 - Basic drawing (text, rectangles, cubes, fps helpers)
 - 2D/3D mode switching

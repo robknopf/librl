@@ -73,12 +73,14 @@ void resize_canvas(int newWidth, int newHeight)
 */
 
 RL_KEEP
-void rl_init_window(int width, int height, const char *title) {
+void rl_init_window(int width, int height, const char *title, int flags) {
     if (!initialized) {
         log_error("rl_init_window() called before rl_init()");
         return;
     }
-    //rl_init();
+    if (flags != 0) {
+        SetConfigFlags((unsigned int)flags);
+    }
     InitWindow(width, height, title);
 }
 

@@ -1,0 +1,6 @@
+-I.
+-Isrc
+-Iinclude
+-Ideps/liblua/include
+-I../../include
+-DPLATFORM_DESKTOP

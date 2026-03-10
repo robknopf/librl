@@ -76,6 +76,15 @@ Build all targets:
 make
 ```
 
+Lua addon is now built as a separate addon artifact (not compiled into core `librl`):
+
+```bash
+make addon_lua_deps
+make addon_lua_desktop
+make addon_lua_wasm
+make lua_addon_test_desktop
+```
+
 ## Test
 
 Project test orchestration now lives in `tests/Makefile`.

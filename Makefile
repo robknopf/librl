@@ -306,6 +306,18 @@ uri_test test_desktop test_wasm test unit_test_desktop unit_test_wasm probe_idbf
 		NODE="$(NODE)" \
 		CHROME="$(CHROME)"
 
+lua_addon_test_desktop:
+	@$(MAKE) -C addons/lua addon_test_desktop
+
+addon_lua_deps:
+	@$(MAKE) -C addons/lua deps
+
+addon_lua_desktop:
+	@$(MAKE) -C addons/lua desktop
+
+addon_lua_wasm:
+	@$(MAKE) -C addons/lua wasm
+
 # Compile Desktop source files to object files
 $(OBJ_DESKTOP_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
@@ -335,7 +347,7 @@ clean:
 #	@$(MAKE) -C $(LIBRAYLIB_ROOT) clean
 
 
-.PHONY: all deps ensure_deps clean ensure_out_dir ensure_obj_dir libraylib_wasm libraylib_desktop wasm wasm_archive desktop test test_desktop test_wasm unit_test_desktop unit_test_wasm check_node check_chrome check_probe_python probe_idbfs_build probe_idbfs uri_test
+.PHONY: all deps ensure_deps clean ensure_out_dir ensure_obj_dir libraylib_wasm libraylib_desktop wasm wasm_archive desktop test test_desktop test_wasm unit_test_desktop unit_test_wasm check_node check_chrome check_probe_python probe_idbfs_build probe_idbfs uri_test lua_addon_test_desktop addon_lua_deps addon_lua_desktop addon_lua_wasm
 # 	"_RL_COLOR_BLACK", \
 # 	"_RL_COLOR_BLANK", \
 # 	"_RL_COLOR_MAGENTA", \

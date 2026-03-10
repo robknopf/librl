@@ -76,6 +76,24 @@ Build all targets:
 make
 ```
 
+## Test
+
+Project test orchestration now lives in `tests/Makefile`.
+
+Run full test suite from repo root (delegates to `tests/Makefile`):
+
+```bash
+make test
+```
+
+Run test targets directly:
+
+```bash
+make -C tests test
+make -C tests test_desktop
+make -C tests test_wasm
+```
+
 Debug mode:
 
 ```bash
@@ -98,6 +116,11 @@ make clean
 ## Notes
 
 - `rl_model_create()` requires a ready window/graphics context. If model loading fails, it substitutes a visible placeholder cube.
+- Root `Makefile` and `tests/Makefile` both default wasm builds to WebGL2 via `MIN_WEBGL_VERSION=2` and `MAX_WEBGL_VERSION=2`.
+- `deps/libraylib/Makefile` defaults to `RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES3`. Override per build if needed, for example:
+  ```bash
+  make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
+  ```
 - `deps/`, `obj/`, `lib/`, and `.vscode/` are ignored by git via `.gitignore`.
 - API surface documentation: see [API.md](docs/API.md).
 - Binding documentation: see [BINDINGS.md](docs/BINDINGS.md).

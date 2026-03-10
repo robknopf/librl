@@ -7,6 +7,20 @@ CC_DESKTOP ?= gcc
 NODE ?= $(shell command -v node 2>/dev/null || command -v nodejs 2>/dev/null)
 CHROME ?= $(shell command -v google-chrome 2>/dev/null || command -v chromium-browser 2>/dev/null || command -v chromium 2>/dev/null)
 
+WASM_PLATFORM_CFLAGS ?= -DPLATFORM_WEB
+WASM_COMMON_LDFLAGS ?= \
+	-s WASM=1 \
+	-lidbfs.js \
+	-s USE_GLFW=3 \
+	-s FETCH=1 \
+	-s ASYNCIFY=1 \
+	-s EXPORT_ES6=1 \
+	-s MODULARIZE=1 \
+	-s MIN_WEBGL_VERSION=2 \
+	-s MAX_WEBGL_VERSION=2 \
+	-s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' \
+	-s ALLOW_MEMORY_GROWTH=1
+
 # destination directories and names
 LIBRL_ROOT ?= .
 LIBRL_BASENAME = librl
@@ -32,22 +46,14 @@ endif
 CFLAGS = -Wall -Wextra -fdiagnostics-color=always -Isrc -I$(WG_CORE_DIR)
 
 CFLAGS_WASM = \
-	-DPLATFORM_WEB
+	$(WASM_PLATFORM_CFLAGS)
 
 LDFLAGS_WASM = \
 	--post-js bindings/js/rl_scratch.js \
 	--extern-post-js bindings/js/rl.js \
 	--extern-post-js bindings/js/rl_module_export.js \
-	-s WASM=1 \
-	-lidbfs.js \
-	-s USE_GLFW=3 \
-	-s EXPORT_ES6=1 \
-	-s FETCH \
-	-s ASYNCIFY=1 \
-	-s MODULARIZE=1 \
+	$(WASM_COMMON_LDFLAGS) \
 	-s INITIAL_MEMORY=67108864 \
-	-s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' \
-	-s ALLOW_MEMORY_GROWTH=1 \
 	-s EXPORTED_FUNCTIONS='[ \
 	"_rl_init", \
 	"_rl_deinit", \
@@ -116,7 +122,7 @@ LDFLAGS_WASM = \
 		"_rl_measure_text", \
 		"_rl_measure_text_ex_to_scratch", \
 		"_rl_set_asset_host" \
-	]'
+		]'
 
 CFLAGS_DESKTOP = -DPLATFORM_DESKTOP
 
@@ -145,35 +151,6 @@ CORE_DIR = $(WG_CORE_DIR)
 ALL_SRCS = $(call rwildcard,$(SRC_DIR)/,*.c) $(call rwildcard,$(CORE_DIR)/,*.c)
 TEST_SRCS = $(call rwildcard,$(SRC_DIR)/,*_test.c) $(call rwildcard,$(CORE_DIR)/,*_test.c)
 LIB_SRCS = $(filter-out $(TEST_SRCS), $(ALL_SRCS))
-
-UNIT_TEST_DIR = tests/unit
-UNIT_TEST_MAIN = $(UNIT_TEST_DIR)/tests_main.c
-UNIT_TEST_SRCS = \
-	$(UNIT_TEST_DIR)/fetch_url_stub.c \
-	$(UNIT_TEST_DIR)/raylib_loader_stub.c \
-	$(UNIT_TEST_DIR)/test_fileio_api.c \
-	$(UNIT_TEST_DIR)/test_fileio_common.c \
-	$(UNIT_TEST_DIR)/test_lru_cache.c \
-	$(UNIT_TEST_DIR)/test_path.c \
-	$(UNIT_TEST_DIR)/test_rl_handle_pool.c \
-	$(UNIT_TEST_DIR)/test_rl_loader.c
-UNIT_TEST_LIB_SRCS = \
-	$(CORE_DIR)/fileio/fileio.c \
-	$(CORE_DIR)/fileio/fileio_common.c \
-	$(CORE_DIR)/lru_cache/lru_cache.c \
-	$(CORE_DIR)/path/path.c \
-	src/rl_handle_pool.c \
-	src/rl_loader.c
-UNIT_TEST_EXTRA_LIB_SRCS = \
-	$(CORE_DIR)/uri/uri.c \
-	$(CORE_DIR)/vendor/cwalk/cwalk.c
-UNIT_TEST_DESKTOP_BIN = /tmp/librl_unit_tests
-UNIT_TEST_WASM_JS = /tmp/librl_unit_tests.js
-
-HEADLESS_PROBE_C = tests/headless/fileio_probe_wasm.c
-HEADLESS_PROBE_JS = tests/headless/fileio_probe.js
-HEADLESS_PROBE_HTML = tests/headless/idbfs_probe_fileio.html
-HEADLESS_PROBE_RUNNER = tests/headless/run_idbfs_probe.py
 
 # Include and library paths
 INCLUDES = -I. -I$(OUT_INC_DIR) -I$(LIBRAYLIB_INC) -I$(LIBRL_ROOT)/$(SRC_DIR) -I$(LIBRL_ROOT)/$(CORE_DIR)
@@ -285,54 +262,13 @@ desktop: libraylib_desktop ensure_out_dir ensure_obj_dir $(DESKTOP_OBJS)
 	cd $(OBJ_DESKTOP_DIR)/.raylib_unpack && ar x $(abspath $(LIBRAYLIB_DESKTOP_ARCHIVE))
 	ar rcs $(OUT_DESKTOP) $(DESKTOP_OBJS) $(OBJ_DESKTOP_DIR)/.raylib_unpack/*.o
 
-uri_test:
-	$(CC_DESKTOP) $(CFLAGS) $(INCLUDES) $(CORE_DIR)/uri/uri_test.c $(CORE_DIR)/uri/uri.c $(CORE_DIR)/vendor/cwalk/cwalk.c -o /tmp/uri_test
-	/tmp/uri_test
-
-test_desktop: desktop uri_test unit_test_desktop
-	@echo "Desktop smoke test passed (build + uri_test run)."
-
-test_wasm: wasm unit_test_wasm probe_idbfs
-	@test -s "$(OUT_WASM)" || (echo "Missing or empty wasm JS loader: $(OUT_WASM)" && exit 1)
-	@test -s "$(OUT_WASM:.js=.wasm)" || (echo "Missing or empty wasm binary: $(OUT_WASM:.js=.wasm)" && exit 1)
-	@echo "WASM smoke test passed (build + unit tests + artifact checks + IDBFS probe)."
-
-test: test_desktop test_wasm
-	@echo "All smoke tests passed."
-
-unit_test_desktop:
-	$(CC_DESKTOP) $(CFLAGS) $(INCLUDES) -I$(UNIT_TEST_DIR) $(UNIT_TEST_MAIN) $(UNIT_TEST_SRCS) $(UNIT_TEST_LIB_SRCS) $(UNIT_TEST_EXTRA_LIB_SRCS) -o $(UNIT_TEST_DESKTOP_BIN)
-	@$(UNIT_TEST_DESKTOP_BIN) > /tmp/librl_unit_tests_desktop.log 2>&1 || (cat /tmp/librl_unit_tests_desktop.log && exit 1)
-	@tail -n 1 /tmp/librl_unit_tests_desktop.log
-
-unit_test_wasm: check_node
-	$(CC_WASM) $(CFLAGS) $(INCLUDES) -I$(UNIT_TEST_DIR) $(UNIT_TEST_MAIN) $(UNIT_TEST_SRCS) $(UNIT_TEST_LIB_SRCS) $(UNIT_TEST_EXTRA_LIB_SRCS) -o $(UNIT_TEST_WASM_JS) -s ENVIRONMENT=node -s EXIT_RUNTIME=1
-	@$(NODE) $(UNIT_TEST_WASM_JS) > /tmp/librl_unit_tests_wasm.log 2>&1 || (cat /tmp/librl_unit_tests_wasm.log && exit 1)
-	@tail -n 1 /tmp/librl_unit_tests_wasm.log
-
-probe_idbfs_build:
-	$(CC_WASM) -o $(HEADLESS_PROBE_JS) \
-		$(HEADLESS_PROBE_C) \
-		$(CORE_DIR)/fileio/fileio.wasm.c \
-		$(CORE_DIR)/fileio/fileio_common.c \
-		$(CORE_DIR)/fetch_url/fetch_url.wasm.c \
-		$(CORE_DIR)/path/path.c \
-		$(CORE_DIR)/uri/uri.c \
-		$(CORE_DIR)/vendor/cwalk/cwalk.c \
-		-Isrc \
-		-I$(CORE_DIR) \
-		-s WASM=1 \
-		-lidbfs.js \
-		-s FETCH \
-		-s ASYNCIFY=1 \
-		-s MODULARIZE=1 \
-		-s EXPORT_ES6=1 \
-		-s EXPORTED_RUNTIME_METHODS='["ccall","cwrap"]' \
-		-s EXPORTED_FUNCTIONS='["_probe_fileio_init","_probe_fileio_write_text","_probe_fileio_exists","_probe_fileio_deinit"]' \
-		-O2
-
-probe_idbfs: probe_idbfs_build check_chrome check_probe_python
-	@CHROME_BIN="$(CHROME)" python3 $(HEADLESS_PROBE_RUNNER)
+uri_test test_desktop test_wasm test unit_test_desktop unit_test_wasm probe_idbfs_build probe_idbfs check_node check_chrome check_probe_python:
+	@$(MAKE) -C tests $@ \
+		ROOT_DIR="$(abspath .)" \
+		CC_WASM="$(CC_WASM)" \
+		CC_DESKTOP="$(CC_DESKTOP)" \
+		NODE="$(NODE)" \
+		CHROME="$(CHROME)"
 
 # Compile Desktop source files to object files
 $(OBJ_DESKTOP_DIR)/%.o: %.c
@@ -361,25 +297,8 @@ clean:
 #	@$(MAKE) -C $(LIBRAYLIB_ROOT) clean
 
 
-.PHONY: all deps ensure_deps clean ensure_out_dir ensure_obj_dir libraylib_wasm libraylib_desktop wasm wasm_archive desktop test test_desktop test_wasm unit_test_desktop unit_test_wasm check_node check_chrome check_probe_python probe_idbfs_build probe_idbfs
+.PHONY: all deps ensure_deps clean ensure_out_dir ensure_obj_dir libraylib_wasm libraylib_desktop wasm wasm_archive desktop test test_desktop test_wasm unit_test_desktop unit_test_wasm check_node check_chrome check_probe_python probe_idbfs_build probe_idbfs uri_test
 # 	"_RL_COLOR_BLACK", \
 # 	"_RL_COLOR_BLANK", \
 # 	"_RL_COLOR_MAGENTA", \
 # 	"_RL_COLOR_RAYWHITE", \
-check_node:
-	@if [ -z "$(NODE)" ]; then \
-		echo "Missing Node.js runtime: install node (or set NODE=/path/to/node) to run wasm unit tests."; \
-		exit 1; \
-	fi
-	@echo "Using Node runtime: $(NODE)"
-
-check_chrome:
-	@if [ -z "$(CHROME)" ]; then \
-		echo "Missing Chrome/Chromium: set CHROME=/path/to/browser for probe_idbfs."; \
-		exit 1; \
-	fi
-	@echo "Using headless browser: $(CHROME)"
-
-check_probe_python:
-	@python3 -c "import importlib.util,sys; sys.exit(0 if importlib.util.find_spec('websocket') else 1)" || (echo "Missing Python websocket-client module (import websocket)" && exit 1)
-	@echo "Python websocket-client module available"

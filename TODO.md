@@ -22,6 +22,17 @@
   - status: mostly done
   - keep examples current when scratch bridge functions are renamed/removed
   - add/maintain a short "wasm-only bridge API" table in docs (`*_to_scratch` functions + JS wrapper names)
+- Event payload bridge for JS:
+  - add scratch-area read/write helpers for event payloads so JS can exchange structured payload data with C listeners
+  - define a stable payload layout/versioning strategy for cross-language safety (JS/Nim/C)
+- Event queueing model:
+  - expand event system with an explicit queue (`enqueue`) alongside immediate emit semantics
+  - add queue processing/drain API and decide where it runs (core update loop vs addon update phase)
+- Addon SDK split:
+  - define a separate addon SDK package/repo for out-of-tree addon builds
+  - include stable `rl_addon.h` ABI and documented versioning/compatibility policy
+  - define how wgutils is provided in SDK (headers/libs/version pin) for addon portability
+  - keep addon development in-tree until SDK contract is stable
 - URI/path follow-up:
   - add URL normalization examples to docs
   - decide whether cache keys should canonicalize host casing

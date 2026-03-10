@@ -43,6 +43,32 @@ void rl_addon_free(const rl_addon_host_api_t *host, void *ptr)
     free(ptr);
 }
 
+int rl_addon_event_on(const rl_addon_host_api_t *host, const char *event_name,
+                      rl_addon_event_listener_fn listener, void *listener_user_data)
+{
+    if (host == NULL || host->event_on == NULL) {
+        return -1;
+    }
+    return host->event_on(host->user_data, event_name, listener, listener_user_data);
+}
+
+int rl_addon_event_off(const rl_addon_host_api_t *host, const char *event_name,
+                       rl_addon_event_listener_fn listener, void *listener_user_data)
+{
+    if (host == NULL || host->event_off == NULL) {
+        return -1;
+    }
+    return host->event_off(host->user_data, event_name, listener, listener_user_data);
+}
+
+int rl_addon_event_emit(const rl_addon_host_api_t *host, const char *event_name, void *payload)
+{
+    if (host == NULL || host->event_emit == NULL) {
+        return -1;
+    }
+    return host->event_emit(host->user_data, event_name, payload);
+}
+
 int rl_addon_api_validate(const rl_addon_api_t *api, char *error, size_t error_size)
 {
     if (api == NULL) {

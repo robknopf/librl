@@ -96,10 +96,10 @@ $(OBJ_WASM_DIR):
 	@mkdir -p $(OBJ_WASM_DIR)
 
 $(ADDON_DESKTOP_OBJ): $(ADDON_IMPL_SRC) | $(OBJ_DESKTOP_DIR)
-	$(CC) $(CFLAGS) -I$(ROOT_DIR)/include -I$(LUA_ADDON_DIR)/include -I$(LIBLUA_INC) -c $< -o $@
+	$(CC) $(CFLAGS) -I$(ROOT_DIR)/include -I$(ROOT_DIR)/deps/wgutils -I$(LUA_ADDON_DIR)/include -I$(LIBLUA_INC) -c $< -o $@
 
 $(ADDON_WASM_OBJ): $(ADDON_IMPL_SRC) | $(OBJ_WASM_DIR)
-	$(CC_WASM) $(CFLAGS_WASM) -I$(ROOT_DIR)/include -I$(LUA_ADDON_DIR)/include -I$(LIBLUA_INC) -c $< -o $@
+	$(CC_WASM) $(CFLAGS_WASM) -I$(ROOT_DIR)/include -I$(ROOT_DIR)/deps/wgutils -I$(LUA_ADDON_DIR)/include -I$(LIBLUA_INC) -c $< -o $@
 
 desktop: ensure_desktop_archive $(ADDON_DESKTOP_OBJ) | $(OUT_DIR)
 	$(AR) rcs $(ADDON_DESKTOP_LIB) $(ADDON_DESKTOP_OBJ)
@@ -111,7 +111,7 @@ wasm: ensure_wasm_archive $(ADDON_WASM_OBJ) | $(OUT_DIR)
 
 addon_test_desktop: desktop
 	@$(MAKE) -C $(ROOT_DIR) desktop
-	$(CC) $(CFLAGS) -I$(ROOT_DIR)/include -I$(LUA_ADDON_DIR)/include -I$(LIBLUA_INC) \
+	$(CC) $(CFLAGS) -I$(ROOT_DIR)/include -I$(ROOT_DIR)/deps/wgutils -I$(LUA_ADDON_DIR)/include -I$(LIBLUA_INC) \
 		$(ADDON_TEST_SRC) $(CORE_LIBRL_DESKTOP) $(ADDON_DESKTOP_LIB) $(LIBLUA_DESKTOP_ARCHIVE) \
 		-lm -ldl -o $(ADDON_TEST_BIN)
 	@$(ADDON_TEST_BIN)

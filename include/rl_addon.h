@@ -18,12 +18,21 @@ typedef enum rl_addon_log_level_t {
 typedef void (*rl_addon_log_fn)(void *user_data, int level, const char *message);
 typedef void *(*rl_addon_alloc_fn)(size_t size, void *user_data);
 typedef void (*rl_addon_free_fn)(void *ptr, void *user_data);
+typedef void (*rl_addon_event_listener_fn)(void *payload, void *listener_user_data);
+typedef int (*rl_addon_event_on_fn)(void *host_user_data, const char *event_name,
+                                    rl_addon_event_listener_fn listener, void *listener_user_data);
+typedef int (*rl_addon_event_off_fn)(void *host_user_data, const char *event_name,
+                                     rl_addon_event_listener_fn listener, void *listener_user_data);
+typedef int (*rl_addon_event_emit_fn)(void *host_user_data, const char *event_name, void *payload);
 
 typedef struct rl_addon_host_api_t {
     void *user_data;
     rl_addon_log_fn log;
     rl_addon_alloc_fn alloc;
     rl_addon_free_fn free;
+    rl_addon_event_on_fn event_on;
+    rl_addon_event_off_fn event_off;
+    rl_addon_event_emit_fn event_emit;
 } rl_addon_host_api_t;
 
 typedef int (*rl_addon_init_fn)(const rl_addon_host_api_t *host, void **addon_state);
@@ -43,6 +52,11 @@ typedef struct rl_addon_api_t {
 void rl_addon_log(const rl_addon_host_api_t *host, int level, const char *message);
 void *rl_addon_alloc(const rl_addon_host_api_t *host, size_t size);
 void rl_addon_free(const rl_addon_host_api_t *host, void *ptr);
+int rl_addon_event_on(const rl_addon_host_api_t *host, const char *event_name,
+                      rl_addon_event_listener_fn listener, void *listener_user_data);
+int rl_addon_event_off(const rl_addon_host_api_t *host, const char *event_name,
+                       rl_addon_event_listener_fn listener, void *listener_user_data);
+int rl_addon_event_emit(const rl_addon_host_api_t *host, const char *event_name, void *payload);
 int rl_addon_api_validate(const rl_addon_api_t *api, char *error, size_t error_size);
 int rl_addon_init_instance(const rl_addon_api_t *api, const rl_addon_host_api_t *host, void **addon_state,
                            char *error, size_t error_size);

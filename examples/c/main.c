@@ -7,6 +7,7 @@
 #include "rl_model.h"
 #include "rl_sprite3d.h"
 #include "lua_interop.h"
+#include "logger/log.h"
 
 
 #include <stdbool.h>
@@ -26,6 +27,7 @@ static const char *get_asset_host(void)
 int main(void)
 {
     SetTraceLogLevel(LOG_WARNING);   
+    log_set_log_level(LOG_LEVEL_INFO);
 
     const char *asset_host = get_asset_host();
     const char *font_path = "assets/fonts/Komika/KOMIKAH_.ttf";

@@ -71,7 +71,7 @@ int main(void)
     const char *font_path = "assets/fonts/Komika/KOMIKAH_.ttf";
     const char *model_path = "assets/models/gumshoe/gumshoe.glb";
     const char *sprite_path = "assets/sprites/logo/wg-logo-bw-alpha.png";
-    const char *music_path = "assets/music/punchy.mp3";
+    const char *music_path = "assets/music/ethernight_club.mp3";
     const float font_size = 24.0f;
     const float small_font_size = 16.0f;
     rl_handle_t music = 0;
@@ -103,12 +103,13 @@ int main(void)
     if (lua_interop_init(&lua_vm, "assets/scripts") == 0) {
         (void)lua_interop_run_file(&lua_vm, "lua_demo.lua");
     } else {
-        fprintf(stderr, "Lua interop init failed\n");
+        log_error(stderr, "Lua interop init failed\n");
     }
 
     music = rl_music_create(music_path);
     if (music != 0) {
         (void)rl_music_set_loop(music, true);
+        (void)rl_music_set_volume(music, 0.25f);
         (void)rl_music_play(music);
     } else {
         log_warn("Failed to load music stream from %s", music_path);

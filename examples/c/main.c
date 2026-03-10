@@ -63,8 +63,8 @@ void reroute_raylib_log(int log_level, const char *text, va_list args)
 int main(void)
 {
     SetTraceLogCallback(reroute_raylib_log);
-    SetTraceLogLevel(LOG_TRACE);   
-    log_set_log_level(LOG_LEVEL_INFO);
+    SetTraceLogLevel(LOG_LEVEL_DEBUG); // let raylib log everything, we'll filter it in our callback   
+    log_set_log_level(LOG_LEVEL_WARN);
 
     const char *asset_host = get_asset_host();
     const char *font_path = "assets/fonts/Komika/KOMIKAH_.ttf";

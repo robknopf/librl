@@ -28,16 +28,16 @@ OUT_DIR := out
 BIN := $(OUT_DIR)/main
 WASM_JS := $(OUT_DIR)/main.js
 WASM_DEBUG_JS := $(OUT_DIR)/main.debug.js
-SRC := main.c lua_interop.c
-LIBLUA_REPO ?= git@github.com:robknopf/liblua-builder.git
-LIBLUA_ROOT ?= deps/lua
-LIBLUA_INC := $(LIBLUA_ROOT)/include
-LIBLUA_DESKTOP_ARCHIVE := $(LIBLUA_ROOT)/lib/liblua.a
-LIBLUA_WASM_ARCHIVE := $(LIBLUA_ROOT)/lib/liblua.wasm.a
+SRC := main.c
+ADDON_LUA_DIR := $(ROOT)/addons/lua
+ADDON_LUA_DESKTOP_ARCHIVE := $(ADDON_LUA_DIR)/lib/librl_lua.a
+ADDON_LUA_WASM_ARCHIVE := $(ADDON_LUA_DIR)/lib/librl_lua.wasm.a
+ADDON_LUA_LIBLUA_DESKTOP_ARCHIVE := $(ADDON_LUA_DIR)/deps/liblua/lib/liblua.a
+ADDON_LUA_LIBLUA_WASM_ARCHIVE := $(ADDON_LUA_DIR)/deps/liblua/lib/liblua.wasm.a
 
-INCLUDES := -I$(ROOT)/include -I$(ROOT)/deps/wgutils -I$(ROOT)/deps/libraylib/include -I$(LIBLUA_INC)
-LIBS := -L$(ROOT)/lib -L$(LIBLUA_ROOT)/lib -lrl -llua -lcurl -lm -lpthread -ldl -lX11
-WASM_LIBS := $(ROOT)/lib/librl.wasm.a $(LIBLUA_WASM_ARCHIVE) -lm
+INCLUDES := -I$(ROOT)/include -I$(ROOT)/deps/wgutils -I$(ROOT)/deps/libraylib/include
+LIBS := -L$(ROOT)/lib -lrl $(ADDON_LUA_DESKTOP_ARCHIVE) $(ADDON_LUA_LIBLUA_DESKTOP_ARCHIVE) -lcurl -lm -lpthread -ldl -lX11
+WASM_LIBS := $(ROOT)/lib/librl.wasm.a $(ADDON_LUA_WASM_ARCHIVE) $(ADDON_LUA_LIBLUA_WASM_ARCHIVE) -lm
 
 .PHONY: all deps ensure_deps desktop run wasm wasm-debug clean
 
@@ -49,57 +49,44 @@ wasm: $(WASM_JS)
 wasm-debug: $(WASM_DEBUG_JS)
 
 deps:
-	@if [ ! -d "$(LIBLUA_ROOT)" ]; then \
-		if [ -z "$(LIBLUA_REPO)" ]; then \
-			echo "Error: LIBLUA_REPO is not set and $(LIBLUA_ROOT) does not exist."; \
-			echo "Set LIBLUA_REPO to your lua-builder repo (or pre-populate $(LIBLUA_ROOT))."; \
-			exit 1; \
-		fi; \
-		echo "Cloning lua builder from $(LIBLUA_REPO) into $(LIBLUA_ROOT)"; \
-		mkdir -p "$$(dirname "$(LIBLUA_ROOT)")"; \
-		git clone $(LIBLUA_REPO) $(LIBLUA_ROOT); \
-	else \
-		echo "Updating existing lua builder directory: $(LIBLUA_ROOT)"; \
-		git -C "$(LIBLUA_ROOT)" pull --ff-only; \
-	fi
-	@if [ ! -f "$(LIBLUA_ROOT)/Makefile" ]; then \
-		echo "Error: missing Lua dependency makefile at $(LIBLUA_ROOT)/Makefile"; \
+	@if [ ! -f "$(ADDON_LUA_DIR)/Makefile" ]; then \
+		echo "Error: missing Lua addon makefile at $(ADDON_LUA_DIR)/Makefile"; \
 		exit 1; \
 	fi
-	@echo "Running make in $(LIBLUA_ROOT)"
-	@$(MAKE) -C "$(LIBLUA_ROOT)" wasm desktop
+	@echo "Running make in $(ADDON_LUA_DIR)"
+	@$(MAKE) -C "$(ADDON_LUA_DIR)" deps
 
 ensure_deps:
-	@if [ ! -f "$(LIBLUA_ROOT)/Makefile" ]; then \
-		echo "Missing Lua dependency at $(LIBLUA_ROOT). Run 'make deps' first."; \
+	@if [ ! -f "$(ADDON_LUA_DIR)/Makefile" ]; then \
+		echo "Missing Lua addon at $(ADDON_LUA_DIR). Run 'make deps' first."; \
 		exit 1; \
 	fi
 
-$(LIBLUA_DESKTOP_ARCHIVE): ensure_deps
-	@if [ -f "$(LIBLUA_DESKTOP_ARCHIVE)" ]; then \
-		echo "Using existing lua desktop archive: $(LIBLUA_DESKTOP_ARCHIVE)"; \
+$(ADDON_LUA_DESKTOP_ARCHIVE): ensure_deps
+	@if [ -f "$(ADDON_LUA_DESKTOP_ARCHIVE)" ] && [ -f "$(ADDON_LUA_LIBLUA_DESKTOP_ARCHIVE)" ]; then \
+		echo "Using existing lua addon desktop archives"; \
 	else \
-		echo "Missing lua desktop archive: $(LIBLUA_DESKTOP_ARCHIVE)"; \
-		$(MAKE) -C "$(LIBLUA_ROOT)" desktop; \
+		echo "Missing lua addon desktop archive(s)"; \
+		$(MAKE) -C "$(ADDON_LUA_DIR)" desktop; \
 	fi
 
-$(LIBLUA_WASM_ARCHIVE): ensure_deps
-	@if [ -f "$(LIBLUA_WASM_ARCHIVE)" ]; then \
-		echo "Using existing lua wasm archive: $(LIBLUA_WASM_ARCHIVE)"; \
+$(ADDON_LUA_WASM_ARCHIVE): ensure_deps
+	@if [ -f "$(ADDON_LUA_WASM_ARCHIVE)" ] && [ -f "$(ADDON_LUA_LIBLUA_WASM_ARCHIVE)" ]; then \
+		echo "Using existing lua addon wasm archives"; \
 	else \
-		echo "Missing lua wasm archive: $(LIBLUA_WASM_ARCHIVE)"; \
-		$(MAKE) -C "$(LIBLUA_ROOT)" wasm; \
+		echo "Missing lua addon wasm archive(s)"; \
+		$(MAKE) -C "$(ADDON_LUA_DIR)" wasm; \
 	fi
 
-$(BIN): $(SRC) $(LIBLUA_DESKTOP_ARCHIVE) | $(OUT_DIR)
+$(BIN): $(SRC) $(ADDON_LUA_DESKTOP_ARCHIVE) | $(OUT_DIR)
 	@$(MAKE) -C $(ROOT) desktop
 	$(CC) $(CFLAGS) $(INCLUDES) $(SRC) $(LIBS) -o $(BIN)
 
-$(WASM_JS): $(SRC) $(LIBLUA_WASM_ARCHIVE) | $(OUT_DIR)
+$(WASM_JS): $(SRC) $(ADDON_LUA_WASM_ARCHIVE) | $(OUT_DIR)
 	@$(MAKE) -C $(ROOT) wasm_archive
 	$(CC_WASM) $(CFLAGS_WASM) $(CFLAGS) $(INCLUDES) $(SRC) $(WASM_LIBS) $(LDFLAGS_WASM) -o $(WASM_JS)
 
-$(WASM_DEBUG_JS): $(SRC) $(LIBLUA_WASM_ARCHIVE) | $(OUT_DIR)
+$(WASM_DEBUG_JS): $(SRC) $(ADDON_LUA_WASM_ARCHIVE) | $(OUT_DIR)
 	@$(MAKE) -C $(ROOT) wasm_archive
 	$(CC_WASM) $(DEBUG_CFLAGS_WASM) $(INCLUDES) $(SRC) $(WASM_LIBS) $(DEBUG_SOURCEMAP_LDFLAGS_WASM) -o $(WASM_DEBUG_JS)
 

@@ -2,20 +2,27 @@
 
 #include "rl.h"
 #include "rl_camera3d.h"
+#include "rl_addon.h"
 #include "rl_color.h"
+#include "rl_event.h"
 #include "rl_font.h"
+#include "rl_loader.h"
 #include "rl_model.h"
 #include "rl_music.h"
 #include "rl_pick.h"
 #include "rl_sound.h"
 #include "rl_sprite3d.h"
-#include "lua_interop.h"
 #include "logger/log.h"
 
 
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+typedef struct addon_runtime_t {
+    const rl_addon_api_t *api;
+    void *state;
+} addon_runtime_t;
 
 static const char *get_asset_host(void)
 {
@@ -63,6 +70,61 @@ void reroute_raylib_log(int log_level, const char *text, va_list args)
     log_message(level, "raylib", 0, "%s", msg);
 }
 
+static void addon_log(void *user_data, int level, const char *message)
+{
+    (void)user_data;
+    log_message(level, "addon", 0, "%s", message != NULL ? message : "(null)");
+}
+
+static int addon_event_on(void *host_user_data, const char *event_name,
+                          rl_addon_event_listener_fn listener, void *listener_user_data)
+{
+    (void)host_user_data;
+    return rl_event_on(event_name, listener, listener_user_data);
+}
+
+static int addon_event_off(void *host_user_data, const char *event_name,
+                           rl_addon_event_listener_fn listener, void *listener_user_data)
+{
+    (void)host_user_data;
+    return rl_event_off(event_name, listener, listener_user_data);
+}
+
+static int addon_event_emit(void *host_user_data, const char *event_name, void *payload)
+{
+    (void)host_user_data;
+    return rl_event_emit(event_name, payload);
+}
+
+static void on_lua_ready(void *payload, void *user_data)
+{
+    bool *ready = (bool *)user_data;
+    (void)payload;
+    if (ready != NULL) {
+        *ready = true;
+    }
+    log_info("Lua addon ready");
+}
+
+static void on_lua_ok(void *payload, void *user_data)
+{
+    int *ok_count = (int *)user_data;
+    (void)payload;
+    if (ok_count != NULL) {
+        (*ok_count)++;
+    }
+}
+
+static void on_lua_error(void *payload, void *user_data)
+{
+    const char *error = (const char *)payload;
+    int *error_count = (int *)user_data;
+    if (error_count != NULL) {
+        (*error_count)++;
+    }
+    log_error("Lua addon error: %s", error != NULL ? error : "(unknown)");
+}
+
 int main(void)
 {
     SetTraceLogCallback(reroute_raylib_log);
@@ -81,7 +143,12 @@ int main(void)
     rl_handle_t click_sound = 0;
     rl_pick_result_t last_pick = {0};
     bool has_pick = false;
-    lua_interop_vm_t lua_vm = {0};
+    bool lua_ready = false;
+    int lua_ok_count = 0;
+    int lua_error_count = 0;
+    addon_runtime_t lua_addon = {0};
+    rl_addon_host_api_t addon_host = {0};
+    char addon_error[256] = {0};
 
     rl_init();
     if (rl_set_asset_host(asset_host) != 0) {
@@ -106,10 +173,23 @@ int main(void)
         0.0f, 1.0f, 0.0f,
         45.0f, CAMERA_PERSPECTIVE);
 
-    if (lua_interop_init(&lua_vm, "assets/scripts") == 0) {
-        (void)lua_interop_run_file(&lua_vm, "lua_demo.lua");
+    (void)rl_event_on("lua.ready", on_lua_ready, &lua_ready);
+    (void)rl_event_on("lua.ok", on_lua_ok, &lua_ok_count);
+    (void)rl_event_on("lua.error", on_lua_error, &lua_error_count);
+
+    addon_host.log = addon_log;
+    addon_host.event_on = addon_event_on;
+    addon_host.event_off = addon_event_off;
+    addon_host.event_emit = addon_event_emit;
+
+    if (rl_addon_init("lua", &addon_host, &lua_addon.api, &lua_addon.state, addon_error, sizeof(addon_error)) == 0) {
+        if (rl_loader_cache_file("assets/scripts/lua_demo.lua") == 0) {
+            (void)rl_event_emit("lua.do_file", "assets/scripts/lua_demo.lua");
+        } else {
+            log_warn("Failed to cache lua_demo.lua before lua.do_file");
+        }
     } else {
-        log_error("Lua interop init failed");
+        log_warn("Lua addon init failed: %s", addon_error);
     }
 
     music = rl_music_create(music_path);
@@ -144,6 +224,9 @@ int main(void)
         if (music != 0) {
             (void)rl_music_update(music);
         }
+        if (lua_addon.api != NULL && lua_addon.api->update != NULL) {
+            (void)lua_addon.api->update(lua_addon.state, dt);
+        }
         if (click_sound != 0 && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
             Vector2 mouse = GetMousePosition();
             last_pick = rl_pick_model(camera, gumshoe, mouse.x, mouse.y, 0.0f, 0.0f, 0.0f, 1.0f);
@@ -176,6 +259,9 @@ int main(void)
         rl_draw_text_ex(komika, message, text_x, text_y, font_size, 1.0f, RL_COLOR_BLUE);
         rl_draw_text_ex(komika_small, TextFormat("assetHost: %s", asset_host), 10, 10, small_font_size, 1.0, RL_COLOR_DARKGRAY);
         rl_draw_text_ex(komika_small, "Set RL_ASSET_HOST to override", 10, 30, small_font_size, 1.0, RL_COLOR_GRAY);
+        rl_draw_text_ex(komika_small,
+                        TextFormat("lua ready: %s ok:%d err:%d", lua_ready ? "yes" : "no", lua_ok_count, lua_error_count),
+                        10, 96, small_font_size, 1.0, RL_COLOR_DARKBLUE);
         if (has_pick) {
             if (last_pick.hit) {
                 rl_draw_text_ex(komika_small,
@@ -206,7 +292,12 @@ int main(void)
     if (music != 0) {
         rl_music_destroy(music);
     }
-    lua_interop_deinit(&lua_vm);
+    if (lua_addon.api != NULL) {
+        rl_addon_deinit_instance(lua_addon.api, lua_addon.state);
+    }
+    (void)rl_event_off("lua.ready", on_lua_ready, &lua_ready);
+    (void)rl_event_off("lua.ok", on_lua_ok, &lua_ok_count);
+    (void)rl_event_off("lua.error", on_lua_error, &lua_error_count);
     rl_deinit();
     CloseWindow();
     return 0;

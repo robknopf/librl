@@ -62,6 +62,8 @@ export interface RLInitOptions {
   env?: RLInitEnv;
 }
 
+export type RLEventCallback = (payload: number) => void;
+
 export interface RLApi {
   _waitForIdbfsReady(timeoutMs?: number): Promise<boolean>;
   isIdbfsReady(): boolean;
@@ -75,6 +77,9 @@ export interface RLApi {
   uncacheFile(filename: string): number;
   clearCache(): number;
   emitEvent(eventName: string, payload?: number): number;
+  onEvent(eventName: string, callback: RLEventCallback): number;
+  onceEvent(eventName: string, callback: RLEventCallback): number;
+  offEvent(eventName: string, callback: RLEventCallback): number;
   clearEventListeners(eventName: string): number;
   getEventListenerCount(eventName: string): number;
 

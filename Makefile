@@ -18,7 +18,7 @@ WASM_COMMON_LDFLAGS ?= \
 	-s MODULARIZE=1 \
 	-s MIN_WEBGL_VERSION=2 \
 	-s MAX_WEBGL_VERSION=2 \
-	-s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' \
+	-s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "addFunction", "removeFunction"]' \
 	-s ALLOW_MEMORY_GROWTH=1
 
 # destination directories and names
@@ -154,6 +154,9 @@ LDFLAGS_WASM = \
 		"_rl_loader_cache_file", \
 		"_rl_loader_uncache_file", \
 		"_rl_loader_clear_cache", \
+		"_rl_event_on", \
+		"_rl_event_once", \
+		"_rl_event_off", \
 		"_rl_event_emit", \
 		"_rl_event_off_all", \
 		"_rl_event_listener_count" \

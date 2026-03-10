@@ -3,6 +3,44 @@ var moduleInstance;
 var moduleOptions = {};
 
 const RL = {
+    _eventDispatchPtr: 0,
+    _nextEventListenerId: 1,
+    _eventListenersById: new Map(),
+    _eventListenerIdsByCallback: new WeakMap(),
+    _dispatchEventFromWasm: (payload, userData) => {
+        const listener = RL._eventListenersById.get(userData >>> 0);
+        if (!listener || typeof listener.callback !== "function") {
+            return;
+        }
+        listener.callback(payload >>> 0);
+    },
+    _ensureEventDispatchPtr: () => {
+        if (!moduleInstance || RL._eventDispatchPtr !== 0) {
+            return;
+        }
+        RL._eventDispatchPtr = moduleInstance.addFunction(RL._dispatchEventFromWasm, "vii");
+    },
+    _forgetListenerById: (listenerId) => {
+        const listener = RL._eventListenersById.get(listenerId);
+        let callbackMap = null;
+        if (!listener) {
+            return;
+        }
+        callbackMap = RL._eventListenerIdsByCallback.get(listener.callback);
+        if (callbackMap) {
+            callbackMap.delete(listener.eventName);
+        }
+        RL._eventListenersById.delete(listenerId);
+    },
+    _clearListenerCacheForEvent: (eventName) => {
+        const idsToDelete = [];
+        RL._eventListenersById.forEach((listener, id) => {
+            if (listener && listener.eventName === eventName) {
+                idsToDelete.push(id);
+            }
+        });
+        idsToDelete.forEach((id) => RL._forgetListenerById(id));
+    },
     _waitForIdbfsReady: async (timeoutMs = 2000) => {
         const start = performance.now();
         while (performance.now() - start < timeoutMs) {
@@ -79,6 +117,12 @@ const RL = {
         return moduleInstance.ccall('rl_get_time', 'number', [], []);
     },
     deinit: () => {
+        RL._eventListenersById.clear();
+        RL._eventListenerIdsByCallback = new WeakMap();
+        if (moduleInstance && RL._eventDispatchPtr !== 0) {
+            moduleInstance.removeFunction(RL._eventDispatchPtr);
+            RL._eventDispatchPtr = 0;
+        }
         moduleInstance.ccall('rl_deinit', null, [], []);
     },
     cacheFile: (filename) => {
@@ -93,8 +137,101 @@ const RL = {
     emitEvent: (eventName, payload = 0) => {
         return moduleInstance.ccall('rl_event_emit', 'number', ['string', 'number'], [eventName, payload]);
     },
+    onEvent: (eventName, callback) => {
+        let callbackMap = null;
+        let listenerId = 0;
+        let rc = 0;
+
+        if (typeof eventName !== "string" || eventName.length === 0 || typeof callback !== "function") {
+            return -1;
+        }
+
+        RL._ensureEventDispatchPtr();
+        if (RL._eventDispatchPtr === 0) {
+            return -1;
+        }
+
+        callbackMap = RL._eventListenerIdsByCallback.get(callback);
+        if (!callbackMap) {
+            callbackMap = new Map();
+            RL._eventListenerIdsByCallback.set(callback, callbackMap);
+        }
+
+        if (callbackMap.has(eventName)) {
+            return 0;
+        }
+
+        listenerId = RL._nextEventListenerId++;
+        rc = moduleInstance.ccall('rl_event_on', 'number', ['string', 'number', 'number'], [eventName, RL._eventDispatchPtr, listenerId]);
+        if (rc !== 0) {
+            return rc;
+        }
+
+        callbackMap.set(eventName, listenerId);
+        RL._eventListenersById.set(listenerId, { eventName, callback });
+        return 0;
+    },
+    onceEvent: (eventName, callback) => {
+        let callbackMap = null;
+        let listenerId = 0;
+        let rc = 0;
+
+        if (typeof eventName !== "string" || eventName.length === 0 || typeof callback !== "function") {
+            return -1;
+        }
+
+        RL._ensureEventDispatchPtr();
+        if (RL._eventDispatchPtr === 0) {
+            return -1;
+        }
+
+        callbackMap = RL._eventListenerIdsByCallback.get(callback);
+        if (!callbackMap) {
+            callbackMap = new Map();
+            RL._eventListenerIdsByCallback.set(callback, callbackMap);
+        }
+
+        if (callbackMap.has(eventName)) {
+            return 0;
+        }
+
+        listenerId = RL._nextEventListenerId++;
+        rc = moduleInstance.ccall('rl_event_once', 'number', ['string', 'number', 'number'], [eventName, RL._eventDispatchPtr, listenerId]);
+        if (rc !== 0) {
+            return rc;
+        }
+
+        callbackMap.set(eventName, listenerId);
+        RL._eventListenersById.set(listenerId, { eventName, callback });
+        return 0;
+    },
+    offEvent: (eventName, callback) => {
+        let callbackMap = null;
+        let listenerId = 0;
+        let rc = 0;
+
+        if (typeof eventName !== "string" || eventName.length === 0 || typeof callback !== "function") {
+            return -1;
+        }
+
+        callbackMap = RL._eventListenerIdsByCallback.get(callback);
+        if (!callbackMap || !callbackMap.has(eventName)) {
+            return 0;
+        }
+
+        listenerId = callbackMap.get(eventName);
+        rc = moduleInstance.ccall('rl_event_off', 'number', ['string', 'number', 'number'], [eventName, RL._eventDispatchPtr, listenerId]);
+        if (rc === 0) {
+            RL._forgetListenerById(listenerId);
+        }
+        return rc;
+    },
     clearEventListeners: (eventName) => {
-        return moduleInstance.ccall('rl_event_off_all', 'number', ['string'], [eventName]);
+        const rc = moduleInstance.ccall('rl_event_off_all', 'number', ['string'], [eventName]);
+        if (rc === 0) {
+            RL._clearListenerCacheForEvent(eventName);
+        }
+        return rc;
     },
     getEventListenerCount: (eventName) => {
         return moduleInstance.ccall('rl_event_listener_count', 'number', ['string'], [eventName]);

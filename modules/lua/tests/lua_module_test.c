@@ -1,4 +1,4 @@
-#include "rl_lua_addon.h"
+#include "rl_lua_module.h"
 #include "fileio/fileio.h"
 
 #include <stdio.h>
@@ -6,7 +6,7 @@
 
 typedef struct test_event_binding_t {
     char event_name[64];
-    rl_addon_event_listener_fn listener;
+    rl_module_event_listener_fn listener;
     void *listener_user_data;
 } test_event_binding_t;
 
@@ -32,7 +32,7 @@ static void test_event_counter(void *payload, void *user_data)
     }
 }
 
-static int host_event_on(void *host_user_data, const char *event_name, rl_addon_event_listener_fn listener,
+static int host_event_on(void *host_user_data, const char *event_name, rl_module_event_listener_fn listener,
                          void *listener_user_data)
 {
     test_event_binding_t *binding = NULL;
@@ -48,7 +48,7 @@ static int host_event_on(void *host_user_data, const char *event_name, rl_addon_
     return 0;
 }
 
-static int host_event_off(void *host_user_data, const char *event_name, rl_addon_event_listener_fn listener,
+static int host_event_off(void *host_user_data, const char *event_name, rl_module_event_listener_fn listener,
                           void *listener_user_data)
 {
     int i = 0;
@@ -78,31 +78,52 @@ static int host_event_emit(void *host_user_data, const char *event_name, void *p
     return 0;
 }
 
+static const rl_module_entry_t g_test_modules[] = {
+    rl_module_register(lua),
+};
+
+const rl_module_api_t *rl_module_lookup_registry(const char *name)
+{
+    size_t i = 0;
+
+    if (name == NULL || name[0] == '\0') {
+        return NULL;
+    }
+
+    for (i = 0; i < (sizeof(g_test_modules) / sizeof(g_test_modules[0])); i++) {
+        if (strcmp(g_test_modules[i].name, name) == 0 && g_test_modules[i].get_api_fn != NULL) {
+            return g_test_modules[i].get_api_fn();
+        }
+    }
+
+    return NULL;
+}
+
 int main(void)
 {
-    const rl_addon_api_t *api = NULL;
-    rl_addon_host_api_t host = {0};
-    void *addon_state = NULL;
-    int addon_log_count = 0;
+    const rl_module_api_t *api = NULL;
+    rl_module_host_api_t host = {0};
+    void *module_state = NULL;
+    int module_log_count = 0;
     int lua_ok_count = 0;
     int lua_error_count = 0;
     int rc = 0;
     char error[256] = {0};
-    const char *mount_point = "lua_addon_test_cache";
-    const char *script_path = "scripts/rl_lua_addon_test_script.lua";
+    const char *mount_point = "lua_module_test_cache";
+    const char *script_path = "scripts/rl_lua_module_test_script.lua";
     const unsigned char script_data[] = "local y = 3 + 4\n";
 
-    api = rl_lua_addon_get_api();
+    api = rl_lua_module_get_api();
     if (api == NULL) {
-        fprintf(stderr, "rl_lua_addon_get_api returned NULL\n");
+        fprintf(stderr, "rl_lua_module_get_api returned NULL\n");
         return 1;
     }
-    if (api->abi_version != RL_ADDON_ABI_VERSION) {
-        fprintf(stderr, "unexpected addon abi version: %d\n", api->abi_version);
+    if (api->abi_version != RL_MODULE_ABI_VERSION) {
+        fprintf(stderr, "unexpected module abi version: %d\n", api->abi_version);
         return 1;
     }
 
-    host.user_data = &addon_log_count;
+    host.user_data = &module_log_count;
     host.log = test_log;
     host.event_on = host_event_on;
     host.event_off = host_event_off;
@@ -119,9 +140,9 @@ int main(void)
         return 1;
     }
 
-    rc = rl_addon_init("lua", &host, &api, &addon_state, error, sizeof(error));
-    if (rc != 0 || addon_state == NULL) {
-        fprintf(stderr, "addon api init failed: %s\n", error);
+    rc = rl_module_init("lua", &host, &api, &module_state, error, sizeof(error));
+    if (rc != 0 || module_state == NULL) {
+        fprintf(stderr, "module api init failed: %s\n", error);
         return 1;
     }
 
@@ -129,54 +150,54 @@ int main(void)
     rc = fileio_init(mount_point);
     if (rc != 0) {
         fprintf(stderr, "failed to init fileio test mount\n");
-        rl_addon_deinit_instance(api, addon_state);
+        rl_module_deinit_instance(api, module_state);
         return 1;
     }
 
     rc = host_event_emit(NULL, "lua.do_string", "local x = 1 + 2");
     if (rc != 0) {
         fprintf(stderr, "failed to emit lua.do_string success case\n");
-        rl_addon_deinit_instance(api, addon_state);
+        rl_module_deinit_instance(api, module_state);
         return 1;
     }
     rc = host_event_emit(NULL, "lua.do_string", "this_is_not_valid_lua(");
     if (rc != 0) {
         fprintf(stderr, "failed to emit lua.do_string error case\n");
-        rl_addon_deinit_instance(api, addon_state);
+        rl_module_deinit_instance(api, module_state);
         return 1;
     }
 
     rc = fileio_write(script_path, (void *)script_data, sizeof(script_data) - 1);
     if (rc != 0) {
         fprintf(stderr, "failed to write lua script through fileio\n");
-        rl_addon_deinit_instance(api, addon_state);
+        rl_module_deinit_instance(api, module_state);
         return 1;
     }
 
     rc = host_event_emit(NULL, "lua.do_file", (void *)script_path);
     if (rc != 0) {
         fprintf(stderr, "failed to emit lua.do_file success case\n");
-        rl_addon_deinit_instance(api, addon_state);
+        rl_module_deinit_instance(api, module_state);
         fileio_deinit();
         return 1;
     }
 
-    rc = host_event_emit(NULL, "lua.do_file", "scripts/rl_lua_addon_missing.lua");
+    rc = host_event_emit(NULL, "lua.do_file", "scripts/rl_lua_module_missing.lua");
     if (rc != 0) {
         fprintf(stderr, "failed to emit lua.do_file error case\n");
-        rl_addon_deinit_instance(api, addon_state);
+        rl_module_deinit_instance(api, module_state);
         fileio_deinit();
         return 1;
     }
 
-    rc = api->update(addon_state, 1.0f / 60.0f);
+    rc = api->update(module_state, 1.0f / 60.0f);
     if (rc != 0) {
-        fprintf(stderr, "addon api update failed\n");
-        rl_addon_deinit_instance(api, addon_state);
+        fprintf(stderr, "module api update failed\n");
+        rl_module_deinit_instance(api, module_state);
         return 1;
     }
 
-    rl_addon_deinit_instance(api, addon_state);
+    rl_module_deinit_instance(api, module_state);
     (void)fileio_rmfile(script_path);
     (void)fileio_rmdir("scripts");
     fileio_deinit();
@@ -191,11 +212,11 @@ int main(void)
         fprintf(stderr, "expected lua.error event at least twice\n");
         return 1;
     }
-    if (addon_log_count < 2) {
-        fprintf(stderr, "expected addon logger to be called at least twice\n");
+    if (module_log_count < 2) {
+        fprintf(stderr, "expected module logger to be called at least twice\n");
         return 1;
     }
 
-    printf("lua_addon_test: passed\n");
+    printf("lua_module_test: passed\n");
     return 0;
 }

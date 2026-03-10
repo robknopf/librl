@@ -4,7 +4,7 @@ This example intentionally mixes:
 
 - direct raylib runtime calls (`InitWindow`, `BeginDrawing`, `BeginMode3D`, `DrawText`, etc.)
 - `librl` handle-based helpers for assets (`rl_font_create`, `rl_model_create`, `rl_sprite3d_create`, etc.)
-- `rl_addon` + `rl_event` flow to drive the Lua addon (`lua.do_file`, `lua.do_string`)
+- `rl_module` + `rl_event` flow to drive the Lua module (`lua.do_file`, `lua.do_string`)
 
 ## Build
 
@@ -12,7 +12,7 @@ This example intentionally mixes:
 make -C examples/c desktop
 ```
 
-The C example builds/links the in-tree Lua addon (`addons/lua`) and its Lua dependency on demand.
+The C example builds/links the in-tree Lua module (`modules/lua`) and its Lua dependency on demand.
 
 ## Build (Wasm)
 

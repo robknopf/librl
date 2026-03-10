@@ -27,7 +27,7 @@ async function loadExampleModuleFactory(maxAttempts = 120, delayMs = 500) {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       // Cache-bust retries so a prior missing-module fetch does not stick.
-      const mod = await import(`/examples/c/out/main.js?t=${Date.now()}`);
+      const mod = await import(/* @vite-ignore */`/examples/c/out/main.js?t=${Date.now()}`);
       return mod.default;
     } catch (err) {
       if (attempt === maxAttempts) {

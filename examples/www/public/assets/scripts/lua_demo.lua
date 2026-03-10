@@ -1,1 +1,1 @@
-print("lua_interop: hello from lua_demo.lua")
+log("info", "lua_module: hello from lua_demo.lua")

@@ -2,7 +2,7 @@
 #define RL_H
 
 #include <stdbool.h>
-#include "rl_addon.h"
+#include "rl_module.h"
 #include "rl_camera3d.h"
 #include "rl_color.h"
 #include "rl_event.h"

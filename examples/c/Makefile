@@ -26,20 +26,29 @@ DEBUG_SOURCEMAP_LDFLAGS_WASM ?= $(DEBUG_LDFLAGS_WASM) -gsource-map -g
 
 OUT_DIR := out
 BIN := $(OUT_DIR)/main
+CACHE_DIR := cache
 WASM_JS := $(OUT_DIR)/main.js
 WASM_DEBUG_JS := $(OUT_DIR)/main.debug.js
 SRC := main.c
-ADDON_LUA_DIR := $(ROOT)/addons/lua
-ADDON_LUA_DESKTOP_ARCHIVE := $(ADDON_LUA_DIR)/lib/librl_lua.a
-ADDON_LUA_WASM_ARCHIVE := $(ADDON_LUA_DIR)/lib/librl_lua.wasm.a
-ADDON_LUA_LIBLUA_DESKTOP_ARCHIVE := $(ADDON_LUA_DIR)/deps/liblua/lib/liblua.a
-ADDON_LUA_LIBLUA_WASM_ARCHIVE := $(ADDON_LUA_DIR)/deps/liblua/lib/liblua.wasm.a
+MODULE_REGISTRY_SRC := $(OUT_DIR)/module_registry.c
+USES_MODULE_LUA ?= 1
+MODULE_LUA_DIR := $(ROOT)/modules/lua
+MODULE_LUA_DESKTOP_ARCHIVE := $(MODULE_LUA_DIR)/lib/librl_lua.a
+MODULE_LUA_WASM_ARCHIVE := $(MODULE_LUA_DIR)/lib/librl_lua.wasm.a
+MODULE_LUA_LIBLUA_DESKTOP_ARCHIVE := $(MODULE_LUA_DIR)/deps/liblua/lib/liblua.a
+MODULE_LUA_LIBLUA_WASM_ARCHIVE := $(MODULE_LUA_DIR)/deps/liblua/lib/liblua.wasm.a
 
 INCLUDES := -I$(ROOT)/include -I$(ROOT)/deps/wgutils -I$(ROOT)/deps/libraylib/include
-LIBS := -L$(ROOT)/lib -lrl $(ADDON_LUA_DESKTOP_ARCHIVE) $(ADDON_LUA_LIBLUA_DESKTOP_ARCHIVE) -lcurl -lm -lpthread -ldl -lX11
-WASM_LIBS := $(ROOT)/lib/librl.wasm.a $(ADDON_LUA_WASM_ARCHIVE) $(ADDON_LUA_LIBLUA_WASM_ARCHIVE) -lm
+MODULE_DESKTOP_ARCHIVES :=
+MODULE_WASM_ARCHIVES :=
+ifeq ($(USES_MODULE_LUA),1)
+MODULE_DESKTOP_ARCHIVES += $(MODULE_LUA_DESKTOP_ARCHIVE) $(MODULE_LUA_LIBLUA_DESKTOP_ARCHIVE)
+MODULE_WASM_ARCHIVES += $(MODULE_LUA_WASM_ARCHIVE) $(MODULE_LUA_LIBLUA_WASM_ARCHIVE)
+endif
+LIBS := -L$(ROOT)/lib -lrl $(MODULE_DESKTOP_ARCHIVES) -lcurl -lm -lpthread -ldl -lX11
+WASM_LIBS := $(ROOT)/lib/librl.wasm.a $(MODULE_WASM_ARCHIVES) -lm
 
-.PHONY: all deps ensure_deps desktop run wasm wasm-debug clean
+.PHONY: all deps ensure_deps desktop run wasm wasm-debug clean FORCE
 
 all: desktop wasm
 
@@ -49,46 +58,82 @@ wasm: $(WASM_JS)
 wasm-debug: $(WASM_DEBUG_JS)
 
 deps:
-	@if [ ! -f "$(ADDON_LUA_DIR)/Makefile" ]; then \
-		echo "Error: missing Lua addon makefile at $(ADDON_LUA_DIR)/Makefile"; \
+	@if [ ! -f "$(MODULE_LUA_DIR)/Makefile" ]; then \
+		echo "Error: missing Lua module makefile at $(MODULE_LUA_DIR)/Makefile"; \
 		exit 1; \
 	fi
-	@echo "Running make in $(ADDON_LUA_DIR)"
-	@$(MAKE) -C "$(ADDON_LUA_DIR)" deps
+	@echo "Running make in $(MODULE_LUA_DIR)"
+	@$(MAKE) -C "$(MODULE_LUA_DIR)" deps
 
 ensure_deps:
-	@if [ ! -f "$(ADDON_LUA_DIR)/Makefile" ]; then \
-		echo "Missing Lua addon at $(ADDON_LUA_DIR). Run 'make deps' first."; \
+	@if [ ! -f "$(MODULE_LUA_DIR)/Makefile" ]; then \
+		echo "Missing Lua module at $(MODULE_LUA_DIR). Run 'make deps' first."; \
 		exit 1; \
 	fi
 
-$(ADDON_LUA_DESKTOP_ARCHIVE): ensure_deps
-	@if [ -f "$(ADDON_LUA_DESKTOP_ARCHIVE)" ] && [ -f "$(ADDON_LUA_LIBLUA_DESKTOP_ARCHIVE)" ]; then \
-		echo "Using existing lua addon desktop archives"; \
+$(MODULE_LUA_DESKTOP_ARCHIVE): ensure_deps
+	@if [ -f "$(MODULE_LUA_DESKTOP_ARCHIVE)" ] && [ -f "$(MODULE_LUA_LIBLUA_DESKTOP_ARCHIVE)" ]; then \
+		echo "Using existing lua module desktop archives"; \
 	else \
-		echo "Missing lua addon desktop archive(s)"; \
-		$(MAKE) -C "$(ADDON_LUA_DIR)" desktop; \
+		echo "Missing lua module desktop archive(s)"; \
+		$(MAKE) -C "$(MODULE_LUA_DIR)" desktop; \
 	fi
 
-$(ADDON_LUA_WASM_ARCHIVE): ensure_deps
-	@if [ -f "$(ADDON_LUA_WASM_ARCHIVE)" ] && [ -f "$(ADDON_LUA_LIBLUA_WASM_ARCHIVE)" ]; then \
-		echo "Using existing lua addon wasm archives"; \
+$(MODULE_LUA_WASM_ARCHIVE): ensure_deps
+	@if [ -f "$(MODULE_LUA_WASM_ARCHIVE)" ] && [ -f "$(MODULE_LUA_LIBLUA_WASM_ARCHIVE)" ]; then \
+		echo "Using existing lua module wasm archives"; \
 	else \
-		echo "Missing lua addon wasm archive(s)"; \
-		$(MAKE) -C "$(ADDON_LUA_DIR)" wasm; \
+		echo "Missing lua module wasm archive(s)"; \
+		$(MAKE) -C "$(MODULE_LUA_DIR)" wasm; \
 	fi
 
-$(BIN): $(SRC) $(ADDON_LUA_DESKTOP_ARCHIVE) | $(OUT_DIR)
+$(MODULE_REGISTRY_SRC): FORCE | $(OUT_DIR)
+	@echo "Generating module registry: $@ (USES_MODULE_LUA=$(USES_MODULE_LUA))"
+	@{ \
+		echo '#include "rl_module.h"'; \
+		echo '#include <string.h>'; \
+		echo ''; \
+		if [ "$(USES_MODULE_LUA)" = "1" ]; then \
+			echo 'extern const rl_module_api_t *rl_lua_module_get_api(void);'; \
+		fi; \
+		echo ''; \
+		echo 'static const rl_module_entry_t g_example_modules[] = {'; \
+		if [ "$(USES_MODULE_LUA)" = "1" ]; then \
+			echo '    rl_module_register(lua),'; \
+		fi; \
+		echo '};'; \
+		echo ''; \
+		echo 'static const size_t g_example_module_count = sizeof(g_example_modules) / sizeof(g_example_modules[0]);'; \
+		echo ''; \
+		echo 'const rl_module_api_t *rl_module_lookup_registry(const char *name)'; \
+		echo '{'; \
+		echo '    size_t i = 0;'; \
+		echo ''; \
+		echo '    if (name == NULL || name[0] == 0) {'; \
+		echo '        return NULL;'; \
+		echo '    }'; \
+		echo ''; \
+		echo '    for (i = 0; i < g_example_module_count; i++) {'; \
+		echo '        if (strcmp(name, g_example_modules[i].name) == 0 && g_example_modules[i].get_api_fn != NULL) {'; \
+		echo '            return g_example_modules[i].get_api_fn();'; \
+		echo '        }'; \
+		echo '    }'; \
+		echo ''; \
+		echo '    return NULL;'; \
+		echo '}'; \
+	} > $@
+
+$(BIN): $(SRC) $(MODULE_REGISTRY_SRC) $(MODULE_DESKTOP_ARCHIVES) | $(OUT_DIR)
 	@$(MAKE) -C $(ROOT) desktop
-	$(CC) $(CFLAGS) $(INCLUDES) $(SRC) $(LIBS) -o $(BIN)
+	$(CC) $(CFLAGS) $(INCLUDES) $(SRC) $(MODULE_REGISTRY_SRC) $(LIBS) -o $(BIN)
 
-$(WASM_JS): $(SRC) $(ADDON_LUA_WASM_ARCHIVE) | $(OUT_DIR)
+$(WASM_JS): $(SRC) $(MODULE_REGISTRY_SRC) $(MODULE_WASM_ARCHIVES) | $(OUT_DIR)
 	@$(MAKE) -C $(ROOT) wasm_archive
-	$(CC_WASM) $(CFLAGS_WASM) $(CFLAGS) $(INCLUDES) $(SRC) $(WASM_LIBS) $(LDFLAGS_WASM) -o $(WASM_JS)
+	$(CC_WASM) $(CFLAGS_WASM) $(CFLAGS) $(INCLUDES) $(SRC) $(MODULE_REGISTRY_SRC) $(WASM_LIBS) $(LDFLAGS_WASM) -o $(WASM_JS)
 
-$(WASM_DEBUG_JS): $(SRC) $(ADDON_LUA_WASM_ARCHIVE) | $(OUT_DIR)
+$(WASM_DEBUG_JS): $(SRC) $(MODULE_REGISTRY_SRC) $(MODULE_WASM_ARCHIVES) | $(OUT_DIR)
 	@$(MAKE) -C $(ROOT) wasm_archive
-	$(CC_WASM) $(DEBUG_CFLAGS_WASM) $(INCLUDES) $(SRC) $(WASM_LIBS) $(DEBUG_SOURCEMAP_LDFLAGS_WASM) -o $(WASM_DEBUG_JS)
+	$(CC_WASM) $(DEBUG_CFLAGS_WASM) $(INCLUDES) $(SRC) $(MODULE_REGISTRY_SRC) $(WASM_LIBS) $(DEBUG_SOURCEMAP_LDFLAGS_WASM) -o $(WASM_DEBUG_JS)
 
 $(OUT_DIR):
 	mkdir -p $(OUT_DIR)
@@ -98,3 +143,6 @@ run: $(BIN)
 
 clean:
 	rm -rf $(OUT_DIR)
+	rm -rf $(CACHE_DIR)
+
+FORCE:

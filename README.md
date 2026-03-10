@@ -76,14 +76,43 @@ Build all targets:
 make
 ```
 
-Lua addon is now built as a separate addon artifact (not compiled into core `librl`):
+Lua module is now built as a separate module artifact (not compiled into core `librl`):
 
 ```bash
-make addon_lua_deps
-make addon_lua_desktop
-make addon_lua_wasm
-make lua_addon_test_desktop
+make -C modules/lua deps
+make -C modules/lua desktop
+make -C modules/lua wasm
+make -C modules/lua lua_module_test_desktop
 ```
+
+## Enabling Modules
+
+`librl` modules are linked in at build time (not runtime-loaded).
+
+1. Build the module archive you want:
+```bash
+make -C modules/lua desktop
+```
+2. Link it with your app (plus its deps), alongside `librl`:
+```bash
+-L./lib -lrl ./modules/lua/lib/librl_lua.a ./modules/lua/deps/liblua/lib/liblua.a
+```
+3. Initialize the module from your app:
+```c
+const rl_module_api_t *api = NULL;
+void *module_state = NULL;
+rl_module_host_api_t host = {0}; // set log/alloc/event callbacks as needed
+char error[256] = {0};
+
+if (rl_module_init("lua", &host, &api, &module_state, error, sizeof(error)) != 0) {
+    // handle error
+}
+```
+4. Per-frame, call `api->update(module_state, dt)` if provided, then call:
+```c
+rl_module_deinit_instance(api, module_state);
+```
+on shutdown.
 
 ## Test
 

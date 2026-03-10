@@ -166,38 +166,38 @@ Notes:
 - URL and file-path normalization flow is centralized through `path_normalize()`.
 - URL normalization preserves scheme/authority/query/fragment and normalizes only URL path segments.
 
-## Addons (`include/rl_addon.h`)
+## Modules (`include/rl_module.h`)
 
 Main responsibilities:
 
-- Generic addon ABI for host-driven plugin lifecycle (`init`, `update`, `deinit`)
-- Host services passed to addons through `rl_addon_host_api_t`:
+- Generic module ABI for host-driven plugin lifecycle (`init`, `update`, `deinit`)
+- Host services passed to modules through `rl_module_host_api_t`:
   - logging (`log`)
   - allocation (`alloc` / `free`)
   - immediate event pub/sub (`event_on` / `event_off` / `event_emit`)
-- Addon registry lookup via addon name (`rl_addon_init("lua", ...)`, etc.)
+- Module registry lookup via module name (`rl_module_init("lua", ...)`, etc.)
 
 Minimal usage pattern:
 
 ```c
 #include "rl.h"
-#include "rl_addon.h"
+#include "rl_module.h"
 #include "rl_event.h"
 
-typedef struct addon_runtime_t {
-    const rl_addon_api_t *api;
+typedef struct module_runtime_t {
+    const rl_module_api_t *api;
     void *state;
-} addon_runtime_t;
+} module_runtime_t;
 
 static int host_event_on(void *host_user_data, const char *event_name,
-                         rl_addon_event_listener_fn listener, void *listener_user_data)
+                         rl_module_event_listener_fn listener, void *listener_user_data)
 {
     (void)host_user_data;
     return rl_event_on(event_name, listener, listener_user_data);
 }
 
 static int host_event_off(void *host_user_data, const char *event_name,
-                          rl_addon_event_listener_fn listener, void *listener_user_data)
+                          rl_module_event_listener_fn listener, void *listener_user_data)
 {
     (void)host_user_data;
     return rl_event_off(event_name, listener, listener_user_data);
@@ -213,13 +213,13 @@ static void host_log(void *user_data, int level, const char *message)
 {
     (void)user_data;
     (void)level;
-    fprintf(stderr, "[addon] %s\n", message ? message : "(null)");
+    fprintf(stderr, "[module] %s\n", message ? message : "(null)");
 }
 
-void run_lua_addon_example(void)
+void run_lua_module_example(void)
 {
-    rl_addon_host_api_t host = {0};
-    addon_runtime_t lua = {0};
+    rl_module_host_api_t host = {0};
+    module_runtime_t lua = {0};
     char error[256] = {0};
 
     rl_init();
@@ -229,20 +229,20 @@ void run_lua_addon_example(void)
     host.event_off = host_event_off;
     host.event_emit = host_event_emit;
 
-    if (rl_addon_init("lua", &host, &lua.api, &lua.state, error, sizeof(error)) != 0) {
-        fprintf(stderr, "failed to init lua addon: %s\n", error);
+    if (rl_module_init("lua", &host, &lua.api, &lua.state, error, sizeof(error)) != 0) {
+        fprintf(stderr, "failed to init lua module: %s\n", error);
         rl_deinit();
         return;
     }
 
-    (void)rl_event_emit("lua.do_string", "print('hello from lua addon')");
+    (void)rl_event_emit("lua.do_string", "print('hello from lua module')");
     (void)rl_event_emit("lua.do_file", "scripts/startup.lua");
 
     if (lua.api != NULL && lua.api->update != NULL) {
         (void)lua.api->update(lua.state, 1.0f / 60.0f);
     }
 
-    rl_addon_deinit_instance(lua.api, lua.state);
+    rl_module_deinit_instance(lua.api, lua.state);
     rl_deinit();
 }
 ```
@@ -250,8 +250,8 @@ void run_lua_addon_example(void)
 Notes:
 
 - Events are immediate/synchronous today (no queue yet).
-- `lua.do_file` in current Lua addon uses `fileio_read(...)`, so file paths should be loader/fileio-relative.
-- Lua addon is built as a separate archive (`addons/lua/lib/librl_lua.a` / `.wasm.a`) and linked by the host app.
+- `lua.do_file` in current Lua module uses `fileio_read(...)`, so file paths should be loader/fileio-relative.
+- Lua module is built as a separate archive (`modules/lua/lib/librl_lua.a` / `.wasm.a`) and linked by the host app.
 
 ## Wasm File I/O Lifecycle (IDBFS)
 

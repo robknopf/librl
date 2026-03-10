@@ -6,11 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-typedef struct addon_runtime_t {
-    const rl_addon_api_t *api;
-    void *state;
-} addon_runtime_t;
-
 static const char *get_asset_host(void)
 {
     const char *value = getenv("RL_ASSET_HOST");
@@ -20,27 +15,38 @@ static const char *get_asset_host(void)
     return "https://localhost:4444";
 }
 
-static void addon_log(void *user_data, int level, const char *message)
+static void module_log(void *user_data, int level, const char *message)
 {
     (void)user_data;
-    log_message(level, "addon", 0, "%s", message != NULL ? message : "(null)");
+    log_message(level, "module", 0, "%s", message != NULL ? message : "(null)");
 }
 
-static int addon_event_on(void *host_user_data, const char *event_name,
-                          rl_addon_event_listener_fn listener, void *listener_user_data)
+static void module_log_source(void *user_data, int level, const char *source_file, int source_line,
+                              const char *message)
+{
+    (void)user_data;
+    log_message(level,
+                source_file != NULL && source_file[0] != '\0' ? source_file : "module",
+                source_line,
+                "%s",
+                message != NULL ? message : "(null)");
+}
+
+static int module_event_on(void *host_user_data, const char *event_name,
+                           rl_module_event_listener_fn listener, void *listener_user_data)
 {
     (void)host_user_data;
     return rl_event_on(event_name, listener, listener_user_data);
 }
 
-static int addon_event_off(void *host_user_data, const char *event_name,
-                           rl_addon_event_listener_fn listener, void *listener_user_data)
+static int module_event_off(void *host_user_data, const char *event_name,
+                            rl_module_event_listener_fn listener, void *listener_user_data)
 {
     (void)host_user_data;
     return rl_event_off(event_name, listener, listener_user_data);
 }
 
-static int addon_event_emit(void *host_user_data, const char *event_name, void *payload)
+static int module_event_emit(void *host_user_data, const char *event_name, void *payload)
 {
     (void)host_user_data;
     return rl_event_emit(event_name, payload);
@@ -53,7 +59,7 @@ static void on_lua_ready(void *payload, void *user_data)
     if (ready != NULL) {
         *ready = true;
     }
-    log_info("Lua addon ready");
+    log_info("Lua module ready");
 }
 
 static void on_lua_ok(void *payload, void *user_data)
@@ -72,7 +78,7 @@ static void on_lua_error(void *payload, void *user_data)
     if (error_count != NULL) {
         (*error_count)++;
     }
-    log_error("Lua addon error: %s", error != NULL ? error : "(unknown)");
+    log_error("Lua module error: %s", error != NULL ? error : "(unknown)");
 }
 
 int main(void)
@@ -95,9 +101,9 @@ int main(void)
     bool lua_ready = false;
     int lua_ok_count = 0;
     int lua_error_count = 0;
-    addon_runtime_t lua_addon = {0};
-    rl_addon_host_api_t addon_host = {0};
-    char addon_error[256] = {0};
+    rl_module_instance_t lua_module = {0};
+    rl_module_host_api_t module_host = {0};
+    char module_error[256] = {0};
 
     rl_init();
     if (rl_set_asset_host(asset_host) != 0) {
@@ -126,19 +132,20 @@ int main(void)
     (void)rl_event_on("lua.ok", on_lua_ok, &lua_ok_count);
     (void)rl_event_on("lua.error", on_lua_error, &lua_error_count);
 
-    addon_host.log = addon_log;
-    addon_host.event_on = addon_event_on;
-    addon_host.event_off = addon_event_off;
-    addon_host.event_emit = addon_event_emit;
+    module_host.log = module_log;
+    module_host.log_source = module_log_source;
+    module_host.event_on = module_event_on;
+    module_host.event_off = module_event_off;
+    module_host.event_emit = module_event_emit;
 
-    if (rl_addon_init("lua", &addon_host, &lua_addon.api, &lua_addon.state, addon_error, sizeof(addon_error)) == 0) {
+    if (rl_module_init("lua", &module_host, &lua_module.api, &lua_module.state, module_error, sizeof(module_error)) == 0) {
         if (rl_loader_cache_file("assets/scripts/lua_demo.lua") == 0) {
             (void)rl_event_emit("lua.do_file", "assets/scripts/lua_demo.lua");
         } else {
             log_warn("Failed to cache lua_demo.lua before lua.do_file");
         }
     } else {
-        log_warn("Lua addon init failed: %s", addon_error);
+        log_warn("Lua module init failed: %s", module_error);
     }
 
     music = rl_music_create(music_path);
@@ -173,8 +180,8 @@ int main(void)
         if (music != 0) {
             (void)rl_music_update(music);
         }
-        if (lua_addon.api != NULL && lua_addon.api->update != NULL) {
-            (void)lua_addon.api->update(lua_addon.state, dt);
+        if (lua_module.api != NULL && lua_module.api->update != NULL) {
+            (void)lua_module.api->update(lua_module.state, dt);
         }
         if (click_sound != 0 && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
             Vector2 mouse = GetMousePosition();
@@ -241,8 +248,8 @@ int main(void)
     if (music != 0) {
         rl_music_destroy(music);
     }
-    if (lua_addon.api != NULL) {
-        rl_addon_deinit_instance(lua_addon.api, lua_addon.state);
+    if (lua_module.api != NULL) {
+        rl_module_deinit_instance(lua_module.api, lua_module.state);
     }
     (void)rl_event_off("lua.ready", on_lua_ready, &lua_ready);
     (void)rl_event_off("lua.ok", on_lua_ok, &lua_ok_count);

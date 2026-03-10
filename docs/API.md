@@ -80,6 +80,22 @@ Notes:
 - `rl_model_create()` requires a ready window/graphics context.
 - On model load failure, the implementation substitutes a visible placeholder cube.
 
+## Picking (`include/rl_pick.h`)
+
+Main responsibilities:
+
+- Model picking from screen-space mouse coordinates with camera + model handles
+- Return collision details (`hit`, `distance`, world-space `point` and `normal`)
+- Wasm bridge helper for JS (`rl_pick_model_to_scratch`)
+
+Notes:
+
+- `rl_pick_model(...)` currently targets one model handle at a time.
+- Transform inputs mirror the current model draw style (position + uniform scale).
+- `rl_pick_model_to_scratch(...)` writes:
+  - hit point into scratch `vector3`
+  - hit normal + distance into scratch `vector4` (`x,y,z = normal`, `w = distance`)
+
 ## Music (`include/rl_music.h`)
 
 Main responsibilities:

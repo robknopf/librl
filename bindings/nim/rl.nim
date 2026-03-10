@@ -3,7 +3,16 @@ type
   Vec2* {.importc: "vec2_t", header: "rl.h", bycopy.} = object
     x*: cfloat
     y*: cfloat
-  RLMouse* = object
+  Vec3* {.importc: "vec3_t", header: "rl.h", bycopy.} = object
+    x*: cfloat
+    y*: cfloat
+    z*: cfloat
+  RLPickResult* {.importc: "rl_pick_result_t", header: "rl_pick.h", bycopy.} = object
+    hit*: bool
+    distance*: cfloat
+    point*: Vec3
+    normal*: Vec3
+  RLMouse* {.importc: "rl_mouse_state_t", header: "rl.h", bycopy.} = object
     x*: cint
     y*: cint
     wheel*: cint
@@ -18,6 +27,10 @@ const
   RL_RAYWHITE* = RLHandle(26)
   RL_CAMERA_PERSPECTIVE* = 0.cint
   RL_CAMERA_ORTHOGRAPHIC* = 1.cint
+  RL_BUTTON_UP* = 0.cint
+  RL_BUTTON_PRESSED* = 1.cint
+  RL_BUTTON_DOWN* = 2.cint
+  RL_BUTTON_RELEASED* = 3.cint
 
 proc rl_init*() {.importc, cdecl, header: "rl.h".}
 proc rl_deinit*() {.importc, cdecl, header: "rl.h".}
@@ -35,16 +48,7 @@ proc rl_get_window_position*(): Vec2 {.importc, cdecl, header: "rl.h".}
 proc rl_get_mouse_position*(): Vec2 {.importc, cdecl, header: "rl.h".}
 proc rl_get_mouse_wheel*(): cint {.importc, cdecl, header: "rl.h".}
 proc rl_get_mouse_button*(button: cint): cint {.importc, cdecl, header: "rl.h".}
-proc rl_get_mouse_state*(): RLMouse =
-  let pos = rl_get_mouse_position()
-  RLMouse(
-    x: cint(pos.x),
-    y: cint(pos.y),
-    wheel: rl_get_mouse_wheel(),
-    left: rl_get_mouse_button(0),
-    right: rl_get_mouse_button(1),
-    middle: rl_get_mouse_button(2)
-  )
+proc rl_get_mouse_state*(): RLMouse {.importc, cdecl, header: "rl.h".}
 proc rl_close_window*() {.importc, cdecl, header: "rl.h".}
 proc rl_begin_drawing*() {.importc, cdecl, header: "rl.h".}
 proc rl_end_drawing*() {.importc, cdecl, header: "rl.h".}
@@ -99,6 +103,16 @@ proc rl_model_set_animation_speed*(model: RLHandle, speed: cfloat): bool {.impor
 proc rl_model_set_animation_loop*(model: RLHandle, shouldLoop: bool): bool {.importc, cdecl, header: "rl_model.h".}
 proc rl_model_animate*(model: RLHandle, deltaSeconds: cfloat): bool {.importc, cdecl, header: "rl_model.h".}
 proc rl_model_destroy*(model: RLHandle) {.importc, cdecl, header: "rl_model.h".}
+proc rl_pick_model*(
+  camera: RLHandle,
+  model: RLHandle,
+  mouseX: cfloat,
+  mouseY: cfloat,
+  positionX: cfloat,
+  positionY: cfloat,
+  positionZ: cfloat,
+  scale: cfloat
+): RLPickResult {.importc, cdecl, header: "rl_pick.h".}
 proc rl_music_create*(filename: cstring): RLHandle {.importc, cdecl, header: "rl_music.h".}
 proc rl_music_destroy*(music: RLHandle) {.importc, cdecl, header: "rl_music.h".}
 proc rl_music_play*(music: RLHandle): bool {.importc, cdecl, header: "rl_music.h".}

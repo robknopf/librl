@@ -179,6 +179,22 @@ bool rl_camera3d_get_active_camera(Camera3D *camera)
     return true;
 }
 
+bool rl_camera3d_get_camera(rl_handle_t handle, Camera3D *camera)
+{
+    rl_camera3d_entry_t *entry = NULL;
+    if (camera == NULL) {
+        return false;
+    }
+
+    entry = rl_camera3d_get_entry(handle);
+    if (entry == NULL) {
+        return false;
+    }
+
+    *camera = entry->camera;
+    return true;
+}
+
 static void rl_clear_active_camera(void)
 {
     rl_has_active_camera = false;

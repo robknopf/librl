@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include "rl_types.h"
+#include "rl_pick.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,6 +25,7 @@ vec2_t rl_get_window_position(void);
 vec2_t rl_get_mouse_position(void);
 int rl_get_mouse_wheel();
 int rl_get_mouse_button(int button);
+rl_mouse_state_t rl_get_mouse_state(void);
 void rl_set_window_position(int x, int y);
 void rl_close_window();
 void rl_begin_drawing();

@@ -225,7 +225,16 @@ const RL = {
     // We provide a uniform calling so js isn't aware of the intermediate scratch area use, 
     // while desktop gets the return structure directly
     getMouseState: () => {
-        return moduleInstance.getMouseState();
+        const mouse = moduleInstance.getMouseState();
+        return {
+            x: mouse.x,
+            y: mouse.y,
+            wheel: mouse.wheel,
+            left: mouse.buttons[0],
+            right: mouse.buttons[1],
+            middle: mouse.buttons[2],
+            buttons: mouse.buttons
+        };
     },
     getKeyboard: () => {
         return moduleInstance.getKeyboard();
@@ -289,6 +298,10 @@ const RL = {
         RAYWHITE: 26,
         CAMERA_PERSPECTIVE: 0,
         CAMERA_ORTHOGRAPHIC: 1,
+        BUTTON_UP: 0,
+        BUTTON_PRESSED: 1,
+        BUTTON_DOWN: 2,
+        BUTTON_RELEASED: 3,
    // },
 
     createColor: (r, g, b, a) => moduleInstance.ccall(
@@ -345,6 +358,26 @@ const RL = {
     destroyModel: (model) => moduleInstance.ccall(
         "rl_model_destroy", null, ["number"], [model]
     ),
+    pickModel: (camera, model, mouseX, mouseY, x = 0, y = 0, z = 0, scale = 1) => {
+        const hit = moduleInstance.ccall(
+            "rl_pick_model_to_scratch",
+            "number",
+            ["number", "number", "number", "number", "number", "number", "number", "number"],
+            [camera, model, mouseX, mouseY, x, y, z, scale]
+        ) !== 0;
+        const point = moduleInstance.getVector3();
+        const normalDistance = moduleInstance.getVector4();
+        return {
+            hit,
+            distance: normalDistance.w,
+            point,
+            normal: {
+                x: normalDistance.x,
+                y: normalDistance.y,
+                z: normalDistance.z
+            }
+        };
+    },
     createMusic: (path) => moduleInstance.ccall(
         "rl_music_create", "number", ["string"], [path], { async: true }
     ),

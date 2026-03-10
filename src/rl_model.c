@@ -2,6 +2,7 @@
 
 #include <math.h>
 #include <raylib.h>
+#include <raymath.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,6 +11,7 @@
 #include "internal/exports.h"
 #include "internal/rl_color_store.h"
 #include "internal/rl_handle_pool.h"
+#include "internal/rl_model_store.h"
 #include "logger/log.h"
 #include "path/path.h"
 
@@ -617,6 +619,44 @@ void rl_model_draw(rl_handle_t handle, float position_x, float position_y, float
     }
 
     DrawModel(*(asset->model), (Vector3){position_x, position_y, position_z}, scale, rl_color_get(tint));
+}
+
+bool rl_model_get_ray_collision(rl_handle_t handle, Ray ray, Matrix transform, RayCollision *collision)
+{
+    rl_model_instance_t *instance = rl_model_instance_get(handle);
+    rl_model_asset_t *asset = NULL;
+    Matrix model_transform = {0};
+    bool found_hit = false;
+    float closest_distance = 0.0f;
+
+    if (collision == NULL) {
+        return false;
+    }
+
+    *collision = (RayCollision){0};
+    if (instance == NULL) {
+        return false;
+    }
+
+    asset = rl_model_asset_get(instance->asset_handle);
+    if (asset == NULL || asset->model == NULL) {
+        return false;
+    }
+
+    model_transform = MatrixMultiply(asset->model->transform, transform);
+    for (int i = 0; i < asset->model->meshCount; i++) {
+        RayCollision mesh_hit = GetRayCollisionMesh(ray, asset->model->meshes[i], model_transform);
+        if (!mesh_hit.hit) {
+            continue;
+        }
+        if (!found_hit || mesh_hit.distance < closest_distance) {
+            *collision = mesh_hit;
+            closest_distance = mesh_hit.distance;
+            found_hit = true;
+        }
+    }
+
+    return true;
 }
 
 RL_KEEP

@@ -7,11 +7,29 @@ extern "C" {
 
 typedef unsigned int rl_handle_t;
 
+typedef enum
+{
+    RL_BUTTON_UP = 0,
+    RL_BUTTON_PRESSED = 1,
+    RL_BUTTON_DOWN = 2,
+    RL_BUTTON_RELEASED = 3
+} rl_button_state_t;
+
 typedef struct
 {
     float x;
     float y;
 } vec2_t;
+
+typedef struct
+{
+    int x;
+    int y;
+    int wheel;
+    int left;
+    int right;
+    int middle;
+} rl_mouse_state_t;
 
 typedef struct
 {

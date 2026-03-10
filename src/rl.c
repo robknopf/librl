@@ -180,18 +180,32 @@ int rl_get_mouse_wheel() {
 RL_KEEP
 int rl_get_mouse_button(int button) {
     if (button < 0 || button >= RL_SCRATCH_MAX_NUM_MOUSE_BUTTONS) {
-        return 0;
+        return RL_BUTTON_UP;
     }
     if (IsMouseButtonPressed(button)) {
-        return 1;
+        return RL_BUTTON_PRESSED;
     }
     if (IsMouseButtonDown(button)) {
-        return 2;
+        return RL_BUTTON_DOWN;
     }
     if (IsMouseButtonReleased(button)) {
-        return 3;
+        return RL_BUTTON_RELEASED;
     }
-    return 0;
+    return RL_BUTTON_UP;
+}
+
+RL_KEEP
+rl_mouse_state_t rl_get_mouse_state(void)
+{
+    vec2_t pos = rl_get_mouse_position();
+    rl_mouse_state_t state = {0};
+    state.x = (int)pos.x;
+    state.y = (int)pos.y;
+    state.wheel = rl_get_mouse_wheel();
+    state.left = rl_get_mouse_button(0);
+    state.right = rl_get_mouse_button(1);
+    state.middle = rl_get_mouse_button(2);
+    return state;
 }
 
 RL_KEEP

@@ -181,41 +181,41 @@ void rl_scratch_update()
 
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
     {
-        mouse_button_status_0 = 1; // just pressed
+        mouse_button_status_0 = RL_BUTTON_PRESSED;
     }
-    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
+    else if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT))
     {
-        mouse_button_status_0 = 2; // held
+        mouse_button_status_0 = RL_BUTTON_RELEASED;
     }
-    if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT))
+    else if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
     {
-        mouse_button_status_0 = 3; // just released
+        mouse_button_status_0 = RL_BUTTON_DOWN;
     }
 
     if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT))
     {
-        mouse_button_status_1 = 1; // just pressed
+        mouse_button_status_1 = RL_BUTTON_PRESSED;
     }
-    if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT))
+    else if (IsMouseButtonReleased(MOUSE_BUTTON_RIGHT))
     {
-        mouse_button_status_1 = 2; // held
+        mouse_button_status_1 = RL_BUTTON_RELEASED;
     }
-    if (IsMouseButtonReleased(MOUSE_BUTTON_RIGHT))
+    else if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT))
     {
-        mouse_button_status_1 = 3; // just released
+        mouse_button_status_1 = RL_BUTTON_DOWN;
     }
 
     if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE))
     {
-        mouse_button_status_2 = 1; // just pressed
+        mouse_button_status_2 = RL_BUTTON_PRESSED;
     }
-    if (IsMouseButtonDown(MOUSE_BUTTON_MIDDLE))
+    else if (IsMouseButtonReleased(MOUSE_BUTTON_MIDDLE))
     {
-        mouse_button_status_2 = 2; // held
+        mouse_button_status_2 = RL_BUTTON_RELEASED;
     }
-    if (IsMouseButtonReleased(MOUSE_BUTTON_MIDDLE))
+    else if (IsMouseButtonDown(MOUSE_BUTTON_MIDDLE))
     {
-        mouse_button_status_2 = 3; // just released
+        mouse_button_status_2 = RL_BUTTON_DOWN;
     }
 
     rl_scratch_set_mouse(GetMouseX(), GetMouseY(), GetMouseWheelMove(), mouse_button_status_0, mouse_button_status_1, mouse_button_status_2);

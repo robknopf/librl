@@ -113,6 +113,8 @@ LDFLAGS_WASM = \
 	"_rl_model_set_animation_loop", \
 	"_rl_model_animate", \
 	"_rl_model_destroy", \
+	"_rl_pick_model", \
+	"_rl_pick_model_to_scratch", \
 	"_rl_music_create", \
 	"_rl_music_destroy", \
 	"_rl_music_play", \

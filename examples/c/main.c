@@ -6,6 +6,7 @@
 #include "rl_font.h"
 #include "rl_model.h"
 #include "rl_music.h"
+#include "rl_pick.h"
 #include "rl_sound.h"
 #include "rl_sprite3d.h"
 #include "lua_interop.h"
@@ -66,7 +67,7 @@ int main(void)
 {
     SetTraceLogCallback(reroute_raylib_log);
     SetTraceLogLevel(LOG_LEVEL_DEBUG); // let raylib log everything, we'll filter it in our callback   
-    log_set_log_level(LOG_LEVEL_WARN);
+    log_set_log_level(LOG_LEVEL_INFO);
 
     const char *asset_host = get_asset_host();
     const char *font_path = "assets/fonts/Komika/KOMIKAH_.ttf";
@@ -78,6 +79,8 @@ int main(void)
     const float small_font_size = 16.0f;
     rl_handle_t music = 0;
     rl_handle_t click_sound = 0;
+    rl_pick_result_t last_pick = {0};
+    bool has_pick = false;
     lua_interop_vm_t lua_vm = {0};
 
     rl_init();
@@ -142,7 +145,17 @@ int main(void)
             (void)rl_music_update(music);
         }
         if (click_sound != 0 && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+            Vector2 mouse = GetMousePosition();
+            last_pick = rl_pick_model(camera, gumshoe, mouse.x, mouse.y, 0.0f, 0.0f, 0.0f, 1.0f);
+            has_pick = true;
             (void)rl_sound_play(click_sound);
+            if (last_pick.hit) {
+                log_info("Picked gumshoe: distance=%.3f point=(%.2f, %.2f, %.2f)",
+                         last_pick.distance,
+                         last_pick.point.x, last_pick.point.y, last_pick.point.z);
+            } else {
+                log_info("Pick miss on gumshoe");
+            }
         }
 
         (void)rl_model_animate(gumshoe, dt);
@@ -163,8 +176,20 @@ int main(void)
         rl_draw_text_ex(komika, message, text_x, text_y, font_size, 1.0f, RL_COLOR_BLUE);
         rl_draw_text_ex(komika_small, TextFormat("assetHost: %s", asset_host), 10, 10, small_font_size, 1.0, RL_COLOR_DARKGRAY);
         rl_draw_text_ex(komika_small, "Set RL_ASSET_HOST to override", 10, 30, small_font_size, 1.0, RL_COLOR_GRAY);
+        if (has_pick) {
+            if (last_pick.hit) {
+                rl_draw_text_ex(komika_small,
+                                TextFormat("Pick hit: d=%.2f @ (%.2f, %.2f, %.2f)",
+                                           last_pick.distance, last_pick.point.x, last_pick.point.y, last_pick.point.z),
+                                10, 52, small_font_size, 1.0, RL_COLOR_DARKGREEN);
+            } else {
+                rl_draw_text_ex(komika_small, "Pick miss", 10, 52, small_font_size, 1.0, RL_COLOR_MAROON);
+            }
+            rl_draw_fps_ex(komika_small, 10, 74, (int)small_font_size, RL_COLOR_BLACK);
+        } else {
+            rl_draw_fps_ex(komika_small, 10, 52, (int)small_font_size, RL_COLOR_BLACK);
+        }
         //DrawText("Set RL_ASSET_HOST to override", 10, 30, 16, GRAY);
-        rl_draw_fps_ex(komika_small, 10, 52, (int)small_font_size, RL_COLOR_BLACK);
 
         EndDrawing();
     }

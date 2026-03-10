@@ -74,6 +74,9 @@ export interface RLApi {
   cacheFile(filename: string): number;
   uncacheFile(filename: string): number;
   clearCache(): number;
+  emitEvent(eventName: string, payload?: number): number;
+  clearEventListeners(eventName: string): number;
+  getEventListenerCount(eventName: string): number;
 
   initWindow(width: number, height: number, title: string, flags?: number): void;
   closeWindow(): void;

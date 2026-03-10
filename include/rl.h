@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include "rl_types.h"
 #include "rl_pick.h"
+#include "rl_event.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -153,7 +153,10 @@ LDFLAGS_WASM = \
 		"_rl_set_asset_host", \
 		"_rl_loader_cache_file", \
 		"_rl_loader_uncache_file", \
-		"_rl_loader_clear_cache" \
+		"_rl_loader_clear_cache", \
+		"_rl_event_emit", \
+		"_rl_event_off_all", \
+		"_rl_event_listener_count" \
 		]'
 
 CFLAGS_DESKTOP = -DPLATFORM_DESKTOP

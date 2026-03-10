@@ -27,6 +27,9 @@ void rl_sprite3d_deinit(void);
 void rl_texture_init(void);
 void rl_texture_deinit(void);
 
+int rl_event_init(void);
+void rl_event_deinit(void);
+
 int rl_loader_init(const char *mount_point);
 void rl_loader_deinit(void);
 

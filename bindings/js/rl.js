@@ -90,6 +90,15 @@ const RL = {
     clearCache: () => {
         return moduleInstance.ccall('rl_loader_clear_cache', 'number', [], []);
     },
+    emitEvent: (eventName, payload = 0) => {
+        return moduleInstance.ccall('rl_event_emit', 'number', ['string', 'number'], [eventName, payload]);
+    },
+    clearEventListeners: (eventName) => {
+        return moduleInstance.ccall('rl_event_off_all', 'number', ['string'], [eventName]);
+    },
+    getEventListenerCount: (eventName) => {
+        return moduleInstance.ccall('rl_event_listener_count', 'number', ['string'], [eventName]);
+    },
 
     initWindow: (width, height, title, flags = 0) => {
         let windowFlags = Number.isInteger(flags) ? flags : 0;

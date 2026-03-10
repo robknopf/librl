@@ -24,6 +24,7 @@ type
     keys*: array[512, cint]
     last_key*: cint
     last_char*: cint
+  RLEventListenerFn* = proc(payload: pointer, userData: pointer) {.cdecl.}
 
 const
   RL_GRAY* = RLHandle(2)
@@ -45,6 +46,12 @@ proc rl_get_asset_host*(): cstring {.importc, cdecl, header: "rl.h".}
 proc rl_loader_cache_file*(filename: cstring): cint {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_uncache_file*(filename: cstring): cint {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_clear_cache*(): cint {.importc, cdecl, header: "rl_loader.h".}
+proc rl_event_on*(eventName: cstring, listener: RLEventListenerFn, userData: pointer): cint {.importc, cdecl, header: "rl_event.h".}
+proc rl_event_once*(eventName: cstring, listener: RLEventListenerFn, userData: pointer): cint {.importc, cdecl, header: "rl_event.h".}
+proc rl_event_off*(eventName: cstring, listener: RLEventListenerFn, userData: pointer): cint {.importc, cdecl, header: "rl_event.h".}
+proc rl_event_off_all*(eventName: cstring): cint {.importc, cdecl, header: "rl_event.h".}
+proc rl_event_emit*(eventName: cstring, payload: pointer): cint {.importc, cdecl, header: "rl_event.h".}
+proc rl_event_listener_count*(eventName: cstring): cint {.importc, cdecl, header: "rl_event.h".}
 proc rl_update*() {.importc, cdecl, header: "rl.h".}
 proc rl_get_time*(): cdouble {.importc, cdecl, header: "rl.h".}
 proc rl_init_window*(width: cint, height: cint, title: cstring, flags: cint) {.importc, cdecl, header: "rl.h".}

@@ -54,6 +54,10 @@ Notes:
     - `getPickStats()`
 - JS `initWindow(width, height, title, flags)` maps directly to C flags.
   - Example: `rl.initWindow(800, 600, "Title", rl.FLAG_MSAA_4X_HINT)`
+- Cache file helpers:
+  - `cacheFile(filename)`
+  - `uncacheFile(filename)`
+  - `clearCache()`
 - IDBFS readiness helpers:
   - `RL.isIdbfsReady()` returns true only after wasm-side restore from IndexedDB completes.
   - `RL.waitForIdbfsReady(timeoutMs)` polls readiness and resolves to a boolean.
@@ -92,6 +96,10 @@ Notes:
 - Window config flags are exposed in Nim:
   - `rl_init_window(width, height, title, flags)`
   - `RL_FLAG_MSAA_4X_HINT`
+- Cache file helpers in Nim:
+  - `rl_loader_cache_file(filename)`
+  - `rl_loader_uncache_file(filename)`
+  - `rl_loader_clear_cache()`
 
 ## Status and Scope
 

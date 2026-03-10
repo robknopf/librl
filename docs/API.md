@@ -156,6 +156,10 @@ Main responsibilities:
 
 - Loader subsystem init/deinit
 - Shared backing for cross-platform asset loading and cache behavior
+- Cache management APIs:
+  - `rl_loader_cache_file(filename)`
+  - `rl_loader_uncache_file(filename)`
+  - `rl_loader_clear_cache()`
 
 Notes:
 

@@ -1,4 +1,5 @@
 #include "test_lru_cache.h"
+#include "fileio_test.h"
 #include "test_fileio_common.h"
 #include "test_fileio_api.h"
 #include "test_path.h"
@@ -14,6 +15,13 @@ int main(void)
     int rc = 0;
 
     rc = test_lru_cache_run();
+    if (rc == 0) {
+        passed++;
+    } else {
+        failed++;
+    }
+
+    rc = fileio_test_run();
     if (rc == 0) {
         passed++;
     } else {

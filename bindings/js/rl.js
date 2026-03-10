@@ -81,6 +81,15 @@ const RL = {
     deinit: () => {
         moduleInstance.ccall('rl_deinit', null, [], []);
     },
+    cacheFile: (filename) => {
+        return moduleInstance.ccall('rl_loader_cache_file', 'number', ['string'], [filename]);
+    },
+    uncacheFile: (filename) => {
+        return moduleInstance.ccall('rl_loader_uncache_file', 'number', ['string'], [filename]);
+    },
+    clearCache: () => {
+        return moduleInstance.ccall('rl_loader_clear_cache', 'number', [], []);
+    },
 
     initWindow: (width, height, title, flags = 0) => {
         let windowFlags = Number.isInteger(flags) ? flags : 0;

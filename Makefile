@@ -150,7 +150,10 @@ LDFLAGS_WASM = \
 	"_rl_sprite3d_destroy", \
 		"_rl_measure_text", \
 		"_rl_measure_text_ex_to_scratch", \
-		"_rl_set_asset_host" \
+		"_rl_set_asset_host", \
+		"_rl_loader_cache_file", \
+		"_rl_loader_uncache_file", \
+		"_rl_loader_clear_cache" \
 		]'
 
 CFLAGS_DESKTOP = -DPLATFORM_DESKTOP

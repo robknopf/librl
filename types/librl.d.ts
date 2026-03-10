@@ -71,6 +71,9 @@ export interface RLApi {
   update(): void;
   getTime(): number;
   deinit(): void;
+  cacheFile(filename: string): number;
+  uncacheFile(filename: string): number;
+  clearCache(): number;
 
   initWindow(width: number, height: number, title: string, flags?: number): void;
   closeWindow(): void;

@@ -15,6 +15,7 @@ OUT_WASM := $(ROOT_DIR)/lib/librl.js
 UNIT_TEST_MAIN := $(UNIT_TEST_DIR)/tests_main.c
 UNIT_TEST_SRCS := \
 	$(UNIT_TEST_DIR)/fetch_url_stub.c \
+	$(UNIT_TEST_DIR)/fileio_test.c \
 	$(UNIT_TEST_DIR)/raylib_loader_stub.c \
 	$(UNIT_TEST_DIR)/test_fileio_api.c \
 	$(UNIT_TEST_DIR)/test_fileio_common.c \
@@ -30,6 +31,7 @@ UNIT_TEST_LIB_SRCS := \
 	$(ROOT_DIR)/src/rl_handle_pool.c \
 	$(ROOT_DIR)/src/rl_loader.c
 UNIT_TEST_EXTRA_LIB_SRCS := \
+	$(CORE_DIR)/logger/log.c \
 	$(CORE_DIR)/uri/uri.c \
 	$(CORE_DIR)/vendor/cwalk/cwalk.c \
 	$(CORE_DIR)/vendor/logger-c/log.c

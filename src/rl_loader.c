@@ -7,8 +7,12 @@
 #include <stdbool.h>
 #include <limits.h>
 #include <ctype.h>
+#include <errno.h>
+#include <dirent.h>
+#include <sys/stat.h>
 
 #include "fileio/fileio.h"
+#include "fileio/fileio_common.h"
 #include "lru_cache/lru_cache.h"
 
 #define RL_LOADER_DEFAULT_MOUNT_POINT "cache"
@@ -136,6 +140,81 @@ static bool rl_loader_should_memory_cache_path(const char *resolved_path)
            rl_loader_ext_eq(ext, ".png");
 }
 
+static int rl_loader_clear_cache_dir(const char *abs_dir, const char *rel_dir)
+{
+    struct stat st;
+    DIR *dir = NULL;
+    struct dirent *entry = NULL;
+
+    if (stat(abs_dir, &st) != 0)
+    {
+        if (errno == ENOENT)
+        {
+            return 0;
+        }
+        return -1;
+    }
+
+    if (!S_ISDIR(st.st_mode))
+    {
+        if (!rel_dir || rel_dir[0] == '\0')
+        {
+            return -1;
+        }
+        return fileio_rmfile(rel_dir);
+    }
+
+    dir = opendir(abs_dir);
+    if (!dir)
+    {
+        return -1;
+    }
+
+    while ((entry = readdir(dir)) != NULL)
+    {
+        char abs_child[FILEIO_MAX_PATH_LENGTH * 2];
+        char rel_child[FILEIO_MAX_PATH_LENGTH * 2];
+        int child_rc = 0;
+
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+        {
+            continue;
+        }
+
+        snprintf(abs_child, sizeof(abs_child), "%s/%s", abs_dir, entry->d_name);
+        abs_child[sizeof(abs_child) - 1] = '\0';
+
+        if (rel_dir && rel_dir[0] != '\0')
+        {
+            snprintf(rel_child, sizeof(rel_child), "%s/%s", rel_dir, entry->d_name);
+        }
+        else
+        {
+            snprintf(rel_child, sizeof(rel_child), "%s", entry->d_name);
+        }
+        rel_child[sizeof(rel_child) - 1] = '\0';
+
+        child_rc = rl_loader_clear_cache_dir(abs_child, rel_child);
+        if (child_rc != 0)
+        {
+            closedir(dir);
+            return child_rc;
+        }
+    }
+
+    closedir(dir);
+
+    if (rel_dir && rel_dir[0] != '\0')
+    {
+        if (fileio_rmdir(rel_dir) != 0)
+        {
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
 static unsigned char *rl_loader_load_file_data_cb(const char *file_name, int *data_size)
 {
     fileio_read_result_t result = {0};
@@ -238,6 +317,81 @@ int rl_loader_set_asset_host(const char *asset_host)
 const char *rl_loader_get_asset_host(void)
 {
     return rl_loader_asset_host;
+}
+
+int rl_loader_cache_file(const char *filename)
+{
+    const char *resolved_path = rl_loader_strip_leading_slash(filename);
+    fileio_read_result_t result = {0};
+    int rc = 0;
+
+    if (!resolved_path || resolved_path[0] == '\0') {
+        return -1;
+    }
+
+    result = fileio_read(resolved_path);
+    if (result.error != 0 || !result.data || result.size == 0) {
+        if (result.data) {
+            free(result.data);
+            result.data = NULL;
+        }
+        result = fileio_read_url(rl_loader_asset_host, resolved_path, RL_LOADER_DEFAULT_TIMEOUT_MS);
+    }
+
+    if (result.error != 0 || !result.data || result.size == 0) {
+        if (result.data) {
+            free(result.data);
+        }
+        return -1;
+    }
+
+    if (rl_loader_memory_cache != NULL &&
+        rl_loader_should_memory_cache_path(resolved_path) &&
+        result.size <= RL_LOADER_CACHE_MAX_ENTRY_BYTES) {
+        rc = lru_cache_put_copy(rl_loader_memory_cache, resolved_path, result.data, result.size);
+        if (rc != 0) {
+            free(result.data);
+            return -1;
+        }
+    }
+
+    free(result.data);
+    return 0;
+}
+
+int rl_loader_uncache_file(const char *filename)
+{
+    const char *resolved_path = rl_loader_strip_leading_slash(filename);
+    int rc = 0;
+
+    if (!resolved_path || resolved_path[0] == '\0') {
+        return -1;
+    }
+
+    rc = fileio_rmfile(resolved_path);
+    if (rc == 0 && rl_loader_memory_cache != NULL) {
+        // Prevent stale reads from in-memory cache after on-disk removal.
+        lru_cache_clear(rl_loader_memory_cache);
+    }
+
+    return rc;
+}
+
+int rl_loader_clear_cache(void)
+{
+    if (!fileio_mount_point_initialized || fileio_mount_point[0] == '\0') {
+        return -1;
+    }
+
+    if (rl_loader_clear_cache_dir(fileio_mount_point, "") != 0) {
+        return -1;
+    }
+
+    if (rl_loader_memory_cache != NULL) {
+        lru_cache_clear(rl_loader_memory_cache);
+    }
+
+    return 0;
 }
 
 int rl_loader_init(const char *mount_point)

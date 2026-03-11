@@ -54,12 +54,14 @@ typedef struct
 
 static rl_model_asset_t rl_model_assets[MAX_MODEL_ASSETS];
 static rl_model_instance_t rl_model_instances[MAX_MODELS];
+static rl_handle_pool_t rl_model_asset_pool;
+static uint16_t rl_model_asset_free_indices[MAX_MODEL_ASSETS];
+static uint16_t rl_model_asset_generations[MAX_MODEL_ASSETS];
+static unsigned char rl_model_asset_occupied[MAX_MODEL_ASSETS];
 static rl_handle_pool_t rl_model_instance_pool;
 static uint16_t rl_model_instance_free_indices[MAX_MODELS];
 static uint16_t rl_model_instance_generations[MAX_MODELS];
 static unsigned char rl_model_instance_occupied[MAX_MODELS];
-
-static rl_handle_t rl_next_asset_handle = 1;
 
 static bool rl_model_is_valid_model(Model model)
 {
@@ -138,13 +140,15 @@ static void rl_model_instance_reset(rl_model_instance_t *instance)
 
 static rl_model_asset_t *rl_model_asset_get(rl_handle_t handle)
 {
-    if (handle == 0 || handle >= MAX_MODEL_ASSETS) {
+    uint16_t index = 0;
+
+    if (!rl_handle_pool_resolve(&rl_model_asset_pool, handle, &index)) {
         return NULL;
     }
-    if (!rl_model_assets[handle].in_use) {
+    if (!rl_model_assets[index].in_use) {
         return NULL;
     }
-    return &rl_model_assets[handle];
+    return &rl_model_assets[index];
 }
 
 static rl_model_instance_t *rl_model_instance_get(rl_handle_t handle)
@@ -159,37 +163,19 @@ static rl_model_instance_t *rl_model_instance_get(rl_handle_t handle)
     return &rl_model_instances[index];
 }
 
-static rl_handle_t rl_model_find_free_asset_handle(void)
-{
-    // Reuse holes first; placeholder to wrapped scan to avoid unbounded growth.
-    for (rl_handle_t i = rl_next_asset_handle; i < MAX_MODEL_ASSETS; i++) {
-        if (!rl_model_assets[i].in_use) {
-            rl_next_asset_handle = i + 1;
-            return i;
-        }
-    }
-    for (rl_handle_t i = 1; i < rl_next_asset_handle; i++) {
-        if (!rl_model_assets[i].in_use) {
-            rl_next_asset_handle = i + 1;
-            return i;
-        }
-    }
-    return 0;
-}
-
 static rl_handle_t rl_model_find_asset_by_path(const char *normalized_path)
 {
     if (!normalized_path || normalized_path[0] == '\0') {
         return 0;
     }
 
-    for (rl_handle_t i = 1; i < MAX_MODEL_ASSETS; i++)
+    for (uint16_t i = 1; i < MAX_MODEL_ASSETS; i++)
     {
         if (!rl_model_assets[i].in_use || !rl_model_assets[i].has_source_path) {
             continue;
         }
         if (strcmp(rl_model_assets[i].source_path, normalized_path) == 0) {
-            return i;
+            return rl_handle_pool_handle_from_index(&rl_model_asset_pool, i);
         }
     }
     return 0;
@@ -221,6 +207,7 @@ static void rl_model_asset_release(rl_handle_t asset_handle)
             free(asset->model);
         }
         rl_model_asset_reset(asset);
+        rl_handle_pool_free(&rl_model_asset_pool, asset_handle);
     }
 }
 
@@ -230,8 +217,9 @@ static rl_handle_t rl_model_asset_create(Model model,
                                          const char *normalized_path,
                                          bool cache_by_path)
 {
-    rl_handle_t handle = rl_model_find_free_asset_handle();
+    rl_handle_t handle = rl_handle_pool_alloc(&rl_model_asset_pool);
     rl_model_asset_t *asset = NULL;
+    uint16_t index = 0;
 
     if (handle == 0) {
         log_error("MAX_MODEL_ASSETS reached (%d)", MAX_MODEL_ASSETS);
@@ -242,13 +230,15 @@ static rl_handle_t rl_model_asset_create(Model model,
         return 0;
     }
 
-    asset = &rl_model_assets[handle];
+    rl_handle_pool_resolve(&rl_model_asset_pool, handle, &index);
+    asset = &rl_model_assets[index];
     rl_model_asset_reset(asset);
 
     asset->model = malloc(sizeof(Model));
     if (asset->model == NULL)
     {
         log_error("Failed to allocate model asset storage");
+        rl_handle_pool_free(&rl_model_asset_pool, handle);
         if (animations != NULL && animation_count > 0) {
             UnloadModelAnimations(animations, animation_count);
         }
@@ -373,7 +363,11 @@ rl_handle_t rl_model_create(const char *filename)
     asset_handle = rl_model_find_asset_by_path(normalized_path);
     if (asset_handle != 0)
     {
-        rl_model_assets[asset_handle].ref_count++;
+        rl_model_asset_t *asset = rl_model_asset_get(asset_handle);
+        if (asset == NULL) {
+            return 0;
+        }
+        asset->ref_count++;
         instance_handle = rl_model_instance_create(asset_handle);
         if (instance_handle == 0) {
             rl_model_asset_release(asset_handle);
@@ -784,6 +778,12 @@ void rl_model_init(void)
                         MAX_MODELS,
                         rl_model_instance_generations,
                         rl_model_instance_occupied);
+    rl_handle_pool_init(&rl_model_asset_pool,
+                        MAX_MODEL_ASSETS,
+                        rl_model_asset_free_indices,
+                        MAX_MODEL_ASSETS,
+                        rl_model_asset_generations,
+                        rl_model_asset_occupied);
     for (int i = 0; i < MAX_MODEL_ASSETS; i++) {
         rl_model_asset_reset(&rl_model_assets[i]);
     }
@@ -791,8 +791,6 @@ void rl_model_init(void)
     for (int i = 0; i < MAX_MODELS; i++) {
         rl_model_instance_reset(&rl_model_instances[i]);
     }
-
-    rl_next_asset_handle = 1;
 }
 
 void rl_model_deinit(void)
@@ -811,14 +809,15 @@ void rl_model_deinit(void)
         }
     }
 
-    for (rl_handle_t i = 1; i < MAX_MODEL_ASSETS; i++) {
-        if (rl_model_assets[i].in_use) {
-            rl_model_asset_release(i);
+    for (uint16_t i = 1; i < MAX_MODEL_ASSETS; i++) {
+        rl_handle_t asset_handle = rl_handle_pool_handle_from_index(&rl_model_asset_pool, i);
+        if (asset_handle != 0) {
+            rl_model_asset_release(asset_handle);
             assets_freed++;
         }
     }
 
-    rl_next_asset_handle = 1;
+    rl_handle_pool_reset(&rl_model_asset_pool);
     rl_handle_pool_reset(&rl_model_instance_pool);
 
     log_info("rl_model_deinit: Freed %d model assets", assets_freed);

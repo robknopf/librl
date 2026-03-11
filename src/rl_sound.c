@@ -29,9 +29,11 @@ static rl_sound_entry_t *rl_sound_get_entry(rl_handle_t handle)
 {
     uint16_t index = 0;
     if (!rl_handle_pool_resolve(&rl_sound_pool, handle, &index)) {
+        log_error("Invalid sound handle (%u)", (unsigned int)handle);
         return NULL;
     }
     if (!rl_sound_entries[index].in_use) {
+        log_error("Stale sound handle (%u)", (unsigned int)handle);
         return NULL;
     }
     return &rl_sound_entries[index];

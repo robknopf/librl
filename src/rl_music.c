@@ -31,9 +31,11 @@ static rl_music_entry_t *rl_music_get_entry(rl_handle_t handle)
 {
     uint16_t index = 0;
     if (!rl_handle_pool_resolve(&rl_music_pool, handle, &index)) {
+        log_error("Invalid music handle (%u)", (unsigned int)handle);
         return NULL;
     }
     if (!rl_music_entries[index].in_use) {
+        log_error("Stale music handle (%u)", (unsigned int)handle);
         return NULL;
     }
     return &rl_music_entries[index];

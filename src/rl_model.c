@@ -143,9 +143,11 @@ static rl_model_asset_t *rl_model_asset_get(rl_handle_t handle)
     uint16_t index = 0;
 
     if (!rl_handle_pool_resolve(&rl_model_asset_pool, handle, &index)) {
+        log_error("Invalid model asset handle (%u)", (unsigned int)handle);
         return NULL;
     }
     if (!rl_model_assets[index].in_use) {
+        log_error("Stale model asset handle (%u)", (unsigned int)handle);
         return NULL;
     }
     return &rl_model_assets[index];
@@ -155,9 +157,11 @@ static rl_model_instance_t *rl_model_instance_get(rl_handle_t handle)
 {
     uint16_t index = 0;
     if (!rl_handle_pool_resolve(&rl_model_instance_pool, handle, &index)) {
+        log_error("Invalid model handle (%u)", (unsigned int)handle);
         return NULL;
     }
     if (!rl_model_instances[index].in_use) {
+        log_error("Stale model handle (%u)", (unsigned int)handle);
         return NULL;
     }
     return &rl_model_instances[index];
@@ -646,7 +650,6 @@ void rl_model_draw(rl_handle_t handle,
     float rotation_angle = 0.0f;
 
     if (instance == NULL) {
-        log_error("Invalid model handle (%d)", handle);
         return;
     }
 

@@ -39,6 +39,7 @@ static rl_font_entry_t *rl_font_get_entry(rl_handle_t handle)
 {
     if (handle == RL_FONT_DEFAULT) {
         if (!rl_fonts[RL_FONT_DEFAULT].in_use) {
+            log_error("Default font handle is unavailable");
             return NULL;
         }
         return &rl_fonts[RL_FONT_DEFAULT];
@@ -47,9 +48,11 @@ static rl_font_entry_t *rl_font_get_entry(rl_handle_t handle)
     {
         uint16_t index = 0;
         if (!rl_handle_pool_resolve(&rl_font_pool, handle, &index)) {
+            log_error("Invalid font handle (%u)", (unsigned int)handle);
             return NULL;
         }
         if (!rl_fonts[index].in_use) {
+            log_error("Stale font handle (%u)", (unsigned int)handle);
             return NULL;
         }
         return &rl_fonts[index];
@@ -165,6 +168,7 @@ void rl_font_destroy(rl_handle_t handle)
     }
 
     if (handle == RL_FONT_DEFAULT) {
+        log_error("Cannot destroy default font handle (%u)", (unsigned int)handle);
         return;
     }
 
@@ -194,7 +198,6 @@ Font rl_font_get(rl_handle_t handle)
     rl_font_entry_t *entry = rl_font_get_entry(handle);
     if (entry == NULL)
     {
-        log_error("Invalid font handle (%d)", handle);
         return rl_fonts[RL_FONT_DEFAULT].font;
     }
 
@@ -205,6 +208,7 @@ void rl_font_set(rl_handle_t handle, Font font)
 {
     uint16_t index = 0;
     if (!rl_font_handle_to_index(handle, &index)) {
+        log_error("Invalid font handle (%u)", (unsigned int)handle);
         return;
     }
 

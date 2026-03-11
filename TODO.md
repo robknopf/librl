@@ -4,7 +4,6 @@
 
 - Handle system cleanup:
   - finish migrating remaining legacy handle paths to `rl_handle_pool`
-  - validate stale-handle behavior consistently across destroy/set/get APIs
 - Lua runtime follow-up:
   - add a general Lua-facing event API:
     - `event_on`

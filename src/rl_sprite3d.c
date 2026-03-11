@@ -34,9 +34,11 @@ static rl_sprite3d_t *rl_sprite3d_get(rl_handle_t handle)
 {
     uint16_t index = 0;
     if (!rl_handle_pool_resolve(&rl_sprite3d_pool, handle, &index)) {
+        log_error("Invalid sprite3d handle (%u)", (unsigned int)handle);
         return NULL;
     }
     if (!rl_sprite3d[index].in_use) {
+        log_error("Stale sprite3d handle (%u)", (unsigned int)handle);
         return NULL;
     }
     return &rl_sprite3d[index];
@@ -99,7 +101,6 @@ void rl_sprite3d_draw(rl_handle_t handle, float position_x, float position_y,
     Camera3D camera = {0};
     if (sprite == NULL)
     {
-        log_error("Invalid sprite3d handle (%u)", handle);
         return;
     }
     texture = rl_texture_get_ptr(sprite->texture);

@@ -3,7 +3,6 @@
 #include <raylib.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <string.h>
 
 #include "internal/exports.h"
 #include "internal/rl_handle_pool.h"

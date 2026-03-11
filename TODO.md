@@ -14,6 +14,12 @@
   - desktop: Lua C module (`require`) path first
   - target Lua 5.2 + LuaJIT compatibility
   - wasm: evaluate JS-side Lua bridge vs embedded Lua VM approach
+  - next Lua runtime follow-up:
+    - add a general Lua-facing event API (`event_on`, `event_off`, `event_emit`)
+    - decide whether host fallback clear stays or Lua fully owns frame clear
+    - evaluate `load/unload` lifecycle split for HCR on top of current `get_config/init/update/shutdown`
+    - decide whether window bootstrap should grow beyond `get_config()` (min/max size, vsync, etc.)
+    - document the Lua standard-library layer (`model.lua`, `texture.lua`, `sprite3d.lua`, `sound.lua`, `music.lua`, `camera3d.lua`, `font.lua`)
 - Frame snapshot submission API:
   - define a compact frame command/snapshot structure using `rl_handle_t`
   - add one-call submit path for per-frame draw state/commands
@@ -38,7 +44,8 @@
     - draw sprite/texture
     - play sound / control music
   - define script lifecycle and reload behavior:
-    - `init/update/draw` or equivalent contract
+    - `get_config/init/update/shutdown` is now in place for Lua
+    - decide whether to add explicit `load/unload` for hot reload
     - what survives hot reload vs what is reconstructed
     - error/reporting behavior with source-aware logs
   - prove the model in the existing C example:
@@ -52,9 +59,12 @@
 - Event payload bridge for JS:
   - add scratch-area read/write helpers for event payloads so JS can exchange structured payload data with C listeners
   - define a stable payload layout/versioning strategy for cross-language safety (JS/Nim/C)
+  - open architecture question:
+    - if the thin host + in-wasm scripting model succeeds, do JS bindings stop being a primary gameplay API and become a thinner operational/system/bootstrap layer instead?
 - Event queueing model:
   - expand event system with an explicit queue (`enqueue`) alongside immediate emit semantics
   - add queue processing/drain API and decide where it runs (core update loop vs module update phase)
+  - if Lua gets a general event API, decide whether script listeners bind to immediate events, queued events, or both
 - Module SDK split:
   - define a separate module SDK package/repo for out-of-tree module builds
   - include stable `rl_module.h` ABI and documented versioning/compatibility policy
@@ -62,7 +72,7 @@
   - keep module development in-tree until SDK contract is stable
 - Scripting backend evaluation:
   - keep Lua as the reference implementation for module-hosted scripting
-  - compare TinyCC and/or daslang against the same module boundary
+  - compare TinyCC, daslang, and Haxe/cppia against the same module boundary
   - define explicit selection criteria for the "right" script language:
     - hot reload/edit-compile latency
     - fit for immediate-mode per-frame game logic
@@ -77,6 +87,8 @@
     - debugging quality
     - wasm feasibility
     - native production build story without a permanent interpreter
+  - Haxe/cppia-specific question:
+    - does it provide a strong "same source in dev + native production later" path without introducing unacceptable C++/toolchain friction?
 - URI/path follow-up:
   - add URL normalization examples to docs
   - decide whether cache keys should canonicalize host casing
@@ -124,6 +136,9 @@
 - Flush out API for bindings:
   - formalize a stable binding-oriented API surface
   - ensure JS/Nim wrappers map cleanly to all intended features
+  - re-evaluate the role of JS bindings after scripting-backend experiments:
+    - keep current broad gameplay-facing bindings
+    - or narrow them into system/bootstrap/tooling APIs around the wasm host
 - Audio polish:
   - evaluate seek/time query APIs for music streams
   - consider fade in/out helpers and optional grouped volume controls
@@ -138,6 +153,10 @@
 ### Follow-up Cleanup
 
 - Review all headers for stale declarations after recent refactors: ongoing
+- Docs refresh after Lua runtime spike:
+  - update `docs/DEV_NOTES.md` with current Lua script lifecycle and wrapper modules
+  - add a short maintainer note about `examples/c/main.c` now being a thin host shell
+  - add a short user-facing doc later for Lua script entrypoints and built-in globals/constants
 - Expand `docs/API.md` to function-by-function docs:
   - call order expectations
   - return/error semantics

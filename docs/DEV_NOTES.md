@@ -113,6 +113,10 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
   - audio playback commands
   - other immediate frame-side effects
 - Frame commands should be cleared every frame. Do not make render state persistent by default.
+- Current C example status:
+  - `examples/c/main.c` is now mostly a thin host shell
+  - host still owns bootstrap, window creation, frame begin/end, and FPS display
+  - Lua now owns almost all demo-specific scene/resource behavior
 
 ### API Shape We Want
 
@@ -139,6 +143,59 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
   - handle-based draw/audio commands
   - predictable hot reload behavior
   - good source-aware logging/errors
+
+## Current Lua Runtime Shape
+
+- Current Lua entrypoints:
+  - `get_config()`
+  - `init()`
+  - `update(frame)`
+  - `shutdown()`
+- Ordering in the C example:
+  1. host initializes librl and Lua module
+  2. host emits `lua.add_path("assets/scripts")`
+  3. host emits `lua.do_file("lua_demo.lua")`
+  4. host asks Lua for `get_config()` before `InitWindow()`
+  5. host creates window / sets target FPS
+  6. host calls Lua `init()`
+  7. host calls Lua `update(frame)` every tick
+  8. host calls Lua `shutdown()` during module teardown
+- `get_config()` currently supports:
+  - `width`
+  - `height`
+  - `title`
+  - `target_fps`
+  - `flags`
+- Lua module currently exposes common window flag constants for `get_config()`.
+
+## Current Lua Support Modules
+
+- Wrapper modules now exist under `examples/www/public/assets/scripts/`:
+  - `model.lua`
+  - `texture.lua`
+  - `sprite3d.lua`
+  - `sound.lua`
+  - `music.lua`
+  - `camera3d.lua`
+  - `font.lua`
+- These are intended to be the first layer of a Lua-side standard library:
+  - C stays flat and handle-based
+  - Lua gets object-like helpers with state and methods
+- Current pattern:
+  - `Model.load(path)` returns a table with transform/animation fields and `:draw()`, `:pick()`, `:destroy()`
+  - similar shape for texture/sprite/sound/music/font/camera wrappers
+
+## Immediate Next Steps
+
+- Add a general Lua-facing event API:
+  - `event_on`
+  - `event_off`
+  - `event_emit`
+- Decide whether the host fallback `ClearBackground(RAYWHITE)` remains in `main.c` or whether Lua fully owns frame clear.
+- Decide how HCR should layer onto the current lifecycle:
+  - keep `init/shutdown` only
+  - or add explicit `load/unload`
+- Document the Lua script-facing surface in a smaller user-facing note once the lifecycle and wrappers stabilize.
 
 ## Assets and Credits
 

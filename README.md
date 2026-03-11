@@ -8,13 +8,16 @@
 
 ## Purpose
 
-`librl` is a binding-oriented runtime layer around raylib that provides stable handles, cross-platform asset loading, and shared-state plumbing for non-C hosts (currently JS/Nim). It is still an active work in progress.
+`librl` is a binding-oriented runtime layer around raylib that provides stable handles, cross-platform asset loading, and shared runtime plumbing for non-C hosts and embedded scripting runtimes. It is still an active work in progress.
 
 Key goals:
 
 - Handle-based APIs for resources:
   - Colors, fonts, models, textures, sprite3d, and camera3d are exposed as `rl_handle_t` IDs instead of raw raylib structs.
   - This keeps bindings simpler and safer by avoiding direct pointer/struct lifetime management in host languages.
+- Thin host/runtime shell:
+  - Keep platform bootstrap, frame boundaries, and resource ownership on the host side.
+  - Let higher-level hosts or scripts describe gameplay and per-frame presentation against a stable handle-based API.
 - Cached asset systems:
   - Loader and resource subsystems are designed for reuse/caching instead of one-shot loads.
   - Model/font/color systems keep runtime-owned instances keyed by handles.
@@ -28,6 +31,27 @@ Key goals:
 - URL/path normalization helpers:
   - File and URL normalization now share one path utility flow.
   - URL normalization preserves scheme/authority/query/fragment and normalizes URL path segments.
+- Script-driven iteration:
+  - The current reference direction is a thin native/wasm host with Lua driving gameplay and frame generation.
+  - Longer-term, the same host boundary should support evaluating alternate scripting backends without redesigning the core runtime.
+
+## Current Direction
+
+- `librl` is moving toward a thin-host model where a native or wasm app owns platform/bootstrap concerns and scripts drive gameplay and per-frame presentation.
+- The current reference path for that is the Lua module:
+  - host initializes the Lua module
+  - Lua script provides `get_config()`, `init()`, `update(frame)`, and `shutdown()`
+  - Lua emits transient frame commands for draw/audio work
+  - host drains those commands during its normal frame loop
+- Lua-side helper modules now exist for common resource types:
+  - model
+  - texture
+  - sprite3d
+  - sound
+  - music
+  - camera3d
+  - font
+- The C example is now primarily a thin host shell around that workflow.
 
 ## Repository Layout
 
@@ -80,8 +104,7 @@ Lua module is now built as a separate module artifact (not compiled into core `l
 
 ```bash
 make -C modules/lua deps
-make -C modules/lua desktop
-make -C modules/lua wasm
+make -C modules/lua
 make -C modules/lua lua_module_test_desktop
 ```
 
@@ -113,6 +136,11 @@ if (rl_module_init("lua", &host, &api, &module_state, error, sizeof(error)) != 0
 rl_module_deinit_instance(api, module_state);
 ```
 on shutdown.
+
+For the current Lua-driven workflow, see:
+
+- [examples/c/main.c](/home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/c/main.c)
+- [examples/www/public/assets/scripts/lua_demo.lua](/home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/www/public/assets/scripts/lua_demo.lua)
 
 ## Test
 
@@ -153,6 +181,7 @@ make clean
 ## Notes
 
 - `rl_model_create()` requires a ready window/graphics context. If model loading fails, it substitutes a visible placeholder cube.
+- Keep the README high-level. Exact C APIs, Lua bindings, frame command details, and script-facing runtime surface belong in the docs below.
 - API surface documentation: see [API.md](docs/API.md).
 - Binding documentation: see [BINDINGS.md](docs/BINDINGS.md).
 - Maintainer-focused build/runtime notes: see [DEV_NOTES.md](docs/DEV_NOTES.md).

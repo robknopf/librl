@@ -79,6 +79,7 @@ Notes:
 
 - `rl_model_create()` requires a ready window/graphics context.
 - On model load failure, the implementation substitutes a visible placeholder cube.
+- Current draw/pick flow now carries full XYZ rotation.
 
 ## Picking (`include/rl_pick.h`)
 
@@ -93,7 +94,7 @@ Notes:
 
 - `rl_pick_model(...)` currently targets one model handle at a time.
 - `rl_pick_sprite3d(...)` targets one sprite handle at a time and uses billboard-quad collision.
-- Transform inputs mirror the current model draw style (position + uniform scale).
+- Transform inputs mirror the current model draw style (position + uniform scale + XYZ rotation).
 - Picking now uses broad-phase culling before narrow-phase tests:
   - models: world-space AABB ray test
   - sprite3d billboards: bounding-sphere ray test
@@ -252,6 +253,143 @@ Notes:
 - Events are immediate/synchronous today (no queue yet).
 - `lua.do_file` in current Lua module uses `fileio_read(...)`, so file paths should be loader/fileio-relative.
 - Lua module is built as a separate archive (`modules/lua/lib/librl_lua.a` / `.wasm.a`) and linked by the host app.
+
+## Lua Module Runtime (`modules/lua`)
+
+Current Lua module responsibilities:
+
+- embeds the Lua VM behind the generic module ABI
+- installs a Lua `require(...)` searcher backed by `lua.add_path`
+- exposes script-facing bindings for:
+  - frame commands (`clear`, `draw_text`, `draw_texture`, `draw_sprite3d`, `draw_model`, `play_sound`)
+  - resource lifecycle (`load_*`, `destroy_*`)
+  - stateful music control
+  - camera creation/update/activation
+  - model/sprite picking
+  - logging with source-aware file/line reporting
+
+### Script Lifecycle
+
+Current Lua script entrypoints:
+
+- `get_config()`
+- `init()`
+- `update(frame)`
+- `shutdown()`
+
+Current host ordering in the C example:
+
+1. initialize `librl`
+2. initialize Lua module with `rl_module_init("lua", ...)`
+3. emit `lua.add_path`
+4. emit `lua.do_file` for the entry script
+5. call `rl_lua_module_get_script_config(...)`
+6. create the window / set target FPS
+7. call `rl_lua_module_call_init(...)`
+8. call `api->update(...)` every frame
+9. script `shutdown()` runs during module deinit
+
+Lua-specific helper declarations for that bridge live in:
+
+- `modules/lua/include/rl_lua_module.h`
+
+`get_config()` currently supports:
+
+- `width`
+- `height`
+- `title`
+- `target_fps`
+- `flags`
+
+### `frame` Table Shape
+
+`update(frame)` currently receives a reused Lua table with:
+
+- `frame.dt`
+- `frame.screen_w`
+- `frame.screen_h`
+- `frame.mouse`
+- `frame.keyboard`
+
+`frame.mouse` currently contains:
+
+- `x`
+- `y`
+- `wheel`
+- `left`
+- `right`
+- `middle`
+- `buttons`
+
+Mouse button values use the shared `RL_BUTTON_*` state encoding:
+
+- `0`: up
+- `1`: pressed
+- `2`: down
+- `3`: released
+
+`frame.keyboard` currently contains:
+
+- `keys`
+- `pressed_key`
+- `pressed_char`
+- `num_pressed_keys`
+- `pressed_keys`
+- `num_pressed_chars`
+- `pressed_chars`
+
+Notes:
+
+- `pressed_key` / `pressed_char` are event-style values, not persistent held-state indicators.
+- held-state lives in `keyboard.keys[keycode]`.
+- `pressed_keys[]` drains the full `GetKeyPressed()` queue for the frame.
+- `pressed_chars[]` drains the full `GetCharPressed()` queue for the frame.
+
+### Current Lua Built-in Globals
+
+The Lua module currently injects a small set of constants/globals, including:
+
+- colors:
+  - `COLOR_WHITE`
+  - `COLOR_BLACK`
+  - `COLOR_BLUE`
+  - `COLOR_RAYWHITE`
+  - `COLOR_DARKBLUE`
+- font:
+  - `FONT_DEFAULT`
+- camera:
+  - `CAMERA_PERSPECTIVE`
+  - `CAMERA_ORTHOGRAPHIC`
+  - `CAMERA3D_DEFAULT`
+- window flags for `get_config()`:
+  - `FLAG_VSYNC_HINT`
+  - `FLAG_FULLSCREEN_MODE`
+  - `FLAG_WINDOW_RESIZABLE`
+  - `FLAG_WINDOW_UNDECORATED`
+  - `FLAG_WINDOW_HIDDEN`
+  - `FLAG_WINDOW_MINIMIZED`
+  - `FLAG_WINDOW_MAXIMIZED`
+  - `FLAG_WINDOW_UNFOCUSED`
+  - `FLAG_WINDOW_TOPMOST`
+  - `FLAG_WINDOW_ALWAYS_RUN`
+  - `FLAG_WINDOW_TRANSPARENT`
+  - `FLAG_WINDOW_HIGHDPI`
+  - `FLAG_MSAA_4X_HINT`
+  - `FLAG_INTERLACED_HINT`
+
+### Current Lua Resource Wrapper Modules
+
+The example Lua runtime now layers small object-style wrappers on top of the flat C bindings:
+
+- `model.lua`
+- `texture.lua`
+- `sprite3d.lua`
+- `sound.lua`
+- `music.lua`
+- `camera3d.lua`
+- `font.lua`
+
+These are not part of the C ABI, but they are the current recommended Lua-side usage pattern.
 
 ## Wasm File I/O Lifecycle (IDBFS)
 

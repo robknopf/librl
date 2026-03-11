@@ -42,9 +42,8 @@
   - clarify command ownership and overflow behavior
   - document the current host/script contract around command emission and drain order
 - Hot reload lifecycle:
-  - current lifecycle is `get_config/init/update/shutdown`
-  - decide whether hot reload should stay on top of that
-  - or whether explicit `load/unload` should be introduced
+  - current lifecycle is `get_config/init/load/update/unload/shutdown`
+  - current HCR state transfer hooks are `serialize/unserialize`
   - define what survives reload vs what is reconstructed
   - make error/reporting behavior predictable during reload
 - External ID mapping layer:

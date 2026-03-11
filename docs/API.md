@@ -171,7 +171,7 @@ Notes:
 
 Main responsibilities:
 
-- Generic module ABI for host-driven plugin lifecycle (`init`, `update`, `deinit`)
+- Generic module ABI for host-driven plugin lifecycle (`init`, optional `get_config`, optional `start`, `update`, `deinit`)
 - Host services passed to modules through `rl_module_host_api_t`:
   - logging (`log`)
   - allocation (`alloc` / `free`)
@@ -220,6 +220,7 @@ static void host_log(void *user_data, int level, const char *message)
 void run_lua_module_example(void)
 {
     rl_module_host_api_t host = {0};
+    rl_module_config_t config = {800, 600, 60, 0, "module example"};
     module_runtime_t lua = {0};
     char error[256] = {0};
 
@@ -238,6 +239,14 @@ void run_lua_module_example(void)
 
     (void)rl_event_emit("lua.do_string", "print('hello from lua module')");
     (void)rl_event_emit("lua.do_file", "scripts/startup.lua");
+
+    if (rl_module_get_config_instance(lua.api, lua.state, &config) == 0) {
+        /* host can now create the window/runtime from config */
+    }
+
+    if (rl_module_start_instance(lua.api, lua.state) != 0) {
+        fprintf(stderr, "failed to start lua module\n");
+    }
 
     if (lua.api != NULL && lua.api->update != NULL) {
         (void)lua.api->update(lua.state, 1.0f / 60.0f);
@@ -275,6 +284,7 @@ Current status notes:
   - Lua emits typed transient commands through the host `frame_command` callback
   - the current reference host in `examples/c/main.c` buffers and drains them each tick
 - The Lua module also keeps its own small resource/color caches so repeated script requests can reuse the same script-visible handles across HCR/reload within the same module lifetime.
+- For HCR-friendly scripts, `load()` should generally reacquire cached handles while `unload()` removes side effects and script-local references rather than aggressively destroying shared cached resources.
 - Current command set is intentionally small:
   - clear background
   - draw text
@@ -290,7 +300,11 @@ Current Lua script entrypoints:
 
 - `get_config()`
 - `init()`
+- `load()`
 - `update(frame)`
+- `unload()`
+- `serialize()`
+- `unserialize(state)`
 - `shutdown()`
 
 Current host ordering in the C example:
@@ -299,15 +313,21 @@ Current host ordering in the C example:
 2. initialize Lua module with `rl_module_init("lua", ...)`
 3. emit `lua.add_path`
 4. emit `lua.do_file` for the entry script
-5. call `rl_lua_module_get_script_config(...)`
+5. call `rl_module_get_config_instance(...)`
 6. create the window / set target FPS
-7. call `rl_lua_module_call_init(...)`
-8. call `api->update(...)` every frame
-9. script `shutdown()` runs during module deinit
+7. call `rl_module_start_instance(...)`
+8. Lua runs one-time `init()` if present
+9. Lua runs `load()` for the active script if present
+10. call `api->update(...)` every frame
+11. on reload, Lua runs `serialize()` -> `unload()` -> new chunk -> `load()` -> `unserialize(state)`
+12. on module teardown, Lua runs `unload()` and then one-time `shutdown()`
 
-Lua-specific helper declarations for that bridge live in:
+Lifecycle intent:
 
-- `modules/lua/include/rl_lua_module.h`
+- `init()` is the one-time constructor for the script runtime instance
+- `load()` / `unload()` are the code-lifetime hooks used for first load and HCR
+- `serialize()` / `unserialize(state)` are optional state-transfer hooks for HCR
+- `shutdown()` is the one-time destructor for the script runtime instance
 
 `get_config()` currently supports:
 

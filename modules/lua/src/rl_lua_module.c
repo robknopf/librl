@@ -99,6 +99,11 @@ typedef struct rl_lua_vm_t {
 typedef struct rl_lua_module_state_t {
     rl_module_host_api_t host;
     rl_lua_vm_t vm;
+    int serialized_state_ref;
+    bool script_init_called;
+    bool host_started;
+    bool script_loaded;
+    bool script_active;
     char search_paths[RL_LUA_MODULE_MAX_SEARCH_PATHS][256];
     rl_lua_cached_resource_t sprite3d_cache[RL_LUA_MODULE_MAX_CACHED_RESOURCES];
     rl_lua_cached_resource_t model_cache[RL_LUA_MODULE_MAX_CACHED_RESOURCES];
@@ -149,7 +154,11 @@ static int lua_module_require_searcher(lua_State *L);
 static const char *lua_module_debug_source(lua_Debug *ar, char *buffer, size_t buffer_size);
 static int lua_vm_call_update(rl_lua_module_state_t *state, float dt_seconds);
 static int lua_vm_call_init(rl_lua_module_state_t *state);
-static int lua_vm_call_get_config(rl_lua_module_state_t *state, rl_lua_script_config_t *out_config);
+static int lua_vm_call_load(rl_lua_module_state_t *state);
+static int lua_vm_call_unload(rl_lua_module_state_t *state);
+static int lua_vm_call_serialize(rl_lua_module_state_t *state);
+static int lua_vm_call_unserialize(rl_lua_module_state_t *state);
+static int lua_vm_call_get_config(rl_lua_module_state_t *state, rl_module_config_t *out_config);
 static int lua_vm_call_shutdown(rl_lua_module_state_t *state);
 static rl_handle_t lua_module_cached_load(rl_lua_cached_resource_t *cache,
                                           int cache_count,
@@ -189,6 +198,11 @@ static int lua_module_resolve_require_path(rl_lua_module_state_t *state, const c
 static int lua_module_expand_search_path(const char *search_path, const char *name, char *resolved_path, size_t resolved_path_size);
 static int lua_module_is_explicit_path(const char *filename);
 static void lua_module_push_pick_result(lua_State *L, rl_pick_result_t result);
+static void lua_module_clear_serialized_state(rl_lua_module_state_t *state);
+static int lua_module_prepare_reload(rl_lua_module_state_t *state);
+static int lua_module_activate_script(rl_lua_module_state_t *state);
+static int rl_lua_module_get_config_impl(void *module_state, rl_module_config_t *out_config);
+static int rl_lua_module_start_impl(void *module_state);
 
 static int parse_lua_log_level(lua_State *L, int idx, int *out_is_level)
 {
@@ -1086,6 +1100,7 @@ static int rl_lua_module_init_impl(const rl_module_host_api_t *host, void **modu
         return -1;
     }
     memset(state, 0, sizeof(*state));
+    state->serialized_state_ref = LUA_NOREF;
 
     if (host != NULL) {
         state->host = *host;
@@ -1121,7 +1136,13 @@ static void rl_lua_module_deinit_impl(void *module_state)
     (void)rl_module_event_off(&state->host, "lua.add_path", lua_module_on_add_path, state);
     (void)rl_module_event_off(&state->host, "lua.do_string", lua_module_on_do_string, state);
     (void)rl_module_event_off(&state->host, "lua.do_file", lua_module_on_do_file, state);
-    if (lua_vm_call_shutdown(state) != 0) {
+    if (state->script_active && lua_vm_call_unload(state) != 0) {
+        rl_module_log(&state->host, RL_MODULE_LOG_ERROR, state->vm.last_error);
+        (void)rl_module_event_emit(&state->host, "lua.error", (void *)state->vm.last_error);
+    }
+    state->script_active = false;
+    lua_module_clear_serialized_state(state);
+    if (state->script_init_called && lua_vm_call_shutdown(state) != 0) {
         rl_module_log(&state->host, RL_MODULE_LOG_ERROR, state->vm.last_error);
         (void)rl_module_event_emit(&state->host, "lua.error", (void *)state->vm.last_error);
     }
@@ -1276,20 +1297,22 @@ static int lua_vm_call_update(rl_lua_module_state_t *state, float dt_seconds)
     return 0;
 }
 
-static int lua_vm_call_init(rl_lua_module_state_t *state)
+static int lua_vm_call_lifecycle_noargs(rl_lua_module_state_t *state,
+                                        const char *function_name,
+                                        const char *error_message)
 {
     lua_State *L = NULL;
     int top = 0;
     int rc = 0;
     const char *err = NULL;
 
-    if (state == NULL || state->vm.state == NULL) {
+    if (state == NULL || state->vm.state == NULL || function_name == NULL) {
         return -1;
     }
 
     L = state->vm.state;
     top = lua_gettop(L);
-    lua_getglobal(L, "init");
+    lua_getglobal(L, function_name);
     if (!lua_isfunction(L, -1)) {
         lua_settop(L, top);
         set_error(&state->vm, NULL);
@@ -1299,7 +1322,7 @@ static int lua_vm_call_init(rl_lua_module_state_t *state)
     rc = lua_pcall(L, 0, 0, 0);
     if (rc != LUA_OK) {
         err = lua_tostring(L, -1);
-        set_error(&state->vm, err != NULL ? err : "lua init failed");
+        set_error(&state->vm, err != NULL ? err : error_message);
         lua_pop(L, 1);
         return -1;
     }
@@ -1308,7 +1331,22 @@ static int lua_vm_call_init(rl_lua_module_state_t *state)
     return 0;
 }
 
-static int lua_vm_call_get_config(rl_lua_module_state_t *state, rl_lua_script_config_t *out_config)
+static int lua_vm_call_init(rl_lua_module_state_t *state)
+{
+    return lua_vm_call_lifecycle_noargs(state, "init", "lua init failed");
+}
+
+static int lua_vm_call_load(rl_lua_module_state_t *state)
+{
+    return lua_vm_call_lifecycle_noargs(state, "load", "lua load failed");
+}
+
+static int lua_vm_call_unload(rl_lua_module_state_t *state)
+{
+    return lua_vm_call_lifecycle_noargs(state, "unload", "lua unload failed");
+}
+
+static int lua_vm_call_get_config(rl_lua_module_state_t *state, rl_module_config_t *out_config)
 {
     lua_State *L = NULL;
     int top = 0;
@@ -1380,7 +1418,7 @@ static int lua_vm_call_get_config(rl_lua_module_state_t *state, rl_lua_script_co
     return 0;
 }
 
-static int lua_vm_call_shutdown(rl_lua_module_state_t *state)
+static int lua_vm_call_serialize(rl_lua_module_state_t *state)
 {
     lua_State *L = NULL;
     int top = 0;
@@ -1391,25 +1429,148 @@ static int lua_vm_call_shutdown(rl_lua_module_state_t *state)
         return -1;
     }
 
+    lua_module_clear_serialized_state(state);
+
     L = state->vm.state;
     top = lua_gettop(L);
-    lua_getglobal(L, "shutdown");
+    lua_getglobal(L, "serialize");
     if (!lua_isfunction(L, -1)) {
         lua_settop(L, top);
         set_error(&state->vm, NULL);
         return 0;
     }
 
-    rc = lua_pcall(L, 0, 0, 0);
+    rc = lua_pcall(L, 0, 1, 0);
     if (rc != LUA_OK) {
         err = lua_tostring(L, -1);
-        set_error(&state->vm, err != NULL ? err : "lua shutdown failed");
+        set_error(&state->vm, err != NULL ? err : "lua serialize failed");
         lua_pop(L, 1);
         return -1;
     }
 
+    if (!lua_isnil(L, -1)) {
+        state->serialized_state_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+    } else {
+        lua_pop(L, 1);
+        state->serialized_state_ref = LUA_NOREF;
+    }
+
     set_error(&state->vm, NULL);
     return 0;
+}
+
+static int lua_vm_call_unserialize(rl_lua_module_state_t *state)
+{
+    lua_State *L = NULL;
+    int top = 0;
+    int rc = 0;
+    const char *err = NULL;
+
+    if (state == NULL || state->vm.state == NULL || state->serialized_state_ref == LUA_NOREF) {
+        return 0;
+    }
+
+    L = state->vm.state;
+    top = lua_gettop(L);
+    lua_getglobal(L, "unserialize");
+    if (!lua_isfunction(L, -1)) {
+        lua_settop(L, top);
+        set_error(&state->vm, NULL);
+        lua_module_clear_serialized_state(state);
+        return 0;
+    }
+
+    lua_rawgeti(L, LUA_REGISTRYINDEX, state->serialized_state_ref);
+    rc = lua_pcall(L, 1, 0, 0);
+    if (rc != LUA_OK) {
+        err = lua_tostring(L, -1);
+        set_error(&state->vm, err != NULL ? err : "lua unserialize failed");
+        lua_pop(L, 1);
+        return -1;
+    }
+
+    lua_module_clear_serialized_state(state);
+    set_error(&state->vm, NULL);
+    return 0;
+}
+
+static int lua_vm_call_shutdown(rl_lua_module_state_t *state)
+{
+    return lua_vm_call_lifecycle_noargs(state, "shutdown", "lua shutdown failed");
+}
+
+static void lua_module_clear_serialized_state(rl_lua_module_state_t *state)
+{
+    if (state == NULL || state->vm.state == NULL || state->serialized_state_ref == LUA_NOREF) {
+        return;
+    }
+
+    luaL_unref(state->vm.state, LUA_REGISTRYINDEX, state->serialized_state_ref);
+    state->serialized_state_ref = LUA_NOREF;
+}
+
+static int lua_module_prepare_reload(rl_lua_module_state_t *state)
+{
+    if (state == NULL || !state->script_active) {
+        return 0;
+    }
+
+    if (lua_vm_call_serialize(state) != 0) {
+        return -1;
+    }
+    if (lua_vm_call_unload(state) != 0) {
+        return -1;
+    }
+
+    state->script_active = false;
+    return 0;
+}
+
+static int lua_module_activate_script(rl_lua_module_state_t *state)
+{
+    if (state == NULL || !state->host_started || !state->script_loaded || state->script_active) {
+        return 0;
+    }
+
+    if (!state->script_init_called) {
+        if (lua_vm_call_init(state) != 0) {
+            return -1;
+        }
+        state->script_init_called = true;
+    }
+
+    if (lua_vm_call_load(state) != 0) {
+        return -1;
+    }
+    if (lua_vm_call_unserialize(state) != 0) {
+        return -1;
+    }
+
+    state->script_active = true;
+    return 0;
+}
+
+static int rl_lua_module_get_config_impl(void *module_state, rl_module_config_t *out_config)
+{
+    rl_lua_module_state_t *state = (rl_lua_module_state_t *)module_state;
+
+    if (state == NULL || out_config == NULL) {
+        return -1;
+    }
+
+    return lua_vm_call_get_config(state, out_config);
+}
+
+static int rl_lua_module_start_impl(void *module_state)
+{
+    rl_lua_module_state_t *state = (rl_lua_module_state_t *)module_state;
+
+    if (state == NULL) {
+        return -1;
+    }
+
+    state->host_started = true;
+    return lua_module_activate_script(state);
 }
 
 static int lua_module_log_binding(lua_State *L)
@@ -1999,28 +2160,6 @@ static int lua_module_destroy_font_binding(lua_State *L)
     return 1;
 }
 
-int rl_lua_module_get_script_config(void *module_state, rl_lua_script_config_t *out_config)
-{
-    rl_lua_module_state_t *state = (rl_lua_module_state_t *)module_state;
-
-    if (state == NULL || out_config == NULL) {
-        return -1;
-    }
-
-    return lua_vm_call_get_config(state, out_config);
-}
-
-int rl_lua_module_call_init(void *module_state)
-{
-    rl_lua_module_state_t *state = (rl_lua_module_state_t *)module_state;
-
-    if (state == NULL) {
-        return -1;
-    }
-
-    return lua_vm_call_init(state);
-}
-
 static void lua_module_on_do_file(void *payload, void *listener_user_data)
 {
     rl_lua_module_state_t *state = (rl_lua_module_state_t *)listener_user_data;
@@ -2033,15 +2172,30 @@ static void lua_module_on_do_file(void *payload, void *listener_user_data)
     }
 
     if (lua_module_resolve_path(state, filename, resolved_path, sizeof(resolved_path)) != 0) {
+        set_error(&state->vm, "lua do_file path resolution failed");
         rl_module_log(&state->host, RL_MODULE_LOG_ERROR, "lua do_file path resolution failed");
+        (void)rl_module_event_emit(&state->host, "lua.error", (void *)state->vm.last_error);
+        return;
+    }
+
+    if (lua_module_prepare_reload(state) != 0) {
+        rl_module_log(&state->host, RL_MODULE_LOG_ERROR, state->vm.last_error);
+        (void)rl_module_event_emit(&state->host, "lua.error", (void *)state->vm.last_error);
         return;
     }
 
     rc = lua_vm_exec_file(&state->vm, resolved_path);
     if (rc != 0) {
+        state->script_loaded = false;
         rl_module_log(&state->host, RL_MODULE_LOG_ERROR, state->vm.last_error);
         (void)rl_module_event_emit(&state->host, "lua.error", (void *)state->vm.last_error);
     } else {
+        state->script_loaded = true;
+        if (lua_module_activate_script(state) != 0) {
+            rl_module_log(&state->host, RL_MODULE_LOG_ERROR, state->vm.last_error);
+            (void)rl_module_event_emit(&state->host, "lua.error", (void *)state->vm.last_error);
+            return;
+        }
         (void)rl_module_event_emit(&state->host, "lua.ok", state);
     }
 }
@@ -2084,15 +2238,27 @@ static void lua_module_on_do_string(void *payload, void *listener_user_data)
     if (state == NULL) {
         return;
     }
+    if (lua_module_prepare_reload(state) != 0) {
+        rl_module_log(&state->host, RL_MODULE_LOG_ERROR, state->vm.last_error);
+        (void)rl_module_event_emit(&state->host, "lua.error", (void *)state->vm.last_error);
+        return;
+    }
     rc = lua_vm_exec_string(&state->vm, source);
     if (rc != 0) {
+        state->script_loaded = false;
         rl_module_log(&state->host, RL_MODULE_LOG_ERROR, state->vm.last_error);
         (void)rl_module_event_emit(&state->host, "lua.error", (void *)state->vm.last_error);
     }
     else {
+        state->script_loaded = true;
+        if (lua_module_activate_script(state) != 0) {
+            rl_module_log(&state->host, RL_MODULE_LOG_ERROR, state->vm.last_error);
+            (void)rl_module_event_emit(&state->host, "lua.error", (void *)state->vm.last_error);
+            return;
+        }
         (void)rl_module_event_emit(&state->host, "lua.ok", state);
     }
 }
 
 RL_MODULE_DEFINE(rl_lua_module_get_api, "lua", rl_lua_module_init_impl, rl_lua_module_deinit_impl,
-                rl_lua_module_update_impl)
+                rl_lua_module_get_config_impl, rl_lua_module_start_impl, rl_lua_module_update_impl)

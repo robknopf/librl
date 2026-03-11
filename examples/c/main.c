@@ -216,8 +216,8 @@ int main(void) {
   const char *asset_host = get_asset_host();
   const char *komika_font_path = "assets/fonts/Komika/KOMIKAH_.ttf";
   const float small_font_size = 16.0f;
-  rl_lua_script_config_t script_config = {800, 600, 60, FLAG_MSAA_4X_HINT,
-                                          "librl + raylib + lua(C example)"};
+  rl_module_config_t script_config = {800, 600, 60, FLAG_MSAA_4X_HINT,
+                                      "librl + raylib + lua(C example)"};
   rl_module_instance_t lua_module = {0};
   rl_module_host_api_t module_host = {0};
   char module_error[256] = {0};
@@ -247,7 +247,7 @@ int main(void) {
     (void)rl_event_on("lua.error", on_lua_error, NULL);
     (void)rl_event_emit("lua.add_path", "assets/scripts");
     (void)rl_event_emit("lua.do_file", "lua_demo.lua");
-    if (rl_lua_module_get_script_config(lua_module.state, &script_config) != 0) {
+    if (rl_module_get_config_instance(lua_module.api, lua_module.state, &script_config) != 0) {
       log_warn("Lua script get_config failed");
     }
   } else {
@@ -259,8 +259,8 @@ int main(void) {
   SetTargetFPS(script_config.target_fps > 0 ? script_config.target_fps : 60);
 
   rl_handle_t komika_small = rl_font_create(komika_font_path, small_font_size);
-  if (lua_module.api != NULL && rl_lua_module_call_init(lua_module.state) != 0) {
-    log_warn("Lua script init failed");
+  if (lua_module.api != NULL && rl_module_start_instance(lua_module.api, lua_module.state) != 0) {
+    log_warn("Lua script start failed");
   }
 
   while (!WindowShouldClose()) {

@@ -141,6 +141,25 @@ int rl_module_init_instance(const rl_module_api_t *api, const rl_module_host_api
     return 0;
 }
 
+int rl_module_get_config_instance(const rl_module_api_t *api, void *module_state, rl_module_config_t *out_config)
+{
+    if (out_config == NULL) {
+        return -1;
+    }
+    if (api == NULL || api->get_config == NULL || module_state == NULL) {
+        return -1;
+    }
+    return api->get_config(module_state, out_config);
+}
+
+int rl_module_start_instance(const rl_module_api_t *api, void *module_state)
+{
+    if (api == NULL || api->start == NULL || module_state == NULL) {
+        return -1;
+    }
+    return api->start(module_state);
+}
+
 void rl_module_deinit_instance(const rl_module_api_t *api, void *module_state)
 {
     if (api == NULL || api->deinit == NULL || module_state == NULL) {

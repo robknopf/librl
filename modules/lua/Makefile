@@ -114,7 +114,7 @@ wasm: ensure_wasm_archive $(MODULE_WASM_OBJ) | $(OUT_DIR)
 lua_module_test_desktop: desktop
 	@$(MAKE) -C $(ROOT_DIR) desktop
 	$(CC) $(CFLAGS) -I$(ROOT_DIR)/include -I$(ROOT_DIR)/deps/wgutils -I$(LUA_MODULE_DIR)/include -I$(LIBLUA_INC) \
-		$(MODULE_TEST_SRC) $(CORE_LIBRL_DESKTOP) $(MODULE_DESKTOP_LIB) $(LIBLUA_DESKTOP_ARCHIVE) \
+		$(MODULE_TEST_SRC) $(MODULE_DESKTOP_LIB) $(CORE_LIBRL_DESKTOP) $(LIBLUA_DESKTOP_ARCHIVE) \
 		-lcurl -lm -lpthread -ldl -lX11 -o $(MODULE_TEST_BIN)
 	@$(MODULE_TEST_BIN)
 

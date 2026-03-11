@@ -17,7 +17,8 @@ local backspace_repeat_delay = 0.35
 local backspace_repeat_interval = 0.05
 local backspace_hold_time = 0.0
 local backspace_repeat_time = 0.0
-local initialized = false
+local constructor_runs = 0
+local load_generation = 0
 
 require("input_mapping")
 local Model = require("model")
@@ -62,10 +63,11 @@ function get_config()
 end
 
 function init()
-  if initialized then
-    return
-  end
+  constructor_runs = 1
+  log("info", "lua_demo: init() constructor")
+end
 
+function load()
   sprite3d_logo = Sprite3D.load("assets/sprites/logo/wg-logo-bw-alpha.png")
   logo_texture = Texture.load("assets/sprites/logo/wg-logo-bw-alpha.png")
   gumshoe_model = Model.load("assets/models/gumshoe/gumshoe.glb")
@@ -93,54 +95,76 @@ function init()
     gumshoe_model.animation_index = 1
     gumshoe_model.animation_fps = 60.0
   end
+  
+  load_generation = load_generation + 1
+  log("info", "lua_demo: load()")
+end
 
-  initialized = true
+function serialize()
+  local music_playing = false
+
+  if bg_music ~= nil then
+    music_playing = bg_music:is_playing()
+  end
+
+  return {
+    time_s = time_s,
+    mouse_left_was_down = mouse_left_was_down,
+    music_toggle_was_down = music_toggle_was_down,
+    last_pick_result = last_pick_result,
+    tracked_key = tracked_key,
+    text_buffer = text_buffer,
+    backspace_hold_time = backspace_hold_time,
+    backspace_repeat_time = backspace_repeat_time,
+    constructor_runs = constructor_runs,
+    load_generation = load_generation,
+    music_playing = music_playing,
+  }
+end
+
+function unserialize(state)
+  if state == nil then
+    return
+  end
+
+  time_s = state.time_s or time_s
+  mouse_left_was_down = state.mouse_left_was_down or false
+  music_toggle_was_down = state.music_toggle_was_down or false
+  last_pick_result = state.last_pick_result
+  tracked_key = state.tracked_key or 0
+  text_buffer = state.text_buffer or ""
+  backspace_hold_time = state.backspace_hold_time or 0.0
+  backspace_repeat_time = state.backspace_repeat_time or 0.0
+  constructor_runs = state.constructor_runs or constructor_runs
+  load_generation = (state.load_generation or 0) + 1
+
+  if bg_music ~= nil then
+    if state.music_playing then
+      bg_music:play()
+    else
+      bg_music:pause()
+    end
+  end
+end
+
+function unload()
+  if bg_music ~= nil then
+    bg_music:stop()
+  end
+
+  sprite3d_logo = nil
+  logo_texture = nil
+  gumshoe_model = nil
+  bg_music = nil
+  click_sound = nil
+  ui_font = nil
+  main_camera = nil
+  accent_color = nil
+  panel_color = nil
 end
 
 function shutdown()
-  if bg_music ~= nil then
-    bg_music:stop()
-    bg_music:destroy()
-    bg_music = nil
-  end
-
-  if click_sound ~= nil then
-    click_sound:destroy()
-    click_sound = nil
-  end
-
-  if gumshoe_model ~= nil then
-    gumshoe_model:destroy()
-    gumshoe_model = nil
-  end
-
-  if sprite3d_logo ~= nil then
-    sprite3d_logo:destroy()
-    sprite3d_logo = nil
-  end
-
-  if logo_texture ~= nil then
-    logo_texture:destroy()
-    logo_texture = nil
-  end
-
-  if ui_font ~= nil then
-    ui_font:destroy()
-    ui_font = nil
-  end
-
-  if accent_color ~= nil then
-    accent_color:destroy()
-    accent_color = nil
-  end
-
-  if panel_color ~= nil then
-    panel_color:destroy()
-    panel_color = nil
-  end
-
-  main_camera = nil
-  initialized = false
+  log("info", "lua_demo: shutdown() destructor")
 end
 
 function update(frame)
@@ -259,12 +283,13 @@ function update(frame)
   clear(COLOR_RAYWHITE)
   if ui_font ~= nil and ui_font.handle ~= 0 then
     ui_font:draw("lua-driven frame", 24, 140 + wobble, 32, 1.0, accent_color ~= nil and accent_color.handle or COLOR_DARKBLUE)
-    ui_font:draw(string.format("t = %.2f  mouse=(%d, %d) buttons=(L:%s R:%s M:%s) wheel=%d", time_s, mouse_x, mouse_y, mouse_left and "down" or "up", mouse_right and "down" or "up", mouse_middle and "down" or "up", Input.mouse_wheel(mouse)), 24, 182, 20, 1.0, panel_color ~= nil and panel_color.handle or COLOR_BLUE)
-    ui_font:draw(string.format("kbd space=%s arrows=(%s %s %s %s)", Input.key_down(keyboard, Input.KEY_SPACE) and "down" or "up", Input.key_down(keyboard, Input.KEY_LEFT) and "L" or "-", Input.key_down(keyboard, Input.KEY_RIGHT) and "R" or "-", Input.key_down(keyboard, Input.KEY_UP) and "U" or "-", Input.key_down(keyboard, Input.KEY_DOWN) and "D" or "-"), 24, 212, 20, 1.0, panel_color ~= nil and panel_color.handle or COLOR_BLUE)
-    ui_font:draw(string.format("pressed key=%d tracked=%d down=%s char=%d counts=(%d/%d) backspace=%d", keyboard.pressed_key, tracked_key, tracked_key_down and "yes" or "no", keyboard.pressed_char, keyboard.num_pressed_keys or 0, keyboard.num_pressed_chars or 0, backspace_presses), 24, 242, 20, 1.0, panel_color ~= nil and panel_color.handle or COLOR_BLUE)
-    ui_font:draw(string.format("mods shift=%s ctrl=%s alt=%s", (Input.key_down(keyboard, Input.KEY_LEFT_SHIFT) or Input.key_down(keyboard, Input.KEY_RIGHT_SHIFT)) and "down" or "up", (Input.key_down(keyboard, Input.KEY_LEFT_CONTROL) or Input.key_down(keyboard, Input.KEY_RIGHT_CONTROL)) and "down" or "up", (Input.key_down(keyboard, Input.KEY_LEFT_ALT) or Input.key_down(keyboard, Input.KEY_RIGHT_ALT)) and "down" or "up"), 24, 272, 20, 1.0, panel_color ~= nil and panel_color.handle or COLOR_BLUE)
-    ui_font:draw(string.format("text: %s_", text_buffer), 24, 302, 20, 1.0, accent_color ~= nil and accent_color.handle or COLOR_DARKBLUE)
-    ui_font:draw(string.format("music(M): %s", (bg_music ~= nil and bg_music:is_playing()) and "playing" or "paused"), 24, 332, 20, 1.0, accent_color ~= nil and accent_color.handle or COLOR_DARKBLUE)
+    ui_font:draw(string.format("constructor=%d load_generation=%d", constructor_runs, load_generation), 24, 170, 20, 1.0, accent_color ~= nil and accent_color.handle or COLOR_DARKBLUE)
+    ui_font:draw(string.format("t = %.2f  mouse=(%d, %d) buttons=(L:%s R:%s M:%s) wheel=%d", time_s, mouse_x, mouse_y, mouse_left and "down" or "up", mouse_right and "down" or "up", mouse_middle and "down" or "up", Input.mouse_wheel(mouse)), 24, 200, 20, 1.0, panel_color ~= nil and panel_color.handle or COLOR_BLUE)
+    ui_font:draw(string.format("kbd space=%s arrows=(%s %s %s %s)", Input.key_down(keyboard, Input.KEY_SPACE) and "down" or "up", Input.key_down(keyboard, Input.KEY_LEFT) and "L" or "-", Input.key_down(keyboard, Input.KEY_RIGHT) and "R" or "-", Input.key_down(keyboard, Input.KEY_UP) and "U" or "-", Input.key_down(keyboard, Input.KEY_DOWN) and "D" or "-"), 24, 230, 20, 1.0, panel_color ~= nil and panel_color.handle or COLOR_BLUE)
+    ui_font:draw(string.format("pressed key=%d tracked=%d down=%s char=%d counts=(%d/%d) backspace=%d", keyboard.pressed_key, tracked_key, tracked_key_down and "yes" or "no", keyboard.pressed_char, keyboard.num_pressed_keys or 0, keyboard.num_pressed_chars or 0, backspace_presses), 24, 260, 20, 1.0, panel_color ~= nil and panel_color.handle or COLOR_BLUE)
+    ui_font:draw(string.format("mods shift=%s ctrl=%s alt=%s", (Input.key_down(keyboard, Input.KEY_LEFT_SHIFT) or Input.key_down(keyboard, Input.KEY_RIGHT_SHIFT)) and "down" or "up", (Input.key_down(keyboard, Input.KEY_LEFT_CONTROL) or Input.key_down(keyboard, Input.KEY_RIGHT_CONTROL)) and "down" or "up", (Input.key_down(keyboard, Input.KEY_LEFT_ALT) or Input.key_down(keyboard, Input.KEY_RIGHT_ALT)) and "down" or "up"), 24, 290, 20, 1.0, panel_color ~= nil and panel_color.handle or COLOR_BLUE)
+    ui_font:draw(string.format("text: %s_", text_buffer), 24, 320, 20, 1.0, accent_color ~= nil and accent_color.handle or COLOR_DARKBLUE)
+    ui_font:draw(string.format("music(M): %s", (bg_music ~= nil and bg_music:is_playing()) and "playing" or "paused"), 24, 350, 20, 1.0, accent_color ~= nil and accent_color.handle or COLOR_DARKBLUE)
     if last_pick_result ~= nil then
       if last_pick_result.hit then
         ui_font:draw(string.format("pick: hit d=%.2f @ (%.2f, %.2f, %.2f)",
@@ -272,9 +297,9 @@ function update(frame)
                                    last_pick_result.point.x,
                                    last_pick_result.point.y,
                                    last_pick_result.point.z),
-                     24, 362, 20, 1.0, accent_color ~= nil and accent_color.handle or COLOR_DARKBLUE)
+                     24, 380, 20, 1.0, accent_color ~= nil and accent_color.handle or COLOR_DARKBLUE)
       else
-        ui_font:draw("pick: miss", 24, 362, 20, 1.0, accent_color ~= nil and accent_color.handle or COLOR_DARKBLUE)
+        ui_font:draw("pick: miss", 24, 380, 20, 1.0, accent_color ~= nil and accent_color.handle or COLOR_DARKBLUE)
       end
     end
   end

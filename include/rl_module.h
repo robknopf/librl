@@ -89,6 +89,14 @@ typedef struct rl_module_frame_command_t {
     } data;
 } rl_module_frame_command_t;
 
+typedef struct rl_module_config_t {
+    int width;
+    int height;
+    int target_fps;
+    unsigned int flags;
+    char title[256];
+} rl_module_config_t;
+
 typedef void (*rl_module_log_fn)(void *user_data, int level, const char *message);
 typedef void (*rl_module_log_source_fn)(void *user_data, int level, const char *source_file,
                                         int source_line, const char *message);
@@ -116,6 +124,8 @@ typedef struct rl_module_host_api_t {
 
 typedef int (*rl_module_init_fn)(const rl_module_host_api_t *host, void **module_state);
 typedef void (*rl_module_deinit_fn)(void *module_state);
+typedef int (*rl_module_get_config_fn)(void *module_state, rl_module_config_t *out_config);
+typedef int (*rl_module_start_fn)(void *module_state);
 typedef int (*rl_module_update_fn)(void *module_state, float dt_seconds);
 
 typedef struct rl_module_api_t {
@@ -123,6 +133,8 @@ typedef struct rl_module_api_t {
     int abi_version;
     rl_module_init_fn init;
     rl_module_deinit_fn deinit;
+    rl_module_get_config_fn get_config;
+    rl_module_start_fn start;
     rl_module_update_fn update;
 } rl_module_api_t;
 
@@ -136,7 +148,7 @@ typedef struct rl_module_entry_t {
     const rl_module_api_t *(*get_api_fn)(void);
 } rl_module_entry_t;
 
-#define RL_MODULE_ABI_VERSION 1
+#define RL_MODULE_ABI_VERSION 2
 
 /*
  * Compile-time module registration helper.
@@ -159,12 +171,14 @@ void rl_module_frame_command(const rl_module_host_api_t *host, const rl_module_f
 int rl_module_api_validate(const rl_module_api_t *api, char *error, size_t error_size);
 int rl_module_init_instance(const rl_module_api_t *api, const rl_module_host_api_t *host, void **module_state,
                            char *error, size_t error_size);
+int rl_module_get_config_instance(const rl_module_api_t *api, void *module_state, rl_module_config_t *out_config);
+int rl_module_start_instance(const rl_module_api_t *api, void *module_state);
 void rl_module_deinit_instance(const rl_module_api_t *api, void *module_state);
 const rl_module_api_t *rl_module_get_api(const char *name);
 int rl_module_init(const char *name, const rl_module_host_api_t *host, const rl_module_api_t **out_api,
                   void **module_state, char *error, size_t error_size);
 
-#define RL_MODULE_DEFINE(GETTER_FN, MODULE_NAME, INIT_FN, DEINIT_FN, UPDATE_FN) \
+#define RL_MODULE_DEFINE(GETTER_FN, MODULE_NAME, INIT_FN, DEINIT_FN, GET_CONFIG_FN, START_FN, UPDATE_FN) \
     const rl_module_api_t *GETTER_FN(void)                                      \
     {                                                                           \
         static const rl_module_api_t api = {                                    \
@@ -172,6 +186,8 @@ int rl_module_init(const char *name, const rl_module_host_api_t *host, const rl_
             RL_MODULE_ABI_VERSION,                                               \
             (INIT_FN),                                                          \
             (DEINIT_FN),                                                        \
+            (GET_CONFIG_FN),                                                    \
+            (START_FN),                                                         \
             (UPDATE_FN)                                                         \
         };                                                                      \
         return &api;                                                            \

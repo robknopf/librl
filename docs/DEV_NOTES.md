@@ -176,17 +176,24 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
 - Current Lua entrypoints:
   - `get_config()`
   - `init()`
+  - `load()`
   - `update(frame)`
+  - `unload()`
+  - `serialize()`
+  - `unserialize(state)`
   - `shutdown()`
 - Ordering in the C example:
   1. host initializes librl and Lua module
   2. host emits `lua.add_path("assets/scripts")`
   3. host emits `lua.do_file("lua_demo.lua")`
-  4. host asks Lua for `get_config()` before `InitWindow()`
+  4. host asks the module for config through `api->get_config`
   5. host creates window / sets target FPS
-  6. host calls Lua `init()`
-  7. host calls Lua `update(frame)` every tick
-  8. host calls Lua `shutdown()` during module teardown
+  6. host calls module `start`
+  7. Lua runs one-time `init()` if present
+  8. Lua runs `load()` if present
+  9. host calls Lua `update(frame)` every tick
+  10. on reload, Lua runs `serialize()` -> `unload()` -> new chunk -> `load()` -> `unserialize(state)`
+  11. on module teardown, Lua runs `unload()` and then `shutdown()`
 - `get_config()` currently supports:
   - `width`
   - `height`
@@ -194,6 +201,11 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
   - `target_fps`
   - `flags`
 - Lua module currently exposes common window flag constants for `get_config()`.
+- Lifecycle intent:
+  - `init()` is one-time constructor-style runtime setup
+  - `load()` / `unload()` are reloadable code-lifetime hooks
+  - `serialize()` / `unserialize(state)` are optional state transfer hooks for HCR
+  - `shutdown()` is one-time destructor-style teardown
 
 ## Current Lua Support Modules
 
@@ -225,9 +237,10 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
   - clarify overflow behavior
   - decide whether the host-local fixed buffer is enough or should become shared infrastructure
   - document the current command drain order and ownership more explicitly
-- Decide how HCR should layer onto the current lifecycle:
-  - keep `init/shutdown` only
-  - or add explicit `load/unload`
+- HCR follow-up after adding `load/unload/serialize/unserialize`:
+  - decide exact persistence rules for script globals vs restored state
+  - decide whether reload should stay in the same VM or move toward new-VM swap later
+  - decide whether unload/load should become mandatory for script modules or remain optional hooks
 - Document the Lua script-facing surface in a smaller user-facing note once the lifecycle and wrappers stabilize.
 
 ## Assets and Credits

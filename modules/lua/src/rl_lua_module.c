@@ -49,6 +49,15 @@
 
 #define RL_LUA_MODULE_MAX_CACHED_RESOURCES 128
 #define RL_LUA_MODULE_MAX_SEARCH_PATHS 16
+#define RL_LUA_MODULE_MAX_EVENT_LISTENERS 128
+
+struct rl_lua_module_state_t;
+typedef struct rl_lua_event_listener_t {
+    bool in_use;
+    int callback_ref;
+    char event_name[128];
+    struct rl_lua_module_state_t *state;
+} rl_lua_event_listener_t;
 /*
  * The Lua module keeps its own small handle caches on top of librl's resource
  * systems for two reasons:
@@ -112,6 +121,7 @@ typedef struct rl_lua_module_state_t {
     rl_lua_cached_resource_t texture_cache[RL_LUA_MODULE_MAX_CACHED_RESOURCES];
     rl_lua_cached_font_t font_cache[RL_LUA_MODULE_MAX_CACHED_RESOURCES];
     rl_lua_cached_color_t color_cache[RL_LUA_MODULE_MAX_CACHED_RESOURCES];
+    rl_lua_event_listener_t event_listeners[RL_LUA_MODULE_MAX_EVENT_LISTENERS];
 } rl_lua_module_state_t;
 
 static void lua_module_on_do_string(void *payload, void *listener_user_data);
@@ -150,6 +160,9 @@ static int lua_module_create_color_binding(lua_State *L);
 static int lua_module_destroy_color_binding(lua_State *L);
 static int lua_module_load_font_binding(lua_State *L);
 static int lua_module_destroy_font_binding(lua_State *L);
+static int lua_module_event_on_binding(lua_State *L);
+static int lua_module_event_off_binding(lua_State *L);
+static int lua_module_event_emit_binding(lua_State *L);
 static int lua_module_require_searcher(lua_State *L);
 static const char *lua_module_debug_source(lua_Debug *ar, char *buffer, size_t buffer_size);
 static int lua_vm_call_update(rl_lua_module_state_t *state, float dt_seconds);
@@ -201,6 +214,8 @@ static void lua_module_push_pick_result(lua_State *L, rl_pick_result_t result);
 static void lua_module_clear_serialized_state(rl_lua_module_state_t *state);
 static int lua_module_prepare_reload(rl_lua_module_state_t *state);
 static int lua_module_activate_script(rl_lua_module_state_t *state);
+static void lua_module_clear_event_listeners(rl_lua_module_state_t *state);
+static void lua_module_dispatch_script_event(void *payload, void *listener_user_data);
 static int rl_lua_module_get_config_impl(void *module_state, rl_module_config_t *out_config);
 static int rl_lua_module_start_impl(void *module_state);
 
@@ -260,6 +275,14 @@ static void lua_vm_set_table_integer(lua_State *L, int index, const char *key, l
     lua_pushstring(L, key);
     lua_pushinteger(L, value);
     lua_settable(L, index < 0 ? index - 2 : index);
+}
+
+static int lua_module_abs_index(lua_State *L, int index)
+{
+    if (index > 0 || index <= LUA_REGISTRYINDEX) {
+        return index;
+    }
+    return lua_gettop(L) + index + 1;
 }
 
 static void lua_vm_set_array_table_integers(lua_State *L, int index, const char *key, const int *values, int count)
@@ -455,6 +478,18 @@ static void lua_vm_bind_log(rl_lua_module_state_t *state)
     lua_pushlightuserdata(L, state);
     lua_pushcclosure(L, lua_module_destroy_font_binding, 1);
     lua_setglobal(L, "destroy_font");
+
+    lua_pushlightuserdata(L, state);
+    lua_pushcclosure(L, lua_module_event_on_binding, 1);
+    lua_setglobal(L, "event_on");
+
+    lua_pushlightuserdata(L, state);
+    lua_pushcclosure(L, lua_module_event_off_binding, 1);
+    lua_setglobal(L, "event_off");
+
+    lua_pushlightuserdata(L, state);
+    lua_pushcclosure(L, lua_module_event_emit_binding, 1);
+    lua_setglobal(L, "event_emit");
 
     lua_pushinteger(L, RL_FONT_DEFAULT);
     lua_setglobal(L, "FONT_DEFAULT");
@@ -813,6 +848,133 @@ static void lua_vm_deinit(rl_lua_vm_t *vm)
     memset(vm, 0, sizeof(*vm));
 }
 
+static bool lua_module_event_listener_matches(lua_State *L,
+                                              rl_lua_event_listener_t *entry,
+                                              const char *event_name,
+                                              int callback_index)
+{
+    bool matches = false;
+
+    if (L == NULL || entry == NULL || !entry->in_use || event_name == NULL) {
+        return false;
+    }
+    if (strcmp(entry->event_name, event_name) != 0) {
+        return false;
+    }
+
+    callback_index = lua_module_abs_index(L, callback_index);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, entry->callback_ref);
+    lua_pushvalue(L, callback_index);
+    matches = lua_rawequal(L, -1, -2) != 0;
+    lua_pop(L, 2);
+    return matches;
+}
+
+static rl_lua_event_listener_t *lua_module_find_event_listener(rl_lua_module_state_t *state,
+                                                               lua_State *L,
+                                                               const char *event_name,
+                                                               int callback_index)
+{
+    int i = 0;
+
+    if (state == NULL || L == NULL || event_name == NULL || event_name[0] == '\0') {
+        return NULL;
+    }
+
+    for (i = 0; i < RL_LUA_MODULE_MAX_EVENT_LISTENERS; i++) {
+        if (!state->event_listeners[i].in_use) {
+            continue;
+        }
+        if (lua_module_event_listener_matches(L, &state->event_listeners[i], event_name, callback_index)) {
+            return &state->event_listeners[i];
+        }
+    }
+
+    return NULL;
+}
+
+static rl_lua_event_listener_t *lua_module_alloc_event_listener(rl_lua_module_state_t *state)
+{
+    int i = 0;
+
+    if (state == NULL) {
+        return NULL;
+    }
+
+    for (i = 0; i < RL_LUA_MODULE_MAX_EVENT_LISTENERS; i++) {
+        if (!state->event_listeners[i].in_use) {
+            return &state->event_listeners[i];
+        }
+    }
+
+    return NULL;
+}
+
+static void lua_module_push_event_payload(lua_State *L, void *payload)
+{
+    if (payload == NULL) {
+        lua_pushnil(L);
+        return;
+    }
+
+    lua_pushstring(L, (const char *)payload);
+}
+
+static void lua_module_dispatch_script_event(void *payload, void *listener_user_data)
+{
+    rl_lua_event_listener_t *entry = (rl_lua_event_listener_t *)listener_user_data;
+    rl_lua_module_state_t *state = NULL;
+    lua_State *L = NULL;
+    const char *err = NULL;
+
+    if (entry == NULL || !entry->in_use) {
+        return;
+    }
+
+    state = entry->state;
+    if (state == NULL || state->vm.state == NULL || entry->callback_ref == LUA_NOREF) {
+        return;
+    }
+
+    L = state->vm.state;
+    lua_rawgeti(L, LUA_REGISTRYINDEX, entry->callback_ref);
+    if (!lua_isfunction(L, -1)) {
+        lua_pop(L, 1);
+        return;
+    }
+
+    lua_module_push_event_payload(L, payload);
+    if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
+        err = lua_tostring(L, -1);
+        rl_module_log(&state->host, RL_MODULE_LOG_ERROR, err != NULL ? err : "lua event listener failed");
+        lua_pop(L, 1);
+    }
+}
+
+static void lua_module_clear_event_listeners(rl_lua_module_state_t *state)
+{
+    int i = 0;
+
+    if (state == NULL) {
+        return;
+    }
+
+    for (i = 0; i < RL_LUA_MODULE_MAX_EVENT_LISTENERS; i++) {
+        rl_lua_event_listener_t *entry = &state->event_listeners[i];
+
+        if (!entry->in_use) {
+            continue;
+        }
+
+        (void)rl_module_event_off(&state->host, entry->event_name, lua_module_dispatch_script_event, entry);
+        if (state->vm.state != NULL && entry->callback_ref != LUA_NOREF) {
+            luaL_unref(state->vm.state, LUA_REGISTRYINDEX, entry->callback_ref);
+        }
+        memset(entry, 0, sizeof(*entry));
+        entry->callback_ref = LUA_NOREF;
+    }
+}
+
 static rl_handle_t lua_module_cached_load(rl_lua_cached_resource_t *cache,
                                           int cache_count,
                                           const char *path,
@@ -1147,6 +1309,7 @@ static void rl_lua_module_deinit_impl(void *module_state)
         (void)rl_module_event_emit(&state->host, "lua.error", (void *)state->vm.last_error);
     }
     (void)rl_module_event_emit(&state->host, "lua.deinit", state);
+    lua_module_clear_event_listeners(state);
     lua_module_cached_destroy(state->model_cache, RL_LUA_MODULE_MAX_CACHED_RESOURCES,
                               rl_model_destroy);
     lua_module_cached_destroy(state->sprite3d_cache, RL_LUA_MODULE_MAX_CACHED_RESOURCES,
@@ -1522,6 +1685,16 @@ static int lua_module_prepare_reload(rl_lua_module_state_t *state)
         return -1;
     }
 
+    /*
+     * TODO: track Lua event listener ownership by script/generation so reload
+     * cleanup can be selective.
+     *
+     * For now we intentionally do not auto-clear all Lua listeners here.
+     * Wiping the module-level listener table on root-script reload breaks
+     * non-reloaded dependency modules that previously registered listeners and
+     * expect them to keep firing. Until ownership tracking exists, listener
+     * bookkeeping is script-managed via explicit event_off() / shutdown.
+     */
     state->script_active = false;
     return 0;
 }
@@ -2157,6 +2330,110 @@ static int lua_module_destroy_font_binding(lua_State *L)
                            lua_module_cached_destroy_font_handle(state->font_cache,
                                                                  RL_LUA_MODULE_MAX_CACHED_RESOURCES,
                                                                  handle));
+    return 1;
+}
+
+static int lua_module_event_on_binding(lua_State *L)
+{
+    rl_lua_module_state_t *state = NULL;
+    const char *event_name = NULL;
+    rl_lua_event_listener_t *entry = NULL;
+    int callback_ref = LUA_NOREF;
+    int rc = -1;
+
+    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    event_name = luaL_checkstring(L, 1);
+    luaL_checktype(L, 2, LUA_TFUNCTION);
+
+    if (state == NULL || event_name == NULL || event_name[0] == '\0') {
+        lua_pushboolean(L, 0);
+        return 1;
+    }
+
+    if (lua_module_find_event_listener(state, L, event_name, 2) != NULL) {
+        lua_pushboolean(L, 1);
+        return 1;
+    }
+
+    entry = lua_module_alloc_event_listener(state);
+    if (entry == NULL) {
+        rl_module_log(&state->host, RL_MODULE_LOG_ERROR, "lua event listener table is full");
+        lua_pushboolean(L, 0);
+        return 1;
+    }
+
+    lua_pushvalue(L, 2);
+    callback_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+
+    memset(entry, 0, sizeof(*entry));
+    entry->in_use = true;
+    entry->callback_ref = callback_ref;
+    entry->state = state;
+    (void)snprintf(entry->event_name, sizeof(entry->event_name), "%s", event_name);
+
+    rc = rl_module_event_on(&state->host, entry->event_name, lua_module_dispatch_script_event, entry);
+    if (rc != 0) {
+        luaL_unref(L, LUA_REGISTRYINDEX, callback_ref);
+        memset(entry, 0, sizeof(*entry));
+        entry->callback_ref = LUA_NOREF;
+        lua_pushboolean(L, 0);
+        return 1;
+    }
+
+    lua_pushboolean(L, 1);
+    return 1;
+}
+
+static int lua_module_event_off_binding(lua_State *L)
+{
+    rl_lua_module_state_t *state = NULL;
+    const char *event_name = NULL;
+    rl_lua_event_listener_t *entry = NULL;
+
+    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    event_name = luaL_checkstring(L, 1);
+    luaL_checktype(L, 2, LUA_TFUNCTION);
+
+    if (state == NULL || event_name == NULL || event_name[0] == '\0') {
+        lua_pushboolean(L, 0);
+        return 1;
+    }
+
+    entry = lua_module_find_event_listener(state, L, event_name, 2);
+    if (entry == NULL) {
+        lua_pushboolean(L, 0);
+        return 1;
+    }
+
+    (void)rl_module_event_off(&state->host, entry->event_name, lua_module_dispatch_script_event, entry);
+    luaL_unref(L, LUA_REGISTRYINDEX, entry->callback_ref);
+    memset(entry, 0, sizeof(*entry));
+    entry->callback_ref = LUA_NOREF;
+
+    lua_pushboolean(L, 1);
+    return 1;
+}
+
+static int lua_module_event_emit_binding(lua_State *L)
+{
+    rl_lua_module_state_t *state = NULL;
+    const char *event_name = NULL;
+    const char *payload = NULL;
+    int rc = -1;
+
+    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    event_name = luaL_checkstring(L, 1);
+    if (!lua_isnoneornil(L, 2)) {
+        payload = luaL_checkstring(L, 2);
+    }
+
+    if (state == NULL || event_name == NULL || event_name[0] == '\0') {
+        lua_pushboolean(L, 0);
+        return 1;
+    }
+
+    rc = rl_module_event_emit(&state->host, event_name, (void *)payload);
+    lua_pushboolean(L, rc == 0);
     return 1;
 }
 

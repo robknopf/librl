@@ -5,10 +5,7 @@
 - Handle system cleanup:
   - finish migrating remaining legacy handle paths to `rl_handle_pool`
 - Lua runtime follow-up:
-  - add a general Lua-facing event API:
-    - `event_on`
-    - `event_off`
-    - `event_emit`
+  - track Lua event listener ownership by script/generation so reload cleanup can be selective
   - decide whether host fallback clear stays in `examples/c/main.c` or Lua fully owns frame clear
   - decide whether window bootstrap should grow beyond `get_config()`:
     - min/max size
@@ -131,6 +128,7 @@
   - unit tests for core subsystems
   - integration tests for desktop and wasm flows
   - regression tests for model loading/animation edge cases
+  - create tests for module/lua
 - Flush out API for bindings:
   - formalize a stable binding-oriented API surface
   - ensure JS/Nim wrappers map cleanly to all intended features

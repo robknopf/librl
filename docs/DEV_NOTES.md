@@ -228,10 +228,10 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
 
 ## Immediate Next Steps
 
-- Add a general Lua-facing event API:
-  - `event_on`
-  - `event_off`
-  - `event_emit`
+- Decide how Lua event listener ownership should work across reloads:
+  - current script-facing API exists: `event_on`, `event_off`, `event_emit`
+  - current temporary policy is script-managed listener teardown
+  - follow-up is ownership/generation tracking so reload cleanup can be selective
 - Decide whether the host fallback `ClearBackground(RAYWHITE)` remains in `main.c` or whether Lua fully owns frame clear.
 - Harden the current frame-command path instead of redesigning it from scratch:
   - clarify overflow behavior
@@ -241,6 +241,7 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
   - decide exact persistence rules for script globals vs restored state
   - decide whether reload should stay in the same VM or move toward new-VM swap later
   - decide whether unload/load should become mandatory for script modules or remain optional hooks
+  - decide whether event listeners should remain script-managed or become auto-cleaned once listener ownership metadata exists
 - Document the Lua script-facing surface in a smaller user-facing note once the lifecycle and wrappers stabilize.
 
 ## Assets and Credits

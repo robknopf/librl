@@ -12,6 +12,8 @@ typedef struct test_event_binding_t {
 
 static test_event_binding_t g_event_bindings[32];
 static int g_event_binding_count = 0;
+static int g_test_event_count = 0;
+static char g_last_test_payload[128];
 
 static void test_log(void *user_data, int level, const char *message)
 {
@@ -30,6 +32,22 @@ static void test_event_counter(void *payload, void *user_data)
     if (counter != NULL) {
         (*counter)++;
     }
+}
+
+static void test_capture_payload(void *payload, void *user_data)
+{
+    int *counter = (int *)user_data;
+    const char *text = (const char *)payload;
+
+    if (counter != NULL) {
+        (*counter)++;
+    }
+    if (text == NULL) {
+        g_last_test_payload[0] = '\0';
+        return;
+    }
+
+    (void)snprintf(g_last_test_payload, sizeof(g_last_test_payload), "%s", text);
 }
 
 static int host_event_on(void *host_user_data, const char *event_name, rl_module_event_listener_fn listener,
@@ -112,6 +130,23 @@ int main(void)
     const char *mount_point = "lua_module_test_cache";
     const char *script_path = "scripts/rl_lua_module_test_script.lua";
     const unsigned char script_data[] = "local y = 3 + 4\n";
+    const char *event_setup_script =
+        "event_count = 0\n"
+        "event_payload = nil\n"
+        "event_listener = function(payload)\n"
+        "  event_count = event_count + 1\n"
+        "  event_payload = payload\n"
+        "end\n"
+        "assert(event_on('test.event', event_listener))\n";
+    const char *event_assert_script =
+        "assert(event_count == 1)\n"
+        "assert(event_payload == 'from_host')\n"
+        "assert(event_off('test.event', event_listener))\n";
+    const char *event_emit_script =
+        "assert(event_emit('lua.test.emit', 'from_lua'))\n";
+    const char *event_post_off_assert_script =
+        "assert(event_count == 1)\n"
+        "assert(event_payload == 'from_host')\n";
 
     api = rl_lua_module_get_api();
     if (api == NULL) {
@@ -137,6 +172,11 @@ int main(void)
     rc = host_event_on(NULL, "lua.error", test_event_counter, &lua_error_count);
     if (rc != 0) {
         fprintf(stderr, "failed to subscribe to lua.error\n");
+        return 1;
+    }
+    rc = host_event_on(NULL, "lua.test.emit", test_capture_payload, &g_test_event_count);
+    if (rc != 0) {
+        fprintf(stderr, "failed to subscribe to lua.test.emit\n");
         return 1;
     }
 
@@ -190,6 +230,54 @@ int main(void)
         return 1;
     }
 
+    rc = host_event_emit(NULL, "lua.do_string", (void *)event_setup_script);
+    if (rc != 0) {
+        fprintf(stderr, "failed to set up lua event listener script\n");
+        rl_module_deinit_instance(api, module_state);
+        fileio_deinit();
+        return 1;
+    }
+
+    rc = host_event_emit(NULL, "test.event", "from_host");
+    if (rc != 0) {
+        fprintf(stderr, "failed to emit host test.event\n");
+        rl_module_deinit_instance(api, module_state);
+        fileio_deinit();
+        return 1;
+    }
+
+    rc = host_event_emit(NULL, "lua.do_string", (void *)event_assert_script);
+    if (rc != 0) {
+        fprintf(stderr, "failed to assert lua event delivery\n");
+        rl_module_deinit_instance(api, module_state);
+        fileio_deinit();
+        return 1;
+    }
+
+    rc = host_event_emit(NULL, "test.event", "after_off");
+    if (rc != 0) {
+        fprintf(stderr, "failed to emit host test.event after off\n");
+        rl_module_deinit_instance(api, module_state);
+        fileio_deinit();
+        return 1;
+    }
+
+    rc = host_event_emit(NULL, "lua.do_string", (void *)event_post_off_assert_script);
+    if (rc != 0) {
+        fprintf(stderr, "failed to assert lua event_off behavior\n");
+        rl_module_deinit_instance(api, module_state);
+        fileio_deinit();
+        return 1;
+    }
+
+    rc = host_event_emit(NULL, "lua.do_string", (void *)event_emit_script);
+    if (rc != 0) {
+        fprintf(stderr, "failed to exercise lua event_emit\n");
+        rl_module_deinit_instance(api, module_state);
+        fileio_deinit();
+        return 1;
+    }
+
     rc = api->update(module_state, 1.0f / 60.0f);
     if (rc != 0) {
         fprintf(stderr, "module api update failed\n");
@@ -203,6 +291,7 @@ int main(void)
     fileio_deinit();
     (void)host_event_off(NULL, "lua.ok", test_event_counter, &lua_ok_count);
     (void)host_event_off(NULL, "lua.error", test_event_counter, &lua_error_count);
+    (void)host_event_off(NULL, "lua.test.emit", test_capture_payload, &g_test_event_count);
 
     if (lua_ok_count < 2) {
         fprintf(stderr, "expected lua.ok event at least twice\n");
@@ -214,6 +303,14 @@ int main(void)
     }
     if (module_log_count < 2) {
         fprintf(stderr, "expected module logger to be called at least twice\n");
+        return 1;
+    }
+    if (g_test_event_count != 1) {
+        fprintf(stderr, "expected lua.test.emit exactly once\n");
+        return 1;
+    }
+    if (strcmp(g_last_test_payload, "from_lua") != 0) {
+        fprintf(stderr, "unexpected lua.test.emit payload: %s\n", g_last_test_payload);
         return 1;
     }
 

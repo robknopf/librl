@@ -283,6 +283,7 @@ Current Lua module responsibilities:
   - stateful music control
   - camera creation/update/activation
   - model/sprite picking
+  - immediate event pub/sub (`event_on`, `event_off`, `event_emit`)
   - logging with source-aware file/line reporting
 
 Current status notes:
@@ -292,6 +293,9 @@ Current status notes:
   - the current reference host in `examples/c/main.c` buffers and drains them each tick
 - The Lua module also keeps its own small resource/color caches so repeated script requests can reuse the same script-visible handles across HCR/reload within the same module lifetime.
 - For HCR-friendly scripts, `load()` should generally reacquire cached handles while `unload()` removes side effects and script-local references rather than aggressively destroying shared cached resources.
+- Lua scripts can subscribe and emit through the host event bus with `event_on`, `event_off`, and `event_emit`.
+- Current event payload support is intentionally narrow: Lua currently treats event payloads as `string` or `nil`.
+- Current reload caveat: Lua event listeners are not yet tracked by script/generation, so listener teardown is currently script-managed rather than auto-pruned on reload.
 - Current command set is intentionally small:
   - clear background
   - draw text
@@ -393,6 +397,10 @@ Notes:
 
 The Lua module currently injects a small set of constants/globals, including:
 
+- event helpers:
+  - `event_on`
+  - `event_off`
+  - `event_emit`
 - colors:
   - `COLOR_WHITE`
   - `COLOR_BLACK`

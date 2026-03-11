@@ -12,6 +12,7 @@
 #include "path/path.h"
 
 #define MAX_FONTS 255
+#define RL_FONT_DEFAULT_INDEX 1u
 
 typedef struct
 {
@@ -28,7 +29,7 @@ static uint16_t rl_font_free_indices[MAX_FONTS];
 static uint16_t rl_font_generations[MAX_FONTS];
 static unsigned char rl_font_occupied[MAX_FONTS];
 
-const rl_handle_t RL_FONT_DEFAULT = 0;
+const rl_handle_t RL_FONT_DEFAULT = RL_HANDLE_MAKE(RL_FONT_DEFAULT_INDEX, 1u);
 
 static int rl_font_size_key(float font_size)
 {
@@ -37,36 +38,23 @@ static int rl_font_size_key(float font_size)
 
 static rl_font_entry_t *rl_font_get_entry(rl_handle_t handle)
 {
-    if (handle == RL_FONT_DEFAULT) {
-        if (!rl_fonts[RL_FONT_DEFAULT].in_use) {
-            log_error("Default font handle is unavailable");
-            return NULL;
-        }
-        return &rl_fonts[RL_FONT_DEFAULT];
-    }
+    uint16_t index = 0;
 
-    {
-        uint16_t index = 0;
-        if (!rl_handle_pool_resolve(&rl_font_pool, handle, &index)) {
-            log_error("Invalid font handle (%u)", (unsigned int)handle);
-            return NULL;
-        }
-        if (!rl_fonts[index].in_use) {
-            log_error("Stale font handle (%u)", (unsigned int)handle);
-            return NULL;
-        }
-        return &rl_fonts[index];
+    if (!rl_handle_pool_resolve(&rl_font_pool, handle, &index)) {
+        log_error("Invalid font handle (%u)", (unsigned int)handle);
+        return NULL;
     }
+    if (!rl_fonts[index].in_use) {
+        log_error("Stale font handle (%u)", (unsigned int)handle);
+        return NULL;
+    }
+    return &rl_fonts[index];
 }
 
 static bool rl_font_handle_to_index(rl_handle_t handle, uint16_t *index_out)
 {
     if (index_out == NULL) {
         return false;
-    }
-    if (handle == RL_FONT_DEFAULT) {
-        *index_out = 0;
-        return true;
     }
     if (!rl_handle_pool_resolve(&rl_font_pool, handle, index_out)) {
         return false;
@@ -76,7 +64,7 @@ static bool rl_font_handle_to_index(rl_handle_t handle, uint16_t *index_out)
 
 static rl_handle_t rl_font_find(const char *normalized_path, int size_key)
 {
-    for (uint16_t i = 1; i < MAX_FONTS; i++)
+    for (uint16_t i = 2; i < MAX_FONTS; i++)
     {
         if (!rl_fonts[i].in_use) {
             continue;
@@ -198,7 +186,7 @@ Font rl_font_get(rl_handle_t handle)
     rl_font_entry_t *entry = rl_font_get_entry(handle);
     if (entry == NULL)
     {
-        return rl_fonts[RL_FONT_DEFAULT].font;
+        return rl_fonts[RL_FONT_DEFAULT_INDEX].font;
     }
 
     return entry->font;
@@ -225,6 +213,8 @@ void rl_font_set(rl_handle_t handle, Font font)
 
 void rl_font_init(void)
 {
+    uint16_t default_index = 0;
+
     rl_handle_pool_init(&rl_font_pool,
                         MAX_FONTS,
                         rl_font_free_indices,
@@ -240,6 +230,15 @@ void rl_font_init(void)
         rl_fonts[i].path[0] = '\0';
     }
 
+    if (!rl_handle_pool_resolve(&rl_font_pool, RL_FONT_DEFAULT, &default_index)) {
+        rl_handle_t default_handle = rl_handle_pool_alloc(&rl_font_pool);
+        if (default_handle != RL_FONT_DEFAULT ||
+            !rl_handle_pool_resolve(&rl_font_pool, default_handle, &default_index)) {
+            log_error("Failed to initialize default font handle");
+            return;
+        }
+    }
+
     rl_font_set(RL_FONT_DEFAULT, GetFontDefault());
 }
 
@@ -247,7 +246,7 @@ void rl_font_deinit(void)
 {
     int fonts_freed = 0;
 
-    for (uint16_t i = 1; i < MAX_FONTS; i++)
+    for (uint16_t i = 2; i < MAX_FONTS; i++)
     {
         if (!rl_fonts[i].in_use) {
             continue;
@@ -261,12 +260,11 @@ void rl_font_deinit(void)
         fonts_freed++;
     }
 
-    // Keep default slot as raylib-owned font (do not unload it here).
-    rl_fonts[RL_FONT_DEFAULT].in_use = false;
-    rl_fonts[RL_FONT_DEFAULT].font = (Font){0};
-    rl_fonts[RL_FONT_DEFAULT].ref_count = 0;
-    rl_fonts[RL_FONT_DEFAULT].size_key = 0;
-    rl_fonts[RL_FONT_DEFAULT].path[0] = '\0';
+    rl_fonts[RL_FONT_DEFAULT_INDEX].in_use = false;
+    rl_fonts[RL_FONT_DEFAULT_INDEX].font = (Font){0};
+    rl_fonts[RL_FONT_DEFAULT_INDEX].ref_count = 0;
+    rl_fonts[RL_FONT_DEFAULT_INDEX].size_key = 0;
+    rl_fonts[RL_FONT_DEFAULT_INDEX].path[0] = '\0';
     rl_handle_pool_reset(&rl_font_pool);
 
     log_info("rl_font_deinit: Freed %d fonts", fonts_freed);

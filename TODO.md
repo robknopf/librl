@@ -2,8 +2,6 @@
 
 ## Active Next
 
-- Handle system cleanup:
-  - finish migrating remaining legacy handle paths to `rl_handle_pool`
 - Lua runtime follow-up:
   - track Lua event listener ownership by script/generation so reload cleanup can be selective
   - decide whether host fallback clear stays in `examples/c/main.c` or Lua fully owns frame clear

@@ -64,6 +64,31 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
   - click SFX on left mouse press: `assets/sounds/click_004.ogg`
 - Cleanup order in example is explicit: destroy handles, then `rl_deinit()`, then `CloseWindow()`.
 
+## Raylib Loader Split
+
+- Not all raylib resource loaders honor `SetLoadFileDataCallback(...)` the same way.
+- In this repo, callback-aware resource paths are:
+  - textures:
+    - `rl_texture_create()` -> `LoadTexture()`
+    - raylib texture loading uses `LoadFileData()` through the callback-aware core path
+  - models:
+    - `rl_model_create()` -> `LoadModel()` / `LoadModelAnimations()`
+    - raylib model loading uses callback-aware `LoadFileData()` internally
+  - fonts:
+    - `rl_font_create()` -> `LoadFileData()` -> `LoadFontFromMemory()`
+    - this goes through the callback-aware core file loader before font decode
+  - music:
+    - `rl_music_create()` -> `LoadFileData()` -> `LoadMusicStreamFromMemory()`
+    - this also goes through the callback-aware core file loader first
+- Non-callback / bespoke path:
+  - sounds:
+    - `rl_sound_create()` -> `LoadSound()`
+    - in the vendored raylib, `raudio.c` uses its own private `LoadFileData()` helper that falls back to `fopen()` directly
+    - because of that, `rl_sound_create()` pre-caches the file with `rl_loader_cache_file()` before calling `LoadSound()`
+- Practical implication:
+  - if a file-backed resource mysteriously ignores the loader callback path, check whether raylib is using a subsystem-local loader instead of the callback-aware `rcore` path
+  - sound loading is the known case today
+
 ## Web/Vite Workflow Notes
 
 - Web examples import from `/lib/librl.js`; if `make clean` removes generated outputs while Vite is running, browser requests can fail until rebuild completes.

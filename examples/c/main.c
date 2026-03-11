@@ -254,7 +254,7 @@ int main(void) {
                      module_error, sizeof(module_error)) == 0) {
     (void)rl_event_on("lua.ready", on_lua_ready, NULL);
     (void)rl_event_on("lua.error", on_lua_error, NULL);
-    (void)rl_event_emit("lua.add_path", "assets/scripts");
+    (void)rl_event_emit("lua.add_path", "assets/scripts/lua");
     (void)rl_event_emit("lua.do_file", "lua_demo.lua");
     if (rl_module_get_config_instance(lua_module.api, lua_module.state,
                                       &script_config) != 0) {

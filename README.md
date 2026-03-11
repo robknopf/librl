@@ -141,7 +141,7 @@ on shutdown.
 For the current Lua-driven workflow, see:
 
 - [examples/c/main.c](/home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/c/main.c)
-- [examples/www/public/assets/scripts/lua_demo.lua](/home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/www/public/assets/scripts/lua_demo.lua)
+- [examples/www/public/assets/scripts/lua/lua_demo.lua](/home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/www/public/assets/scripts/lua/lua_demo.lua)
 
 ## Test
 

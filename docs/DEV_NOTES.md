@@ -184,7 +184,7 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
   - `shutdown()`
 - Ordering in the C example:
   1. host initializes librl and Lua module
-  2. host emits `lua.add_path("assets/scripts")`
+  2. host emits `lua.add_path("assets/scripts/lua")`
   3. host emits `lua.do_file("lua_demo.lua")`
   4. host asks the module for config through `api->get_config`
   5. host creates window / sets target FPS
@@ -209,7 +209,7 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
 
 ## Current Lua Support Modules
 
-- Wrapper modules now exist under `examples/www/public/assets/scripts/`:
+- Lua modules now exist under `examples/www/public/assets/scripts/lua/`:
   - `color.lua`
   - `model.lua`
   - `texture.lua`

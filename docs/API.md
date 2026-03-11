@@ -245,7 +245,8 @@ void run_lua_module_example(void)
     }
 
     (void)rl_event_emit("lua.do_string", "print('hello from lua module')");
-    (void)rl_event_emit("lua.do_file", "scripts/startup.lua");
+    (void)rl_event_emit("lua.add_path", "assets/scripts/lua");
+    (void)rl_event_emit("lua.do_file", "startup.lua");
 
     if (rl_module_get_config_instance(lua.api, lua.state, &config) == 0) {
         /* host can now create the window/runtime from config */
@@ -268,6 +269,7 @@ Notes:
 
 - Events are immediate/synchronous today (no queue yet).
 - `lua.do_file` in current Lua module uses `fileio_read(...)`, so file paths should be loader/fileio-relative.
+- In the current example host, the Lua search root is `assets/scripts/lua`, so entry scripts are emitted relative to that path.
 - Lua module is built as a separate archive (`modules/lua/lib/librl_lua.a` / `.wasm.a`) and linked by the host app.
 - The module host API also includes `frame_command`, which is the current typed path for transient draw/audio commands emitted by scripting modules.
 
@@ -441,6 +443,8 @@ The example Lua runtime now layers small object-style wrappers on top of the fla
 - `music.lua`
 - `camera3d.lua`
 - `font.lua`
+
+These currently live under `examples/www/public/assets/scripts/lua/`.
 
 These are not part of the C ABI, but they are the current recommended Lua-side usage pattern.
 

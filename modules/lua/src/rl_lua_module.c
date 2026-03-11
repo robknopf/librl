@@ -26,6 +26,7 @@ typedef struct rl_lua_module_state_t {
 static void lua_module_on_do_string(void *payload, void *listener_user_data);
 static void lua_module_on_do_file(void *payload, void *listener_user_data);
 static int lua_module_log_binding(lua_State *L);
+static const char *lua_module_debug_source(lua_Debug *ar, char *buffer, size_t buffer_size);
 
 static int parse_lua_log_level(lua_State *L, int idx, int *out_is_level)
 {
@@ -110,7 +111,7 @@ static void lua_vm_bind_log(rl_lua_module_state_t *state)
 static int lua_vm_exec_file(rl_lua_vm_t *vm, const char *filename)
 {
     fileio_read_result_t read_result = {0};
-    const char *chunk_name = NULL;
+    char chunk_name[512];
     int rc = 0;
     const char *err = NULL;
 
@@ -128,7 +129,7 @@ static int lua_vm_exec_file(rl_lua_vm_t *vm, const char *filename)
         return -1;
     }
 
-    chunk_name = filename;
+    (void)snprintf(chunk_name, sizeof(chunk_name), "@%s", filename);
     rc = luaL_loadbuffer(vm->state, (const char *)read_result.data, read_result.size, chunk_name);
     if (rc == LUA_OK) {
         rc = lua_pcall(vm->state, 0, LUA_MULTRET, 0);
@@ -248,10 +249,50 @@ static int rl_lua_module_update_impl(void *module_state, float dt_seconds)
     return 0;
 }
 
+static const char *lua_module_debug_source(lua_Debug *ar, char *buffer, size_t buffer_size)
+{
+    const char *source = NULL;
+    size_t len = 0;
+
+    if (ar == NULL || buffer == NULL || buffer_size == 0) {
+        return "lua";
+    }
+
+    buffer[0] = '\0';
+
+    source = ar->source;
+    if (source == NULL || source[0] == '\0') {
+        source = ar->short_src;
+    }
+    if (source == NULL || source[0] == '\0') {
+        return "lua";
+    }
+
+    if (source[0] == '@') {
+        source += 1;
+    } else if (strncmp(source, "[string \"", 9) == 0) {
+        source += 9;
+        len = strlen(source);
+        if (len >= 2 && source[len - 2] == '"' && source[len - 1] == ']') {
+            len -= 2;
+        }
+        if (len >= buffer_size) {
+            len = buffer_size - 1;
+        }
+        memcpy(buffer, source, len);
+        buffer[len] = '\0';
+        return buffer;
+    }
+
+    (void)snprintf(buffer, buffer_size, "%s", source);
+    return buffer;
+}
+
 static int lua_module_log_binding(lua_State *L)
 {
     rl_lua_module_state_t *state = NULL;
     lua_Debug ar;
+    char source_file_buffer[512];
     const char *source_file = "lua";
     int source_line = 0;
     int level = RL_MODULE_LOG_INFO;
@@ -282,9 +323,7 @@ static int lua_module_log_binding(lua_State *L)
 
     if (lua_getstack(L, 1, &ar) != 0) {
         if (lua_getinfo(L, "Sl", &ar) != 0) {
-            if (ar.short_src[0] != '\0') {
-                source_file = ar.short_src;
-            }
+            source_file = lua_module_debug_source(&ar, source_file_buffer, sizeof(source_file_buffer));
             if (ar.currentline > 0) {
                 source_line = ar.currentline;
             }

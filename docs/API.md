@@ -11,7 +11,7 @@ This document summarizes the current public C API exposed by `include/*.h`.  As 
 ## Resource Lifetime Semantics
 
 - Not all handle-backed resources use the same storage/lifetime policy.
-- Colors are lightweight value handles (RGBA) and are not refcounted shared GPU assets.
+- Colors are lightweight pooled value handles (RGBA) and are not refcounted shared GPU assets.
 - Textures are shared GPU assets with path-based deduplication and internal refcounting.
 - Music streams are handle-backed runtime resources; each handle owns its decoded stream/data until destroyed.
 - Sounds are handle-backed runtime resources intended for short one-shot SFX.
@@ -57,6 +57,13 @@ Main responsibilities:
 
 - Built-in color handles (e.g. `RL_COLOR_WHITE`, `RL_COLOR_BLACK`, etc.)
 - Create/destroy runtime color handles
+
+Notes:
+
+- Built-in color constants are stable `rl_handle_t` values, not raw array indices.
+- Color handles resolve through the shared handle-pool machinery and get stale-handle protection after destroy.
+- Built-in colors are global singleton handles and are not caller-owned; destroying them is invalid.
+- Runtime colors created with `rl_color_create(...)` are lightweight value handles, not shared/refcounted assets.
 
 ## Fonts (`include/rl_font.h`)
 

@@ -5,7 +5,6 @@
 - Handle system cleanup:
   - finish migrating remaining legacy handle paths to `rl_handle_pool`
   - likely remaining holdouts:
-    - colors (`src/rl_color.c`)
     - model asset IDs / asset-instance split (`src/rl_model.c`)
   - validate stale-handle behavior consistently across destroy/set/get APIs
 - Lua runtime follow-up:

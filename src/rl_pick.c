@@ -20,11 +20,17 @@ static rl_pick_result_t rl_pick_result_empty(void)
     return result;
 }
 
-static Matrix rl_pick_model_transform(float x, float y, float z, float scale)
+static Matrix rl_pick_model_transform(float x, float y, float z, float scale,
+                                      float rotation_x, float rotation_y, float rotation_z)
 {
     Matrix translation = MatrixTranslate(x, y, z);
+    Matrix rotation = MatrixRotateXYZ((Vector3){
+        rotation_x * DEG2RAD,
+        rotation_y * DEG2RAD,
+        rotation_z * DEG2RAD
+    });
     Matrix scaling = MatrixScale(scale, scale, scale);
-    return MatrixMultiply(scaling, translation);
+    return MatrixMultiply(MatrixMultiply(scaling, rotation), translation);
 }
 
 static rl_pick_result_t rl_pick_from_ray_collision(RayCollision collision)
@@ -49,7 +55,10 @@ rl_pick_result_t rl_pick_model(rl_handle_t camera,
                                float position_x,
                                float position_y,
                                float position_z,
-                               float scale)
+                               float scale,
+                               float rotation_x,
+                               float rotation_y,
+                               float rotation_z)
 {
     Camera3D camera_data = {0};
     Ray ray = {0};
@@ -64,7 +73,8 @@ rl_pick_result_t rl_pick_model(rl_handle_t camera,
     }
 
     ray = GetMouseRay((Vector2){mouse_x, mouse_y}, camera_data);
-    transform = rl_pick_model_transform(position_x, position_y, position_z, scale);
+    transform = rl_pick_model_transform(position_x, position_y, position_z, scale,
+                                        rotation_x, rotation_y, rotation_z);
     if (!rl_model_get_ray_collision_ex(model,
                                        ray,
                                        transform,
@@ -99,9 +109,14 @@ bool rl_pick_model_to_scratch(rl_handle_t camera,
                               float position_x,
                               float position_y,
                               float position_z,
-                              float scale)
+                              float scale,
+                              float rotation_x,
+                              float rotation_y,
+                              float rotation_z)
 {
-    rl_pick_result_t result = rl_pick_model(camera, model, mouse_x, mouse_y, position_x, position_y, position_z, scale);
+    rl_pick_result_t result = rl_pick_model(camera, model, mouse_x, mouse_y,
+                                            position_x, position_y, position_z,
+                                            scale, rotation_x, rotation_y, rotation_z);
 
     rl_scratch_set_vector3(result.point.x, result.point.y, result.point.z);
     rl_scratch_set_vector4(result.normal.x, result.normal.y, result.normal.z, result.distance);

@@ -42,11 +42,12 @@ INCLUDES := -I$(ROOT)/include -I$(ROOT)/deps/wgutils -I$(ROOT)/deps/libraylib/in
 MODULE_DESKTOP_ARCHIVES :=
 MODULE_WASM_ARCHIVES :=
 ifeq ($(USES_MODULE_LUA),1)
+INCLUDES += -I$(MODULE_LUA_DIR)/include
 MODULE_DESKTOP_ARCHIVES += $(MODULE_LUA_DESKTOP_ARCHIVE) $(MODULE_LUA_LIBLUA_DESKTOP_ARCHIVE)
 MODULE_WASM_ARCHIVES += $(MODULE_LUA_WASM_ARCHIVE) $(MODULE_LUA_LIBLUA_WASM_ARCHIVE)
 endif
-LIBS := -L$(ROOT)/lib -lrl $(MODULE_DESKTOP_ARCHIVES) -lcurl -lm -lpthread -ldl -lX11
-WASM_LIBS := $(ROOT)/lib/librl.wasm.a $(MODULE_WASM_ARCHIVES) -lm
+LIBS := -L$(ROOT)/lib $(MODULE_DESKTOP_ARCHIVES) -lrl -lcurl -lm -lpthread -ldl -lX11
+WASM_LIBS := $(MODULE_WASM_ARCHIVES) $(ROOT)/lib/librl.wasm.a -lm
 
 .PHONY: all deps ensure_deps desktop run wasm wasm-debug clean FORCE
 

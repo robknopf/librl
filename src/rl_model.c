@@ -639,10 +639,17 @@ bool rl_model_animate(rl_handle_t handle, float delta_seconds)
 }
 
 RL_KEEP
-void rl_model_draw(rl_handle_t handle, float position_x, float position_y, float position_z, float scale, rl_handle_t tint)
+void rl_model_draw(rl_handle_t handle,
+                   float position_x, float position_y, float position_z,
+                   float scale,
+                   float rotation_x, float rotation_y, float rotation_z,
+                   rl_handle_t tint)
 {
     rl_model_instance_t *instance = rl_model_instance_get(handle);
     rl_model_asset_t *asset = NULL;
+    Quaternion rotation_quat = {0};
+    Vector3 rotation_axis = {0.0f, 1.0f, 0.0f};
+    float rotation_angle = 0.0f;
 
     if (instance == NULL) {
         log_error("Invalid model handle (%d)", handle);
@@ -655,7 +662,17 @@ void rl_model_draw(rl_handle_t handle, float position_x, float position_y, float
         return;
     }
 
-    DrawModel(*(asset->model), (Vector3){position_x, position_y, position_z}, scale, rl_color_get(tint));
+    rotation_quat = QuaternionFromEuler(rotation_x * DEG2RAD,
+                                        rotation_y * DEG2RAD,
+                                        rotation_z * DEG2RAD);
+    QuaternionToAxisAngle(rotation_quat, &rotation_axis, &rotation_angle);
+
+    DrawModelEx(*(asset->model),
+                (Vector3){position_x, position_y, position_z},
+                rotation_axis,
+                rotation_angle * RAD2DEG,
+                (Vector3){scale, scale, scale},
+                rl_color_get(tint));
 }
 
 bool rl_model_get_ray_collision_ex(rl_handle_t handle,

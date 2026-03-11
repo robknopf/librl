@@ -1,11 +1,14 @@
 #include "rl_lua_module.h"
 #include "rl_color.h"
+#include "rl_camera3d.h"
 #include "rl_font.h"
 #include "rl.h"
 #include "rl_model.h"
 #include "rl_music.h"
+#include "rl_pick.h"
 #include "rl_sound.h"
 #include "rl_sprite3d.h"
+#include "rl_texture.h"
 #include "fileio/fileio.h"
 #include "path/path.h"
 
@@ -20,6 +23,29 @@
 #ifndef LUA_OK
 #define LUA_OK 0
 #endif
+
+#ifndef RL_LUA_CAMERA_PERSPECTIVE
+#define RL_LUA_CAMERA_PERSPECTIVE 0
+#endif
+
+#ifndef RL_LUA_CAMERA_ORTHOGRAPHIC
+#define RL_LUA_CAMERA_ORTHOGRAPHIC 1
+#endif
+
+#define RL_LUA_FLAG_VSYNC_HINT 0x00000040
+#define RL_LUA_FLAG_FULLSCREEN_MODE 0x00000002
+#define RL_LUA_FLAG_WINDOW_RESIZABLE 0x00000004
+#define RL_LUA_FLAG_WINDOW_UNDECORATED 0x00000008
+#define RL_LUA_FLAG_WINDOW_HIDDEN 0x00000080
+#define RL_LUA_FLAG_WINDOW_MINIMIZED 0x00000200
+#define RL_LUA_FLAG_WINDOW_MAXIMIZED 0x00000400
+#define RL_LUA_FLAG_WINDOW_UNFOCUSED 0x00000800
+#define RL_LUA_FLAG_WINDOW_TOPMOST 0x00001000
+#define RL_LUA_FLAG_WINDOW_ALWAYS_RUN 0x00000100
+#define RL_LUA_FLAG_WINDOW_TRANSPARENT 0x00000010
+#define RL_LUA_FLAG_WINDOW_HIGHDPI 0x00002000
+#define RL_LUA_FLAG_MSAA_4X_HINT 0x00000020
+#define RL_LUA_FLAG_INTERLACED_HINT 0x00010000
 
 #define RL_LUA_MODULE_MAX_CACHED_RESOURCES 128
 #define RL_LUA_MODULE_MAX_SEARCH_PATHS 16
@@ -52,6 +78,7 @@ typedef struct rl_lua_module_state_t {
     rl_lua_cached_resource_t model_cache[RL_LUA_MODULE_MAX_CACHED_RESOURCES];
     rl_lua_cached_resource_t music_cache[RL_LUA_MODULE_MAX_CACHED_RESOURCES];
     rl_lua_cached_resource_t sound_cache[RL_LUA_MODULE_MAX_CACHED_RESOURCES];
+    rl_lua_cached_resource_t texture_cache[RL_LUA_MODULE_MAX_CACHED_RESOURCES];
     rl_lua_cached_font_t font_cache[RL_LUA_MODULE_MAX_CACHED_RESOURCES];
 } rl_lua_module_state_t;
 
@@ -60,13 +87,26 @@ static void lua_module_on_do_file(void *payload, void *listener_user_data);
 static void lua_module_on_add_path(void *payload, void *listener_user_data);
 static int lua_module_log_binding(lua_State *L);
 static int lua_module_clear_binding(lua_State *L);
+static int lua_module_create_camera3d_binding(lua_State *L);
+static int lua_module_set_camera3d_binding(lua_State *L);
+static int lua_module_set_active_camera3d_binding(lua_State *L);
+static int lua_module_get_active_camera3d_binding(lua_State *L);
+static int lua_module_pick_model_binding(lua_State *L);
+static int lua_module_pick_sprite3d_binding(lua_State *L);
 static int lua_module_draw_text_binding(lua_State *L);
 static int lua_module_draw_sprite3d_binding(lua_State *L);
 static int lua_module_draw_model_binding(lua_State *L);
+static int lua_module_draw_texture_binding(lua_State *L);
 static int lua_module_load_model_binding(lua_State *L);
+static int lua_module_destroy_model_binding(lua_State *L);
 static int lua_module_load_sprite3d_binding(lua_State *L);
+static int lua_module_destroy_sprite3d_binding(lua_State *L);
 static int lua_module_load_music_binding(lua_State *L);
+static int lua_module_destroy_music_binding(lua_State *L);
 static int lua_module_load_sound_binding(lua_State *L);
+static int lua_module_destroy_sound_binding(lua_State *L);
+static int lua_module_load_texture_binding(lua_State *L);
+static int lua_module_destroy_texture_binding(lua_State *L);
 static int lua_module_play_music_binding(lua_State *L);
 static int lua_module_pause_music_binding(lua_State *L);
 static int lua_module_stop_music_binding(lua_State *L);
@@ -75,9 +115,13 @@ static int lua_module_set_music_volume_binding(lua_State *L);
 static int lua_module_is_music_playing_binding(lua_State *L);
 static int lua_module_play_sound_binding(lua_State *L);
 static int lua_module_load_font_binding(lua_State *L);
+static int lua_module_destroy_font_binding(lua_State *L);
 static int lua_module_require_searcher(lua_State *L);
 static const char *lua_module_debug_source(lua_Debug *ar, char *buffer, size_t buffer_size);
 static int lua_vm_call_update(rl_lua_module_state_t *state, float dt_seconds);
+static int lua_vm_call_init(rl_lua_module_state_t *state);
+static int lua_vm_call_get_config(rl_lua_module_state_t *state, rl_lua_script_config_t *out_config);
+static int lua_vm_call_shutdown(rl_lua_module_state_t *state);
 static rl_handle_t lua_module_cached_load(rl_lua_cached_resource_t *cache,
                                           int cache_count,
                                           const char *path,
@@ -85,18 +129,26 @@ static rl_handle_t lua_module_cached_load(rl_lua_cached_resource_t *cache,
 static void lua_module_cached_destroy(rl_lua_cached_resource_t *cache,
                                       int cache_count,
                                       void (*destroy_fn)(rl_handle_t handle));
+static bool lua_module_cached_destroy_handle(rl_lua_cached_resource_t *cache,
+                                             int cache_count,
+                                             rl_handle_t handle,
+                                             void (*destroy_fn)(rl_handle_t handle));
 static rl_handle_t lua_module_cached_load_font(rl_lua_cached_font_t *cache,
                                                int cache_count,
                                                const char *path,
                                                float size);
 static void lua_module_cached_destroy_fonts(rl_lua_cached_font_t *cache,
                                             int cache_count);
+static bool lua_module_cached_destroy_font_handle(rl_lua_cached_font_t *cache,
+                                                  int cache_count,
+                                                  rl_handle_t handle);
 static int lua_vm_load_file_chunk(lua_State *L, const char *filename);
 static void lua_vm_install_searcher(rl_lua_module_state_t *state);
 static int lua_module_resolve_path(rl_lua_module_state_t *state, const char *filename, char *resolved_path, size_t resolved_path_size);
 static int lua_module_resolve_require_path(rl_lua_module_state_t *state, const char *module_name, char *resolved_path, size_t resolved_path_size);
 static int lua_module_expand_search_path(const char *search_path, const char *name, char *resolved_path, size_t resolved_path_size);
 static int lua_module_is_explicit_path(const char *filename);
+static void lua_module_push_pick_result(lua_State *L, rl_pick_result_t result);
 
 static int parse_lua_log_level(lua_State *L, int idx, int *out_is_level)
 {
@@ -227,12 +279,40 @@ static void lua_vm_bind_log(rl_lua_module_state_t *state)
     lua_setglobal(L, "clear");
 
     lua_pushlightuserdata(L, state);
+    lua_pushcclosure(L, lua_module_create_camera3d_binding, 1);
+    lua_setglobal(L, "create_camera3d");
+
+    lua_pushlightuserdata(L, state);
+    lua_pushcclosure(L, lua_module_set_camera3d_binding, 1);
+    lua_setglobal(L, "set_camera3d");
+
+    lua_pushlightuserdata(L, state);
+    lua_pushcclosure(L, lua_module_set_active_camera3d_binding, 1);
+    lua_setglobal(L, "set_active_camera3d");
+
+    lua_pushlightuserdata(L, state);
+    lua_pushcclosure(L, lua_module_get_active_camera3d_binding, 1);
+    lua_setglobal(L, "get_active_camera3d");
+
+    lua_pushlightuserdata(L, state);
+    lua_pushcclosure(L, lua_module_pick_model_binding, 1);
+    lua_setglobal(L, "pick_model");
+
+    lua_pushlightuserdata(L, state);
+    lua_pushcclosure(L, lua_module_pick_sprite3d_binding, 1);
+    lua_setglobal(L, "pick_sprite3d");
+
+    lua_pushlightuserdata(L, state);
     lua_pushcclosure(L, lua_module_draw_text_binding, 1);
     lua_setglobal(L, "draw_text");
 
     lua_pushlightuserdata(L, state);
     lua_pushcclosure(L, lua_module_draw_sprite3d_binding, 1);
     lua_setglobal(L, "draw_sprite3d");
+
+    lua_pushlightuserdata(L, state);
+    lua_pushcclosure(L, lua_module_draw_texture_binding, 1);
+    lua_setglobal(L, "draw_texture");
 
     lua_pushlightuserdata(L, state);
     lua_pushcclosure(L, lua_module_draw_model_binding, 1);
@@ -243,16 +323,40 @@ static void lua_vm_bind_log(rl_lua_module_state_t *state)
     lua_setglobal(L, "load_model");
 
     lua_pushlightuserdata(L, state);
+    lua_pushcclosure(L, lua_module_destroy_model_binding, 1);
+    lua_setglobal(L, "destroy_model");
+
+    lua_pushlightuserdata(L, state);
     lua_pushcclosure(L, lua_module_load_sprite3d_binding, 1);
     lua_setglobal(L, "load_sprite3d");
+
+    lua_pushlightuserdata(L, state);
+    lua_pushcclosure(L, lua_module_destroy_sprite3d_binding, 1);
+    lua_setglobal(L, "destroy_sprite3d");
 
     lua_pushlightuserdata(L, state);
     lua_pushcclosure(L, lua_module_load_music_binding, 1);
     lua_setglobal(L, "load_music");
 
     lua_pushlightuserdata(L, state);
+    lua_pushcclosure(L, lua_module_destroy_music_binding, 1);
+    lua_setglobal(L, "destroy_music");
+
+    lua_pushlightuserdata(L, state);
     lua_pushcclosure(L, lua_module_load_sound_binding, 1);
     lua_setglobal(L, "load_sound");
+
+    lua_pushlightuserdata(L, state);
+    lua_pushcclosure(L, lua_module_destroy_sound_binding, 1);
+    lua_setglobal(L, "destroy_sound");
+
+    lua_pushlightuserdata(L, state);
+    lua_pushcclosure(L, lua_module_load_texture_binding, 1);
+    lua_setglobal(L, "load_texture");
+
+    lua_pushlightuserdata(L, state);
+    lua_pushcclosure(L, lua_module_destroy_texture_binding, 1);
+    lua_setglobal(L, "destroy_texture");
 
     lua_pushlightuserdata(L, state);
     lua_pushcclosure(L, lua_module_play_music_binding, 1);
@@ -286,6 +390,10 @@ static void lua_vm_bind_log(rl_lua_module_state_t *state)
     lua_pushcclosure(L, lua_module_load_font_binding, 1);
     lua_setglobal(L, "load_font");
 
+    lua_pushlightuserdata(L, state);
+    lua_pushcclosure(L, lua_module_destroy_font_binding, 1);
+    lua_setglobal(L, "destroy_font");
+
     lua_pushinteger(L, RL_FONT_DEFAULT);
     lua_setglobal(L, "FONT_DEFAULT");
     lua_pushinteger(L, RL_COLOR_WHITE);
@@ -298,6 +406,40 @@ static void lua_vm_bind_log(rl_lua_module_state_t *state)
     lua_setglobal(L, "COLOR_RAYWHITE");
     lua_pushinteger(L, RL_COLOR_DARKBLUE);
     lua_setglobal(L, "COLOR_DARKBLUE");
+    lua_pushinteger(L, RL_LUA_CAMERA_PERSPECTIVE);
+    lua_setglobal(L, "CAMERA_PERSPECTIVE");
+    lua_pushinteger(L, RL_LUA_CAMERA_ORTHOGRAPHIC);
+    lua_setglobal(L, "CAMERA_ORTHOGRAPHIC");
+    lua_pushinteger(L, RL_CAMERA3D_DEFAULT);
+    lua_setglobal(L, "CAMERA3D_DEFAULT");
+    lua_pushinteger(L, RL_LUA_FLAG_VSYNC_HINT);
+    lua_setglobal(L, "FLAG_VSYNC_HINT");
+    lua_pushinteger(L, RL_LUA_FLAG_FULLSCREEN_MODE);
+    lua_setglobal(L, "FLAG_FULLSCREEN_MODE");
+    lua_pushinteger(L, RL_LUA_FLAG_WINDOW_RESIZABLE);
+    lua_setglobal(L, "FLAG_WINDOW_RESIZABLE");
+    lua_pushinteger(L, RL_LUA_FLAG_WINDOW_UNDECORATED);
+    lua_setglobal(L, "FLAG_WINDOW_UNDECORATED");
+    lua_pushinteger(L, RL_LUA_FLAG_WINDOW_HIDDEN);
+    lua_setglobal(L, "FLAG_WINDOW_HIDDEN");
+    lua_pushinteger(L, RL_LUA_FLAG_WINDOW_MINIMIZED);
+    lua_setglobal(L, "FLAG_WINDOW_MINIMIZED");
+    lua_pushinteger(L, RL_LUA_FLAG_WINDOW_MAXIMIZED);
+    lua_setglobal(L, "FLAG_WINDOW_MAXIMIZED");
+    lua_pushinteger(L, RL_LUA_FLAG_WINDOW_UNFOCUSED);
+    lua_setglobal(L, "FLAG_WINDOW_UNFOCUSED");
+    lua_pushinteger(L, RL_LUA_FLAG_WINDOW_TOPMOST);
+    lua_setglobal(L, "FLAG_WINDOW_TOPMOST");
+    lua_pushinteger(L, RL_LUA_FLAG_WINDOW_ALWAYS_RUN);
+    lua_setglobal(L, "FLAG_WINDOW_ALWAYS_RUN");
+    lua_pushinteger(L, RL_LUA_FLAG_WINDOW_TRANSPARENT);
+    lua_setglobal(L, "FLAG_WINDOW_TRANSPARENT");
+    lua_pushinteger(L, RL_LUA_FLAG_WINDOW_HIGHDPI);
+    lua_setglobal(L, "FLAG_WINDOW_HIGHDPI");
+    lua_pushinteger(L, RL_LUA_FLAG_MSAA_4X_HINT);
+    lua_setglobal(L, "FLAG_MSAA_4X_HINT");
+    lua_pushinteger(L, RL_LUA_FLAG_INTERLACED_HINT);
+    lua_setglobal(L, "FLAG_INTERLACED_HINT");
 }
 
 static int lua_vm_load_file_chunk(lua_State *L, const char *filename)
@@ -671,6 +813,31 @@ static void lua_module_cached_destroy(rl_lua_cached_resource_t *cache,
     }
 }
 
+static bool lua_module_cached_destroy_handle(rl_lua_cached_resource_t *cache,
+                                             int cache_count,
+                                             rl_handle_t handle,
+                                             void (*destroy_fn)(rl_handle_t handle))
+{
+    int i = 0;
+
+    if (cache == NULL || cache_count <= 0 || handle == 0 || destroy_fn == NULL) {
+        return false;
+    }
+
+    for (i = 0; i < cache_count; i++) {
+        if (cache[i].handle != handle) {
+            continue;
+        }
+
+        destroy_fn(cache[i].handle);
+        cache[i].handle = 0;
+        cache[i].path[0] = '\0';
+        return true;
+    }
+
+    return false;
+}
+
 static rl_handle_t lua_module_cached_load_font(rl_lua_cached_font_t *cache,
                                                int cache_count,
                                                const char *path,
@@ -735,6 +902,31 @@ static void lua_module_cached_destroy_fonts(rl_lua_cached_font_t *cache,
     }
 }
 
+static bool lua_module_cached_destroy_font_handle(rl_lua_cached_font_t *cache,
+                                                  int cache_count,
+                                                  rl_handle_t handle)
+{
+    int i = 0;
+
+    if (cache == NULL || cache_count <= 0 || handle == 0) {
+        return false;
+    }
+
+    for (i = 0; i < cache_count; i++) {
+        if (cache[i].handle != handle) {
+            continue;
+        }
+
+        rl_font_destroy(cache[i].handle);
+        cache[i].handle = 0;
+        cache[i].size = 0.0f;
+        cache[i].path[0] = '\0';
+        return true;
+    }
+
+    return false;
+}
+
 static int rl_lua_module_init_impl(const rl_module_host_api_t *host, void **module_state)
 {
     rl_lua_module_state_t *state = NULL;
@@ -785,6 +977,10 @@ static void rl_lua_module_deinit_impl(void *module_state)
     (void)rl_module_event_off(&state->host, "lua.add_path", lua_module_on_add_path, state);
     (void)rl_module_event_off(&state->host, "lua.do_string", lua_module_on_do_string, state);
     (void)rl_module_event_off(&state->host, "lua.do_file", lua_module_on_do_file, state);
+    if (lua_vm_call_shutdown(state) != 0) {
+        rl_module_log(&state->host, RL_MODULE_LOG_ERROR, state->vm.last_error);
+        (void)rl_module_event_emit(&state->host, "lua.error", (void *)state->vm.last_error);
+    }
     (void)rl_module_event_emit(&state->host, "lua.deinit", state);
     lua_module_cached_destroy(state->model_cache, RL_LUA_MODULE_MAX_CACHED_RESOURCES,
                               rl_model_destroy);
@@ -794,6 +990,8 @@ static void rl_lua_module_deinit_impl(void *module_state)
                               rl_music_destroy);
     lua_module_cached_destroy(state->sound_cache, RL_LUA_MODULE_MAX_CACHED_RESOURCES,
                               rl_sound_destroy);
+    lua_module_cached_destroy(state->texture_cache, RL_LUA_MODULE_MAX_CACHED_RESOURCES,
+                              rl_texture_destroy);
     lua_module_cached_destroy_fonts(state->font_cache,
                                     RL_LUA_MODULE_MAX_CACHED_RESOURCES);
     lua_vm_deinit(&state->vm);
@@ -932,6 +1130,142 @@ static int lua_vm_call_update(rl_lua_module_state_t *state, float dt_seconds)
     return 0;
 }
 
+static int lua_vm_call_init(rl_lua_module_state_t *state)
+{
+    lua_State *L = NULL;
+    int top = 0;
+    int rc = 0;
+    const char *err = NULL;
+
+    if (state == NULL || state->vm.state == NULL) {
+        return -1;
+    }
+
+    L = state->vm.state;
+    top = lua_gettop(L);
+    lua_getglobal(L, "init");
+    if (!lua_isfunction(L, -1)) {
+        lua_settop(L, top);
+        set_error(&state->vm, NULL);
+        return 0;
+    }
+
+    rc = lua_pcall(L, 0, 0, 0);
+    if (rc != LUA_OK) {
+        err = lua_tostring(L, -1);
+        set_error(&state->vm, err != NULL ? err : "lua init failed");
+        lua_pop(L, 1);
+        return -1;
+    }
+
+    set_error(&state->vm, NULL);
+    return 0;
+}
+
+static int lua_vm_call_get_config(rl_lua_module_state_t *state, rl_lua_script_config_t *out_config)
+{
+    lua_State *L = NULL;
+    int top = 0;
+    int rc = 0;
+    const char *err = NULL;
+
+    if (state == NULL || state->vm.state == NULL || out_config == NULL) {
+        return -1;
+    }
+
+    L = state->vm.state;
+    top = lua_gettop(L);
+    lua_getglobal(L, "get_config");
+    if (!lua_isfunction(L, -1)) {
+        lua_settop(L, top);
+        set_error(&state->vm, NULL);
+        return 0;
+    }
+
+    rc = lua_pcall(L, 0, 1, 0);
+    if (rc != LUA_OK) {
+        err = lua_tostring(L, -1);
+        set_error(&state->vm, err != NULL ? err : "lua get_config failed");
+        lua_pop(L, 1);
+        return -1;
+    }
+
+    if (!lua_istable(L, -1)) {
+        lua_pop(L, 1);
+        set_error(&state->vm, "lua get_config must return a table");
+        return -1;
+    }
+
+    lua_getfield(L, -1, "width");
+    if (lua_isnumber(L, -1)) {
+        out_config->width = (int)lua_tointeger(L, -1);
+    }
+    lua_pop(L, 1);
+
+    lua_getfield(L, -1, "height");
+    if (lua_isnumber(L, -1)) {
+        out_config->height = (int)lua_tointeger(L, -1);
+    }
+    lua_pop(L, 1);
+
+    lua_getfield(L, -1, "target_fps");
+    if (lua_isnumber(L, -1)) {
+        out_config->target_fps = (int)lua_tointeger(L, -1);
+    }
+    lua_pop(L, 1);
+
+    lua_getfield(L, -1, "flags");
+    if (lua_isnumber(L, -1)) {
+        out_config->flags = (unsigned int)lua_tointeger(L, -1);
+    }
+    lua_pop(L, 1);
+
+    lua_getfield(L, -1, "title");
+    if (lua_isstring(L, -1)) {
+        const char *title = lua_tostring(L, -1);
+        if (title != NULL) {
+            (void)snprintf(out_config->title, sizeof(out_config->title), "%s", title);
+        }
+    }
+    lua_pop(L, 1);
+
+    lua_pop(L, 1);
+    set_error(&state->vm, NULL);
+    return 0;
+}
+
+static int lua_vm_call_shutdown(rl_lua_module_state_t *state)
+{
+    lua_State *L = NULL;
+    int top = 0;
+    int rc = 0;
+    const char *err = NULL;
+
+    if (state == NULL || state->vm.state == NULL) {
+        return -1;
+    }
+
+    L = state->vm.state;
+    top = lua_gettop(L);
+    lua_getglobal(L, "shutdown");
+    if (!lua_isfunction(L, -1)) {
+        lua_settop(L, top);
+        set_error(&state->vm, NULL);
+        return 0;
+    }
+
+    rc = lua_pcall(L, 0, 0, 0);
+    if (rc != LUA_OK) {
+        err = lua_tostring(L, -1);
+        set_error(&state->vm, err != NULL ? err : "lua shutdown failed");
+        lua_pop(L, 1);
+        return -1;
+    }
+
+    set_error(&state->vm, NULL);
+    return 0;
+}
+
 static int lua_module_log_binding(lua_State *L)
 {
     rl_lua_module_state_t *state = NULL;
@@ -995,6 +1329,130 @@ static int lua_module_clear_binding(lua_State *L)
     return 0;
 }
 
+static int lua_module_create_camera3d_binding(lua_State *L)
+{
+    rl_handle_t handle = rl_camera3d_create(
+        (float)luaL_checknumber(L, 1), (float)luaL_checknumber(L, 2), (float)luaL_checknumber(L, 3),
+        (float)luaL_checknumber(L, 4), (float)luaL_checknumber(L, 5), (float)luaL_checknumber(L, 6),
+        (float)luaL_checknumber(L, 7), (float)luaL_checknumber(L, 8), (float)luaL_checknumber(L, 9),
+        (float)luaL_checknumber(L, 10), (int)luaL_checkinteger(L, 11));
+    lua_pushinteger(L, (lua_Integer)handle);
+    return 1;
+}
+
+static int lua_module_set_camera3d_binding(lua_State *L)
+{
+    rl_handle_t handle = (rl_handle_t)luaL_checkinteger(L, 1);
+    lua_pushboolean(L, rl_camera3d_set(
+        handle,
+        (float)luaL_checknumber(L, 2), (float)luaL_checknumber(L, 3), (float)luaL_checknumber(L, 4),
+        (float)luaL_checknumber(L, 5), (float)luaL_checknumber(L, 6), (float)luaL_checknumber(L, 7),
+        (float)luaL_checknumber(L, 8), (float)luaL_checknumber(L, 9), (float)luaL_checknumber(L, 10),
+        (float)luaL_checknumber(L, 11), (int)luaL_checkinteger(L, 12)));
+    return 1;
+}
+
+static int lua_module_set_active_camera3d_binding(lua_State *L)
+{
+    rl_handle_t handle = (rl_handle_t)luaL_checkinteger(L, 1);
+    lua_pushboolean(L, rl_camera3d_set_active(handle));
+    return 1;
+}
+
+static int lua_module_get_active_camera3d_binding(lua_State *L)
+{
+    lua_pushinteger(L, (lua_Integer)rl_camera3d_get_active());
+    return 1;
+}
+
+static void lua_module_push_pick_result(lua_State *L, rl_pick_result_t result)
+{
+    lua_newtable(L);
+
+    lua_pushboolean(L, result.hit);
+    lua_setfield(L, -2, "hit");
+
+    lua_pushnumber(L, result.distance);
+    lua_setfield(L, -2, "distance");
+
+    lua_newtable(L);
+    lua_pushnumber(L, result.point.x);
+    lua_setfield(L, -2, "x");
+    lua_pushnumber(L, result.point.y);
+    lua_setfield(L, -2, "y");
+    lua_pushnumber(L, result.point.z);
+    lua_setfield(L, -2, "z");
+    lua_setfield(L, -2, "point");
+
+    lua_newtable(L);
+    lua_pushnumber(L, result.normal.x);
+    lua_setfield(L, -2, "x");
+    lua_pushnumber(L, result.normal.y);
+    lua_setfield(L, -2, "y");
+    lua_pushnumber(L, result.normal.z);
+    lua_setfield(L, -2, "z");
+    lua_setfield(L, -2, "normal");
+}
+
+static int lua_module_pick_model_binding(lua_State *L)
+{
+    rl_handle_t model = (rl_handle_t)luaL_checkinteger(L, 1);
+    float mouse_x = (float)luaL_checknumber(L, 2);
+    float mouse_y = (float)luaL_checknumber(L, 3);
+    float x = (float)luaL_checknumber(L, 4);
+    float y = (float)luaL_checknumber(L, 5);
+    float z = (float)luaL_checknumber(L, 6);
+    float scale = (float)luaL_checknumber(L, 7);
+    float rotation_x = 0.0f;
+    float rotation_y = 0.0f;
+    float rotation_z = 0.0f;
+    rl_handle_t camera = 0;
+    rl_pick_result_t result = {0};
+
+    if (lua_gettop(L) >= 8 && !lua_isnil(L, 8)) {
+        rotation_x = (float)luaL_checknumber(L, 8);
+    }
+    if (lua_gettop(L) >= 9 && !lua_isnil(L, 9)) {
+        rotation_y = (float)luaL_checknumber(L, 9);
+    }
+    if (lua_gettop(L) >= 10 && !lua_isnil(L, 10)) {
+        rotation_z = (float)luaL_checknumber(L, 10);
+    }
+    if (lua_gettop(L) >= 11 && !lua_isnil(L, 11)) {
+        camera = (rl_handle_t)luaL_checkinteger(L, 11);
+    } else {
+        camera = rl_camera3d_get_active();
+    }
+
+    result = rl_pick_model(camera, model, mouse_x, mouse_y, x, y, z, scale,
+                           rotation_x, rotation_y, rotation_z);
+    lua_module_push_pick_result(L, result);
+    return 1;
+}
+
+static int lua_module_pick_sprite3d_binding(lua_State *L)
+{
+    rl_handle_t sprite3d = (rl_handle_t)luaL_checkinteger(L, 1);
+    float mouse_x = (float)luaL_checknumber(L, 2);
+    float mouse_y = (float)luaL_checknumber(L, 3);
+    float x = (float)luaL_checknumber(L, 4);
+    float y = (float)luaL_checknumber(L, 5);
+    float z = (float)luaL_checknumber(L, 6);
+    float size = (float)luaL_checknumber(L, 7);
+    rl_handle_t camera = 0;
+    rl_pick_result_t result = {0};
+
+    if (lua_gettop(L) >= 8 && !lua_isnil(L, 8)) {
+        camera = (rl_handle_t)luaL_checkinteger(L, 8);
+    } else {
+        camera = rl_camera3d_get_active();
+    }
+
+    result = rl_pick_sprite3d(camera, sprite3d, mouse_x, mouse_y, x, y, z, size);
+    lua_module_push_pick_result(L, result);
+    return 1;
+}
+
 static int lua_module_draw_text_binding(lua_State *L)
 {
     rl_lua_module_state_t *state = NULL;
@@ -1042,6 +1500,28 @@ static int lua_module_draw_sprite3d_binding(lua_State *L)
     return 0;
 }
 
+static int lua_module_draw_texture_binding(lua_State *L)
+{
+    rl_lua_module_state_t *state = NULL;
+    rl_module_frame_command_t command;
+
+    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    if (state == NULL) {
+        return 0;
+    }
+
+    memset(&command, 0, sizeof(command));
+    command.type = RL_MODULE_FRAME_CMD_DRAW_TEXTURE;
+    command.data.draw_texture.texture = (rl_handle_t)luaL_checkinteger(L, 1);
+    command.data.draw_texture.x = (float)luaL_checknumber(L, 2);
+    command.data.draw_texture.y = (float)luaL_checknumber(L, 3);
+    command.data.draw_texture.scale = (float)luaL_checknumber(L, 4);
+    command.data.draw_texture.rotation = (float)luaL_optnumber(L, 5, 0.0f);
+    command.data.draw_texture.tint = (rl_handle_t)luaL_checkinteger(L, 6);
+    rl_module_frame_command(&state->host, &command);
+    return 0;
+}
+
 static int lua_module_draw_model_binding(lua_State *L)
 {
     rl_lua_module_state_t *state = NULL;
@@ -1062,13 +1542,25 @@ static int lua_module_draw_model_binding(lua_State *L)
     command.data.draw_model.z = (float)luaL_checknumber(L, 4);
     command.data.draw_model.scale = (float)luaL_checknumber(L, 5);
     command.data.draw_model.tint = (rl_handle_t)luaL_checkinteger(L, 6);
+    command.data.draw_model.rotation_x = 0.0f;
+    command.data.draw_model.rotation_y = 0.0f;
+    command.data.draw_model.rotation_z = 0.0f;
     command.data.draw_model.animation_index = -1;
     command.data.draw_model.animation_frame = 0;
     if (arg_count >= 7 && !lua_isnil(L, 7)) {
-        command.data.draw_model.animation_index = (int)luaL_checkinteger(L, 7);
+        command.data.draw_model.rotation_x = (float)luaL_checknumber(L, 7);
     }
     if (arg_count >= 8 && !lua_isnil(L, 8)) {
-        command.data.draw_model.animation_frame = (int)luaL_checkinteger(L, 8);
+        command.data.draw_model.rotation_y = (float)luaL_checknumber(L, 8);
+    }
+    if (arg_count >= 9 && !lua_isnil(L, 9)) {
+        command.data.draw_model.rotation_z = (float)luaL_checknumber(L, 9);
+    }
+    if (arg_count >= 10 && !lua_isnil(L, 10)) {
+        command.data.draw_model.animation_index = (int)luaL_checkinteger(L, 10);
+    }
+    if (arg_count >= 11 && !lua_isnil(L, 11)) {
+        command.data.draw_model.animation_frame = (int)luaL_checkinteger(L, 11);
     }
     rl_module_frame_command(&state->host, &command);
     return 0;
@@ -1094,6 +1586,18 @@ static int lua_module_load_model_binding(lua_State *L)
     return 1;
 }
 
+static int lua_module_destroy_model_binding(lua_State *L)
+{
+    rl_lua_module_state_t *state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    rl_handle_t handle = (rl_handle_t)luaL_checkinteger(L, 1);
+    lua_pushboolean(L, state != NULL &&
+                           lua_module_cached_destroy_handle(state->model_cache,
+                                                            RL_LUA_MODULE_MAX_CACHED_RESOURCES,
+                                                            handle,
+                                                            rl_model_destroy));
+    return 1;
+}
+
 static int lua_module_load_sprite3d_binding(lua_State *L)
 {
     rl_lua_module_state_t *state = NULL;
@@ -1111,6 +1615,18 @@ static int lua_module_load_sprite3d_binding(lua_State *L)
                                     RL_LUA_MODULE_MAX_CACHED_RESOURCES, path,
                                     rl_sprite3d_create);
     lua_pushinteger(L, (lua_Integer)handle);
+    return 1;
+}
+
+static int lua_module_destroy_sprite3d_binding(lua_State *L)
+{
+    rl_lua_module_state_t *state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    rl_handle_t handle = (rl_handle_t)luaL_checkinteger(L, 1);
+    lua_pushboolean(L, state != NULL &&
+                           lua_module_cached_destroy_handle(state->sprite3d_cache,
+                                                            RL_LUA_MODULE_MAX_CACHED_RESOURCES,
+                                                            handle,
+                                                            rl_sprite3d_destroy));
     return 1;
 }
 
@@ -1134,6 +1650,18 @@ static int lua_module_load_music_binding(lua_State *L)
     return 1;
 }
 
+static int lua_module_destroy_music_binding(lua_State *L)
+{
+    rl_lua_module_state_t *state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    rl_handle_t handle = (rl_handle_t)luaL_checkinteger(L, 1);
+    lua_pushboolean(L, state != NULL &&
+                           lua_module_cached_destroy_handle(state->music_cache,
+                                                            RL_LUA_MODULE_MAX_CACHED_RESOURCES,
+                                                            handle,
+                                                            rl_music_destroy));
+    return 1;
+}
+
 static int lua_module_load_sound_binding(lua_State *L)
 {
     rl_lua_module_state_t *state = NULL;
@@ -1151,6 +1679,50 @@ static int lua_module_load_sound_binding(lua_State *L)
                                     RL_LUA_MODULE_MAX_CACHED_RESOURCES, path,
                                     rl_sound_create);
     lua_pushinteger(L, (lua_Integer)handle);
+    return 1;
+}
+
+static int lua_module_destroy_sound_binding(lua_State *L)
+{
+    rl_lua_module_state_t *state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    rl_handle_t handle = (rl_handle_t)luaL_checkinteger(L, 1);
+    lua_pushboolean(L, state != NULL &&
+                           lua_module_cached_destroy_handle(state->sound_cache,
+                                                            RL_LUA_MODULE_MAX_CACHED_RESOURCES,
+                                                            handle,
+                                                            rl_sound_destroy));
+    return 1;
+}
+
+static int lua_module_load_texture_binding(lua_State *L)
+{
+    rl_lua_module_state_t *state = NULL;
+    const char *path = NULL;
+    rl_handle_t handle = 0;
+
+    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    if (state == NULL) {
+        lua_pushinteger(L, 0);
+        return 1;
+    }
+
+    path = luaL_checkstring(L, 1);
+    handle = lua_module_cached_load(state->texture_cache,
+                                    RL_LUA_MODULE_MAX_CACHED_RESOURCES, path,
+                                    rl_texture_create);
+    lua_pushinteger(L, (lua_Integer)handle);
+    return 1;
+}
+
+static int lua_module_destroy_texture_binding(lua_State *L)
+{
+    rl_lua_module_state_t *state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    rl_handle_t handle = (rl_handle_t)luaL_checkinteger(L, 1);
+    lua_pushboolean(L, state != NULL &&
+                           lua_module_cached_destroy_handle(state->texture_cache,
+                                                            RL_LUA_MODULE_MAX_CACHED_RESOURCES,
+                                                            handle,
+                                                            rl_texture_destroy));
     return 1;
 }
 
@@ -1235,6 +1807,39 @@ static int lua_module_load_font_binding(lua_State *L)
                                          path, size);
     lua_pushinteger(L, (lua_Integer)handle);
     return 1;
+}
+
+static int lua_module_destroy_font_binding(lua_State *L)
+{
+    rl_lua_module_state_t *state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    rl_handle_t handle = (rl_handle_t)luaL_checkinteger(L, 1);
+    lua_pushboolean(L, state != NULL &&
+                           lua_module_cached_destroy_font_handle(state->font_cache,
+                                                                 RL_LUA_MODULE_MAX_CACHED_RESOURCES,
+                                                                 handle));
+    return 1;
+}
+
+int rl_lua_module_get_script_config(void *module_state, rl_lua_script_config_t *out_config)
+{
+    rl_lua_module_state_t *state = (rl_lua_module_state_t *)module_state;
+
+    if (state == NULL || out_config == NULL) {
+        return -1;
+    }
+
+    return lua_vm_call_get_config(state, out_config);
+}
+
+int rl_lua_module_call_init(void *module_state)
+{
+    rl_lua_module_state_t *state = (rl_lua_module_state_t *)module_state;
+
+    if (state == NULL) {
+        return -1;
+    }
+
+    return lua_vm_call_init(state);
 }
 
 static void lua_module_on_do_file(void *payload, void *listener_user_data)

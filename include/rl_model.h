@@ -9,7 +9,11 @@ extern "C" {
 #include "rl_types.h"
 
 rl_handle_t rl_model_create(const char *filename) ;
-void rl_model_draw(rl_handle_t handle, float position_x, float position_y, float position_z, float scale, rl_handle_t tint);
+void rl_model_draw(rl_handle_t handle,
+                   float position_x, float position_y, float position_z,
+                   float scale,
+                   float rotation_x, float rotation_y, float rotation_z,
+                   rl_handle_t tint);
 bool rl_model_is_valid(rl_handle_t handle);
 bool rl_model_is_valid_strict(rl_handle_t handle);
 int rl_model_animation_count(rl_handle_t handle);

@@ -50,6 +50,7 @@ void rl_draw_fps(int x, int y);
 void rl_draw_fps_ex(rl_handle_t font, int x, int y, int fontSize, rl_handle_t color);
 void rl_draw_text(const char *text, int x, int y, int fontSize, rl_handle_t color);
 void rl_draw_text_ex(rl_handle_t font, const char *text, int x, int y, float fontSize, float spacing, rl_handle_t color);
+void rl_draw_texture_ex(rl_handle_t texture, float x, float y, float scale, float rotation, rl_handle_t tint);
 void rl_begin_mode_2d(rl_handle_t camera);
 void rl_end_mode_2d();
 void rl_begin_mode_3d();

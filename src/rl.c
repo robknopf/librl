@@ -6,6 +6,7 @@
 #include "logger/log.h"
 #include "internal/rl_color_store.h"
 #include "internal/rl_font_store.h"
+#include "internal/rl_texture_store.h"
 #include "internal/rl_subsystems.h"
 
 
@@ -324,6 +325,16 @@ void rl_draw_text_ex(rl_handle_t font, const char *text, int x, int y, float fon
     //}
     //fprintf(stderr, "DrawTextEx: %d, %s, %f, %f, %d\n", font, text, fontSize, spacing, color);
     DrawTextEx(f, text, position, fontSize, spacing, c);
+}
+
+RL_KEEP
+void rl_draw_texture_ex(rl_handle_t texture, float x, float y, float scale, float rotation, rl_handle_t tint) {
+    Texture2D *tex = rl_texture_get_ptr(texture);
+    if (tex == NULL) {
+        return;
+    }
+
+    DrawTextureEx(*tex, (Vector2){x, y}, rotation, scale, rl_color_get(tint));
 }
 
 RL_KEEP

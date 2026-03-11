@@ -31,7 +31,10 @@ rl_pick_result_t rl_pick_model(rl_handle_t camera,
                                float position_x,
                                float position_y,
                                float position_z,
-                               float scale);
+                               float scale,
+                               float rotation_x,
+                               float rotation_y,
+                               float rotation_z);
 
 bool rl_pick_model_to_scratch(rl_handle_t camera,
                               rl_handle_t model,
@@ -40,7 +43,10 @@ bool rl_pick_model_to_scratch(rl_handle_t camera,
                               float position_x,
                               float position_y,
                               float position_z,
-                              float scale);
+                              float scale,
+                              float rotation_x,
+                              float rotation_y,
+                              float rotation_z);
 
 rl_pick_result_t rl_pick_sprite3d(rl_handle_t camera,
                                   rl_handle_t sprite3d,

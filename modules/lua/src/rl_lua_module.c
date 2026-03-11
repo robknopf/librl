@@ -49,6 +49,24 @@
 
 #define RL_LUA_MODULE_MAX_CACHED_RESOURCES 128
 #define RL_LUA_MODULE_MAX_SEARCH_PATHS 16
+/*
+ * The Lua module keeps its own small handle caches on top of librl's resource
+ * systems for two reasons:
+ *
+ * 1. HCR / script reload stability.
+ *    A script may run its init path again while the module and its native
+ *    resources are still alive. If Lua simply called load/create every time,
+ *    reloads would mint fresh handles for resources the script already asked
+ *    for previously. Caching at the module layer lets repeated requests for
+ *    the same logical resource return the same handle across reloads.
+ *
+ * 2. Lua-side ownership and teardown.
+ *    librl may already cache the underlying asset data internally, but the Lua
+ *    module still needs to know which handles it handed out so it can destroy
+ *    exactly its own resources on module shutdown or explicit Lua destroy
+ *    calls. The module cache is therefore about stable script-visible handle
+ *    reuse and lifecycle bookkeeping, not just asset decode/upload reuse.
+ */
 typedef struct rl_lua_cached_resource_t {
     rl_handle_t handle;
     char path[256];
@@ -59,6 +77,14 @@ typedef struct rl_lua_cached_font_t {
     float size;
     char path[256];
 } rl_lua_cached_font_t;
+
+typedef struct rl_lua_cached_color_t {
+    rl_handle_t handle;
+    int r;
+    int g;
+    int b;
+    int a;
+} rl_lua_cached_color_t;
 
 typedef struct rl_lua_vm_t {
     lua_State *state;
@@ -80,6 +106,7 @@ typedef struct rl_lua_module_state_t {
     rl_lua_cached_resource_t sound_cache[RL_LUA_MODULE_MAX_CACHED_RESOURCES];
     rl_lua_cached_resource_t texture_cache[RL_LUA_MODULE_MAX_CACHED_RESOURCES];
     rl_lua_cached_font_t font_cache[RL_LUA_MODULE_MAX_CACHED_RESOURCES];
+    rl_lua_cached_color_t color_cache[RL_LUA_MODULE_MAX_CACHED_RESOURCES];
 } rl_lua_module_state_t;
 
 static void lua_module_on_do_string(void *payload, void *listener_user_data);
@@ -114,6 +141,8 @@ static int lua_module_set_music_loop_binding(lua_State *L);
 static int lua_module_set_music_volume_binding(lua_State *L);
 static int lua_module_is_music_playing_binding(lua_State *L);
 static int lua_module_play_sound_binding(lua_State *L);
+static int lua_module_create_color_binding(lua_State *L);
+static int lua_module_destroy_color_binding(lua_State *L);
 static int lua_module_load_font_binding(lua_State *L);
 static int lua_module_destroy_font_binding(lua_State *L);
 static int lua_module_require_searcher(lua_State *L);
@@ -142,6 +171,17 @@ static void lua_module_cached_destroy_fonts(rl_lua_cached_font_t *cache,
 static bool lua_module_cached_destroy_font_handle(rl_lua_cached_font_t *cache,
                                                   int cache_count,
                                                   rl_handle_t handle);
+static rl_handle_t lua_module_cached_load_color(rl_lua_cached_color_t *cache,
+                                                int cache_count,
+                                                int r,
+                                                int g,
+                                                int b,
+                                                int a);
+static void lua_module_cached_destroy_colors(rl_lua_cached_color_t *cache,
+                                             int cache_count);
+static bool lua_module_cached_destroy_color_handle(rl_lua_cached_color_t *cache,
+                                                   int cache_count,
+                                                   rl_handle_t handle);
 static int lua_vm_load_file_chunk(lua_State *L, const char *filename);
 static void lua_vm_install_searcher(rl_lua_module_state_t *state);
 static int lua_module_resolve_path(rl_lua_module_state_t *state, const char *filename, char *resolved_path, size_t resolved_path_size);
@@ -385,6 +425,14 @@ static void lua_vm_bind_log(rl_lua_module_state_t *state)
     lua_pushlightuserdata(L, state);
     lua_pushcclosure(L, lua_module_play_sound_binding, 1);
     lua_setglobal(L, "play_sound");
+
+    lua_pushlightuserdata(L, state);
+    lua_pushcclosure(L, lua_module_create_color_binding, 1);
+    lua_setglobal(L, "create_color");
+
+    lua_pushlightuserdata(L, state);
+    lua_pushcclosure(L, lua_module_destroy_color_binding, 1);
+    lua_setglobal(L, "destroy_color");
 
     lua_pushlightuserdata(L, state);
     lua_pushcclosure(L, lua_module_load_font_binding, 1);
@@ -927,6 +975,102 @@ static bool lua_module_cached_destroy_font_handle(rl_lua_cached_font_t *cache,
     return false;
 }
 
+static rl_handle_t lua_module_cached_load_color(rl_lua_cached_color_t *cache,
+                                                int cache_count,
+                                                int r,
+                                                int g,
+                                                int b,
+                                                int a)
+{
+    int i = 0;
+
+    if (cache == NULL || cache_count <= 0) {
+        return 0;
+    }
+
+    for (i = 0; i < cache_count; i++) {
+        if (cache[i].handle != 0 &&
+            cache[i].r == r &&
+            cache[i].g == g &&
+            cache[i].b == b &&
+            cache[i].a == a) {
+            return cache[i].handle;
+        }
+    }
+
+    for (i = 0; i < cache_count; i++) {
+        rl_handle_t handle = 0;
+
+        if (cache[i].handle != 0) {
+            continue;
+        }
+
+        handle = rl_color_create(r, g, b, a);
+        if (handle == 0) {
+            return 0;
+        }
+
+        cache[i].handle = handle;
+        cache[i].r = r;
+        cache[i].g = g;
+        cache[i].b = b;
+        cache[i].a = a;
+        return handle;
+    }
+
+    return 0;
+}
+
+static void lua_module_cached_destroy_colors(rl_lua_cached_color_t *cache,
+                                             int cache_count)
+{
+    int i = 0;
+
+    if (cache == NULL || cache_count <= 0) {
+        return;
+    }
+
+    for (i = 0; i < cache_count; i++) {
+        if (cache[i].handle == 0) {
+            continue;
+        }
+
+        rl_color_destroy(cache[i].handle);
+        cache[i].handle = 0;
+        cache[i].r = 0;
+        cache[i].g = 0;
+        cache[i].b = 0;
+        cache[i].a = 0;
+    }
+}
+
+static bool lua_module_cached_destroy_color_handle(rl_lua_cached_color_t *cache,
+                                                   int cache_count,
+                                                   rl_handle_t handle)
+{
+    int i = 0;
+
+    if (cache == NULL || cache_count <= 0 || handle == 0) {
+        return false;
+    }
+
+    for (i = 0; i < cache_count; i++) {
+        if (cache[i].handle != handle) {
+            continue;
+        }
+
+        rl_color_destroy(cache[i].handle);
+        cache[i].handle = 0;
+        cache[i].r = 0;
+        cache[i].g = 0;
+        cache[i].b = 0;
+        cache[i].a = 0;
+        return true;
+    }
+
+    return false;
+}
+
 static int rl_lua_module_init_impl(const rl_module_host_api_t *host, void **module_state)
 {
     rl_lua_module_state_t *state = NULL;
@@ -994,6 +1138,8 @@ static void rl_lua_module_deinit_impl(void *module_state)
                               rl_texture_destroy);
     lua_module_cached_destroy_fonts(state->font_cache,
                                     RL_LUA_MODULE_MAX_CACHED_RESOURCES);
+    lua_module_cached_destroy_colors(state->color_cache,
+                                     RL_LUA_MODULE_MAX_CACHED_RESOURCES);
     lua_vm_deinit(&state->vm);
     rl_module_log(&state->host, RL_MODULE_LOG_INFO, "lua module deinitialized");
     rl_module_free(&state->host, state);
@@ -1785,6 +1931,39 @@ static int lua_module_play_sound_binding(lua_State *L)
     command.data.play_sound.sound = (rl_handle_t)luaL_checkinteger(L, 1);
     rl_module_frame_command(&state->host, &command);
     return 0;
+}
+
+static int lua_module_create_color_binding(lua_State *L)
+{
+    rl_lua_module_state_t *state = NULL;
+    int r = (int)luaL_checkinteger(L, 1);
+    int g = (int)luaL_checkinteger(L, 2);
+    int b = (int)luaL_checkinteger(L, 3);
+    int a = (int)luaL_optinteger(L, 4, 255);
+
+    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    if (state == NULL) {
+        lua_pushinteger(L, 0);
+        return 1;
+    }
+
+    lua_pushinteger(L, (lua_Integer)lua_module_cached_load_color(state->color_cache,
+                                                                 RL_LUA_MODULE_MAX_CACHED_RESOURCES,
+                                                                 r, g, b, a));
+    return 1;
+}
+
+static int lua_module_destroy_color_binding(lua_State *L)
+{
+    rl_lua_module_state_t *state = NULL;
+    rl_handle_t handle = (rl_handle_t)luaL_checkinteger(L, 1);
+
+    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    lua_pushboolean(L, state != NULL &&
+                           lua_module_cached_destroy_color_handle(state->color_cache,
+                                                                  RL_LUA_MODULE_MAX_CACHED_RESOURCES,
+                                                                  handle));
+    return 1;
 }
 
 static int lua_module_load_font_binding(lua_State *L)

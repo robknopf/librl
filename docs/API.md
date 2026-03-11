@@ -253,6 +253,7 @@ Notes:
 - Events are immediate/synchronous today (no queue yet).
 - `lua.do_file` in current Lua module uses `fileio_read(...)`, so file paths should be loader/fileio-relative.
 - Lua module is built as a separate archive (`modules/lua/lib/librl_lua.a` / `.wasm.a`) and linked by the host app.
+- The module host API also includes `frame_command`, which is the current typed path for transient draw/audio commands emitted by scripting modules.
 
 ## Lua Module Runtime (`modules/lua`)
 
@@ -262,11 +263,26 @@ Current Lua module responsibilities:
 - installs a Lua `require(...)` searcher backed by `lua.add_path`
 - exposes script-facing bindings for:
   - frame commands (`clear`, `draw_text`, `draw_texture`, `draw_sprite3d`, `draw_model`, `play_sound`)
-  - resource lifecycle (`load_*`, `destroy_*`)
+  - resource lifecycle (`create_color` / `destroy_color`, `load_*`, `destroy_*`)
   - stateful music control
   - camera creation/update/activation
   - model/sprite picking
   - logging with source-aware file/line reporting
+
+Current status notes:
+
+- The frame-command path is already active, not just planned:
+  - Lua emits typed transient commands through the host `frame_command` callback
+  - the current reference host in `examples/c/main.c` buffers and drains them each tick
+- The Lua module also keeps its own small resource/color caches so repeated script requests can reuse the same script-visible handles across HCR/reload within the same module lifetime.
+- Current command set is intentionally small:
+  - clear background
+  - draw text
+  - draw sprite3d
+  - draw model
+  - draw texture
+  - play sound
+- Music control currently remains stateful resource API usage rather than a transient frame command.
 
 ### Script Lifecycle
 
@@ -344,6 +360,7 @@ Notes:
 - held-state lives in `keyboard.keys[keycode]`.
 - `pressed_keys[]` drains the full `GetKeyPressed()` queue for the frame.
 - `pressed_chars[]` drains the full `GetCharPressed()` queue for the frame.
+- The host is expected to rebuild transient frame commands every tick rather than treating them as persistent render state.
 
 ### Current Lua Built-in Globals
 
@@ -381,6 +398,7 @@ The Lua module currently injects a small set of constants/globals, including:
 
 The example Lua runtime now layers small object-style wrappers on top of the flat C bindings:
 
+- `color.lua`
 - `model.lua`
 - `texture.lua`
 - `sprite3d.lua`

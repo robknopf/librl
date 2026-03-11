@@ -44,6 +44,7 @@ Key goals:
   - Lua emits transient frame commands for draw/audio work
   - host drains those commands during its normal frame loop
 - Lua-side helper modules now exist for common resource types:
+  - color
   - model
   - texture
   - sprite3d

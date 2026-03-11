@@ -113,10 +113,12 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
   - audio playback commands
   - other immediate frame-side effects
 - Frame commands should be cleared every frame. Do not make render state persistent by default.
-- Current C example status:
-  - `examples/c/main.c` is now mostly a thin host shell
-  - host still owns bootstrap, window creation, frame begin/end, and FPS display
+- Current status:
+  - `include/rl_module.h` now contains the typed frame-command ABI
+  - `examples/c/main.c` is the current reference thin host
+  - the host resets and drains a per-tick command buffer in clear / audio / 3D / 2D passes
   - Lua now owns almost all demo-specific scene/resource behavior
+  - the Lua module keeps its own small caches so reloads can reuse stable script-visible handles for already-requested resources/colors
 
 ### API Shape We Want
 
@@ -131,7 +133,7 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
   - similar immediate commands
 - Events are acceptable for orchestration and notifications, but should not become the primary render/audio command surface.
 - Prefer a typed command structure or tagged union over stringly-typed event payloads for per-frame work.
-- A ring buffer is a reasonable implementation if fixed-capacity/no-allocation frame submission is desirable.
+- A ring buffer remains a reasonable future refinement if fixed-capacity/no-allocation frame submission is desirable.
 
 ### Practical Goal
 
@@ -171,6 +173,7 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
 ## Current Lua Support Modules
 
 - Wrapper modules now exist under `examples/www/public/assets/scripts/`:
+  - `color.lua`
   - `model.lua`
   - `texture.lua`
   - `sprite3d.lua`
@@ -182,6 +185,7 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
   - C stays flat and handle-based
   - Lua gets object-like helpers with state and methods
 - Current pattern:
+  - `Color.create(r, g, b, a)` returns a wrapper around a runtime-created color handle with `:destroy()`
   - `Model.load(path)` returns a table with transform/animation fields and `:draw()`, `:pick()`, `:destroy()`
   - similar shape for texture/sprite/sound/music/font/camera wrappers
 
@@ -192,6 +196,10 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
   - `event_off`
   - `event_emit`
 - Decide whether the host fallback `ClearBackground(RAYWHITE)` remains in `main.c` or whether Lua fully owns frame clear.
+- Harden the current frame-command path instead of redesigning it from scratch:
+  - clarify overflow behavior
+  - decide whether the host-local fixed buffer is enough or should become shared infrastructure
+  - document the current command drain order and ownership more explicitly
 - Decide how HCR should layer onto the current lifecycle:
   - keep `init/shutdown` only
   - or add explicit `load/unload`

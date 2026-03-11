@@ -6,6 +6,8 @@ local bg_music = nil
 local click_sound = nil
 local ui_font = nil
 local main_camera = nil
+local accent_color = nil
+local panel_color = nil
 local mouse_left_was_down = false
 local music_toggle_was_down = false
 local last_pick_result = nil
@@ -25,6 +27,7 @@ local Sprite3D = require("sprite3d")
 local Sound = require("sound")
 local Camera3D = require("camera3d")
 local Font = require("font")
+local Color = require("color")
 
 local function append_pressed_char(buffer, ch)
   if ch == nil or ch < 32 or ch > 255 then
@@ -69,6 +72,8 @@ function init()
   bg_music = Music.load("assets/music/ethernight_club.mp3")
   click_sound = Sound.load("assets/sounds/click_004.ogg")
   ui_font = Font.load("assets/fonts/Komika/KOMIKAH_.ttf", 24)
+  accent_color = Color.create(221, 87, 54, 255)
+  panel_color = Color.create(24, 107, 138, 255)
   main_camera = Camera3D.create(12.0, 12.0, 12.0,
                                 0.0, 1.0, 0.0,
                                 0.0, 1.0, 0.0,
@@ -122,6 +127,16 @@ function shutdown()
   if ui_font ~= nil then
     ui_font:destroy()
     ui_font = nil
+  end
+
+  if accent_color ~= nil then
+    accent_color:destroy()
+    accent_color = nil
+  end
+
+  if panel_color ~= nil then
+    panel_color:destroy()
+    panel_color = nil
   end
 
   main_camera = nil
@@ -243,13 +258,13 @@ function update(frame)
 
   clear(COLOR_RAYWHITE)
   if ui_font ~= nil and ui_font.handle ~= 0 then
-    ui_font:draw("lua-driven frame", 24, 140 + wobble, 32, 1.0, COLOR_DARKBLUE)
-    ui_font:draw(string.format("t = %.2f  mouse=(%d, %d) buttons=(L:%s R:%s M:%s) wheel=%d", time_s, mouse_x, mouse_y, mouse_left and "down" or "up", mouse_right and "down" or "up", mouse_middle and "down" or "up", Input.mouse_wheel(mouse)), 24, 182, 20, 1.0, COLOR_BLUE)
-    ui_font:draw(string.format("kbd space=%s arrows=(%s %s %s %s)", Input.key_down(keyboard, Input.KEY_SPACE) and "down" or "up", Input.key_down(keyboard, Input.KEY_LEFT) and "L" or "-", Input.key_down(keyboard, Input.KEY_RIGHT) and "R" or "-", Input.key_down(keyboard, Input.KEY_UP) and "U" or "-", Input.key_down(keyboard, Input.KEY_DOWN) and "D" or "-"), 24, 212, 20, 1.0, COLOR_BLUE)
-    ui_font:draw(string.format("pressed key=%d tracked=%d down=%s char=%d counts=(%d/%d) backspace=%d", keyboard.pressed_key, tracked_key, tracked_key_down and "yes" or "no", keyboard.pressed_char, keyboard.num_pressed_keys or 0, keyboard.num_pressed_chars or 0, backspace_presses), 24, 242, 20, 1.0, COLOR_BLUE)
-    ui_font:draw(string.format("mods shift=%s ctrl=%s alt=%s", (Input.key_down(keyboard, Input.KEY_LEFT_SHIFT) or Input.key_down(keyboard, Input.KEY_RIGHT_SHIFT)) and "down" or "up", (Input.key_down(keyboard, Input.KEY_LEFT_CONTROL) or Input.key_down(keyboard, Input.KEY_RIGHT_CONTROL)) and "down" or "up", (Input.key_down(keyboard, Input.KEY_LEFT_ALT) or Input.key_down(keyboard, Input.KEY_RIGHT_ALT)) and "down" or "up"), 24, 272, 20, 1.0, COLOR_BLUE)
-    ui_font:draw(string.format("text: %s_", text_buffer), 24, 302, 20, 1.0, COLOR_DARKBLUE)
-    ui_font:draw(string.format("music(M): %s", (bg_music ~= nil and bg_music:is_playing()) and "playing" or "paused"), 24, 332, 20, 1.0, COLOR_DARKBLUE)
+    ui_font:draw("lua-driven frame", 24, 140 + wobble, 32, 1.0, accent_color ~= nil and accent_color.handle or COLOR_DARKBLUE)
+    ui_font:draw(string.format("t = %.2f  mouse=(%d, %d) buttons=(L:%s R:%s M:%s) wheel=%d", time_s, mouse_x, mouse_y, mouse_left and "down" or "up", mouse_right and "down" or "up", mouse_middle and "down" or "up", Input.mouse_wheel(mouse)), 24, 182, 20, 1.0, panel_color ~= nil and panel_color.handle or COLOR_BLUE)
+    ui_font:draw(string.format("kbd space=%s arrows=(%s %s %s %s)", Input.key_down(keyboard, Input.KEY_SPACE) and "down" or "up", Input.key_down(keyboard, Input.KEY_LEFT) and "L" or "-", Input.key_down(keyboard, Input.KEY_RIGHT) and "R" or "-", Input.key_down(keyboard, Input.KEY_UP) and "U" or "-", Input.key_down(keyboard, Input.KEY_DOWN) and "D" or "-"), 24, 212, 20, 1.0, panel_color ~= nil and panel_color.handle or COLOR_BLUE)
+    ui_font:draw(string.format("pressed key=%d tracked=%d down=%s char=%d counts=(%d/%d) backspace=%d", keyboard.pressed_key, tracked_key, tracked_key_down and "yes" or "no", keyboard.pressed_char, keyboard.num_pressed_keys or 0, keyboard.num_pressed_chars or 0, backspace_presses), 24, 242, 20, 1.0, panel_color ~= nil and panel_color.handle or COLOR_BLUE)
+    ui_font:draw(string.format("mods shift=%s ctrl=%s alt=%s", (Input.key_down(keyboard, Input.KEY_LEFT_SHIFT) or Input.key_down(keyboard, Input.KEY_RIGHT_SHIFT)) and "down" or "up", (Input.key_down(keyboard, Input.KEY_LEFT_CONTROL) or Input.key_down(keyboard, Input.KEY_RIGHT_CONTROL)) and "down" or "up", (Input.key_down(keyboard, Input.KEY_LEFT_ALT) or Input.key_down(keyboard, Input.KEY_RIGHT_ALT)) and "down" or "up"), 24, 272, 20, 1.0, panel_color ~= nil and panel_color.handle or COLOR_BLUE)
+    ui_font:draw(string.format("text: %s_", text_buffer), 24, 302, 20, 1.0, accent_color ~= nil and accent_color.handle or COLOR_DARKBLUE)
+    ui_font:draw(string.format("music(M): %s", (bg_music ~= nil and bg_music:is_playing()) and "playing" or "paused"), 24, 332, 20, 1.0, accent_color ~= nil and accent_color.handle or COLOR_DARKBLUE)
     if last_pick_result ~= nil then
       if last_pick_result.hit then
         ui_font:draw(string.format("pick: hit d=%.2f @ (%.2f, %.2f, %.2f)",
@@ -257,9 +272,9 @@ function update(frame)
                                    last_pick_result.point.x,
                                    last_pick_result.point.y,
                                    last_pick_result.point.z),
-                     24, 362, 20, 1.0, COLOR_DARKBLUE)
+                     24, 362, 20, 1.0, accent_color ~= nil and accent_color.handle or COLOR_DARKBLUE)
       else
-        ui_font:draw("pick: miss", 24, 362, 20, 1.0, COLOR_DARKBLUE)
+        ui_font:draw("pick: miss", 24, 362, 20, 1.0, accent_color ~= nil and accent_color.handle or COLOR_DARKBLUE)
       end
     end
   end

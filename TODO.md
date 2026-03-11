@@ -1,112 +1,117 @@
 # TODO
 
-## Short Term
+## Active Next
 
-- Handle system rewrite (first):
-  - migrate all remaining subsystems to `rl_handle_pool` (slot + generation)
-  - remove legacy monotonic-ID code paths
-  - validate stale-handle behavior consistently across all destroy/set/get APIs
+- Handle system cleanup:
+  - finish migrating remaining legacy handle paths to `rl_handle_pool`
+  - likely remaining holdouts:
+    - colors (`src/rl_color.c`)
+    - model asset IDs / asset-instance split (`src/rl_model.c`)
+  - validate stale-handle behavior consistently across destroy/set/get APIs
+- Lua runtime follow-up:
+  - add a general Lua-facing event API:
+    - `event_on`
+    - `event_off`
+    - `event_emit`
+  - decide whether host fallback clear stays in `examples/c/main.c` or Lua fully owns frame clear
+  - decide whether window bootstrap should grow beyond `get_config()`:
+    - min/max size
+    - vsync hint
+    - other window policy flags/settings
+  - document the Lua standard-library layer more directly for script authors:
+    - `color.lua`
+    - `model.lua`
+    - `texture.lua`
+    - `sprite3d.lua`
+    - `sound.lua`
+    - `music.lua`
+    - `camera3d.lua`
+    - `font.lua`
+- Frame command path hardening:
+  - current typed command path exists through `rl_module_frame_command_t` and the C example host buffer
+  - next step is to expand and harden it rather than redesign it from scratch
+  - decide whether to keep the current host-owned fixed-capacity buffer shape or promote a more general transient command queue/ring buffer
+  - grow the command set carefully as needed:
+    - clear background
+    - camera control / active camera intent
+    - draw text
+    - draw model
+    - draw sprite/texture
+    - play sound
+    - music control if it belongs in the transient command path
+  - clarify command ownership and overflow behavior
+  - document the current host/script contract around command emission and drain order
+- Hot reload lifecycle:
+  - current lifecycle is `get_config/init/update/shutdown`
+  - decide whether hot reload should stay on top of that
+  - or whether explicit `load/unload` should be introduced
+  - define what survives reload vs what is reconstructed
+  - make error/reporting behavior predictable during reload
 - External ID mapping layer:
   - add optional `external_id -> internal_handle` mapping
   - allow caller-supplied IDs while preserving internal handle safety
   - define replace/update behavior when an external ID is reused
-- Lua integration:
-  - desktop: Lua C module (`require`) path first
-  - target Lua 5.2 + LuaJIT compatibility
-  - wasm: evaluate JS-side Lua bridge vs embedded Lua VM approach
-  - next Lua runtime follow-up:
-    - add a general Lua-facing event API (`event_on`, `event_off`, `event_emit`)
-    - decide whether host fallback clear stays or Lua fully owns frame clear
-    - evaluate `load/unload` lifecycle split for HCR on top of current `get_config/init/update/shutdown`
-    - decide whether window bootstrap should grow beyond `get_config()` (min/max size, vsync, etc.)
-    - document the Lua standard-library layer (`model.lua`, `texture.lua`, `sprite3d.lua`, `sound.lua`, `music.lua`, `camera3d.lua`, `font.lua`)
-- Frame snapshot submission API:
-  - define a compact frame command/snapshot structure using `rl_handle_t`
-  - add one-call submit path for per-frame draw state/commands
-  - start with clear + camera + model/text/rect primitives
-  - define the per-frame script contract:
-    - host gathers `dt`, keyboard snapshot, mouse snapshot, and basic window/screen state
-    - host calls script `update(...)` once per tick
-    - script mutates gameplay state and emits transient frame commands
-    - host drains commands after script update and executes draw/audio work
-    - clear command buffer every frame
-  - decide command transport:
-    - ring buffer / fixed-capacity queue vs growable transient buffer
-    - tagged union / typed opcodes instead of stringly-typed event payloads
-  - split API responsibilities cleanly:
-    - explicit host API for resource create/load/destroy returning handles
-    - transient per-frame command path for draw/audio/immediate actions
-  - define initial script-facing command set:
-    - clear background
-    - set camera
-    - draw text
-    - draw model
-    - draw sprite/texture
-    - play sound / control music
-  - define script lifecycle and reload behavior:
-    - `get_config/init/update/shutdown` is now in place for Lua
-    - decide whether to add explicit `load/unload` for hot reload
-    - what survives hot reload vs what is reconstructed
-    - error/reporting behavior with source-aware logs
-  - prove the model in the existing C example:
-    - build host once
-    - edit script in a plain text editor
-    - save and observe changed gameplay/frame output without C rebuilds
-- API/docs sync after recent camera/input refactor:
-  - status: mostly done
-  - keep examples current when scratch bridge functions are renamed/removed
-  - add/maintain a short "wasm-only bridge API" table in docs (`*_to_scratch` functions + JS wrapper names)
-- Event payload bridge for JS:
-  - add scratch-area read/write helpers for event payloads so JS can exchange structured payload data with C listeners
-  - define a stable payload layout/versioning strategy for cross-language safety (JS/Nim/C)
-  - open architecture question:
-    - if the thin host + in-wasm scripting model succeeds, do JS bindings stop being a primary gameplay API and become a thinner operational/system/bootstrap layer instead?
-- Event queueing model:
-  - expand event system with an explicit queue (`enqueue`) alongside immediate emit semantics
-  - add queue processing/drain API and decide where it runs (core update loop vs module update phase)
+- Event system follow-up:
+  - add an explicit queue (`enqueue`) alongside immediate emit semantics
+  - add queue processing/drain API
+  - decide where queued events are drained:
+    - core update loop
+    - module update phase
+    - caller-owned explicit drain point
   - if Lua gets a general event API, decide whether script listeners bind to immediate events, queued events, or both
-- Module SDK split:
-  - define a separate module SDK package/repo for out-of-tree module builds
-  - include stable `rl_module.h` ABI and documented versioning/compatibility policy
-  - define how wgutils is provided in SDK (headers/libs/version pin) for module portability
-  - keep module development in-tree until SDK contract is stable
+- Wasm + scripting direction:
+  - decide whether wasm Lua should be:
+    - embedded Lua VM
+    - JS-side Lua bridge
+    - something else entirely
+  - keep the thin-host boundary stable enough that this can be swapped without redesigning the runtime
+- API/docs sync:
+  - keep examples current as APIs change
+  - add a short wasm-only bridge table for scratch helpers (`*_to_scratch` and JS wrapper names)
+  - keep `README.md`, `docs/API.md`, `docs/BINDINGS.md`, and `docs/DEV_NOTES.md` aligned when the Lua/module surface changes
+
+## In Progress Conceptually
+
+- Thin host + scripted gameplay is now the active direction:
+  - host owns bootstrap, window/frame boundaries, and resource execution
+  - script owns gameplay state and emits transient frame commands
+  - current reference implementation is the Lua module plus `examples/c/main.c`
+- Frame command transport is no longer hypothetical:
+  - typed command ABI exists in `include/rl_module.h`
+  - Lua emits commands through the module host API
+  - the C example drains those commands in clear / audio / 3D / 2D passes
+- Lua-side wrapper modules exist and are the beginning of a script-facing standard library.
+
+## Research / Evaluation
+
 - Scripting backend evaluation:
   - keep Lua as the reference implementation for module-hosted scripting
   - compare TinyCC, daslang, and Haxe/cppia against the same module boundary
-  - define explicit selection criteria for the "right" script language:
-    - hot reload/edit-compile latency
-    - fit for immediate-mode per-frame game logic
-    - embedding complexity behind the module host API
-    - wasm viability
-    - native production build story without a permanent interpreter
-    - debugging/error-reporting quality
-    - ergonomics for handle-based host calls
   - evaluate:
-    - reload latency
+    - hot reload / edit-compile latency
     - host API friction
     - debugging quality
     - wasm feasibility
-    - native production build story without a permanent interpreter
+    - native production story without a permanent interpreter
+    - ergonomics for handle-based host calls
   - Haxe/cppia-specific question:
-    - does it provide a strong "same source in dev + native production later" path without introducing unacceptable C++/toolchain friction?
+    - does it provide a strong "same source in dev + native production later" path without unacceptable C++/toolchain friction?
+- Event payload bridge for JS:
+  - add scratch-area read/write helpers for event payloads so JS can exchange structured payload data with C listeners
+  - define a stable payload layout/versioning strategy for JS/Nim/C safety
+  - re-evaluate the long-term role of JS bindings if in-wasm scripting becomes the primary gameplay path
+- Module SDK split:
+  - define a separate module SDK package/repo for out-of-tree module builds
+  - include stable `rl_module.h` ABI and documented versioning/compatibility policy
+  - define how wgutils is provided in the SDK for module portability
+  - keep module development in-tree until the SDK contract is stable
 - URI/path follow-up:
   - add URL normalization examples to docs
   - decide whether cache keys should canonicalize host casing
 - Asset versioning + manifest:
   - add per-asset version metadata so cached files can be upgraded/replaced safely
-  - define a manifest format (Babylon-style) listing assets, versions, hashes, and URLs
-  - on startup/load, compare manifest vs local cache and invalidate stale entries
-- IDBFS lifecycle hardening: done (single sync path + overlap guard + documented ready-state timing)
-- FileIO logging cleanup: done
-  - standardized FileIO message style and capitalization
-  - switched FileIO logging calls to shared `logger/log` API
-  - moved logger implementation from `src/vendor/logger` to `src/logger`
-- Audio support baseline: done
-  - added `rl_music` (streaming BGM) and `rl_sound` (SFX) subsystems
-  - wired lifecycle into `rl_init()` / `rl_deinit()`
-  - exported APIs in C + JS + Nim bindings and documented in `docs/API.md`
-  - C example now includes BGM + click SFX playback
-- Developer handoff docs: done (`docs/DEV_NOTES.md`)
+  - define a manifest format listing assets, versions, hashes, and URLs
+  - compare manifest vs local cache on startup/load and invalidate stale entries
 
 ## Parking Lot
 
@@ -117,14 +122,12 @@
   - document/validate missing-normal-VBO fallback behavior
 - Consider caching animation GPU-state readiness per model instance to avoid per-frame mesh scans.
 - Picking follow-up:
-  - broad-phase checks before narrow-phase ray tests: done (model world-AABB and sprite billboard-sphere early reject)
+  - broad-phase checks before narrow-phase ray tests: done
   - add a scene-level "what's under the mouse" API that returns closest hit target + hit data
   - determine ownership of scene graph/state (host app vs librl) for scene-level picking and related queries
 
 ### Build / Tooling
 
-- Build/test smoke target: done (`make test` now runs desktop + wasm unit tests, plus desktop `uri_test` and wasm artifact checks)
-- C example wasm target naming cleanup: done (`wasm-debug-smap` merged into `wasm-debug`)
 - Consider formatting/lint guidance for C, JS, and Nim.
 
 ### Product Roadmap
@@ -150,18 +153,27 @@
 - Evaluate NavMesh support (Recast/Detour integration path).
 - Evaluate tilemap support (e.g. Tiled pipeline and runtime representation).
 
-### Follow-up Cleanup
+## Done
 
-- Review all headers for stale declarations after recent refactors: ongoing
-- Docs refresh after Lua runtime spike:
-  - update `docs/DEV_NOTES.md` with current Lua script lifecycle and wrapper modules
-  - add a short maintainer note about `examples/c/main.c` now being a thin host shell
-  - add a short user-facing doc later for Lua script entrypoints and built-in globals/constants
-- Expand `docs/API.md` to function-by-function docs:
-  - call order expectations
-  - return/error semantics
-  - platform-specific notes (desktop vs web)
-- Include source-of-truth pointers in docs for build/runtime internals:
-  - public usage in `README.md`
-  - maintainer internals in `docs/DEV_NOTES.md`
-- Expand `docs/BINDINGS.md` with minimal usage examples for JS and Nim.
+- IDBFS lifecycle hardening:
+  - single sync path
+  - overlap guard
+  - documented ready-state timing
+- FileIO logging cleanup:
+  - standardized FileIO message style and capitalization
+  - switched FileIO logging calls to shared `logger/log` API
+  - moved logger implementation from `src/vendor/logger` to `src/logger`
+- Audio support baseline:
+  - added `rl_music` (streaming BGM) and `rl_sound` (SFX) subsystems
+  - wired lifecycle into `rl_init()` / `rl_deinit()`
+  - exported APIs in C + JS + Nim bindings and documented in `docs/API.md`
+  - C example includes BGM + click SFX playback
+- Developer handoff docs:
+  - `docs/DEV_NOTES.md` exists and is useful for session restart
+- Build/test smoke target:
+  - `make test` runs desktop + wasm unit tests, plus desktop `uri_test` and wasm artifact checks
+- C example wasm target naming cleanup:
+  - `wasm-debug-smap` merged into `wasm-debug`
+- Picking broad-phase optimization:
+  - model world-AABB early reject
+  - sprite billboard-sphere early reject

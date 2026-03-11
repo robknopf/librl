@@ -1,4 +1,3 @@
-#include <string.h>
 #include "rl.h"
 #include "internal/exports.h"
 #include "raylib.h"

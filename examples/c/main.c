@@ -3,6 +3,7 @@
 #include "logger/log.h"
 #include "rl.h"
 #include "rl_loader.h"
+#include "rl_model.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -136,6 +137,17 @@ static void lua_frame_execute_3d(const lua_frame_buffer_t *frame) {
   for (i = 0; i < frame->count; i++) {
     const rl_module_frame_command_t *command = &frame->commands[i];
     switch (command->type) {
+    case RL_MODULE_FRAME_CMD_DRAW_MODEL:
+      if (command->data.draw_model.animation_index >= 0) {
+        rl_model_animation_update(command->data.draw_model.model,
+                                  command->data.draw_model.animation_index,
+                                  command->data.draw_model.animation_frame);
+      }
+      rl_model_draw(command->data.draw_model.model, command->data.draw_model.x,
+                    command->data.draw_model.y, command->data.draw_model.z,
+                    command->data.draw_model.scale,
+                    command->data.draw_model.tint);
+      break;
     case RL_MODULE_FRAME_CMD_DRAW_SPRITE3D:
       rl_sprite3d_draw(command->data.draw_sprite3d.sprite,
                        command->data.draw_sprite3d.x,
@@ -208,11 +220,9 @@ int main(void) {
   const char *font_path = "assets/fonts/Komika/KOMIKAH_.ttf";
   const char *model_path = "assets/models/gumshoe/gumshoe.glb";
   const char *sprite3d_path = "assets/sprites/logo/wg-logo-bw-alpha.png";
-  const char *music_path = "assets/music/ethernight_club.mp3";
   const char *sfx_path = "assets/sounds/click_004.ogg";
   const float font_size = 24.0f;
   const float small_font_size = 16.0f;
-  rl_handle_t music = 0;
   rl_handle_t sfx = 0;
   rl_handle_t model = 0;
   rl_handle_t sprite3d = 0;
@@ -262,27 +272,10 @@ int main(void) {
 
   if (rl_module_init("lua", &module_host, &lua_module.api, &lua_module.state,
                      module_error, sizeof(module_error)) == 0) {
-    if (rl_loader_cache_file("assets/scripts/input_mapping.lua") == 0) {
-      (void)rl_event_emit("lua.do_file", "assets/scripts/input_mapping.lua");
-    } else {
-      log_warn("Failed to cache input_mapping.lua before lua.do_file");
-    }
-    if (rl_loader_cache_file("assets/scripts/lua_demo.lua") == 0) {
-      (void)rl_event_emit("lua.do_file", "assets/scripts/lua_demo.lua");
-    } else {
-      log_warn("Failed to cache lua_demo.lua before lua.do_file");
-    }
+    (void)rl_event_emit("lua.add_path", "assets/scripts");
+    (void)rl_event_emit("lua.do_file", "lua_demo.lua");
   } else {
     log_warn("Lua module init failed: %s", module_error);
-  }
-
-  music = rl_music_create(music_path);
-  if (music != 0) {
-    (void)rl_music_set_loop(music, true);
-    (void)rl_music_set_volume(music, 0.25f);
-    (void)rl_music_play(music);
-  } else {
-    log_warn("Failed to load music stream from %s", music_path);
   }
 
   //sfx = rl_sound_create(sfx_path);
@@ -290,12 +283,8 @@ int main(void) {
     log_warn("Failed to load sfx from %s", sfx_path);
   }
 
-  model = rl_model_create(model_path);
-  if (model != 0) {
-    (void)rl_model_set_animation(model, 1);
-    (void)rl_model_set_animation_speed(model, 1.0f);
-    (void)rl_model_set_animation_loop(model, true);
-  } else {
+  //model = rl_model_create(model_path);
+  if (model == 0) {
     log_warn("Failed to load model from %s", model_path);
   }
 
@@ -315,9 +304,7 @@ int main(void) {
     int text_x = 0;
     int text_y = 0;
 
-    if (music != 0) {
-      (void)rl_music_update(music);
-    }
+    rl_music_update_all();
     // Script-generated frame commands are rebuilt from scratch every tick.
     lua_frame_reset(&g_app.lua_frame);
     if (lua_module.api != NULL && lua_module.api->update != NULL) {
@@ -341,10 +328,6 @@ int main(void) {
       }
     }
 
-    if (model != 0) {
-      (void)rl_model_animate(model, dt);
-    }
-
     BeginDrawing();
     // Drain scripted commands in the same passes the host uses: clear, 3D,
     // then 2D/UI.
@@ -353,9 +336,6 @@ int main(void) {
 
     rl_begin_mode_3d();
     lua_frame_execute_3d(&g_app.lua_frame);
-    if (model != 0) {
-      rl_model_draw(model, 0.0f, 0.0f, 0.0f, 1.0f, RL_COLOR_WHITE);
-    }
     if (sprite3d != 0) {
       rl_sprite3d_draw(sprite3d, 0.0f, 0.0f, 0.0f, 1.0f, RL_COLOR_WHITE);
     }
@@ -412,9 +392,6 @@ int main(void) {
   rl_color_destroy(text_shadow);
   if (sfx != 0) {
     rl_sound_destroy(sfx);
-  }
-  if (music != 0) {
-    rl_music_destroy(music);
   }
   if (lua_module.api != NULL) {
     rl_module_deinit_instance(lua_module.api, lua_module.state);

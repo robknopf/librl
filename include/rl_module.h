@@ -20,7 +20,8 @@ typedef enum rl_module_frame_command_type_t {
     RL_MODULE_FRAME_CMD_CLEAR = 0,
     RL_MODULE_FRAME_CMD_DRAW_TEXT = 1,
     RL_MODULE_FRAME_CMD_DRAW_SPRITE3D = 2,
-    RL_MODULE_FRAME_CMD_PLAY_SOUND = 3
+    RL_MODULE_FRAME_CMD_PLAY_SOUND = 3,
+    RL_MODULE_FRAME_CMD_DRAW_MODEL = 4
 } rl_module_frame_command_type_t;
 
 #define RL_MODULE_FRAME_TEXT_MAX 256
@@ -52,6 +53,17 @@ typedef struct rl_module_frame_play_sound_t {
     rl_handle_t sound;
 } rl_module_frame_play_sound_t;
 
+typedef struct rl_module_frame_draw_model_t {
+    rl_handle_t model;
+    rl_handle_t tint;
+    float x;
+    float y;
+    float z;
+    float scale;
+    int animation_index;
+    int animation_frame;
+} rl_module_frame_draw_model_t;
+
 typedef struct rl_module_frame_command_t {
     int type;
     union {
@@ -59,6 +71,7 @@ typedef struct rl_module_frame_command_t {
         rl_module_frame_draw_text_t draw_text;
         rl_module_frame_draw_sprite3d_t draw_sprite3d;
         rl_module_frame_play_sound_t play_sound;
+        rl_module_frame_draw_model_t draw_model;
     } data;
 } rl_module_frame_command_t;
 

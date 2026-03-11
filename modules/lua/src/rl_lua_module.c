@@ -136,6 +136,8 @@ static int lua_module_get_active_camera3d_binding(lua_State *L);
 static int lua_module_pick_model_binding(lua_State *L);
 static int lua_module_pick_sprite3d_binding(lua_State *L);
 static int lua_module_draw_text_binding(lua_State *L);
+static int lua_module_draw_cube_binding(lua_State *L);
+static int lua_module_draw_ground_texture_binding(lua_State *L);
 static int lua_module_draw_sprite3d_binding(lua_State *L);
 static int lua_module_draw_model_binding(lua_State *L);
 static int lua_module_draw_texture_binding(lua_State *L);
@@ -382,6 +384,14 @@ static void lua_vm_bind_log(rl_lua_module_state_t *state)
     lua_pushlightuserdata(L, state);
     lua_pushcclosure(L, lua_module_draw_text_binding, 1);
     lua_setglobal(L, "draw_text");
+
+    lua_pushlightuserdata(L, state);
+    lua_pushcclosure(L, lua_module_draw_cube_binding, 1);
+    lua_setglobal(L, "draw_cube");
+
+    lua_pushlightuserdata(L, state);
+    lua_pushcclosure(L, lua_module_draw_ground_texture_binding, 1);
+    lua_setglobal(L, "draw_ground_texture");
 
     lua_pushlightuserdata(L, state);
     lua_pushcclosure(L, lua_module_draw_sprite3d_binding, 1);
@@ -1954,6 +1964,52 @@ static int lua_module_draw_text_binding(lua_State *L)
     command.data.draw_text.font_size = (float)luaL_checknumber(L, 5);
     command.data.draw_text.spacing = (float)luaL_optnumber(L, 6, 1.0);
     (void)snprintf(command.data.draw_text.text, sizeof(command.data.draw_text.text), "%s", text);
+    rl_module_frame_command(&state->host, &command);
+    return 0;
+}
+
+static int lua_module_draw_cube_binding(lua_State *L)
+{
+    rl_lua_module_state_t *state = NULL;
+    rl_module_frame_command_t command;
+
+    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    if (state == NULL) {
+        return 0;
+    }
+
+    memset(&command, 0, sizeof(command));
+    command.type = RL_MODULE_FRAME_CMD_DRAW_CUBE;
+    command.data.draw_cube.x = (float)luaL_checknumber(L, 1);
+    command.data.draw_cube.y = (float)luaL_checknumber(L, 2);
+    command.data.draw_cube.z = (float)luaL_checknumber(L, 3);
+    command.data.draw_cube.width = (float)luaL_checknumber(L, 4);
+    command.data.draw_cube.height = (float)luaL_checknumber(L, 5);
+    command.data.draw_cube.length = (float)luaL_checknumber(L, 6);
+    command.data.draw_cube.color = (rl_handle_t)luaL_checkinteger(L, 7);
+    rl_module_frame_command(&state->host, &command);
+    return 0;
+}
+
+static int lua_module_draw_ground_texture_binding(lua_State *L)
+{
+    rl_lua_module_state_t *state = NULL;
+    rl_module_frame_command_t command;
+
+    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    if (state == NULL) {
+        return 0;
+    }
+
+    memset(&command, 0, sizeof(command));
+    command.type = RL_MODULE_FRAME_CMD_DRAW_GROUND_TEXTURE;
+    command.data.draw_ground_texture.texture = (rl_handle_t)luaL_checkinteger(L, 1);
+    command.data.draw_ground_texture.x = (float)luaL_checknumber(L, 2);
+    command.data.draw_ground_texture.y = (float)luaL_checknumber(L, 3);
+    command.data.draw_ground_texture.z = (float)luaL_checknumber(L, 4);
+    command.data.draw_ground_texture.width = (float)luaL_checknumber(L, 5);
+    command.data.draw_ground_texture.length = (float)luaL_checknumber(L, 6);
+    command.data.draw_ground_texture.tint = (rl_handle_t)luaL_checkinteger(L, 7);
     rl_module_frame_command(&state->host, &command);
     return 0;
 }

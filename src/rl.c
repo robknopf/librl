@@ -1,6 +1,7 @@
 #include "rl.h"
 #include "internal/exports.h"
 #include "raylib.h"
+#include "rlgl.h"
 #include "rl_loader.h"
 #include "rl_scratch.h"
 #include "logger/log.h"
@@ -335,6 +336,36 @@ void rl_draw_texture_ex(rl_handle_t texture, float x, float y, float scale, floa
     }
 
     DrawTextureEx(*tex, (Vector2){x, y}, rotation, scale, rl_color_get(tint));
+}
+
+RL_KEEP
+void rl_draw_ground_texture(rl_handle_t texture,
+                            float position_x, float position_y, float position_z,
+                            float width, float length, rl_handle_t tint) {
+    Texture2D *tex = rl_texture_get_ptr(texture);
+    Color c = rl_color_get(tint);
+    const float half_width = width * 0.5f;
+    const float half_length = length * 0.5f;
+
+    if (tex == NULL) {
+        return;
+    }
+
+    rlSetTexture(tex->id);
+    rlBegin(RL_QUADS);
+    rlColor4ub(c.r, c.g, c.b, c.a);
+
+    rlTexCoord2f(0.0f, 0.0f);
+    rlVertex3f(position_x - half_width, position_y, position_z - half_length);
+    rlTexCoord2f(0.0f, 1.0f);
+    rlVertex3f(position_x - half_width, position_y, position_z + half_length);
+    rlTexCoord2f(1.0f, 1.0f);
+    rlVertex3f(position_x + half_width, position_y, position_z + half_length);
+    rlTexCoord2f(1.0f, 0.0f);
+    rlVertex3f(position_x + half_width, position_y, position_z - half_length);
+
+    rlEnd();
+    rlSetTexture(0);
 }
 
 RL_KEEP

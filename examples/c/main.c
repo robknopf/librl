@@ -1,5 +1,4 @@
 #include <raylib.h>
-
 #include "logger/log.h"
 #include "rl.h"
 #include "rl_loader.h"
@@ -154,6 +153,22 @@ static void lua_frame_execute_3d(const lua_frame_buffer_t *frame) {
           command->data.draw_sprite3d.sprite, command->data.draw_sprite3d.x,
           command->data.draw_sprite3d.y, command->data.draw_sprite3d.z,
           command->data.draw_sprite3d.size, command->data.draw_sprite3d.tint);
+      break;
+    case RL_MODULE_FRAME_CMD_DRAW_CUBE:
+      rl_draw_cube(command->data.draw_cube.x, command->data.draw_cube.y,
+                   command->data.draw_cube.z, command->data.draw_cube.width,
+                   command->data.draw_cube.height,
+                   command->data.draw_cube.length,
+                   command->data.draw_cube.color);
+      break;
+    case RL_MODULE_FRAME_CMD_DRAW_GROUND_TEXTURE:
+      rl_draw_ground_texture(command->data.draw_ground_texture.texture,
+                             command->data.draw_ground_texture.x,
+                             command->data.draw_ground_texture.y,
+                             command->data.draw_ground_texture.z,
+                             command->data.draw_ground_texture.width,
+                             command->data.draw_ground_texture.length,
+                             command->data.draw_ground_texture.tint);
       break;
     default:
       break;

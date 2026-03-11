@@ -1,6 +1,7 @@
 local time_s = 0
 local sprite3d_logo = nil
 local logo_texture = nil
+local blob_shadow_texture = nil
 local gumshoe_model = nil
 local bg_music = nil
 local click_sound = nil
@@ -8,6 +9,7 @@ local ui_font = nil
 local main_camera = nil
 local accent_color = nil
 local panel_color = nil
+local shadow_color = nil
 local mouse_left_was_down = false
 local music_toggle_was_down = false
 local last_pick_result = nil
@@ -32,6 +34,7 @@ local Sound = require("sound")
 local Camera3D = require("camera3d")
 local Font = require("font")
 local Color = require("color")
+local Shadow = require("shadow")
 
 local function append_pressed_char(buffer, ch)
   if ch == nil or ch < 32 or ch > 255 then
@@ -90,12 +93,14 @@ end
 function load()
   sprite3d_logo = Sprite3D.load("assets/sprites/logo/wg-logo-bw-alpha.png")
   logo_texture = Texture.load("assets/sprites/logo/wg-logo-bw-alpha.png")
+  blob_shadow_texture = Texture.load("assets/textures/blobshadow.png")
   gumshoe_model = Model.load("assets/models/gumshoe/gumshoe.glb")
   bg_music = Music.load("assets/music/ethernight_club.mp3")
   click_sound = Sound.load("assets/sounds/click_004.ogg")
   ui_font = Font.load("assets/fonts/Komika/KOMIKAH_.ttf", 24)
   accent_color = Color.create(221, 87, 54, 255)
   panel_color = Color.create(24, 107, 138, 255)
+  shadow_color = Color.create(0, 0, 0, 255)
   main_camera = Camera3D.create(12.0, 12.0, 12.0,
                                 0.0, 1.0, 0.0,
                                 0.0, 1.0, 0.0,
@@ -174,6 +179,7 @@ function unload()
 
   sprite3d_logo = nil
   logo_texture = nil
+  blob_shadow_texture = nil
   gumshoe_model = nil
   bg_music = nil
   click_sound = nil
@@ -181,6 +187,7 @@ function unload()
   main_camera = nil
   accent_color = nil
   panel_color = nil
+  shadow_color = nil
 end
 
 function shutdown()
@@ -335,6 +342,10 @@ function update(frame)
     sprite3d_logo.y = bob
     sprite3d_logo.z = 0.0
     sprite3d_logo.size = size
+    if blob_shadow_texture ~= nil and blob_shadow_texture.handle ~= 0 and
+       shadow_color ~= nil and shadow_color.handle ~= 0 then
+      Shadow.draw_blob(blob_shadow_texture, sprite3d_logo, 1.35, shadow_color.handle, 0.0)
+    end
     sprite3d_logo:draw(COLOR_WHITE)
   end
 

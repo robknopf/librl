@@ -29,16 +29,23 @@ typedef struct
     int left;
     int right;
     int middle;
+    int buttons[3];
 } rl_mouse_state_t;
 
 #define RL_KEYBOARD_MAX_KEYS 512
+#define RL_KEYBOARD_MAX_PRESSED_KEYS 32
+#define RL_KEYBOARD_MAX_PRESSED_CHARS 32
 
 typedef struct
 {
     int max_num_keys;
     int keys[RL_KEYBOARD_MAX_KEYS];
-    int last_key;
-    int last_char;
+    int pressed_key;
+    int pressed_char;
+    int num_pressed_keys;
+    int pressed_keys[RL_KEYBOARD_MAX_PRESSED_KEYS];
+    int num_pressed_chars;
+    int pressed_chars[RL_KEYBOARD_MAX_PRESSED_CHARS];
 } rl_keyboard_state_t;
 
 typedef struct

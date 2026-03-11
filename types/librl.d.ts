@@ -31,8 +31,12 @@ export interface RLMouseState {
 export interface RLKeyboardState {
   max_num_keys: number;
   keys: Int32Array;
-  last_key: number;
-  last_char: number;
+  pressed_key: number;
+  pressed_char: number;
+  num_pressed_keys: number;
+  pressed_keys: Int32Array;
+  num_pressed_chars: number;
+  pressed_chars: Int32Array;
 }
 
 export interface RLPickResult {

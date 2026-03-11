@@ -211,19 +211,48 @@ rl_mouse_state_t rl_get_mouse_state(void)
     state.left = rl_get_mouse_button(0);
     state.right = rl_get_mouse_button(1);
     state.middle = rl_get_mouse_button(2);
+    state.buttons[0] = state.left;
+    state.buttons[1] = state.right;
+    state.buttons[2] = state.middle;
     return state;
 }
 
 RL_KEEP
 rl_keyboard_state_t rl_get_keyboard_state(void)
 {
-    rl_keyboard_t keyboard = rl_scratch_get_keyboard();
     rl_keyboard_state_t state = {0};
+    int max_keys = RL_KEYBOARD_MAX_KEYS;
 
-    state.max_num_keys = keyboard.max_num_keys;
-    memcpy(state.keys, keyboard.keys, sizeof(state.keys));
-    state.last_key = keyboard.last_key;
-    state.last_char = keyboard.last_char;
+    state.max_num_keys = max_keys;
+    for (int i = 0; i < max_keys; i++) {
+        if (IsKeyPressed(i)) {
+            state.keys[i] = RL_BUTTON_PRESSED;
+        } else if (IsKeyDown(i)) {
+            state.keys[i] = RL_BUTTON_DOWN;
+        } else if (IsKeyReleased(i)) {
+            state.keys[i] = RL_BUTTON_RELEASED;
+        } else {
+            state.keys[i] = RL_BUTTON_UP;
+        }
+    }
+
+    while (state.num_pressed_keys < RL_KEYBOARD_MAX_PRESSED_KEYS) {
+        int key = GetKeyPressed();
+        if (key == 0) {
+            break;
+        }
+        state.pressed_key = key;
+        state.pressed_keys[state.num_pressed_keys++] = key;
+    }
+
+    while (state.num_pressed_chars < RL_KEYBOARD_MAX_PRESSED_CHARS) {
+        int ch = GetCharPressed();
+        if (ch == 0) {
+            break;
+        }
+        state.pressed_char = ch;
+        state.pressed_chars[state.num_pressed_chars++] = ch;
+    }
 
     return state;
 }

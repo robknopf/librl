@@ -22,8 +22,12 @@ type
   RLKeyboardState* {.importc: "rl_keyboard_state_t", header: "rl.h", bycopy.} = object
     max_num_keys*: cint
     keys*: array[512, cint]
-    last_key*: cint
-    last_char*: cint
+    pressed_key*: cint
+    pressed_char*: cint
+    num_pressed_keys*: cint
+    pressed_keys*: array[32, cint]
+    num_pressed_chars*: cint
+    pressed_chars*: array[32, cint]
   RLEventListenerFn* = proc(payload: pointer, userData: pointer) {.cdecl.}
   RLModuleLogFn* = proc(userData: pointer, level: cint, message: cstring) {.cdecl.}
   RLModuleLogSourceFn* = proc(userData: pointer, level: cint, sourceFile: cstring,

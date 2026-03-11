@@ -62,6 +62,7 @@ void rl_set_light_ambient(float ambient);
 void rl_draw_cube(float position_x, float position_y, float position_z,
                   float width, float height, float length, rl_handle_t color);
 void rl_draw_rectangle(int x, int y, int width, int height, rl_handle_t color);
+void rl_update_to_scratch(void);
 void rl_update(void);
 double rl_get_time();
 int rl_measure_text(const char *text, int fontSize) ;

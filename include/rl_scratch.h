@@ -95,8 +95,12 @@ typedef struct
     {
         size_t max_num_keys;
         size_t keys;
-        size_t last_key;
-        size_t last_char;
+        size_t pressed_key;
+        size_t pressed_char;
+        size_t num_pressed_keys;
+        size_t pressed_keys;
+        size_t num_pressed_chars;
+        size_t pressed_chars;
     } keyboard;
     struct
     {

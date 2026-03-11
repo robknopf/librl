@@ -29,8 +29,12 @@ const rl_scratch_offsets_t *rl_scratch_get_offsets(void)
         .keyboard = {
             .max_num_keys = offsetof(rl_scratch_t, keyboard.max_num_keys), 
             .keys = offsetof(rl_scratch_t, keyboard.keys), 
-            .last_key = offsetof(rl_scratch_t, keyboard.last_key), 
-            .last_char = offsetof(rl_scratch_t, keyboard.last_char)
+            .pressed_key = offsetof(rl_scratch_t, keyboard.pressed_key),
+            .pressed_char = offsetof(rl_scratch_t, keyboard.pressed_char),
+            .num_pressed_keys = offsetof(rl_scratch_t, keyboard.num_pressed_keys),
+            .pressed_keys = offsetof(rl_scratch_t, keyboard.pressed_keys),
+            .num_pressed_chars = offsetof(rl_scratch_t, keyboard.num_pressed_chars),
+            .pressed_chars = offsetof(rl_scratch_t, keyboard.pressed_chars)
         },
         .gamepads = {
             .max_num_gamepads = offsetof(rl_scratch_t, gamepads.max_num_gamepads),
@@ -125,11 +129,6 @@ void rl_scratch_set_touchpoint(int index, int x, int y, int id)
 void rl_scratch_set_keyboard_key(int key, int state)
 {
     rl_scratch.keyboard.keys[key] = state;
-    if (state == 1)
-    {
-        rl_scratch.keyboard.last_key = key;
-        rl_scratch.keyboard.last_char = key;
-    }
 }
 
 void rl_scratch_set_gamepad_axis(int id, int axis, float value)
@@ -221,6 +220,11 @@ void rl_scratch_update()
     rl_scratch_set_mouse(GetMouseX(), GetMouseY(), GetMouseWheelMove(), mouse_button_status_0, mouse_button_status_1, mouse_button_status_2);
 
     // keyboard
+    rl_scratch.keyboard.pressed_key = 0;
+    rl_scratch.keyboard.pressed_char = 0;
+    rl_scratch.keyboard.num_pressed_keys = 0;
+    rl_scratch.keyboard.num_pressed_chars = 0;
+
     for (int i = 0; i < RL_SCRATCH_MAX_NUM_KEYBOARD_KEYS; i++)
     {
         int key_status = 0;
@@ -238,6 +242,28 @@ void rl_scratch_update()
             key_status = 3; // just released
         }
         rl_scratch_set_keyboard_key(i, key_status);
+    }
+
+    while (rl_scratch.keyboard.num_pressed_keys < RL_KEYBOARD_MAX_PRESSED_KEYS)
+    {
+        int key = GetKeyPressed();
+        if (key == 0)
+        {
+            break;
+        }
+        rl_scratch.keyboard.pressed_key = key;
+        rl_scratch.keyboard.pressed_keys[rl_scratch.keyboard.num_pressed_keys++] = key;
+    }
+
+    while (rl_scratch.keyboard.num_pressed_chars < RL_KEYBOARD_MAX_PRESSED_CHARS)
+    {
+        int ch = GetCharPressed();
+        if (ch == 0)
+        {
+            break;
+        }
+        rl_scratch.keyboard.pressed_char = ch;
+        rl_scratch.keyboard.pressed_chars[rl_scratch.keyboard.num_pressed_chars++] = ch;
     }
 
     // gamepad

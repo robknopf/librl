@@ -5,6 +5,7 @@
 #include "rl_sound.h"
 #include "rl_sprite3d.h"
 #include "fileio/fileio.h"
+#include "path/path.h"
 
 #include <lua.h>
 #include <lauxlib.h>
@@ -18,14 +19,34 @@
 #define LUA_OK 0
 #endif
 
+#define RL_LUA_MODULE_MAX_CACHED_RESOURCES 128
+typedef struct rl_lua_cached_resource_t {
+    rl_handle_t handle;
+    char path[256];
+} rl_lua_cached_resource_t;
+
+typedef struct rl_lua_cached_font_t {
+    rl_handle_t handle;
+    float size;
+    char path[256];
+} rl_lua_cached_font_t;
+
 typedef struct rl_lua_vm_t {
     lua_State *state;
     char last_error[256];
+    int frame_ref;
+    int mouse_ref;
+    int mouse_buttons_ref;
+    int keyboard_ref;
+    int keyboard_keys_ref;
 } rl_lua_vm_t;
 
 typedef struct rl_lua_module_state_t {
     rl_module_host_api_t host;
     rl_lua_vm_t vm;
+    rl_lua_cached_resource_t sprite3d_cache[RL_LUA_MODULE_MAX_CACHED_RESOURCES];
+    rl_lua_cached_resource_t sound_cache[RL_LUA_MODULE_MAX_CACHED_RESOURCES];
+    rl_lua_cached_font_t font_cache[RL_LUA_MODULE_MAX_CACHED_RESOURCES];
 } rl_lua_module_state_t;
 
 static void lua_module_on_do_string(void *payload, void *listener_user_data);
@@ -37,8 +58,22 @@ static int lua_module_draw_sprite3d_binding(lua_State *L);
 static int lua_module_load_sprite3d_binding(lua_State *L);
 static int lua_module_load_sound_binding(lua_State *L);
 static int lua_module_play_sound_binding(lua_State *L);
+static int lua_module_load_font_binding(lua_State *L);
 static const char *lua_module_debug_source(lua_Debug *ar, char *buffer, size_t buffer_size);
 static int lua_vm_call_update(rl_lua_module_state_t *state, float dt_seconds);
+static rl_handle_t lua_module_cached_load(rl_lua_cached_resource_t *cache,
+                                          int cache_count,
+                                          const char *path,
+                                          rl_handle_t (*create_fn)(const char *path));
+static void lua_module_cached_destroy(rl_lua_cached_resource_t *cache,
+                                      int cache_count,
+                                      void (*destroy_fn)(rl_handle_t handle));
+static rl_handle_t lua_module_cached_load_font(rl_lua_cached_font_t *cache,
+                                               int cache_count,
+                                               const char *path,
+                                               float size);
+static void lua_module_cached_destroy_fonts(rl_lua_cached_font_t *cache,
+                                            int cache_count);
 
 static int parse_lua_log_level(lua_State *L, int idx, int *out_is_level)
 {
@@ -84,6 +119,32 @@ static void set_error(rl_lua_vm_t *vm, const char *msg)
     (void)snprintf(vm->last_error, sizeof(vm->last_error), "%s", msg);
 }
 
+static void lua_vm_set_table_number(lua_State *L, int index, const char *key, lua_Number value)
+{
+    lua_pushstring(L, key);
+    lua_pushnumber(L, value);
+    lua_settable(L, index < 0 ? index - 2 : index);
+}
+
+static void lua_vm_set_table_integer(lua_State *L, int index, const char *key, lua_Integer value)
+{
+    lua_pushstring(L, key);
+    lua_pushinteger(L, value);
+    lua_settable(L, index < 0 ? index - 2 : index);
+}
+
+static void lua_vm_set_array_table_integers(lua_State *L, int index, const char *key, const int *values, int count)
+{
+    lua_pushstring(L, key);
+    lua_newtable(L);
+    for (int i = 0; i < count; i++) {
+        lua_pushinteger(L, i + 1);
+        lua_pushinteger(L, values[i]);
+        lua_settable(L, -3);
+    }
+    lua_settable(L, index < 0 ? index - 2 : index);
+}
+
 static int lua_vm_init(rl_lua_vm_t *vm)
 {
     lua_State *L = NULL;
@@ -102,6 +163,25 @@ static int lua_vm_init(rl_lua_vm_t *vm)
 
     luaL_openlibs(L);
     vm->state = L;
+    vm->frame_ref = LUA_NOREF;
+    vm->mouse_ref = LUA_NOREF;
+    vm->mouse_buttons_ref = LUA_NOREF;
+    vm->keyboard_ref = LUA_NOREF;
+
+    lua_newtable(L);
+    vm->frame_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+
+    lua_newtable(L);
+    vm->mouse_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+
+    lua_newtable(L);
+    vm->mouse_buttons_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+
+    lua_newtable(L);
+    vm->keyboard_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+
+    lua_newtable(L);
+    vm->keyboard_keys_ref = luaL_ref(L, LUA_REGISTRYINDEX);
     set_error(vm, NULL);
     return 0;
 }
@@ -142,6 +222,10 @@ static void lua_vm_bind_log(rl_lua_module_state_t *state)
     lua_pushlightuserdata(L, state);
     lua_pushcclosure(L, lua_module_play_sound_binding, 1);
     lua_setglobal(L, "play_sound");
+
+    lua_pushlightuserdata(L, state);
+    lua_pushcclosure(L, lua_module_load_font_binding, 1);
+    lua_setglobal(L, "load_font");
 
     lua_pushinteger(L, RL_FONT_DEFAULT);
     lua_setglobal(L, "FONT_DEFAULT");
@@ -233,9 +317,147 @@ static void lua_vm_deinit(rl_lua_vm_t *vm)
 
     L = vm->state;
     if (L != NULL) {
+        if (vm->frame_ref != LUA_NOREF) {
+            luaL_unref(L, LUA_REGISTRYINDEX, vm->frame_ref);
+        }
+        if (vm->mouse_ref != LUA_NOREF) {
+            luaL_unref(L, LUA_REGISTRYINDEX, vm->mouse_ref);
+        }
+        if (vm->keyboard_ref != LUA_NOREF) {
+            luaL_unref(L, LUA_REGISTRYINDEX, vm->keyboard_ref);
+        }
+        if (vm->keyboard_keys_ref != LUA_NOREF) {
+            luaL_unref(L, LUA_REGISTRYINDEX, vm->keyboard_keys_ref);
+        }
         lua_close(L);
     }
     memset(vm, 0, sizeof(*vm));
+}
+
+static rl_handle_t lua_module_cached_load(rl_lua_cached_resource_t *cache,
+                                          int cache_count,
+                                          const char *path,
+                                          rl_handle_t (*create_fn)(const char *path))
+{
+    char normalized_path[256] = {0};
+    int i = 0;
+
+    if (cache == NULL || cache_count <= 0 || path == NULL || path[0] == '\0' ||
+        create_fn == NULL) {
+        return 0;
+    }
+
+    path_normalize(path, normalized_path, sizeof(normalized_path));
+
+    for (i = 0; i < cache_count; i++) {
+        if (cache[i].handle != 0 && strcmp(cache[i].path, normalized_path) == 0) {
+            return cache[i].handle;
+        }
+    }
+
+    for (i = 0; i < cache_count; i++) {
+        rl_handle_t handle = 0;
+
+        if (cache[i].handle != 0) {
+            continue;
+        }
+
+        handle = create_fn(normalized_path);
+        if (handle == 0) {
+            return 0;
+        }
+
+        cache[i].handle = handle;
+        (void)snprintf(cache[i].path, sizeof(cache[i].path), "%s", normalized_path);
+        return handle;
+    }
+
+    return 0;
+}
+
+static void lua_module_cached_destroy(rl_lua_cached_resource_t *cache,
+                                      int cache_count,
+                                      void (*destroy_fn)(rl_handle_t handle))
+{
+    int i = 0;
+
+    if (cache == NULL || cache_count <= 0 || destroy_fn == NULL) {
+        return;
+    }
+
+    for (i = 0; i < cache_count; i++) {
+        if (cache[i].handle == 0) {
+            continue;
+        }
+
+        destroy_fn(cache[i].handle);
+        cache[i].handle = 0;
+        cache[i].path[0] = '\0';
+    }
+}
+
+static rl_handle_t lua_module_cached_load_font(rl_lua_cached_font_t *cache,
+                                               int cache_count,
+                                               const char *path,
+                                               float size)
+{
+    char normalized_path[256] = {0};
+    int i = 0;
+
+    if (cache == NULL || cache_count <= 0 || path == NULL || path[0] == '\0') {
+        return 0;
+    }
+
+    path_normalize(path, normalized_path, sizeof(normalized_path));
+
+    for (i = 0; i < cache_count; i++) {
+        if (cache[i].handle != 0 &&
+            cache[i].size == size &&
+            strcmp(cache[i].path, normalized_path) == 0) {
+            return cache[i].handle;
+        }
+    }
+
+    for (i = 0; i < cache_count; i++) {
+        rl_handle_t handle = 0;
+
+        if (cache[i].handle != 0) {
+            continue;
+        }
+
+        handle = rl_font_create(normalized_path, size);
+        if (handle == 0) {
+            return 0;
+        }
+
+        cache[i].handle = handle;
+        cache[i].size = size;
+        (void)snprintf(cache[i].path, sizeof(cache[i].path), "%s", normalized_path);
+        return handle;
+    }
+
+    return 0;
+}
+
+static void lua_module_cached_destroy_fonts(rl_lua_cached_font_t *cache,
+                                            int cache_count)
+{
+    int i = 0;
+
+    if (cache == NULL || cache_count <= 0) {
+        return;
+    }
+
+    for (i = 0; i < cache_count; i++) {
+        if (cache[i].handle == 0) {
+            continue;
+        }
+
+        rl_font_destroy(cache[i].handle);
+        cache[i].handle = 0;
+        cache[i].size = 0.0f;
+        cache[i].path[0] = '\0';
+    }
 }
 
 static int rl_lua_module_init_impl(const rl_module_host_api_t *host, void **module_state)
@@ -286,6 +508,12 @@ static void rl_lua_module_deinit_impl(void *module_state)
     (void)rl_module_event_off(&state->host, "lua.do_string", lua_module_on_do_string, state);
     (void)rl_module_event_off(&state->host, "lua.do_file", lua_module_on_do_file, state);
     (void)rl_module_event_emit(&state->host, "lua.deinit", state);
+    lua_module_cached_destroy(state->sprite3d_cache, RL_LUA_MODULE_MAX_CACHED_RESOURCES,
+                              rl_sprite3d_destroy);
+    lua_module_cached_destroy(state->sound_cache, RL_LUA_MODULE_MAX_CACHED_RESOURCES,
+                              rl_sound_destroy);
+    lua_module_cached_destroy_fonts(state->font_cache,
+                                    RL_LUA_MODULE_MAX_CACHED_RESOURCES);
     lua_vm_deinit(&state->vm);
     rl_module_log(&state->host, RL_MODULE_LOG_INFO, "lua module deinitialized");
     rl_module_free(&state->host, state);
@@ -349,8 +577,9 @@ static const char *lua_module_debug_source(lua_Debug *ar, char *buffer, size_t b
 static int lua_vm_call_update(rl_lua_module_state_t *state, float dt_seconds)
 {
     lua_State *L = NULL;
-    vec2_t mouse = {0};
     rl_mouse_state_t mouse_state = {0};
+    rl_keyboard_state_t keyboard_state = {0};
+    vec2_t screen_size = {0};
     int top = 0;
     int rc = 0;
     const char *err = NULL;
@@ -368,13 +597,48 @@ static int lua_vm_call_update(rl_lua_module_state_t *state, float dt_seconds)
         return 0;
     }
 
-    lua_pushnumber(L, (lua_Number)dt_seconds);
-    mouse = rl_get_mouse_position();
     mouse_state = rl_get_mouse_state();
-    lua_pushnumber(L, (lua_Number)mouse.x);
-    lua_pushnumber(L, (lua_Number)mouse.y);
-    lua_pushboolean(L, mouse_state.left == RL_BUTTON_PRESSED || mouse_state.left == RL_BUTTON_DOWN);
-    rc = lua_pcall(L, 4, 0, 0);
+    keyboard_state = rl_get_keyboard_state();
+    screen_size = rl_get_screen_size();
+
+    lua_rawgeti(L, LUA_REGISTRYINDEX, state->vm.frame_ref);
+    lua_vm_set_table_number(L, -1, "dt", (lua_Number)dt_seconds);
+    lua_vm_set_table_integer(L, -1, "screen_w", (lua_Integer)screen_size.x);
+    lua_vm_set_table_integer(L, -1, "screen_h", (lua_Integer)screen_size.y);
+
+    lua_rawgeti(L, LUA_REGISTRYINDEX, state->vm.mouse_ref);
+    lua_vm_set_table_integer(L, -1, "x", mouse_state.x);
+    lua_vm_set_table_integer(L, -1, "y", mouse_state.y);
+    lua_vm_set_table_integer(L, -1, "wheel", mouse_state.wheel);
+    lua_vm_set_table_integer(L, -1, "left", mouse_state.left);
+    lua_vm_set_table_integer(L, -1, "right", mouse_state.right);
+    lua_vm_set_table_integer(L, -1, "middle", mouse_state.middle);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, state->vm.mouse_buttons_ref);
+    for (int i = 0; i < 3; i++) {
+        lua_pushinteger(L, i);
+        lua_pushinteger(L, mouse_state.buttons[i]);
+        lua_settable(L, -3);
+    }
+    lua_setfield(L, -2, "buttons");
+    lua_setfield(L, -2, "mouse");
+
+    lua_rawgeti(L, LUA_REGISTRYINDEX, state->vm.keyboard_ref);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, state->vm.keyboard_keys_ref);
+    for (int i = 0; i < keyboard_state.max_num_keys; i++) {
+        lua_pushinteger(L, i);
+        lua_pushinteger(L, keyboard_state.keys[i]);
+        lua_settable(L, -3);
+    }
+    lua_setfield(L, -2, "keys");
+    lua_vm_set_table_integer(L, -1, "pressed_key", keyboard_state.pressed_key);
+    lua_vm_set_table_integer(L, -1, "pressed_char", keyboard_state.pressed_char);
+    lua_vm_set_table_integer(L, -1, "num_pressed_keys", keyboard_state.num_pressed_keys);
+    lua_vm_set_table_integer(L, -1, "num_pressed_chars", keyboard_state.num_pressed_chars);
+    lua_vm_set_array_table_integers(L, -1, "pressed_keys", keyboard_state.pressed_keys, keyboard_state.num_pressed_keys);
+    lua_vm_set_array_table_integers(L, -1, "pressed_chars", keyboard_state.pressed_chars, keyboard_state.num_pressed_chars);
+    lua_setfield(L, -2, "keyboard");
+
+    rc = lua_pcall(L, 1, 0, 0);
     if (rc != LUA_OK) {
         err = lua_tostring(L, -1);
         set_error(&state->vm, err != NULL ? err : "lua update failed");
@@ -498,24 +762,40 @@ static int lua_module_draw_sprite3d_binding(lua_State *L)
 
 static int lua_module_load_sprite3d_binding(lua_State *L)
 {
+    rl_lua_module_state_t *state = NULL;
     const char *path = NULL;
     rl_handle_t handle = 0;
 
-    (void)lua_touserdata(L, lua_upvalueindex(1));
+    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    if (state == NULL) {
+        lua_pushinteger(L, 0);
+        return 1;
+    }
+
     path = luaL_checkstring(L, 1);
-    handle = rl_sprite3d_create(path);
+    handle = lua_module_cached_load(state->sprite3d_cache,
+                                    RL_LUA_MODULE_MAX_CACHED_RESOURCES, path,
+                                    rl_sprite3d_create);
     lua_pushinteger(L, (lua_Integer)handle);
     return 1;
 }
 
 static int lua_module_load_sound_binding(lua_State *L)
 {
+    rl_lua_module_state_t *state = NULL;
     const char *path = NULL;
     rl_handle_t handle = 0;
 
-    (void)lua_touserdata(L, lua_upvalueindex(1));
+    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    if (state == NULL) {
+        lua_pushinteger(L, 0);
+        return 1;
+    }
+
     path = luaL_checkstring(L, 1);
-    handle = rl_sound_create(path);
+    handle = lua_module_cached_load(state->sound_cache,
+                                    RL_LUA_MODULE_MAX_CACHED_RESOURCES, path,
+                                    rl_sound_create);
     lua_pushinteger(L, (lua_Integer)handle);
     return 1;
 }
@@ -535,6 +815,28 @@ static int lua_module_play_sound_binding(lua_State *L)
     command.data.play_sound.sound = (rl_handle_t)luaL_checkinteger(L, 1);
     rl_module_frame_command(&state->host, &command);
     return 0;
+}
+
+static int lua_module_load_font_binding(lua_State *L)
+{
+    rl_lua_module_state_t *state = NULL;
+    const char *path = NULL;
+    float size = 0.0f;
+    rl_handle_t handle = 0;
+
+    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    if (state == NULL) {
+        lua_pushinteger(L, 0);
+        return 1;
+    }
+
+    path = luaL_checkstring(L, 1);
+    size = (float)luaL_checknumber(L, 2);
+    handle = lua_module_cached_load_font(state->font_cache,
+                                         RL_LUA_MODULE_MAX_CACHED_RESOURCES,
+                                         path, size);
+    lua_pushinteger(L, (lua_Integer)handle);
+    return 1;
 }
 
 static void lua_module_on_do_file(void *payload, void *listener_user_data)

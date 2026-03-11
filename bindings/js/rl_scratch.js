@@ -37,24 +37,28 @@ Module.initScratchArea = () => {
         keyboard: {
             max_num_keys: HEAP32[scratchAreaOffsetsPtr + 11],
             keys: HEAP32[scratchAreaOffsetsPtr + 12],
-            last_key: HEAP32[scratchAreaOffsetsPtr + 13],
-            last_char: HEAP32[scratchAreaOffsetsPtr + 14],
+            pressed_key: HEAP32[scratchAreaOffsetsPtr + 13],
+            pressed_char: HEAP32[scratchAreaOffsetsPtr + 14],
+            num_pressed_keys: HEAP32[scratchAreaOffsetsPtr + 15],
+            pressed_keys: HEAP32[scratchAreaOffsetsPtr + 16],
+            num_pressed_chars: HEAP32[scratchAreaOffsetsPtr + 17],
+            pressed_chars: HEAP32[scratchAreaOffsetsPtr + 18],
         },
         gamepads: {
-            max_num_gamepads: HEAP32[scratchAreaOffsetsPtr + 15],
-            gamepad: HEAP32[scratchAreaOffsetsPtr + 16],
-            id: HEAP32[scratchAreaOffsetsPtr + 17],
-            axis: HEAP32[scratchAreaOffsetsPtr + 18],
-            buttons: HEAP32[scratchAreaOffsetsPtr + 19],
-            stride: HEAP32[scratchAreaOffsetsPtr + 20] >> 2, // Convert stride to 32-bit units
+            max_num_gamepads: HEAP32[scratchAreaOffsetsPtr + 19],
+            gamepad: HEAP32[scratchAreaOffsetsPtr + 20],
+            id: HEAP32[scratchAreaOffsetsPtr + 21],
+            axis: HEAP32[scratchAreaOffsetsPtr + 22],
+            buttons: HEAP32[scratchAreaOffsetsPtr + 23],
+            stride: HEAP32[scratchAreaOffsetsPtr + 24] >> 2, // Convert stride to 32-bit units
         },
         touchpoints: {
-            count: HEAP32[scratchAreaOffsetsPtr + 21],
-            touchpoint: HEAP32[scratchAreaOffsetsPtr + 22],
-            id: HEAP32[scratchAreaOffsetsPtr + 23],
-            x: HEAP32[scratchAreaOffsetsPtr + 24],
-            y: HEAP32[scratchAreaOffsetsPtr + 25],
-            stride: HEAP32[scratchAreaOffsetsPtr + 26] >> 2, // Convert stride to 32-bit units
+            count: HEAP32[scratchAreaOffsetsPtr + 25],
+            touchpoint: HEAP32[scratchAreaOffsetsPtr + 26],
+            id: HEAP32[scratchAreaOffsetsPtr + 27],
+            x: HEAP32[scratchAreaOffsetsPtr + 28],
+            y: HEAP32[scratchAreaOffsetsPtr + 29],
+            stride: HEAP32[scratchAreaOffsetsPtr + 30] >> 2, // Convert stride to 32-bit units
         },
     };
 };
@@ -125,8 +129,20 @@ Module.getKeyboard = () => ({
         scratchAreaPtr + (scratchAreaOffsets.keyboard.keys >> 2) +
         HEAP32[scratchAreaPtr + (scratchAreaOffsets.keyboard.max_num_keys >> 2)]
     ),
-    last_key: HEAP32[scratchAreaPtr + (scratchAreaOffsets.keyboard.last_key >> 2)],
-    last_char: HEAP32[scratchAreaPtr + (scratchAreaOffsets.keyboard.last_char >> 2)],
+    pressed_key: HEAP32[scratchAreaPtr + (scratchAreaOffsets.keyboard.pressed_key >> 2)],
+    pressed_char: HEAP32[scratchAreaPtr + (scratchAreaOffsets.keyboard.pressed_char >> 2)],
+    num_pressed_keys: HEAP32[scratchAreaPtr + (scratchAreaOffsets.keyboard.num_pressed_keys >> 2)],
+    pressed_keys: HEAP32.subarray(
+        scratchAreaPtr + (scratchAreaOffsets.keyboard.pressed_keys >> 2),
+        scratchAreaPtr + (scratchAreaOffsets.keyboard.pressed_keys >> 2) +
+        HEAP32[scratchAreaPtr + (scratchAreaOffsets.keyboard.num_pressed_keys >> 2)]
+    ),
+    num_pressed_chars: HEAP32[scratchAreaPtr + (scratchAreaOffsets.keyboard.num_pressed_chars >> 2)],
+    pressed_chars: HEAP32.subarray(
+        scratchAreaPtr + (scratchAreaOffsets.keyboard.pressed_chars >> 2),
+        scratchAreaPtr + (scratchAreaOffsets.keyboard.pressed_chars >> 2) +
+        HEAP32[scratchAreaPtr + (scratchAreaOffsets.keyboard.num_pressed_chars >> 2)]
+    ),
 });
 
 Module.getGamepads = () => {
@@ -212,4 +228,3 @@ Module.getTouchpoint = (id) => {
 }
 //}
 //return scratchAreaWrapper;
-

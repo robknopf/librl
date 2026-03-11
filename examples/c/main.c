@@ -262,6 +262,11 @@ int main(void) {
 
   if (rl_module_init("lua", &module_host, &lua_module.api, &lua_module.state,
                      module_error, sizeof(module_error)) == 0) {
+    if (rl_loader_cache_file("assets/scripts/input_mapping.lua") == 0) {
+      (void)rl_event_emit("lua.do_file", "assets/scripts/input_mapping.lua");
+    } else {
+      log_warn("Failed to cache input_mapping.lua before lua.do_file");
+    }
     if (rl_loader_cache_file("assets/scripts/lua_demo.lua") == 0) {
       (void)rl_event_emit("lua.do_file", "assets/scripts/lua_demo.lua");
     } else {

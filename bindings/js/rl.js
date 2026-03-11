@@ -455,6 +455,7 @@ const RL = {
         CAMERA_PERSPECTIVE: 0,
         CAMERA_ORTHOGRAPHIC: 1,
         FLAG_MSAA_4X_HINT: 32,
+        FLAG_WINDOW_RESIZABLE: 4,
         BUTTON_UP: 0,
         BUTTON_PRESSED: 1,
         BUTTON_DOWN: 2,

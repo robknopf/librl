@@ -3,7 +3,6 @@
 #include "logger/log.h"
 #include "rl.h"
 #include "rl_loader.h"
-#include "rl_lua_module.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -143,21 +142,18 @@ static void lua_frame_execute_3d(const lua_frame_buffer_t *frame) {
                                   command->data.draw_model.animation_index,
                                   command->data.draw_model.animation_frame);
       }
-      rl_model_draw(command->data.draw_model.model, command->data.draw_model.x,
-                    command->data.draw_model.y, command->data.draw_model.z,
-                    command->data.draw_model.scale,
-                    command->data.draw_model.rotation_x,
-                    command->data.draw_model.rotation_y,
-                    command->data.draw_model.rotation_z,
-                    command->data.draw_model.tint);
+      rl_model_draw(
+          command->data.draw_model.model, command->data.draw_model.x,
+          command->data.draw_model.y, command->data.draw_model.z,
+          command->data.draw_model.scale, command->data.draw_model.rotation_x,
+          command->data.draw_model.rotation_y,
+          command->data.draw_model.rotation_z, command->data.draw_model.tint);
       break;
     case RL_MODULE_FRAME_CMD_DRAW_SPRITE3D:
-      rl_sprite3d_draw(command->data.draw_sprite3d.sprite,
-                       command->data.draw_sprite3d.x,
-                       command->data.draw_sprite3d.y,
-                       command->data.draw_sprite3d.z,
-                       command->data.draw_sprite3d.size,
-                       command->data.draw_sprite3d.tint);
+      rl_sprite3d_draw(
+          command->data.draw_sprite3d.sprite, command->data.draw_sprite3d.x,
+          command->data.draw_sprite3d.y, command->data.draw_sprite3d.z,
+          command->data.draw_sprite3d.size, command->data.draw_sprite3d.tint);
       break;
     default:
       break;
@@ -176,12 +172,10 @@ static void lua_frame_execute_2d(const lua_frame_buffer_t *frame) {
     const rl_module_frame_command_t *command = &frame->commands[i];
     switch (command->type) {
     case RL_MODULE_FRAME_CMD_DRAW_TEXTURE:
-      rl_draw_texture_ex(command->data.draw_texture.texture,
-                         command->data.draw_texture.x,
-                         command->data.draw_texture.y,
-                         command->data.draw_texture.scale,
-                         command->data.draw_texture.rotation,
-                         command->data.draw_texture.tint);
+      rl_draw_texture_ex(
+          command->data.draw_texture.texture, command->data.draw_texture.x,
+          command->data.draw_texture.y, command->data.draw_texture.scale,
+          command->data.draw_texture.rotation, command->data.draw_texture.tint);
       break;
     case RL_MODULE_FRAME_CMD_DRAW_TEXT:
       rl_draw_text_ex(
@@ -247,7 +241,8 @@ int main(void) {
     (void)rl_event_on("lua.error", on_lua_error, NULL);
     (void)rl_event_emit("lua.add_path", "assets/scripts");
     (void)rl_event_emit("lua.do_file", "lua_demo.lua");
-    if (rl_module_get_config_instance(lua_module.api, lua_module.state, &script_config) != 0) {
+    if (rl_module_get_config_instance(lua_module.api, lua_module.state,
+                                      &script_config) != 0) {
       log_warn("Lua script get_config failed");
     }
   } else {
@@ -255,11 +250,34 @@ int main(void) {
   }
 
   SetConfigFlags(script_config.flags);
+
+  int w = script_config.width;
+  int h = script_config.height;
+
   InitWindow(script_config.width, script_config.height, script_config.title);
   SetTargetFPS(script_config.target_fps > 0 ? script_config.target_fps : 60);
 
+  // resize the window so it fits in our monitor.
+  int current_monitor = GetCurrentMonitor();
+  int mon_width = GetMonitorWidth(current_monitor);
+  int mon_height = GetMonitorHeight(current_monitor);
+
+  // This check will only resize if the desired size is bigger. (shrink only)
+  // Rmove/comment it if we want the window to alway try to fit the monitor
+  // if (w > mon_width || h > mon_height) {
+  // give it a little outside margin so it's not bumping the edges
+  float margin_scalar = 0.9;
+  float width_scale = ((float)mon_width * margin_scalar) / (float)w;
+  float height_scale = ((float)mon_height * margin_scalar) / (float)h;
+  float scale = width_scale < height_scale ? width_scale : height_scale;
+  w = (int)((float)w * scale);
+  h = (int)((float)h * scale);
+  SetWindowSize(w > 0 ? w : 1, h > 0 ? h : 1);
+  //}
+
   rl_handle_t komika_small = rl_font_create(komika_font_path, small_font_size);
-  if (lua_module.api != NULL && rl_module_start_instance(lua_module.api, lua_module.state) != 0) {
+  if (lua_module.api != NULL &&
+      rl_module_start_instance(lua_module.api, lua_module.state) != 0) {
     log_warn("Lua script start failed");
   }
 
@@ -275,9 +293,9 @@ int main(void) {
     BeginDrawing();
     // Drain scripted commands in the same passes the host uses: clear, 3D,
     // then 2D/UI.
-    
+
     // clear to some neutral color in case lua doesn't clear
-    ClearBackground(RAYWHITE);  
+    ClearBackground(RAYWHITE);
 
     // lua frame clear pass
     lua_frame_execute_clear(&g_app.lua_frame);
@@ -291,8 +309,7 @@ int main(void) {
     lua_frame_execute_2d(&g_app.lua_frame);
 
     // draw the fps in the top left corner
-    rl_draw_fps_ex(komika_small, 10, 10, (int)small_font_size,
-                   RL_COLOR_BLACK);
+    rl_draw_fps_ex(komika_small, 10, 10, (int)small_font_size, RL_COLOR_BLACK);
 
     EndDrawing();
   }

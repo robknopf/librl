@@ -63,15 +63,20 @@ function getEnv() {
   return env;
 }
 
-function addWindowResizeListener(moduleInstance, idealWidth, idealHeight) {
-  // we default to keeping the canvas the same aspect ratio as the ideal dimensions
-  idealWidth = idealWidth || 1024;
-  idealHeight = idealHeight || 1280;
-  var aspectRatio = idealWidth / idealHeight;
+function applyLetterboxCanvasStyle(canvas, idealWidth, idealHeight) {
+  const gameContainer = document.getElementById("gameContainer");
+  const wrapper = document.getElementById("wrapper");
+
+  // Match the desktop host model: keep a fixed internal render size and only
+  // scale the DOM presentation box to a letterboxed rect.
+  idealWidth = idealWidth || canvas.width || 800;
+  idealHeight = idealHeight || canvas.height || 600;
+  const aspectRatio = idealWidth / idealHeight;
 
   window.addEventListener('resize', (_event) => {
-    const windowWidth = window.innerWidth;
-    const windowHeight = window.innerHeight;
+    const bounds = wrapper ? wrapper.getBoundingClientRect() : document.body.getBoundingClientRect();
+    const windowWidth = Math.max(0, Math.floor(bounds.width));
+    const windowHeight = Math.max(0, Math.floor(bounds.height));
 
     let newWidth, newHeight;
     if (windowWidth / windowHeight > aspectRatio) {
@@ -82,12 +87,10 @@ function addWindowResizeListener(moduleInstance, idealWidth, idealHeight) {
       newHeight = windowWidth / aspectRatio;
     }
 
-    moduleInstance.ccall(
-      "rl_set_window_size",
-      null,
-      ["number", "number"],
-      [newWidth, newHeight]
-    );
+    if (gameContainer) {
+      gameContainer.style.width = `${Math.floor(newWidth)}px`;
+      gameContainer.style.height = `${Math.floor(newHeight)}px`;
+    }
   });
 
   // force an initial resize event
@@ -100,10 +103,14 @@ function addWindowResizeListener(moduleInstance, idealWidth, idealHeight) {
     const canvas = document.getElementById("renderCanvas");
     const createExampleModule = await loadExampleModuleFactory();
     const mod = await createExampleModule(getEnv());
+    const idealWidth = 1024 * 4;
+    const idealHeight = 1280 * 4;
 
     console.log("WASM module initialized:", mod);
+    console.log(`Letterbox target size: ${idealWidth}x${idealHeight}`);
 
-    addWindowResizeListener(mod, 1024, 1280);
+    applyLetterboxCanvasStyle(canvas, idealWidth, idealHeight);
+    
     // main() auto-runs by default in this build. If you later add -sNO_INITIAL_RUN=1,
     // uncomment the following line:
     // mod._main(0, 0);

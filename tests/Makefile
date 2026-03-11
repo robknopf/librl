@@ -83,6 +83,7 @@ probe_idbfs_build:
 		$(CORE_DIR)/fileio/fileio.wasm.c \
 		$(CORE_DIR)/fileio/fileio_common.c \
 		$(CORE_DIR)/fetch_url/fetch_url.wasm.c \
+		$(CORE_DIR)/logger/log.c \
 		$(CORE_DIR)/path/path.c \
 		$(CORE_DIR)/uri/uri.c \
 		$(CORE_DIR)/vendor/cwalk/cwalk.c \

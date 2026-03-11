@@ -73,6 +73,73 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
   2. Touch or re-save relevant entry file if HMR does not recover.
   3. Restart Vite only if file watching still does not pick up rebuilt outputs.
 
+## Scripting Runtime Direction
+
+- Current module/handle architecture is intentionally pointed at a "scripts own gameplay, host owns resources" model.
+- Long-term target:
+  - build the native or wasm host once
+  - edit plain text scripts for gameplay iteration
+  - let scripts drive per-frame logic and generate the visual/audio frame
+  - keep the option to ship without a permanent interpreter if a future backend supports native/AOT output
+- Lua is currently a useful reference/runtime bootstrap, not necessarily the final scripting backend.
+- TinyCC and/or daslang remain plausible follow-up experiments behind the same module boundary.
+
+### Scripting Language Criteria
+
+- The "right" scripting language is the one that best matches these goals:
+  - very fast iteration with plain text editing and hot reload
+  - natural fit for immediate-mode per-frame logic
+  - easy embedding behind a narrow C/module host API
+  - low friction when issuing handle-based draw/audio/resource commands
+  - acceptable debugging and error reporting during iteration
+  - viable wasm story for web builds
+  - viable native production story without forcing a permanent interpreter into shipping builds
+- Lua is strong on embedding speed, maturity, and iteration, but weak on the "no interpreter in production" goal.
+- TinyCC is attractive for fast C-like iteration and a more direct path to native execution, but has tradeoffs in safety, tooling, and portability.
+- daslang is attractive if the priority is "script fast, ship native-ish later," but it carries more integration complexity.
+- Keep the module boundary stable enough that backend experiments can be compared honestly without redesigning the host each time.
+
+### Intended Per-Frame Contract
+
+- Host gathers frame inputs and timing:
+  - `dt`
+  - keyboard snapshot
+  - mouse snapshot
+  - window/screen info as needed
+- Host calls script `update(...)` once per tick.
+- Script owns gameplay state and emits transient frame commands using host-managed handles.
+- After script update, the thin host drains the frame command buffer and performs:
+  - draw calls
+  - audio playback commands
+  - other immediate frame-side effects
+- Frame commands should be cleared every frame. Do not make render state persistent by default.
+
+### API Shape We Want
+
+- Keep handles as the main bridge between script-side logic and host-owned assets/resources.
+- Prefer explicit host API calls for resource lifecycle:
+  - create/load resource
+  - destroy resource
+  - query lightweight state if needed
+- Prefer a transient per-frame command buffer for hot-path operations:
+  - draw
+  - play/stop audio
+  - similar immediate commands
+- Events are acceptable for orchestration and notifications, but should not become the primary render/audio command surface.
+- Prefer a typed command structure or tagged union over stringly-typed event payloads for per-frame work.
+- A ring buffer is a reasonable implementation if fixed-capacity/no-allocation frame submission is desirable.
+
+### Practical Goal
+
+- In the ideal workflow, the existing C example should be usable as a thin host shell where gameplay can be authored in scripts with a basic text editor.
+- To make that real, the script layer still needs a coherent contract for:
+  - `init/update/draw`-style lifecycle or equivalent
+  - input access
+  - resource creation returning handles
+  - handle-based draw/audio commands
+  - predictable hot reload behavior
+  - good source-aware logging/errors
+
 ## Assets and Credits
 
 - Credits file is at `examples/www/public/assets/CREDITS.md`.

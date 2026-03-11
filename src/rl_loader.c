@@ -368,10 +368,18 @@ int rl_loader_uncache_file(const char *filename)
         return -1;
     }
 
+    if (!fileio_wait_for_ready(RL_LOADER_DEFAULT_TIMEOUT_MS)) {
+        return -1;
+    }
+
     rc = fileio_rmfile(resolved_path);
     if (rc == 0 && rl_loader_memory_cache != NULL) {
         // Prevent stale reads from in-memory cache after on-disk removal.
         lru_cache_clear(rl_loader_memory_cache);
+    }
+
+    if (rc == 0) {
+        rc = fileio_sync(RL_LOADER_DEFAULT_TIMEOUT_MS);
     }
 
     return rc;
@@ -383,12 +391,20 @@ int rl_loader_clear_cache(void)
         return -1;
     }
 
+    if (!fileio_wait_for_ready(RL_LOADER_DEFAULT_TIMEOUT_MS)) {
+        return -1;
+    }
+
     if (rl_loader_clear_cache_dir(fileio_mount_point, "") != 0) {
         return -1;
     }
 
     if (rl_loader_memory_cache != NULL) {
         lru_cache_clear(rl_loader_memory_cache);
+    }
+
+    if (fileio_sync(RL_LOADER_DEFAULT_TIMEOUT_MS) != 0) {
+        return -1;
     }
 
     return 0;

@@ -18,6 +18,33 @@
   - define a compact frame command/snapshot structure using `rl_handle_t`
   - add one-call submit path for per-frame draw state/commands
   - start with clear + camera + model/text/rect primitives
+  - define the per-frame script contract:
+    - host gathers `dt`, keyboard snapshot, mouse snapshot, and basic window/screen state
+    - host calls script `update(...)` once per tick
+    - script mutates gameplay state and emits transient frame commands
+    - host drains commands after script update and executes draw/audio work
+    - clear command buffer every frame
+  - decide command transport:
+    - ring buffer / fixed-capacity queue vs growable transient buffer
+    - tagged union / typed opcodes instead of stringly-typed event payloads
+  - split API responsibilities cleanly:
+    - explicit host API for resource create/load/destroy returning handles
+    - transient per-frame command path for draw/audio/immediate actions
+  - define initial script-facing command set:
+    - clear background
+    - set camera
+    - draw text
+    - draw model
+    - draw sprite/texture
+    - play sound / control music
+  - define script lifecycle and reload behavior:
+    - `init/update/draw` or equivalent contract
+    - what survives hot reload vs what is reconstructed
+    - error/reporting behavior with source-aware logs
+  - prove the model in the existing C example:
+    - build host once
+    - edit script in a plain text editor
+    - save and observe changed gameplay/frame output without C rebuilds
 - API/docs sync after recent camera/input refactor:
   - status: mostly done
   - keep examples current when scratch bridge functions are renamed/removed
@@ -33,6 +60,23 @@
   - include stable `rl_module.h` ABI and documented versioning/compatibility policy
   - define how wgutils is provided in SDK (headers/libs/version pin) for module portability
   - keep module development in-tree until SDK contract is stable
+- Scripting backend evaluation:
+  - keep Lua as the reference implementation for module-hosted scripting
+  - compare TinyCC and/or daslang against the same module boundary
+  - define explicit selection criteria for the "right" script language:
+    - hot reload/edit-compile latency
+    - fit for immediate-mode per-frame game logic
+    - embedding complexity behind the module host API
+    - wasm viability
+    - native production build story without a permanent interpreter
+    - debugging/error-reporting quality
+    - ergonomics for handle-based host calls
+  - evaluate:
+    - reload latency
+    - host API friction
+    - debugging quality
+    - wasm feasibility
+    - native production build story without a permanent interpreter
 - URI/path follow-up:
   - add URL normalization examples to docs
   - decide whether cache keys should canonicalize host casing

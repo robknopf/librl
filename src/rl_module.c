@@ -80,6 +80,14 @@ int rl_module_event_emit(const rl_module_host_api_t *host, const char *event_nam
     return host->event_emit(host->user_data, event_name, payload);
 }
 
+void rl_module_frame_command(const rl_module_host_api_t *host, const rl_module_frame_command_t *command)
+{
+    if (host == NULL || host->frame_command == NULL || command == NULL) {
+        return;
+    }
+    host->frame_command(host->user_data, command);
+}
+
 int rl_module_api_validate(const rl_module_api_t *api, char *error, size_t error_size)
 {
     if (api == NULL) {

@@ -27,9 +27,11 @@ CORE_LIBRL_DESKTOP := $(ROOT_DIR)/lib/librl.a
 MODULE_TEST_SRC := $(LUA_MODULE_DIR)/tests/lua_module_test.c
 MODULE_TEST_BIN := /tmp/rl_lua_module_test
 
-.PHONY: deps ensure_deps ensure_wasm_archive ensure_desktop_archive \
+.PHONY: all deps ensure_deps ensure_wasm_archive ensure_desktop_archive \
 	print_liblua_root print_liblua_include print_liblua_wasm_archive print_liblua_desktop_archive \
 	desktop wasm clean lua_module_test_desktop
+
+all: desktop wasm
 
 deps:
 	@if [ ! -d "$(LIBLUA_ROOT)" ]; then \

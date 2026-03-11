@@ -1,4 +1,9 @@
 #include "rl_lua_module.h"
+#include "rl_color.h"
+#include "rl_font.h"
+#include "rl.h"
+#include "rl_sound.h"
+#include "rl_sprite3d.h"
 #include "fileio/fileio.h"
 
 #include <lua.h>
@@ -26,7 +31,14 @@ typedef struct rl_lua_module_state_t {
 static void lua_module_on_do_string(void *payload, void *listener_user_data);
 static void lua_module_on_do_file(void *payload, void *listener_user_data);
 static int lua_module_log_binding(lua_State *L);
+static int lua_module_clear_binding(lua_State *L);
+static int lua_module_draw_text_binding(lua_State *L);
+static int lua_module_draw_sprite3d_binding(lua_State *L);
+static int lua_module_load_sprite3d_binding(lua_State *L);
+static int lua_module_load_sound_binding(lua_State *L);
+static int lua_module_play_sound_binding(lua_State *L);
 static const char *lua_module_debug_source(lua_Debug *ar, char *buffer, size_t buffer_size);
+static int lua_vm_call_update(rl_lua_module_state_t *state, float dt_seconds);
 
 static int parse_lua_log_level(lua_State *L, int idx, int *out_is_level)
 {
@@ -106,6 +118,43 @@ static void lua_vm_bind_log(rl_lua_module_state_t *state)
     lua_pushlightuserdata(L, state);
     lua_pushcclosure(L, lua_module_log_binding, 1);
     lua_setglobal(L, "log");
+
+    lua_pushlightuserdata(L, state);
+    lua_pushcclosure(L, lua_module_clear_binding, 1);
+    lua_setglobal(L, "clear");
+
+    lua_pushlightuserdata(L, state);
+    lua_pushcclosure(L, lua_module_draw_text_binding, 1);
+    lua_setglobal(L, "draw_text");
+
+    lua_pushlightuserdata(L, state);
+    lua_pushcclosure(L, lua_module_draw_sprite3d_binding, 1);
+    lua_setglobal(L, "draw_sprite3d");
+
+    lua_pushlightuserdata(L, state);
+    lua_pushcclosure(L, lua_module_load_sprite3d_binding, 1);
+    lua_setglobal(L, "load_sprite3d");
+
+    lua_pushlightuserdata(L, state);
+    lua_pushcclosure(L, lua_module_load_sound_binding, 1);
+    lua_setglobal(L, "load_sound");
+
+    lua_pushlightuserdata(L, state);
+    lua_pushcclosure(L, lua_module_play_sound_binding, 1);
+    lua_setglobal(L, "play_sound");
+
+    lua_pushinteger(L, RL_FONT_DEFAULT);
+    lua_setglobal(L, "FONT_DEFAULT");
+    lua_pushinteger(L, RL_COLOR_WHITE);
+    lua_setglobal(L, "COLOR_WHITE");
+    lua_pushinteger(L, RL_COLOR_BLACK);
+    lua_setglobal(L, "COLOR_BLACK");
+    lua_pushinteger(L, RL_COLOR_BLUE);
+    lua_setglobal(L, "COLOR_BLUE");
+    lua_pushinteger(L, RL_COLOR_RAYWHITE);
+    lua_setglobal(L, "COLOR_RAYWHITE");
+    lua_pushinteger(L, RL_COLOR_DARKBLUE);
+    lua_setglobal(L, "COLOR_DARKBLUE");
 }
 
 static int lua_vm_exec_file(rl_lua_vm_t *vm, const char *filename)
@@ -244,8 +293,17 @@ static void rl_lua_module_deinit_impl(void *module_state)
 
 static int rl_lua_module_update_impl(void *module_state, float dt_seconds)
 {
-    (void)module_state;
-    (void)dt_seconds;
+    rl_lua_module_state_t *state = (rl_lua_module_state_t *)module_state;
+
+    if (state == NULL) {
+        return -1;
+    }
+
+    if (lua_vm_call_update(state, dt_seconds) != 0) {
+        rl_module_log(&state->host, RL_MODULE_LOG_ERROR, state->vm.last_error);
+        (void)rl_module_event_emit(&state->host, "lua.error", (void *)state->vm.last_error);
+        return -1;
+    }
     return 0;
 }
 
@@ -286,6 +344,46 @@ static const char *lua_module_debug_source(lua_Debug *ar, char *buffer, size_t b
 
     (void)snprintf(buffer, buffer_size, "%s", source);
     return buffer;
+}
+
+static int lua_vm_call_update(rl_lua_module_state_t *state, float dt_seconds)
+{
+    lua_State *L = NULL;
+    vec2_t mouse = {0};
+    rl_mouse_state_t mouse_state = {0};
+    int top = 0;
+    int rc = 0;
+    const char *err = NULL;
+
+    if (state == NULL || state->vm.state == NULL) {
+        return -1;
+    }
+
+    L = state->vm.state;
+    top = lua_gettop(L);
+    lua_getglobal(L, "update");
+    if (!lua_isfunction(L, -1)) {
+        lua_settop(L, top);
+        set_error(&state->vm, NULL);
+        return 0;
+    }
+
+    lua_pushnumber(L, (lua_Number)dt_seconds);
+    mouse = rl_get_mouse_position();
+    mouse_state = rl_get_mouse_state();
+    lua_pushnumber(L, (lua_Number)mouse.x);
+    lua_pushnumber(L, (lua_Number)mouse.y);
+    lua_pushboolean(L, mouse_state.left == RL_BUTTON_PRESSED || mouse_state.left == RL_BUTTON_DOWN);
+    rc = lua_pcall(L, 4, 0, 0);
+    if (rc != LUA_OK) {
+        err = lua_tostring(L, -1);
+        set_error(&state->vm, err != NULL ? err : "lua update failed");
+        lua_pop(L, 1);
+        return -1;
+    }
+
+    set_error(&state->vm, NULL);
+    return 0;
 }
 
 static int lua_module_log_binding(lua_State *L)
@@ -331,6 +429,111 @@ static int lua_module_log_binding(lua_State *L)
     }
 
     rl_module_log_source(&state->host, level, source_file, source_line, message);
+    return 0;
+}
+
+static int lua_module_clear_binding(lua_State *L)
+{
+    rl_lua_module_state_t *state = NULL;
+    rl_module_frame_command_t command;
+
+    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    if (state == NULL) {
+        return 0;
+    }
+
+    memset(&command, 0, sizeof(command));
+    command.type = RL_MODULE_FRAME_CMD_CLEAR;
+    command.data.clear.color = (rl_handle_t)luaL_checkinteger(L, 1);
+    rl_module_frame_command(&state->host, &command);
+    return 0;
+}
+
+static int lua_module_draw_text_binding(lua_State *L)
+{
+    rl_lua_module_state_t *state = NULL;
+    rl_module_frame_command_t command;
+    const char *text = NULL;
+
+    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    if (state == NULL) {
+        return 0;
+    }
+
+    text = luaL_checkstring(L, 2);
+    memset(&command, 0, sizeof(command));
+    command.type = RL_MODULE_FRAME_CMD_DRAW_TEXT;
+    command.data.draw_text.font = (rl_handle_t)luaL_checkinteger(L, 1);
+    command.data.draw_text.color = (rl_handle_t)luaL_checkinteger(L, 7);
+    command.data.draw_text.x = (float)luaL_checknumber(L, 3);
+    command.data.draw_text.y = (float)luaL_checknumber(L, 4);
+    command.data.draw_text.font_size = (float)luaL_checknumber(L, 5);
+    command.data.draw_text.spacing = (float)luaL_optnumber(L, 6, 1.0);
+    (void)snprintf(command.data.draw_text.text, sizeof(command.data.draw_text.text), "%s", text);
+    rl_module_frame_command(&state->host, &command);
+    return 0;
+}
+
+static int lua_module_draw_sprite3d_binding(lua_State *L)
+{
+    rl_lua_module_state_t *state = NULL;
+    rl_module_frame_command_t command;
+
+    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    if (state == NULL) {
+        return 0;
+    }
+
+    memset(&command, 0, sizeof(command));
+    command.type = RL_MODULE_FRAME_CMD_DRAW_SPRITE3D;
+    command.data.draw_sprite3d.sprite = (rl_handle_t)luaL_checkinteger(L, 1);
+    command.data.draw_sprite3d.x = (float)luaL_checknumber(L, 2);
+    command.data.draw_sprite3d.y = (float)luaL_checknumber(L, 3);
+    command.data.draw_sprite3d.z = (float)luaL_checknumber(L, 4);
+    command.data.draw_sprite3d.size = (float)luaL_checknumber(L, 5);
+    command.data.draw_sprite3d.tint = (rl_handle_t)luaL_checkinteger(L, 6);
+    rl_module_frame_command(&state->host, &command);
+    return 0;
+}
+
+static int lua_module_load_sprite3d_binding(lua_State *L)
+{
+    const char *path = NULL;
+    rl_handle_t handle = 0;
+
+    (void)lua_touserdata(L, lua_upvalueindex(1));
+    path = luaL_checkstring(L, 1);
+    handle = rl_sprite3d_create(path);
+    lua_pushinteger(L, (lua_Integer)handle);
+    return 1;
+}
+
+static int lua_module_load_sound_binding(lua_State *L)
+{
+    const char *path = NULL;
+    rl_handle_t handle = 0;
+
+    (void)lua_touserdata(L, lua_upvalueindex(1));
+    path = luaL_checkstring(L, 1);
+    handle = rl_sound_create(path);
+    lua_pushinteger(L, (lua_Integer)handle);
+    return 1;
+}
+
+static int lua_module_play_sound_binding(lua_State *L)
+{
+    rl_lua_module_state_t *state = NULL;
+    rl_module_frame_command_t command;
+
+    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    if (state == NULL) {
+        return 0;
+    }
+
+    memset(&command, 0, sizeof(command));
+    command.type = RL_MODULE_FRAME_CMD_PLAY_SOUND;
+    command.data.play_sound.sound = (rl_handle_t)luaL_checkinteger(L, 1);
+    rl_module_frame_command(&state->host, &command);
     return 0;
 }
 

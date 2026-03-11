@@ -100,7 +100,7 @@ function load()
   ui_font = Font.load("assets/fonts/Komika/KOMIKAH_.ttf", 24)
   accent_color = Color.create(221, 87, 54, 255)
   panel_color = Color.create(24, 107, 138, 255)
-  shadow_color = Color.create(0, 0, 0, 255)
+  shadow_color = Color.create(0, 0, 0, 64)
   main_camera = Camera3D.create(12.0, 12.0, 12.0,
                                 0.0, 1.0, 0.0,
                                 0.0, 1.0, 0.0,

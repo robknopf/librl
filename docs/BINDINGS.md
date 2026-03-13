@@ -83,8 +83,8 @@ Notes:
 
 - This binding is direct/low-level and close to the C surface.
 - Keep declarations synchronized with header changes in `include/`.
-- It maps `RLMouseState` directly to `rl_mouse_state_t` via `rl_get_mouse_state()`.
-- It maps `RLKeyboardState` directly to `rl_keyboard_state_t` via `rl_get_keyboard_state()`.
+- It maps `RLMouseState` directly to `rl_mouse_state_t` via `rl_input_get_mouse_state()`.
+- It maps `RLKeyboardState` directly to `rl_keyboard_state_t` via `rl_input_get_keyboard_state()`.
 - Mouse button states use shared constants:
   - `RL_BUTTON_UP`
   - `RL_BUTTON_PRESSED`
@@ -94,7 +94,7 @@ Notes:
   - `rl_pick_model(...)`
   - `rl_pick_sprite3d(...)`
 - Window config flags are exposed in Nim:
-  - `rl_init_window(width, height, title, flags)`
+  - `rl_window_init(width, height, title, flags)`
   - `RL_FLAG_MSAA_4X_HINT`
 - Cache file helpers in Nim:
   - `rl_loader_cache_file(filename)`

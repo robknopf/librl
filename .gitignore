@@ -3,6 +3,7 @@ lib/
 out/
 examples/c/deps/*
 .vscode/
+.emcache
 .well-known/
 examples/**/cache/
 node_modules/

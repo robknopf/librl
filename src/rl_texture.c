@@ -7,9 +7,11 @@
 
 #include "internal/exports.h"
 #include "internal/rl_handle_pool.h"
+#include "internal/rl_color_store.h"
 #include "internal/rl_texture_store.h"
 #include "logger/log.h"
 #include "path/path.h"
+#include "rlgl.h"
 
 #define MAX_TEXTURES 1024
 #define RL_TEXTURE_PLACEHOLDER_KEY "<placeholder:magenta>"
@@ -171,6 +173,49 @@ RL_KEEP
 void rl_texture_destroy(rl_handle_t handle)
 {
     rl_texture_release(handle);
+}
+
+RL_KEEP
+void rl_texture_draw_ex(rl_handle_t texture, float x, float y, float scale,
+                        float rotation, rl_handle_t tint)
+{
+    Texture2D *tex = rl_texture_get_ptr(texture);
+    if (tex == NULL) {
+        return;
+    }
+
+    DrawTextureEx(*tex, (Vector2){x, y}, rotation, scale, rl_color_get(tint));
+}
+
+RL_KEEP
+void rl_texture_draw_ground(rl_handle_t texture,
+                            float position_x, float position_y, float position_z,
+                            float width, float length, rl_handle_t tint)
+{
+    Texture2D *tex = rl_texture_get_ptr(texture);
+    Color c = rl_color_get(tint);
+    const float half_width = width * 0.5f;
+    const float half_length = length * 0.5f;
+
+    if (tex == NULL) {
+        return;
+    }
+
+    rlSetTexture(tex->id);
+    rlBegin(RL_QUADS);
+    rlColor4ub(c.r, c.g, c.b, c.a);
+
+    rlTexCoord2f(0.0f, 0.0f);
+    rlVertex3f(position_x - half_width, position_y, position_z - half_length);
+    rlTexCoord2f(0.0f, 1.0f);
+    rlVertex3f(position_x - half_width, position_y, position_z + half_length);
+    rlTexCoord2f(1.0f, 1.0f);
+    rlVertex3f(position_x + half_width, position_y, position_z + half_length);
+    rlTexCoord2f(1.0f, 0.0f);
+    rlVertex3f(position_x + half_width, position_y, position_z - half_length);
+
+    rlEnd();
+    rlSetTexture(0);
 }
 
 void rl_texture_init(void)

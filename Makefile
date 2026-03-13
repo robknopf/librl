@@ -6,6 +6,8 @@ CC_WASM ?= emcc
 CC_DESKTOP ?= gcc
 NODE ?= $(shell command -v node 2>/dev/null || command -v nodejs 2>/dev/null)
 CHROME ?= $(shell command -v google-chrome 2>/dev/null || command -v chromium-browser 2>/dev/null || command -v chromium 2>/dev/null)
+EM_CACHE_DIR ?= $(abspath .emcache)
+EM_ENV := EM_CACHE=$(EM_CACHE_DIR)
 
 WASM_PLATFORM_CFLAGS ?= -DPLATFORM_WEB
 WASM_COMMON_LDFLAGS ?= \
@@ -13,7 +15,6 @@ WASM_COMMON_LDFLAGS ?= \
 	-lidbfs.js \
 	-s USE_GLFW=3 \
 	-s FETCH=1 \
-	-s ASYNCIFY=1 \
 	-s EXPORT_ES6=1 \
 	-s MODULARIZE=1 \
 	-s MIN_WEBGL_VERSION=2 \
@@ -58,25 +59,27 @@ LDFLAGS_WASM = \
 	"_rl_init", \
 	"_rl_deinit", \
 	"_rl_update_to_scratch", \
-	"_rl_get_time", \
-	"_rl_init_window", \
-	"_rl_set_window_title", \
-	"_rl_set_window_size", \
-	"_rl_close_window", \
+	"_rl_frame_get_time", \
+	"_rl_window_init", \
+	"_rl_window_set_title", \
+	"_rl_window_set_size", \
+	"_rl_window_close", \
 	"_rl_scratch_get", \
 	"_rl_scratch_update", \
 	"_rl_scratch_get_offsets", \
-	"_rl_get_monitor_position_to_scratch", \
-	"_rl_set_window_position", \
-	"_rl_get_window_position_to_scratch", \
-	"_rl_get_mouse_position_to_scratch", \
-	"_rl_get_screen_size_to_scratch", \
-	"_rl_set_target_fps", \
-	"_rl_begin_drawing", \
-	"_rl_end_drawing", \
-	"_rl_clear_background", \
-	"_rl_begin_mode_2d", \
-	"_rl_end_mode_2d", \
+	"_rl_window_get_monitor_position_to_scratch", \
+	"_rl_window_get_monitor_width", \
+	"_rl_window_get_monitor_height", \
+	"_rl_window_set_position", \
+	"_rl_window_get_position_to_scratch", \
+	"_rl_input_get_mouse_position_to_scratch", \
+	"_rl_window_get_screen_size_to_scratch", \
+	"_rl_frame_runner_set_target_fps", \
+	"_rl_frame_begin", \
+	"_rl_frame_end", \
+	"_rl_frame_clear_background", \
+	"_rl_frame_begin_mode_2d", \
+	"_rl_frame_end_mode_2d", \
 	"_rl_begin_mode_3d", \
 	"_rl_end_mode_3d", \
 	"_rl_camera3d_create", \
@@ -93,10 +96,10 @@ LDFLAGS_WASM = \
 	"_rl_draw_cube", \
 	"_rl_color_create", \
 	"_rl_color_destroy", \
-	"_rl_draw_text", \
-	"_rl_draw_text_ex", \
-	"_rl_draw_fps", \
-	"_rl_draw_fps_ex", \
+	"_rl_text_draw", \
+	"_rl_text_draw_ex", \
+	"_rl_text_draw_fps", \
+	"_rl_text_draw_fps_ex", \
 	"_RL_FONT_DEFAULT", \
 	"_rl_font_get_default", \
 	"_rl_font_create", \
@@ -144,12 +147,14 @@ LDFLAGS_WASM = \
 	"_rl_sound_is_playing", \
 	"_rl_texture_create", \
 	"_rl_texture_destroy", \
+	"_rl_texture_draw_ex", \
+	"_rl_texture_draw_ground", \
 	"_rl_sprite3d_create", \
 	"_rl_sprite3d_create_from_texture", \
 	"_rl_sprite3d_draw", \
 	"_rl_sprite3d_destroy", \
-		"_rl_measure_text", \
-		"_rl_measure_text_ex_to_scratch", \
+		"_rl_text_measure", \
+		"_rl_text_measure_ex_to_scratch", \
 		"_rl_set_asset_host", \
 		"_rl_loader_cache_file", \
 		"_rl_loader_uncache_file", \
@@ -282,7 +287,8 @@ wasm: libraylib_wasm ensure_out_dir
 	$(info Building WASM with sources: $(WASM_SRCS))
 	$(info LDFLAGS_WASM: $(LDFLAGS_WASM))
 	$(info CFLAGS: $(CFLAGS))
-	$(CC_WASM) -o $(OUT_WASM) $(WASM_SRCS) $(LDFLAGS_WASM) $(CFLAGS_WASM) $(CFLAGS) $(INCLUDES) $(LIBS_WASM)
+	@mkdir -p "$(EM_CACHE_DIR)"
+	$(EM_ENV) $(CC_WASM) -o $(OUT_WASM) $(WASM_SRCS) $(LDFLAGS_WASM) $(CFLAGS_WASM) $(CFLAGS) $(INCLUDES) $(LIBS_WASM)
 
 # WebAssembly static library build
 wasm_archive: libraylib_wasm ensure_out_dir ensure_obj_dir $(WASM_OBJS)
@@ -291,8 +297,9 @@ wasm_archive: libraylib_wasm ensure_out_dir ensure_obj_dir $(WASM_OBJS)
 	@test -f "$(LIBRAYLIB_WASM_ARCHIVE)" || (echo "Missing raylib wasm archive: $(LIBRAYLIB_WASM_ARCHIVE)" && exit 1)
 	rm -rf $(OBJ_WASM_DIR)/.raylib_unpack
 	mkdir -p $(OBJ_WASM_DIR)/.raylib_unpack
-	cd $(OBJ_WASM_DIR)/.raylib_unpack && emar x $(abspath $(LIBRAYLIB_WASM_ARCHIVE))
-	emar rcs $(OUT_WASM_ARCHIVE) $(WASM_OBJS) $(OBJ_WASM_DIR)/.raylib_unpack/*.o
+	@mkdir -p "$(EM_CACHE_DIR)"
+	cd $(OBJ_WASM_DIR)/.raylib_unpack && $(EM_ENV) emar x $(abspath $(LIBRAYLIB_WASM_ARCHIVE))
+	$(EM_ENV) emar rcs $(OUT_WASM_ARCHIVE) $(WASM_OBJS) $(OBJ_WASM_DIR)/.raylib_unpack/*.o
 
 # Desktop static library build
 desktop: libraylib_desktop ensure_out_dir ensure_obj_dir $(DESKTOP_OBJS)
@@ -320,7 +327,8 @@ $(OBJ_DESKTOP_DIR)/%.o: %.c
 # Compile WASM source files to object files
 $(OBJ_WASM_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
-	$(CC_WASM) $(CFLAGS_WASM) $(CFLAGS) $(INCLUDES) -c $< -o $@
+	@mkdir -p "$(EM_CACHE_DIR)"
+	$(EM_ENV) $(CC_WASM) $(CFLAGS_WASM) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 # Ensure the output directory exists
 ensure_out_dir:

@@ -22,13 +22,13 @@ This document summarizes the current public C API exposed by `include/*.h`.  As 
 Main responsibilities:
 
 - Runtime lifecycle (`rl_init`, `rl_deinit`)
-- Window management (`rl_init_window(width, height, title, flags)`, size/position/title helpers)
-- Frame lifecycle (`rl_begin_drawing`, `rl_end_drawing`, `rl_update`)
+- Window management (`rl_window_init(width, height, title, flags)`, size/position/title helpers)
+- Frame lifecycle (`rl_frame_runner_run`, `rl_frame_runner_request_stop`, `rl_frame_runner_set_target_fps`, `rl_frame_begin`, `rl_frame_end`, `rl_update`)
 - Basic drawing (text, rectangles, cubes, fps helpers)
 - 2D/3D mode switching
-- Mouse/keyboard input helpers (`rl_get_mouse*`, `rl_get_keyboard_state`)
+- Mouse/keyboard input helpers (`rl_input_get_mouse*`, `rl_input_get_keyboard_state`)
 - Basic lighting toggles and parameters
-- Timing helpers (`rl_get_time`)
+- Timing helpers (`rl_frame_get_time`)
 - Text measurement helpers
 
 Header note:

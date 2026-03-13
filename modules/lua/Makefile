@@ -10,6 +10,8 @@ CC ?= gcc
 CC_WASM ?= emcc
 AR ?= ar
 EMAR ?= emar
+EM_CACHE_DIR ?= $(abspath $(ROOT_DIR)/.emcache)
+EM_ENV := EM_CACHE=$(EM_CACHE_DIR)
 CFLAGS ?= -Wall -Wextra -fdiagnostics-color=always -O2
 CFLAGS_WASM ?= -DPLATFORM_WEB -O2
 
@@ -101,14 +103,16 @@ $(MODULE_DESKTOP_OBJ): $(MODULE_IMPL_SRC) | $(OBJ_DESKTOP_DIR)
 	$(CC) $(CFLAGS) -I$(ROOT_DIR)/include -I$(ROOT_DIR)/deps/wgutils -I$(LUA_MODULE_DIR)/include -I$(LIBLUA_INC) -c $< -o $@
 
 $(MODULE_WASM_OBJ): $(MODULE_IMPL_SRC) | $(OBJ_WASM_DIR)
-	$(CC_WASM) $(CFLAGS_WASM) -I$(ROOT_DIR)/include -I$(ROOT_DIR)/deps/wgutils -I$(LUA_MODULE_DIR)/include -I$(LIBLUA_INC) -c $< -o $@
+	@mkdir -p "$(EM_CACHE_DIR)"
+	$(EM_ENV) $(CC_WASM) $(CFLAGS_WASM) -I$(ROOT_DIR)/include -I$(ROOT_DIR)/deps/wgutils -I$(LUA_MODULE_DIR)/include -I$(LIBLUA_INC) -c $< -o $@
 
 desktop: ensure_desktop_archive $(MODULE_DESKTOP_OBJ) | $(OUT_DIR)
 	$(AR) rcs $(MODULE_DESKTOP_LIB) $(MODULE_DESKTOP_OBJ)
 	@echo "Built Lua module desktop archive: $(MODULE_DESKTOP_LIB)"
 
 wasm: ensure_wasm_archive $(MODULE_WASM_OBJ) | $(OUT_DIR)
-	$(EMAR) rcs $(MODULE_WASM_LIB) $(MODULE_WASM_OBJ)
+	@mkdir -p "$(EM_CACHE_DIR)"
+	$(EM_ENV) $(EMAR) rcs $(MODULE_WASM_LIB) $(MODULE_WASM_OBJ)
 	@echo "Built Lua module wasm archive: $(MODULE_WASM_LIB)"
 
 lua_module_test_desktop: desktop

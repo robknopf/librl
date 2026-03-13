@@ -117,22 +117,24 @@ proc rl_event_off_all*(eventName: cstring): cint {.importc, cdecl, header: "rl_e
 proc rl_event_emit*(eventName: cstring, payload: pointer): cint {.importc, cdecl, header: "rl_event.h".}
 proc rl_event_listener_count*(eventName: cstring): cint {.importc, cdecl, header: "rl_event.h".}
 proc rl_update*() {.importc, cdecl, header: "rl.h".}
-proc rl_get_time*(): cdouble {.importc, cdecl, header: "rl.h".}
-proc rl_init_window*(width: cint, height: cint, title: cstring, flags: cint) {.importc, cdecl, header: "rl.h".}
-proc rl_get_monitor_count*(): cint {.importc, cdecl, header: "rl.h".}
-proc rl_get_current_monitor*(): cint {.importc, cdecl, header: "rl.h".}
-proc rl_set_window_monitor*(monitor: cint) {.importc, cdecl, header: "rl.h".}
-proc rl_get_screen_size*(): Vec2 {.importc, cdecl, header: "rl.h".}
-proc rl_get_monitor_position*(monitor: cint): Vec2 {.importc, cdecl, header: "rl.h".}
-proc rl_get_window_position*(): Vec2 {.importc, cdecl, header: "rl.h".}
-proc rl_get_mouse_position*(): Vec2 {.importc, cdecl, header: "rl.h".}
-proc rl_get_mouse_wheel*(): cint {.importc, cdecl, header: "rl.h".}
-proc rl_get_mouse_button*(button: cint): cint {.importc, cdecl, header: "rl.h".}
-proc rl_get_mouse_state*(): RLMouseState {.importc, cdecl, header: "rl.h".}
-proc rl_get_keyboard_state*(): RLKeyboardState {.importc, cdecl, header: "rl.h".}
-proc rl_close_window*() {.importc, cdecl, header: "rl.h".}
-proc rl_begin_drawing*() {.importc, cdecl, header: "rl.h".}
-proc rl_end_drawing*() {.importc, cdecl, header: "rl.h".}
+proc rl_frame_get_time*(): cdouble {.importc, cdecl, header: "rl.h".}
+proc rl_window_init*(width: cint, height: cint, title: cstring, flags: cint) {.importc, cdecl, header: "rl.h".}
+proc rl_window_get_monitor_count*(): cint {.importc, cdecl, header: "rl.h".}
+proc rl_window_get_current_monitor*(): cint {.importc, cdecl, header: "rl.h".}
+proc rl_window_set_monitor*(monitor: cint) {.importc, cdecl, header: "rl.h".}
+proc rl_window_get_monitor_width*(monitor: cint): cint {.importc, cdecl, header: "rl.h".}
+proc rl_window_get_monitor_height*(monitor: cint): cint {.importc, cdecl, header: "rl.h".}
+proc rl_window_get_screen_size*(): Vec2 {.importc, cdecl, header: "rl.h".}
+proc rl_window_get_monitor_position*(monitor: cint): Vec2 {.importc, cdecl, header: "rl.h".}
+proc rl_window_get_position*(): Vec2 {.importc, cdecl, header: "rl.h".}
+proc rl_input_get_mouse_position*(): Vec2 {.importc, cdecl, header: "rl.h".}
+proc rl_input_get_mouse_wheel*(): cint {.importc, cdecl, header: "rl.h".}
+proc rl_input_get_mouse_button*(button: cint): cint {.importc, cdecl, header: "rl.h".}
+proc rl_input_get_mouse_state*(): RLMouseState {.importc, cdecl, header: "rl.h".}
+proc rl_input_get_keyboard_state*(): RLKeyboardState {.importc, cdecl, header: "rl.h".}
+proc rl_window_close*() {.importc, cdecl, header: "rl.h".}
+proc rl_frame_begin*() {.importc, cdecl, header: "rl.h".}
+proc rl_frame_end*() {.importc, cdecl, header: "rl.h".}
 proc rl_begin_mode_3d*() {.importc, cdecl, header: "rl.h".}
 proc rl_end_mode_3d*() {.importc, cdecl, header: "rl.h".}
 proc rl_camera3d_create*(
@@ -162,12 +164,12 @@ proc rl_draw_cube*(
   width: cfloat, height: cfloat, length: cfloat,
   color: RLHandle
 ) {.importc, cdecl, header: "rl.h".}
-proc rl_clear_background*(color: RLHandle) {.importc, cdecl, header: "rl.h".}
-proc rl_set_target_fps*(fps: cint) {.importc, cdecl, header: "rl.h".}
-proc rl_draw_text*(text: cstring, x: cint, y: cint, fontSize: cint, color: RLHandle) {.importc, cdecl, header: "rl.h".}
-proc rl_draw_text_ex*(font: RLHandle, text: cstring, x: cint, y: cint, fontSize: cfloat, spacing: cfloat, color: RLHandle) {.importc, cdecl, header: "rl.h".}
-proc rl_measure_text_ex*(font: RLHandle, text: cstring, fontSize: cfloat, spacing: cfloat): Vec2 {.importc, cdecl, header: "rl.h".}
-proc rl_draw_fps_ex*(font: RLHandle, x: cint, y: cint, fontSize: cint, color: RLHandle) {.importc, cdecl, header: "rl.h".}
+proc rl_frame_clear_background*(color: RLHandle) {.importc, cdecl, header: "rl.h".}
+proc rl_frame_runner_set_target_fps*(fps: cint) {.importc, cdecl, header: "rl.h".}
+proc rl_text_draw*(text: cstring, x: cint, y: cint, fontSize: cint, color: RLHandle) {.importc, cdecl, header: "rl.h".}
+proc rl_text_draw_ex*(font: RLHandle, text: cstring, x: cint, y: cint, fontSize: cfloat, spacing: cfloat, color: RLHandle) {.importc, cdecl, header: "rl.h".}
+proc rl_text_measure_ex*(font: RLHandle, text: cstring, fontSize: cfloat, spacing: cfloat): Vec2 {.importc, cdecl, header: "rl.h".}
+proc rl_text_draw_fps_ex*(font: RLHandle, x: cint, y: cint, fontSize: cint, color: RLHandle) {.importc, cdecl, header: "rl.h".}
 proc rl_color_create*(r: cint, g: cint, b: cint, a: cint): RLHandle {.importc, cdecl, header: "rl_color.h".}
 proc rl_color_destroy*(color: RLHandle) {.importc, cdecl, header: "rl_color.h".}
 proc rl_font_create*(filename: cstring, fontSize: cfloat): RLHandle {.importc, cdecl, header: "rl_font.h".}

@@ -4,6 +4,8 @@ CC_WASM ?= emcc
 CC_DESKTOP ?= gcc
 NODE ?= $(shell command -v node 2>/dev/null || command -v nodejs 2>/dev/null)
 CHROME ?= $(shell command -v google-chrome 2>/dev/null || command -v chromium-browser 2>/dev/null || command -v chromium 2>/dev/null)
+EM_CACHE_DIR ?= $(abspath $(ROOT_DIR)/.emcache)
+EM_ENV := EM_CACHE=$(EM_CACHE_DIR)
 
 CORE_DIR := $(ROOT_DIR)/deps/wgutils
 UNIT_TEST_DIR := $(ROOT_DIR)/tests/unit
@@ -19,6 +21,7 @@ UNIT_TEST_SRCS := \
 	$(UNIT_TEST_DIR)/rl_handle_pool_test.c \
 	$(UNIT_TEST_DIR)/rl_loader_test.c
 UNIT_TEST_LIB_SRCS := \
+	$(CORE_DIR)/async/wg_op.c \
 	$(CORE_DIR)/fileio/fileio.c \
 	$(CORE_DIR)/fileio/fileio_common.c \
 	$(CORE_DIR)/lru_cache/lru_cache.c \
@@ -28,6 +31,7 @@ UNIT_TEST_LIB_SRCS := \
 UNIT_TEST_EXTRA_LIB_SRCS := \
 	$(CORE_DIR)/logger/log.c \
 	$(CORE_DIR)/uri/uri.c \
+	$(CORE_DIR)/vendor/cjson/cJSON.c \
 	$(CORE_DIR)/vendor/cwalk/cwalk.c \
 	$(CORE_DIR)/vendor/logger-c/log.c
 UNIT_TEST_DESKTOP_BIN := /tmp/librl_unit_tests
@@ -38,7 +42,6 @@ WASM_COMMON_LDFLAGS ?= \
 	-lidbfs.js \
 	-s USE_GLFW=3 \
 	-s FETCH=1 \
-	-s ASYNCIFY=1 \
 	-s EXPORT_ES6=1 \
 	-s MODULARIZE=1 \
 	-s MIN_WEBGL_VERSION=2 \
@@ -73,12 +76,14 @@ unit_test_desktop:
 	@tail -n 1 /tmp/librl_unit_tests_desktop.log
 
 unit_test_wasm: check_node
-	$(CC_WASM) $(CFLAGS) $(INCLUDES) -I$(UNIT_TEST_DIR) $(UNIT_TEST_MAIN) $(UNIT_TEST_SRCS) $(UNIT_TEST_LIB_SRCS) $(UNIT_TEST_EXTRA_LIB_SRCS) -o $(UNIT_TEST_WASM_JS) -s ENVIRONMENT=node -s EXIT_RUNTIME=1
+	@mkdir -p "$(EM_CACHE_DIR)"
+	$(EM_ENV) $(CC_WASM) $(CFLAGS) $(INCLUDES) -I$(UNIT_TEST_DIR) $(UNIT_TEST_MAIN) $(UNIT_TEST_SRCS) $(UNIT_TEST_LIB_SRCS) $(UNIT_TEST_EXTRA_LIB_SRCS) -o $(UNIT_TEST_WASM_JS) -s ENVIRONMENT=node -s EXIT_RUNTIME=1
 	@$(NODE) $(UNIT_TEST_WASM_JS) > /tmp/librl_unit_tests_wasm.log 2>&1 || (cat /tmp/librl_unit_tests_wasm.log && exit 1)
 	@tail -n 1 /tmp/librl_unit_tests_wasm.log
 
 probe_idbfs_build:
-	$(CC_WASM) -o $(HEADLESS_PROBE_JS) \
+	@mkdir -p "$(EM_CACHE_DIR)"
+	$(EM_ENV) $(CC_WASM) -o $(HEADLESS_PROBE_JS) \
 		$(HEADLESS_PROBE_C) \
 		$(CORE_DIR)/fileio/fileio.wasm.c \
 		$(CORE_DIR)/fileio/fileio_common.c \

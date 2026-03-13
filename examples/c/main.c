@@ -1,26 +1,54 @@
-#include <raylib.h>
-#include "logger/log.h"
 #include "rl.h"
-#include "rl_loader.h"
+#include "rl_window.h"
 
 #include <stdbool.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#define LUA_FRAME_COMMAND_CAPACITY 128
+typedef enum example_boot_state_t {
+  EXAMPLE_BOOT_RESTORE = 0,
+  EXAMPLE_BOOT_PREPARE = 1,
+  EXAMPLE_BOOT_INIT_MODULE = 2,
+  EXAMPLE_BOOT_RUNNING = 3,
+  EXAMPLE_BOOT_ERROR = 4
+} example_boot_state_t;
 
-typedef struct lua_frame_buffer_t {
-  rl_module_frame_command_t commands[LUA_FRAME_COMMAND_CAPACITY];
-  int count;
-} lua_frame_buffer_t;
+static const char *const EXAMPLE_ASSET_MANIFEST[] = {
+    "assets/scripts/lua/lua_demo.lua",
+    "assets/scripts/lua/input_mapping.lua",
+    "assets/scripts/lua/model.lua",
+    "assets/scripts/lua/music.lua",
+    "assets/scripts/lua/texture.lua",
+    "assets/scripts/lua/sprite3d.lua",
+    "assets/scripts/lua/sound.lua",
+    "assets/scripts/lua/camera3d.lua",
+    "assets/scripts/lua/font.lua",
+    "assets/scripts/lua/color.lua",
+    "assets/scripts/lua/shadow.lua",
+    "assets/fonts/Komika/KOMIKAH_.ttf",
+    "assets/sprites/logo/wg-logo-bw-alpha.png",
+    "assets/textures/blobshadow.png",
+    "assets/models/gumshoe/gumshoe.glb",
+    "assets/music/ethernight_club.mp3",
+    "assets/sounds/click_004.ogg",
+};
 
-typedef struct example_app_context_t {
-  lua_frame_buffer_t lua_frame;
-} example_app_context_t;
+typedef struct example_context_t {
+  rl_module_config_t script_config;
+  rl_module_instance_t script_module;
+  rl_module_host_api_t module_host;
+  rl_loader_op_t *loader_op;
+  example_boot_state_t boot_state;
+  char module_error[256];
+  char boot_error[256];
+} example_context_t;
 
 // Keep the command buffer out of the wasm stack; the example only needs one
 // app-wide instance.
-static example_app_context_t g_app = {0};
+static rl_frame_command_buffer_t g_frame_command_buffer = {0};
+static example_context_t g_example_context = {0};
+static const char *g_asset_host = NULL;
 
 static const char *get_asset_host(void) {
   const char *value = getenv("RL_ASSET_HOST");
@@ -65,277 +93,251 @@ static int module_event_emit(void *host_user_data, const char *event_name,
   return rl_event_emit(event_name, payload);
 }
 
-static void module_frame_command(void *host_user_data,
-                                 const rl_module_frame_command_t *command) {
-  example_app_context_t *app = (example_app_context_t *)host_user_data;
-  lua_frame_buffer_t *frame = NULL;
-
-  if (app == NULL || command == NULL) {
-    return;
-  }
-
-  frame = &app->lua_frame;
-  if (frame->count < LUA_FRAME_COMMAND_CAPACITY) {
-    frame->commands[frame->count++] = *command;
-  }
-}
-
-static void lua_frame_reset(lua_frame_buffer_t *frame) {
-  if (frame == NULL) {
-    return;
-  }
-  frame->count = 0;
-}
-
-static void lua_frame_execute_clear(const lua_frame_buffer_t *frame) {
-  int i = 0;
-
-  if (frame == NULL) {
-    return;
-  }
-
-  for (i = 0; i < frame->count; i++) {
-    const rl_module_frame_command_t *command = &frame->commands[i];
-    switch (command->type) {
-    case RL_MODULE_FRAME_CMD_CLEAR:
-      rl_clear_background(command->data.clear.color);
-      break;
-    default:
-      break;
-    }
-  }
-}
-
-static void lua_frame_execute_audio(const lua_frame_buffer_t *frame) {
-  int i = 0;
-
-  if (frame == NULL) {
-    return;
-  }
-
-  for (i = 0; i < frame->count; i++) {
-    const rl_module_frame_command_t *command = &frame->commands[i];
-    switch (command->type) {
-    case RL_MODULE_FRAME_CMD_PLAY_SOUND:
-      (void)rl_sound_play(command->data.play_sound.sound);
-      break;
-    default:
-      break;
-    }
-  }
-}
-
-static void lua_frame_execute_3d(const lua_frame_buffer_t *frame) {
-  int i = 0;
-
-  if (frame == NULL) {
-    return;
-  }
-
-  for (i = 0; i < frame->count; i++) {
-    const rl_module_frame_command_t *command = &frame->commands[i];
-    switch (command->type) {
-    case RL_MODULE_FRAME_CMD_DRAW_MODEL:
-      if (command->data.draw_model.animation_index >= 0) {
-        rl_model_animation_update(command->data.draw_model.model,
-                                  command->data.draw_model.animation_index,
-                                  command->data.draw_model.animation_frame);
-      }
-      rl_model_draw(
-          command->data.draw_model.model, command->data.draw_model.x,
-          command->data.draw_model.y, command->data.draw_model.z,
-          command->data.draw_model.scale, command->data.draw_model.rotation_x,
-          command->data.draw_model.rotation_y,
-          command->data.draw_model.rotation_z, command->data.draw_model.tint);
-      break;
-    case RL_MODULE_FRAME_CMD_DRAW_SPRITE3D:
-      rl_sprite3d_draw(
-          command->data.draw_sprite3d.sprite, command->data.draw_sprite3d.x,
-          command->data.draw_sprite3d.y, command->data.draw_sprite3d.z,
-          command->data.draw_sprite3d.size, command->data.draw_sprite3d.tint);
-      break;
-    case RL_MODULE_FRAME_CMD_DRAW_CUBE:
-      rl_draw_cube(command->data.draw_cube.x, command->data.draw_cube.y,
-                   command->data.draw_cube.z, command->data.draw_cube.width,
-                   command->data.draw_cube.height,
-                   command->data.draw_cube.length,
-                   command->data.draw_cube.color);
-      break;
-    case RL_MODULE_FRAME_CMD_DRAW_GROUND_TEXTURE:
-      rl_draw_ground_texture(command->data.draw_ground_texture.texture,
-                             command->data.draw_ground_texture.x,
-                             command->data.draw_ground_texture.y,
-                             command->data.draw_ground_texture.z,
-                             command->data.draw_ground_texture.width,
-                             command->data.draw_ground_texture.length,
-                             command->data.draw_ground_texture.tint);
-      break;
-    default:
-      break;
-    }
-  }
-}
-
-static void lua_frame_execute_2d(const lua_frame_buffer_t *frame) {
-  int i = 0;
-
-  if (frame == NULL) {
-    return;
-  }
-
-  for (i = 0; i < frame->count; i++) {
-    const rl_module_frame_command_t *command = &frame->commands[i];
-    switch (command->type) {
-    case RL_MODULE_FRAME_CMD_DRAW_TEXTURE:
-      rl_draw_texture_ex(
-          command->data.draw_texture.texture, command->data.draw_texture.x,
-          command->data.draw_texture.y, command->data.draw_texture.scale,
-          command->data.draw_texture.rotation, command->data.draw_texture.tint);
-      break;
-    case RL_MODULE_FRAME_CMD_DRAW_TEXT:
-      rl_draw_text_ex(
-          command->data.draw_text.font, command->data.draw_text.text,
-          (int)command->data.draw_text.x, (int)command->data.draw_text.y,
-          command->data.draw_text.font_size, command->data.draw_text.spacing,
-          command->data.draw_text.color);
-      break;
-    default:
-      break;
-    }
-  }
-}
-
-static void on_lua_ready(void *payload, void *user_data) {
+static void on_module_ready(void *payload, void *user_data) {
   (void)payload;
   (void)user_data;
   log_info("Lua module ready");
 }
 
-static void on_lua_error(void *payload, void *user_data) {
+static void on_module_error(void *payload, void *user_data) {
   const char *error = (const char *)payload;
   (void)user_data;
   log_error("Lua module error: %s", error != NULL ? error : "(unknown)");
 }
 
-int main(void) {
-  SetTraceLogLevel(LOG_LEVEL_DEBUG); // let raylib log everything, we'll filter
-                                     // it in our callback
-  log_set_log_level(LOG_LEVEL_DEBUG);
+static void set_boot_error(example_context_t *context, const char *format, ...) {
+  va_list args;
 
-  const char *asset_host = get_asset_host();
-  const char *komika_font_path = "assets/fonts/Komika/KOMIKAH_.ttf";
-  const float small_font_size = 16.0f;
-  rl_module_config_t script_config = {800, 600, 60, FLAG_MSAA_4X_HINT,
-                                      "librl + raylib + lua(C example)"};
-  rl_module_instance_t lua_module = {0};
-  rl_module_host_api_t module_host = {0};
-  char module_error[256] = {0};
-
-  rl_init();
-  if (rl_set_asset_host(asset_host) != 0) {
-    fprintf(stderr, "Failed to set asset host: %s\n", asset_host);
-    rl_deinit();
-    return 1;
+  if (context == NULL || format == NULL) {
+    return;
   }
 
-  // Debugging: clear any persisted asset cache before we repopulate it.
-  rl_loader_clear_cache();
+  va_start(args, format);
+  (void)vsnprintf(context->boot_error, sizeof(context->boot_error), format, args);
+  va_end(args);
+  context->boot_state = EXAMPLE_BOOT_ERROR;
+}
 
-  module_host.user_data = &g_app;
-  module_host.log = module_log;
-  module_host.log_source = module_log_source;
-  module_host.event_on = module_event_on;
-  module_host.event_off = module_event_off;
-  module_host.event_emit = module_event_emit;
-  // Lua pushes transient draw commands into this host-owned buffer.
-  module_host.frame_command = module_frame_command;
+static void draw_boot_status(const char *title, const char *detail) {
+  rl_frame_begin();
+  rl_frame_clear_background(RL_COLOR_RAYWHITE);
+  rl_text_draw(title != NULL ? title : "Booting...", 32, 32, 32,
+               RL_COLOR_DARKGRAY);
+  rl_text_draw(detail != NULL ? detail : "", 32, 80, 20, RL_COLOR_GRAY);
+  rl_frame_end();
+}
 
-  if (rl_module_init("lua", &module_host, &lua_module.api, &lua_module.state,
-                     module_error, sizeof(module_error)) == 0) {
-    (void)rl_event_on("lua.ready", on_lua_ready, NULL);
-    (void)rl_event_on("lua.error", on_lua_error, NULL);
-    (void)rl_event_emit("lua.add_path", "assets/scripts/lua");
-    (void)rl_event_emit("lua.do_file", "lua_demo.lua");
-    if (rl_module_get_config_instance(lua_module.api, lua_module.state,
-                                      &script_config) != 0) {
-      log_warn("Lua script get_config failed");
+static void handle_boot_restore(example_context_t *context) {
+  if (context->loader_op != NULL && rl_loader_poll_op(context->loader_op)) {
+    int rc = rl_loader_finish_op(context->loader_op);
+    rl_loader_free_op(context->loader_op);
+    context->loader_op = NULL;
+
+    if (rc != 0) {
+      set_boot_error(context, "Loader bootstrap failed (%d)", rc);
+      return;
     }
-  } else {
-    log_warn("Lua module init failed: %s", module_error);
+
+    context->loader_op = rl_loader_begin_prepare_paths(
+        EXAMPLE_ASSET_MANIFEST,
+        sizeof(EXAMPLE_ASSET_MANIFEST) / sizeof(EXAMPLE_ASSET_MANIFEST[0]));
+    if (context->loader_op == NULL) {
+      set_boot_error(context, "Failed to start asset prepare");
+      return;
+    }
+
+    context->boot_state = EXAMPLE_BOOT_PREPARE;
   }
 
-  SetConfigFlags(script_config.flags);
+  draw_boot_status("Loading assets", "Restoring cache...");
+}
 
-  int w = script_config.width;
-  int h = script_config.height;
+static void handle_boot_prepare(example_context_t *context) {
+  if (context->loader_op != NULL && rl_loader_poll_op(context->loader_op)) {
+    int rc = rl_loader_finish_op(context->loader_op);
+    rl_loader_free_op(context->loader_op);
+    context->loader_op = NULL;
 
-  InitWindow(script_config.width, script_config.height, script_config.title);
-  SetTargetFPS(script_config.target_fps > 0 ? script_config.target_fps : 60);
+    if (rc != 0) {
+      set_boot_error(context, "Loader bootstrap failed (%d)", rc);
+      return;
+    }
 
-  // resize the window so it fits in our monitor.
-  int current_monitor = GetCurrentMonitor();
-  int mon_width = GetMonitorWidth(current_monitor);
-  int mon_height = GetMonitorHeight(current_monitor);
+    context->boot_state = EXAMPLE_BOOT_INIT_MODULE;
+  }
 
-  // This check will only resize if the desired size is bigger. (shrink only)
-  // Rmove/comment it if we want the window to alway try to fit the monitor
-  // if (w > mon_width || h > mon_height) {
-  // give it a little outside margin so it's not bumping the edges
-  float margin_scalar = 0.9;
-  float width_scale = ((float)mon_width * margin_scalar) / (float)w;
-  float height_scale = ((float)mon_height * margin_scalar) / (float)h;
-  float scale = width_scale < height_scale ? width_scale : height_scale;
+  draw_boot_status("Loading assets", "Preparing assets...");
+}
+
+static void handle_boot_init_module(example_context_t *context) {
+  int w = 0;
+  int h = 0;
+  int current_monitor = 0;
+  int mon_width = 0;
+  int mon_height = 0;
+  float margin_scalar = 0.9f;
+  float width_scale = 1.0f;
+  float height_scale = 1.0f;
+  float scale = 1.0f;
+  rl_module_config_t *script_config = &context->script_config;
+  rl_module_instance_t *script_module = &context->script_module;
+  rl_module_host_api_t *module_host = &context->module_host;
+
+  if (rl_module_init("lua", module_host, &script_module->api,
+                     &script_module->state, context->module_error,
+                     sizeof(context->module_error)) != 0) {
+    set_boot_error(context, "Lua module init failed: %.220s",
+                   context->module_error);
+    return;
+  }
+
+  (void)rl_event_on("lua.ready", on_module_ready, NULL);
+  (void)rl_event_on("lua.error", on_module_error, NULL);
+  (void)rl_event_emit("lua.add_path", "assets/scripts/lua");
+  (void)rl_event_emit("lua.do_file", "lua_demo.lua");
+  if (rl_module_get_config_instance(script_module->api, script_module->state,
+                                    script_config) != 0) {
+    log_warn("Lua script get_config failed");
+  }
+
+  rl_window_set_title(script_config->title);
+  rl_frame_runner_set_target_fps(script_config->target_fps > 0
+                                     ? script_config->target_fps
+                                     : 60);
+  w = script_config->width;
+  h = script_config->height;
+
+  current_monitor = rl_window_get_current_monitor();
+  mon_width = rl_window_get_monitor_width(current_monitor);
+  mon_height = rl_window_get_monitor_height(current_monitor);
+  width_scale = ((float)mon_width * margin_scalar) / (float)w;
+  height_scale = ((float)mon_height * margin_scalar) / (float)h;
+  scale = width_scale < height_scale ? width_scale : height_scale;
   w = (int)((float)w * scale);
   h = (int)((float)h * scale);
-  SetWindowSize(w > 0 ? w : 1, h > 0 ? h : 1);
-  //}
+  rl_window_set_size(w > 0 ? w : 1, h > 0 ? h : 1);
 
-  rl_handle_t komika_small = rl_font_create(komika_font_path, small_font_size);
-  if (lua_module.api != NULL &&
-      rl_module_start_instance(lua_module.api, lua_module.state) != 0) {
+  rl_debug_enable_fps(10, 10, 16, "assets/fonts/Komika/KOMIKAH_.ttf");
+  if (script_module->api != NULL &&
+      rl_module_start_instance(script_module->api, script_module->state) != 0) {
     log_warn("Lua script start failed");
   }
 
-  while (!WindowShouldClose()) {
-    const float dt = GetFrameTime();
-    rl_music_update_all();
-    // Script-generated frame commands are rebuilt from scratch every tick.
-    lua_frame_reset(&g_app.lua_frame);
-    if (lua_module.api != NULL && lua_module.api->update != NULL) {
-      (void)lua_module.api->update(lua_module.state, dt);
-    }
-    lua_frame_execute_audio(&g_app.lua_frame);
-    BeginDrawing();
-    // Drain scripted commands in the same passes the host uses: clear, 3D,
-    // then 2D/UI.
+  context->boot_state = EXAMPLE_BOOT_RUNNING;
+}
 
-    // clear to some neutral color in case lua doesn't clear
-    ClearBackground(RAYWHITE);
+static void on_shutdown(void *user_data) {
+  example_context_t *context = (example_context_t *)user_data;
 
-    // lua frame clear pass
-    lua_frame_execute_clear(&g_app.lua_frame);
-
-    // lua frame 3d pass
-    rl_begin_mode_3d();
-    lua_frame_execute_3d(&g_app.lua_frame);
-    rl_end_mode_3d();
-
-    // lua frame 2d pass
-    lua_frame_execute_2d(&g_app.lua_frame);
-
-    // draw the fps in the top left corner
-    rl_draw_fps_ex(komika_small, 10, 10, (int)small_font_size, RL_COLOR_BLACK);
-
-    EndDrawing();
+  if (context == NULL) {
+    return;
   }
 
-  rl_font_destroy(komika_small);
-  if (lua_module.api != NULL) {
-    rl_module_deinit_instance(lua_module.api, lua_module.state);
+  if (context->loader_op != NULL) {
+    rl_loader_free_op(context->loader_op);
+    context->loader_op = NULL;
   }
-  (void)rl_event_off("lua.ready", on_lua_ready, NULL);
-  (void)rl_event_off("lua.error", on_lua_error, NULL);
+  rl_debug_disable();
+  if (context->script_module.api != NULL) {
+    rl_module_deinit_instance(context->script_module.api,
+                              context->script_module.state);
+    context->script_module.api = NULL;
+    context->script_module.state = NULL;
+  }
+  (void)rl_event_off("lua.ready", on_module_ready, NULL);
+  (void)rl_event_off("lua.error", on_module_error, NULL);
   rl_deinit();
-  CloseWindow();
+  rl_window_close();
+}
+
+static void on_init(void *user_data) {
+  example_context_t *context = (example_context_t *)user_data;
+
+  if (context == NULL) {
+    return;
+  }
+
+  if (rl_set_asset_host(g_asset_host) != 0) {
+    set_boot_error(context, "Failed to set asset host: %s",
+                   g_asset_host != NULL ? g_asset_host : "(null)");
+    return;
+  }
+
+  rl_loader_clear_cache();
+
+  rl_window_init(context->script_config.width, context->script_config.height,
+                 context->script_config.title, context->script_config.flags);
+  rl_frame_runner_set_target_fps(context->script_config.target_fps > 0
+                                     ? context->script_config.target_fps
+                                     : 60);
+
+  context->module_host.user_data = &g_frame_command_buffer;
+  context->module_host.log = module_log;
+  context->module_host.log_source = module_log_source;
+  context->module_host.event_on = module_event_on;
+  context->module_host.event_off = module_event_off;
+  context->module_host.event_emit = module_event_emit;
+  context->module_host.frame_command = rl_frame_commands_append;
+  context->loader_op = rl_loader_begin_restore();
+  if (context->loader_op == NULL) {
+    set_boot_error(context, "Failed to start cache restore");
+  }
+}
+
+static void on_tick(void *user_data) {
+  example_context_t *context = (example_context_t *)user_data;
+  rl_module_instance_t *script_module = NULL;
+  const float dt = rl_frame_get_delta_time();
+
+  if (context == NULL) {
+    return;
+  }
+
+  script_module = &context->script_module;
+  switch (context->boot_state) {
+  case EXAMPLE_BOOT_RESTORE:
+    handle_boot_restore(context);
+    return;
+  case EXAMPLE_BOOT_PREPARE:
+    handle_boot_prepare(context);
+    return;
+  case EXAMPLE_BOOT_INIT_MODULE:
+    handle_boot_init_module(context);
+    return;
+  case EXAMPLE_BOOT_ERROR:
+    draw_boot_status("Boot failed", context->boot_error);
+    return;
+  case EXAMPLE_BOOT_RUNNING:
+    break;
+  }
+
+  rl_frame_commands_reset(&g_frame_command_buffer);
+  if (script_module->api != NULL && script_module->api->update != NULL) {
+    (void)script_module->api->update(script_module->state, dt);
+  }
+  rl_frame_commands_execute_audio(&g_frame_command_buffer);
+  rl_frame_begin();
+  rl_frame_clear_background(RL_COLOR_RAYWHITE);
+  rl_frame_commands_execute_clear(&g_frame_command_buffer);
+  rl_begin_mode_3d();
+  rl_frame_commands_execute_3d(&g_frame_command_buffer);
+  rl_end_mode_3d();
+  rl_frame_commands_execute_2d(&g_frame_command_buffer);
+  rl_frame_end();
+}
+
+int main(void) {
+  g_asset_host = get_asset_host();
+  rl_logger_set_level(LOG_LEVEL_DEBUG);
+
+  g_example_context.script_config =
+      (rl_module_config_t){800, 600, 60, RL_WINDOW_FLAG_MSAA_4X_HINT,
+                           "librl + raylib + lua(C example)"};
+  g_example_context.boot_state = EXAMPLE_BOOT_RESTORE;
+
+  rl_init();
+  rl_frame_runner_run(on_init, on_tick, on_shutdown,
+                      &g_example_context);
+
   return 0;
 }

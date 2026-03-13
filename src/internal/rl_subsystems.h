@@ -27,6 +27,10 @@ void rl_sprite3d_deinit(void);
 void rl_texture_init(void);
 void rl_texture_deinit(void);
 
+void rl_debug_init(void);
+void rl_debug_deinit(void);
+void rl_debug_draw(void);
+
 void rl_logger_init(void);
 void rl_logger_deinit(void);
 

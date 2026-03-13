@@ -1,0 +1,20 @@
+#ifndef RL_INPUT_H
+#define RL_INPUT_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "rl_types.h"
+
+vec2_t rl_input_get_mouse_position(void);
+int rl_input_get_mouse_wheel(void);
+int rl_input_get_mouse_button(int button);
+rl_mouse_state_t rl_input_get_mouse_state(void);
+rl_keyboard_state_t rl_input_get_keyboard_state(void);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif // RL_INPUT_H

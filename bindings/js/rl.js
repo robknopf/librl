@@ -114,7 +114,7 @@ const RL = {
         moduleInstance.ccall('rl_update_to_scratch', null, [], []);
     },
     getTime: () => {
-        return moduleInstance.ccall('rl_get_time', 'number', [], []);
+        return moduleInstance.ccall('rl_frame_get_time', 'number', [], []);
     },
     deinit: () => {
         RL._eventListenersById.clear();
@@ -261,7 +261,7 @@ const RL = {
             //console.log("resize", newWidth, newHeight);
 
             moduleInstance.ccall(
-                "rl_set_window_size",
+                "rl_window_set_size",
                 null,
                 ["number", "number"],
                 [newWidth, newHeight]
@@ -269,24 +269,24 @@ const RL = {
         });
 
 
-        moduleInstance.ccall('rl_init_window', null, ['number', 'number', 'string', 'number'], [width, height, title, windowFlags]);
+        moduleInstance.ccall('rl_window_init', null, ['number', 'number', 'string', 'number'], [width, height, title, windowFlags]);
         // force an initial resize event
         window.dispatchEvent(new Event('resize'));
     },
     closeWindow: () => {
-        return moduleInstance.ccall('rl_close_window', null, [], []);
+        return moduleInstance.ccall('rl_window_close', null, [], []);
     },
     setWindowSize: (width, height) => {
-        return moduleInstance.ccall('rl_set_window_size', null, ['number', 'number'], [width, height]);
+        return moduleInstance.ccall('rl_window_set_size', null, ['number', 'number'], [width, height]);
     },
     setWindowPosition: (x, y) => {
-        return moduleInstance.ccall('rl_set_window_position', null, ['number', 'number'], [x, y]);
+        return moduleInstance.ccall('rl_window_set_position', null, ['number', 'number'], [x, y]);
     },
     beginDrawing: () => {
-        return moduleInstance.ccall('rl_begin_drawing', null, [], []);
+        return moduleInstance.ccall('rl_frame_begin', null, [], []);
     },
     endDrawing: () => {
-        return moduleInstance.ccall('rl_end_drawing', null, [], []);
+        return moduleInstance.ccall('rl_frame_end', null, [], []);
     },
     beginMode3D: () => {
         return moduleInstance.ccall('rl_begin_mode_3d', null, [], []);
@@ -349,7 +349,7 @@ const RL = {
         return moduleInstance.ccall('rl_set_light_ambient', null, ['number'], [ambient]);
     },
     clearBackground: (color) => {
-        return moduleInstance.ccall('rl_clear_background', null, ['number'], [color]);
+        return moduleInstance.ccall('rl_frame_clear_background', null, ['number'], [color]);
     },
     drawCube: (positionX, positionY, positionZ, width, height, length, color) => {
         return moduleInstance.ccall(
@@ -360,19 +360,22 @@ const RL = {
         );
     },
     drawFPS: (x, y) => {
-        return moduleInstance.ccall('rl_draw_fps', null, ['number', 'number'], [x, y]);
+        return moduleInstance.ccall('rl_text_draw_fps', null, ['number', 'number'], [x, y]);
     },
     drawFPSEx: (font, x, y, fontSize, color) => {
-        moduleInstance.ccall('rl_draw_fps_ex', null, ['number', 'number', 'number', 'number', 'number'], [font, x, y, fontSize, color]);
+        moduleInstance.ccall('rl_text_draw_fps_ex', null, ['number', 'number', 'number', 'number', 'number'], [font, x, y, fontSize, color]);
     },
     drawText: (text, x, y, fontSize, color) => {
-        return moduleInstance.ccall('rl_draw_text', null, ['string', 'number', 'number', 'number', 'number'], [text, x, y, fontSize, color]);
+        return moduleInstance.ccall('rl_text_draw', null, ['string', 'number', 'number', 'number', 'number'], [text, x, y, fontSize, color]);
     },
     drawTextEx: (font, text, x, y, fontSize, spacing, tint) => {
-        return moduleInstance.ccall('rl_draw_text_ex', null, ['number', 'string', 'number', 'number', 'number', 'number', 'number'], [font, text, x, y, fontSize, spacing, tint]);
+        return moduleInstance.ccall('rl_text_draw_ex', null, ['number', 'string', 'number', 'number', 'number', 'number', 'number'], [font, text, x, y, fontSize, spacing, tint]);
+    },
+    drawTextureEx: (texture, x, y, scale, rotation, tint) => {
+        return moduleInstance.ccall('rl_texture_draw_ex', null, ['number', 'number', 'number', 'number', 'number', 'number'], [texture, x, y, scale, rotation, tint]);
     },
     measureText: (text, fontSize) => {
-        return moduleInstance.ccall('rl_measure_text', 'number', ['string', 'number'], [text, fontSize]);
+        return moduleInstance.ccall('rl_text_measure', 'number', ['string', 'number'], [text, fontSize]);
     },
 
     // Begin Scratch-backed wrappers
@@ -396,7 +399,7 @@ const RL = {
         return moduleInstance.getKeyboard();
     },
     getScreenSize: () => {
-        moduleInstance.ccall('rl_get_screen_size_to_scratch', null, [], []);
+        moduleInstance.ccall('rl_window_get_screen_size_to_scratch', null, [], []);
         return moduleInstance.getVector2();
     },
     getScreenWidth: () => {
@@ -406,19 +409,19 @@ const RL = {
         return RL.getScreenSize().y;
     },
     getWindowPosition: () => {
-        moduleInstance.ccall('rl_get_window_position_to_scratch', null, [], []);
+        moduleInstance.ccall('rl_window_get_position_to_scratch', null, [], []);
         return moduleInstance.getVector2();
     },
     getMonitorPosition: (monitor = 0) => {
-        moduleInstance.ccall('rl_get_monitor_position_to_scratch', null, ['number'], [monitor]);
+        moduleInstance.ccall('rl_window_get_monitor_position_to_scratch', null, ['number'], [monitor]);
         return moduleInstance.getVector2();
     },
     getMousePosition: () => {
-        moduleInstance.ccall('rl_get_mouse_position_to_scratch', null, [], []);
+        moduleInstance.ccall('rl_input_get_mouse_position_to_scratch', null, [], []);
         return moduleInstance.getVector2();
     },
     measureTextEx: (font, text, fontSize, spacing = 1) => {
-        moduleInstance.ccall('rl_measure_text_ex_to_scratch', 'number', ['number', 'string', 'number', 'number'], [font, text, fontSize, spacing]);
+        moduleInstance.ccall('rl_text_measure_ex_to_scratch', 'number', ['number', 'string', 'number', 'number'], [font, text, fontSize, spacing]);
         return moduleInstance.getVector2();
     },
     // End Scratch-backed wrappers
@@ -478,7 +481,7 @@ const RL = {
         "rl_font_get_default", "number", [], []
     ),
     setTargetFPS: (fps) => moduleInstance.ccall(
-        "rl_set_target_fps", null, ["number"], [fps]
+        "rl_frame_runner_set_target_fps", null, ["number"], [fps]
     ),
     createModel: (path) => moduleInstance.ccall(
         "rl_model_create", "number", ["string"], [path], { async: true } // async: true, it uses fetch

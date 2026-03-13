@@ -586,7 +586,7 @@ static int lua_module_resolve_path(rl_lua_module_state_t *state, const char *fil
 
     if (explicit_path) {
         path_normalize(filename, resolved_path, resolved_path_size);
-        if (rl_loader_cache_file(resolved_path) == 0) {
+        if (rl_loader_is_local(resolved_path)) {
             return 0;
         }
     }
@@ -599,7 +599,7 @@ static int lua_module_resolve_path(rl_lua_module_state_t *state, const char *fil
             if (lua_module_expand_search_path(state->search_paths[i], filename, resolved_path, resolved_path_size) != 0) {
                 continue;
             }
-            if (rl_loader_cache_file(resolved_path) == 0) {
+            if (rl_loader_is_local(resolved_path)) {
                 return 0;
             }
         }
@@ -607,7 +607,7 @@ static int lua_module_resolve_path(rl_lua_module_state_t *state, const char *fil
 
     if (!explicit_path) {
         path_normalize(filename, resolved_path, resolved_path_size);
-        if (rl_loader_cache_file(resolved_path) == 0) {
+        if (rl_loader_is_local(resolved_path)) {
             return 0;
         }
     }
@@ -683,7 +683,7 @@ static int lua_module_resolve_require_path(rl_lua_module_state_t *state, const c
 
         if (strchr(search_path, '?') != NULL) {
             if (lua_module_expand_search_path(search_path, module_rel, resolved_path, resolved_path_size) == 0 &&
-                rl_loader_cache_file(resolved_path) == 0) {
+                rl_loader_is_local(resolved_path)) {
                 return 0;
             }
             continue;
@@ -695,7 +695,7 @@ static int lua_module_resolve_require_path(rl_lua_module_state_t *state, const c
         memcpy(module_suffix, module_rel, module_rel_len);
         memcpy(module_suffix + module_rel_len, ".lua", 5);
         if (lua_module_expand_search_path(search_path, module_suffix, resolved_path, resolved_path_size) == 0 &&
-            rl_loader_cache_file(resolved_path) == 0) {
+            rl_loader_is_local(resolved_path)) {
             return 0;
         }
 
@@ -705,7 +705,7 @@ static int lua_module_resolve_require_path(rl_lua_module_state_t *state, const c
         memcpy(module_init, module_rel, module_rel_len);
         memcpy(module_init + module_rel_len, "/init.lua", 10);
         if (lua_module_expand_search_path(search_path, module_init, resolved_path, resolved_path_size) == 0 &&
-            rl_loader_cache_file(resolved_path) == 0) {
+            rl_loader_is_local(resolved_path)) {
             return 0;
         }
     }
@@ -1417,9 +1417,9 @@ static int lua_vm_call_update(rl_lua_module_state_t *state, float dt_seconds)
         return 0;
     }
 
-    mouse_state = rl_get_mouse_state();
-    keyboard_state = rl_get_keyboard_state();
-    screen_size = rl_get_screen_size();
+    mouse_state = rl_input_get_mouse_state();
+    keyboard_state = rl_input_get_keyboard_state();
+    screen_size = rl_window_get_screen_size();
 
     lua_rawgeti(L, LUA_REGISTRYINDEX, state->vm.frame_ref);
     lua_vm_set_table_number(L, -1, "dt", (lua_Number)dt_seconds);

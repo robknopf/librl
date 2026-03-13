@@ -18,17 +18,17 @@ proc main() =
 
   rl_init()
   discard rl_set_asset_host(asset_host)
-  rl_init_window(800.cint, 600.cint, "Hello, World! (Nim)", RL_FLAG_MSAA_4X_HINT)
+  rl_window_init(800.cint, 600.cint, "Hello, World! (Nim)", RL_FLAG_MSAA_4X_HINT)
   let monitorOverride = getEnv("RL_MONITOR", "")
   if monitorOverride.len > 0:
     try:
-      rl_set_window_monitor(parseInt(monitorOverride).cint)
+      rl_window_set_monitor(parseInt(monitorOverride).cint)
     except ValueError:
       discard
 
-  rl_set_window_monitor(1)
+  rl_window_set_monitor(1)
 
-  rl_set_target_fps(60.cint)
+  rl_frame_runner_set_target_fps(60.cint)
   let greyAlphaColor = rl_color_create(0, 0, 0, 128)
 
   rl_enable_lighting();
@@ -57,10 +57,10 @@ proc main() =
   discard rl_model_set_animation_speed(gumshoe, 1.0)
   discard rl_model_set_animation_loop(gumshoe, true)
 
-  lastTime = rl_get_time().float
+  lastTime = rl_frame_get_time().float
 
   while true:
-    currentTime = rl_get_time().float
+    currentTime = rl_frame_get_time().float
     deltaTime = currentTime - lastTime
     totalTime += deltaTime
     lastTime = currentTime
@@ -68,30 +68,30 @@ proc main() =
     if countdownTimer <= 0:
       break
 
-    rl_begin_drawing()
-    rl_clear_background(RL_RAYWHITE)
+    rl_frame_begin()
+    rl_frame_clear_background(RL_RAYWHITE)
     rl_begin_mode_3d()
     discard rl_model_animate(gumshoe, deltaTime.cfloat)
     rl_model_draw(gumshoe, 0.0, 0.0, 0.0, 1.0, RL_RAYWHITE)
     rl_sprite3d_draw(sprite, 0.0, 0.0, 0.0, 1.0, RL_RAYWHITE)
     rl_end_mode_3d()
 
-    let screen = rl_get_screen_size()
+    let screen = rl_window_get_screen_size()
     let w = cint(screen.x)
     let h = cint(screen.y)
-    let textSize = rl_measure_text_ex(komika, message.cstring, fontSize.cfloat, 0)
+    let textSize = rl_text_measure_ex(komika, message.cstring, fontSize.cfloat, 0)
     let textX = cint((w.float32 - textSize.x) / 2)
     let textY = cint((h.float32 - textSize.y) / 2)
-    rl_draw_text_ex(komika, message.cstring, textX, textY, fontSize.cfloat, 1.0, RL_BLUE)
+    rl_text_draw_ex(komika, message.cstring, textX, textY, fontSize.cfloat, 1.0, RL_BLUE)
     let remaining = fmt"Remaining: {countdownTimer:.2f}"
     let elapsed = fmt"Elapsed: {totalTime:.2f}"
-    let mouse = rl_get_mouse_state()
+    let mouse = rl_input_get_mouse_state()
     let mouseText = fmt"Mouse: ({mouse.x}, {mouse.y}) w:{mouse.wheel} b:[{mouse.left}, {mouse.right}, {mouse.middle}]"
-    rl_draw_text_ex(komikaSmall, remaining.cstring, 10.cint, 36.cint, smallFontSize.cfloat, 1.0, RL_BLACK)
-    rl_draw_text_ex(komikaSmall, elapsed.cstring, 10.cint, 56.cint, smallFontSize.cfloat, 1.0, RL_BLACK)
-    rl_draw_text_ex(komikaSmall, mouseText.cstring, 10.cint, 76.cint, smallFontSize.cfloat, 1.0, RL_BLACK)
-    rl_draw_fps_ex(komikaSmall, 10.cint, 10.cint, smallFontSize.cint, greyAlphaColor)
-    rl_end_drawing()
+    rl_text_draw_ex(komikaSmall, remaining.cstring, 10.cint, 36.cint, smallFontSize.cfloat, 1.0, RL_BLACK)
+    rl_text_draw_ex(komikaSmall, elapsed.cstring, 10.cint, 56.cint, smallFontSize.cfloat, 1.0, RL_BLACK)
+    rl_text_draw_ex(komikaSmall, mouseText.cstring, 10.cint, 76.cint, smallFontSize.cfloat, 1.0, RL_BLACK)
+    rl_text_draw_fps_ex(komikaSmall, 10.cint, 10.cint, smallFontSize.cint, greyAlphaColor)
+    rl_frame_end()
 
   rl_disable_lighting()
   rl_sprite3d_destroy(sprite)
@@ -101,7 +101,7 @@ proc main() =
   rl_color_destroy(greyAlphaColor)
   rl_camera3d_destroy(camera)
   rl_deinit()
-  rl_close_window()
+  rl_window_close()
 
 when isMainModule:
   main()

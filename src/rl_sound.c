@@ -83,18 +83,11 @@ rl_handle_t rl_sound_create(const char *filename)
 
     path_normalize(filename, normalized_path, sizeof(normalized_path));
     /*
-     * Pre-cache the file through rl_loader before calling raylib LoadSound().
-     *
-     * Most raylib file-backed loaders can be redirected through the global
-     * LoadFileData callback, but raudio.c uses its own private LoadFileData()
-     * implementation and LoadSound() ultimately falls back to fopen() on the
-     * provided path. That means audio can bypass our loader callback path
-     * entirely. Ensuring the asset is present in the loader-managed cache first
-     * makes the subsequent LoadSound(normalized_path) path work consistently for
-     * remote/cache-backed assets too.
+     * Audio still bypasses the global LoadFileData callback path in raylib,
+     * so sound creation requires the file to already exist locally.
      */
-    if (rl_loader_cache_file(normalized_path) != 0) {
-        log_error("Failed to cache sound (%s)", normalized_path);
+    if (!rl_loader_is_local(normalized_path)) {
+        log_error("Sound is not prepared locally (%s)", normalized_path);
         return 0;
     }
     loaded_sound = LoadSound(normalized_path);

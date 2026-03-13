@@ -27,7 +27,11 @@ LIBRL_ROOT ?= .
 LIBRL_BASENAME = librl
 WGUTILS_REPO ?= https://github.com/whirlinggizmo/wgutils-c.git
 WGUTILS_ROOT ?= $(LIBRL_ROOT)/deps/wgutils
-WG_CORE_DIR ?= $(WGUTILS_ROOT)
+WG_CORE_DIR ?= $(WGUTILS_ROOT)/src
+WGUTILS_INC_DIR := $(WGUTILS_ROOT)/include
+WGUTILS_LIB_DIR := $(WGUTILS_ROOT)/lib
+WGUTILS_DESKTOP_ARCHIVE := $(WGUTILS_LIB_DIR)/libwgutils.a
+WGUTILS_WASM_ARCHIVE := $(WGUTILS_LIB_DIR)/libwgutils.wasm.a
 
 # Raylib paths and names
 LIBRAYLIB_REPO ?= git@github.com:robknopf/raylib-builder.git
@@ -44,7 +48,7 @@ LIBRAYLIB_WASM_ARCHIVE = $(LIBRAYLIB_LIB)/libraylib.wasm.a
 LIBRAYLIB_DESKTOP_ARCHIVE = $(LIBRAYLIB_ROOT)/obj/desktop/release/libraylib.a
 endif
 
-CFLAGS = -Wall -Wextra -fdiagnostics-color=always -Isrc -I$(WG_CORE_DIR)
+CFLAGS = -Wall -Wextra -fdiagnostics-color=always -Isrc
 
 CFLAGS_WASM = \
 	$(WASM_PLATFORM_CFLAGS)
@@ -198,12 +202,12 @@ LIBS_WASM = -L$(LIBRAYLIB_LIB) \
 SRC_DIR = src
 CORE_DIR = $(WG_CORE_DIR)
 CORE_EXCLUDED_SRCS = $(call rwildcard,$(CORE_DIR)/tests/,*.c)
-ALL_SRCS = $(call rwildcard,$(SRC_DIR)/,*.c) $(filter-out $(CORE_EXCLUDED_SRCS),$(call rwildcard,$(CORE_DIR)/,*.c))
+ALL_SRCS = $(call rwildcard,$(SRC_DIR)/,*.c)
 TEST_SRCS = $(call rwildcard,$(SRC_DIR)/,*_test.c) $(call rwildcard,$(CORE_DIR)/,*_test.c)
 LIB_SRCS = $(filter-out $(TEST_SRCS), $(ALL_SRCS))
 
 # Include and library paths
-INCLUDES = -I. -I$(OUT_INC_DIR) -I$(LIBRAYLIB_INC) -I$(LIBRL_ROOT)/$(SRC_DIR) -I$(LIBRL_ROOT)/$(CORE_DIR)
+INCLUDES = -I. -I$(OUT_INC_DIR) -I$(LIBRAYLIB_INC) -I$(WGUTILS_INC_DIR) -I$(LIBRL_ROOT)/$(SRC_DIR)
 
 # Object files
 OBJ_BASE_DIR = obj
@@ -257,7 +261,7 @@ deps:
 		echo "Updating existing wgutils directory: $(WGUTILS_ROOT)"; \
 		git -C "$(WGUTILS_ROOT)" pull --ff-only; \
 	fi
-	@if [ ! -d "$(WGUTILS_ROOT)/path" ]; then \
+	@if [ ! -d "$(WGUTILS_ROOT)/src/path" ]; then \
 		echo "Error: $(WGUTILS_ROOT) does not look like wgutils source."; \
 		exit 1; \
 	fi
@@ -267,9 +271,25 @@ ensure_deps:
 		echo "Missing dependencies at $(LIBRAYLIB_ROOT). Run 'make deps' first."; \
 		exit 1; \
 	fi
-	@if [ ! -d "$(WGUTILS_ROOT)/path" ]; then \
+	@if [ ! -d "$(WGUTILS_ROOT)/src/path" ]; then \
 		echo "Missing dependencies at $(WGUTILS_ROOT). Run 'make deps' first."; \
 		exit 1; \
+	fi
+
+wgutils_desktop: ensure_deps
+	@if [ -f "$(WGUTILS_DESKTOP_ARCHIVE)" ]; then \
+		echo "Using existing wgutils desktop archive: $(WGUTILS_DESKTOP_ARCHIVE)"; \
+	else \
+		echo "Missing wgutils desktop archive: $(WGUTILS_DESKTOP_ARCHIVE)"; \
+		$(MAKE) -C $(WGUTILS_ROOT) desktop; \
+	fi
+
+wgutils_wasm: ensure_deps
+	@if [ -f "$(WGUTILS_WASM_ARCHIVE)" ]; then \
+		echo "Using existing wgutils wasm archive: $(WGUTILS_WASM_ARCHIVE)"; \
+	else \
+		echo "Missing wgutils wasm archive: $(WGUTILS_WASM_ARCHIVE)"; \
+		$(MAKE) -C $(WGUTILS_ROOT) wasm; \
 	fi
 
 libraylib_wasm: ensure_deps
@@ -289,33 +309,41 @@ libraylib_desktop: ensure_deps
 	fi
 
 # WebAssembly static build
-wasm: libraylib_wasm ensure_out_dir
+wasm: libraylib_wasm wgutils_wasm ensure_out_dir
 	$(info Building WASM with sources: $(WASM_SRCS))
 	$(info LDFLAGS_WASM: $(LDFLAGS_WASM))
 	$(info CFLAGS: $(CFLAGS))
 	@mkdir -p "$(EM_CACHE_DIR)"
-	$(EM_ENV) $(CC_WASM) -o $(OUT_WASM) $(WASM_SRCS) $(LDFLAGS_WASM) $(CFLAGS_WASM) $(CFLAGS) $(INCLUDES) $(LIBS_WASM)
+	$(EM_ENV) $(CC_WASM) -o $(OUT_WASM) $(WASM_SRCS) $(WGUTILS_WASM_ARCHIVE) $(LDFLAGS_WASM) $(CFLAGS_WASM) $(CFLAGS) $(INCLUDES) $(LIBS_WASM)
 
 # WebAssembly static library build
-wasm_archive: libraylib_wasm ensure_out_dir ensure_obj_dir $(WASM_OBJS)
+wasm_archive: libraylib_wasm wgutils_wasm ensure_out_dir ensure_obj_dir $(WASM_OBJS)
 	$(info Building WASM archive with objects: $(WASM_OBJS))
 	$(info Adding raylib wasm archive: $(LIBRAYLIB_WASM_ARCHIVE))
+	$(info Adding wgutils wasm archive: $(WGUTILS_WASM_ARCHIVE))
 	@test -f "$(LIBRAYLIB_WASM_ARCHIVE)" || (echo "Missing raylib wasm archive: $(LIBRAYLIB_WASM_ARCHIVE)" && exit 1)
+	@test -f "$(WGUTILS_WASM_ARCHIVE)" || (echo "Missing wgutils wasm archive: $(WGUTILS_WASM_ARCHIVE)" && exit 1)
 	rm -rf $(OBJ_WASM_DIR)/.raylib_unpack
-	mkdir -p $(OBJ_WASM_DIR)/.raylib_unpack
+	rm -rf $(OBJ_WASM_DIR)/.wgutils_unpack
+	mkdir -p $(OBJ_WASM_DIR)/.raylib_unpack $(OBJ_WASM_DIR)/.wgutils_unpack
 	@mkdir -p "$(EM_CACHE_DIR)"
 	cd $(OBJ_WASM_DIR)/.raylib_unpack && $(EM_ENV) emar x $(abspath $(LIBRAYLIB_WASM_ARCHIVE))
-	$(EM_ENV) emar rcs $(OUT_WASM_ARCHIVE) $(WASM_OBJS) $(OBJ_WASM_DIR)/.raylib_unpack/*.o
+	cd $(OBJ_WASM_DIR)/.wgutils_unpack && $(EM_ENV) emar x $(abspath $(WGUTILS_WASM_ARCHIVE))
+	$(EM_ENV) emar rcs $(OUT_WASM_ARCHIVE) $(WASM_OBJS) $(OBJ_WASM_DIR)/.raylib_unpack/*.o $(OBJ_WASM_DIR)/.wgutils_unpack/*.o
 
 # Desktop static library build
-desktop: libraylib_desktop ensure_out_dir ensure_obj_dir $(DESKTOP_OBJS)
+desktop: libraylib_desktop wgutils_desktop ensure_out_dir ensure_obj_dir $(DESKTOP_OBJS)
 	$(info Building Desktop (static) with sources: $(DESKTOP_SRCS))
 	$(info Adding raylib archive: $(LIBRAYLIB_DESKTOP_ARCHIVE))
+	$(info Adding wgutils archive: $(WGUTILS_DESKTOP_ARCHIVE))
 	@test -f "$(LIBRAYLIB_DESKTOP_ARCHIVE)" || (echo "Missing raylib archive: $(LIBRAYLIB_DESKTOP_ARCHIVE)" && exit 1)
+	@test -f "$(WGUTILS_DESKTOP_ARCHIVE)" || (echo "Missing wgutils archive: $(WGUTILS_DESKTOP_ARCHIVE)" && exit 1)
 	rm -rf $(OBJ_DESKTOP_DIR)/.raylib_unpack
-	mkdir -p $(OBJ_DESKTOP_DIR)/.raylib_unpack
+	rm -rf $(OBJ_DESKTOP_DIR)/.wgutils_unpack
+	mkdir -p $(OBJ_DESKTOP_DIR)/.raylib_unpack $(OBJ_DESKTOP_DIR)/.wgutils_unpack
 	cd $(OBJ_DESKTOP_DIR)/.raylib_unpack && ar x $(abspath $(LIBRAYLIB_DESKTOP_ARCHIVE))
-	ar rcs $(OUT_DESKTOP) $(DESKTOP_OBJS) $(OBJ_DESKTOP_DIR)/.raylib_unpack/*.o
+	cd $(OBJ_DESKTOP_DIR)/.wgutils_unpack && ar x $(abspath $(WGUTILS_DESKTOP_ARCHIVE))
+	ar rcs $(OUT_DESKTOP) $(DESKTOP_OBJS) $(OBJ_DESKTOP_DIR)/.raylib_unpack/*.o $(OBJ_DESKTOP_DIR)/.wgutils_unpack/*.o
 
 uri_test test_desktop test_wasm test unit_test_desktop unit_test_wasm probe_idbfs_build probe_idbfs check_node check_chrome check_probe_python:
 	@$(MAKE) -C tests $@ \
@@ -355,7 +383,7 @@ clean:
 #	@$(MAKE) -C $(LIBRAYLIB_ROOT) clean
 
 
-.PHONY: all deps ensure_deps clean ensure_out_dir ensure_obj_dir libraylib_wasm libraylib_desktop wasm wasm_archive desktop test test_desktop test_wasm unit_test_desktop unit_test_wasm check_node check_chrome check_probe_python probe_idbfs_build probe_idbfs uri_test
+.PHONY: all deps ensure_deps clean ensure_out_dir ensure_obj_dir libraylib_wasm libraylib_desktop wgutils_desktop wgutils_wasm wasm wasm_archive desktop test test_desktop test_wasm unit_test_desktop unit_test_wasm check_node check_chrome check_probe_python probe_idbfs_build probe_idbfs uri_test
 # 	"_RL_COLOR_BLACK", \
 # 	"_RL_COLOR_BLANK", \
 # 	"_RL_COLOR_MAGENTA", \

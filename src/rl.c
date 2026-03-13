@@ -3,7 +3,7 @@
 #include "internal/rl_state.h"
 #include "raylib.h"
 #include "rl_loader.h"
-#include "logger/log.h"
+#include "logger/logger.h"
 #include "internal/rl_subsystems.h"
 
 

@@ -521,7 +521,7 @@ Notes:
 ## Logging
 
 Notes:
-- Logging goes through the shared wrapper logger (`deps/wgutils/logger/log.h`), not direct `fprintf`/`printf`.
+- Logging goes through the shared wrapper logger (`deps/wgutils/include/logger/logger.h`), not direct `fprintf`/`printf`.
 - Log level is carried by logger calls (`log_error`, `log_warn`, `log_info`, `log_debug`) or explicit `log_message(...)`.
 - Log messages should include a subsystem scope prefix in message text, e.g. `FILEIO: ...`.
 

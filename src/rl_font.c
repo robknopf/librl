@@ -8,7 +8,7 @@
 
 #include "internal/exports.h"
 #include "internal/rl_handle_pool.h"
-#include "logger/log.h"
+#include "logger/logger.h"
 #include "path/path.h"
 
 #define MAX_FONTS 255

@@ -5,7 +5,7 @@
 #include "raylib.h"
 #include "rl.h"
 #include "rl_camera3d.h"
-#include "logger/log.h"
+#include "logger/logger.h"
 //#include "rl_color.h"
 #include "internal/exports.h"
 #include "internal/rl_camera3d_store.h"

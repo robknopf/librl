@@ -1,5 +1,5 @@
 #include "rl_protocol.h"
-#include "../../deps/wgutils/vendor/cjson/cJSON.h"
+#include "vendor/cjson/cJSON.h"
 #include <string.h>
 #include <stdio.h>
 

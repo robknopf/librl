@@ -7,7 +7,10 @@ CHROME ?= $(shell command -v google-chrome 2>/dev/null || command -v chromium-br
 EM_CACHE_DIR ?= $(abspath $(ROOT_DIR)/.emcache)
 EM_ENV := EM_CACHE=$(EM_CACHE_DIR)
 
-CORE_DIR := $(ROOT_DIR)/deps/wgutils
+CORE_INC_DIR := $(ROOT_DIR)/deps/wgutils/include
+CORE_LIB_DIR := $(ROOT_DIR)/deps/wgutils/lib
+CORE_DESKTOP_ARCHIVE := $(CORE_LIB_DIR)/libwgutils.a
+CORE_WASM_ARCHIVE := $(CORE_LIB_DIR)/libwgutils.wasm.a
 UNIT_TEST_DIR := $(ROOT_DIR)/tests/unit
 HEADLESS_PROBE_C := $(ROOT_DIR)/tests/headless/fileio_probe_wasm.c
 HEADLESS_PROBE_JS := $(ROOT_DIR)/tests/headless/fileio_probe.js
@@ -21,20 +24,9 @@ UNIT_TEST_SRCS := \
 	$(UNIT_TEST_DIR)/rl_handle_pool_test.c \
 	$(UNIT_TEST_DIR)/rl_loader_test.c
 UNIT_TEST_LIB_SRCS := \
-	$(CORE_DIR)/async/wg_op.c \
-	$(CORE_DIR)/fileio/fileio.c \
-	$(CORE_DIR)/fileio/fileio_common.c \
-	$(CORE_DIR)/lru_cache/lru_cache.c \
-	$(CORE_DIR)/path/path.c \
 	$(ROOT_DIR)/src/rl_handle_pool.c \
 	$(ROOT_DIR)/src/rl_loader.c \
 	$(ROOT_DIR)/src/rl_scratch.c
-UNIT_TEST_EXTRA_LIB_SRCS := \
-	$(CORE_DIR)/logger/log.c \
-	$(CORE_DIR)/uri/uri.c \
-	$(CORE_DIR)/vendor/cjson/cJSON.c \
-	$(CORE_DIR)/vendor/cwalk/cwalk.c \
-	$(CORE_DIR)/vendor/logger-c/log.c
 UNIT_TEST_DESKTOP_BIN := /tmp/librl_unit_tests
 UNIT_TEST_WASM_JS := /tmp/librl_unit_tests.js
 
@@ -50,8 +42,8 @@ WASM_COMMON_LDFLAGS ?= \
 	-s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' \
 	-s ALLOW_MEMORY_GROWTH=1
 
-CFLAGS ?= -Wall -Wextra -fdiagnostics-color=always -Isrc -I$(CORE_DIR) -O2
-INCLUDES := -I$(ROOT_DIR) -I$(ROOT_DIR)/include -I$(ROOT_DIR)/deps/libraylib/include -I$(ROOT_DIR)/src -I$(CORE_DIR)
+CFLAGS ?= -Wall -Wextra -fdiagnostics-color=always -Isrc -O2
+INCLUDES := -I$(ROOT_DIR) -I$(ROOT_DIR)/include -I$(ROOT_DIR)/deps/libraylib/include -I$(ROOT_DIR)/src -I$(CORE_INC_DIR)
 
 .PHONY: test test_desktop test_wasm unit_test_desktop unit_test_wasm probe_idbfs_build probe_idbfs check_node check_chrome check_probe_python
 
@@ -72,30 +64,26 @@ test: test_desktop test_wasm
 	@echo "All smoke tests passed."
 
 unit_test_desktop:
-	$(CC_DESKTOP) $(CFLAGS) -DHEADLESS $(INCLUDES) -I$(UNIT_TEST_DIR) $(UNIT_TEST_MAIN) $(UNIT_TEST_SRCS) $(UNIT_TEST_LIB_SRCS) $(UNIT_TEST_EXTRA_LIB_SRCS) -o $(UNIT_TEST_DESKTOP_BIN)
+	@$(MAKE) -C $(ROOT_DIR)/deps/wgutils desktop
+	$(CC_DESKTOP) $(CFLAGS) -DHEADLESS $(INCLUDES) -I$(UNIT_TEST_DIR) $(UNIT_TEST_MAIN) $(UNIT_TEST_SRCS) $(UNIT_TEST_LIB_SRCS) $(CORE_DESKTOP_ARCHIVE) -lcurl -o $(UNIT_TEST_DESKTOP_BIN)
 	@$(UNIT_TEST_DESKTOP_BIN) > /tmp/librl_unit_tests_desktop.log 2>&1 || (cat /tmp/librl_unit_tests_desktop.log && exit 1)
 	@tail -n 1 /tmp/librl_unit_tests_desktop.log
 
 unit_test_wasm: check_node
+	@$(MAKE) -C $(ROOT_DIR)/deps/wgutils wasm
 	@mkdir -p "$(EM_CACHE_DIR)"
-	$(EM_ENV) $(CC_WASM) $(CFLAGS) -DHEADLESS $(INCLUDES) -I$(UNIT_TEST_DIR) $(UNIT_TEST_MAIN) $(UNIT_TEST_SRCS) $(UNIT_TEST_LIB_SRCS) $(UNIT_TEST_EXTRA_LIB_SRCS) -o $(UNIT_TEST_WASM_JS) -s ENVIRONMENT=node -s EXIT_RUNTIME=1
+	$(EM_ENV) $(CC_WASM) $(CFLAGS) -DHEADLESS $(INCLUDES) -I$(UNIT_TEST_DIR) $(UNIT_TEST_MAIN) $(UNIT_TEST_SRCS) $(UNIT_TEST_LIB_SRCS) $(CORE_WASM_ARCHIVE) -o $(UNIT_TEST_WASM_JS) $(WASM_COMMON_LDFLAGS) -s ENVIRONMENT=node -s EXIT_RUNTIME=1
 	@$(NODE) $(UNIT_TEST_WASM_JS) > /tmp/librl_unit_tests_wasm.log 2>&1 || (cat /tmp/librl_unit_tests_wasm.log && exit 1)
 	@tail -n 1 /tmp/librl_unit_tests_wasm.log
 
 probe_idbfs_build:
+	@$(MAKE) -C $(ROOT_DIR)/deps/wgutils wasm
 	@mkdir -p "$(EM_CACHE_DIR)"
 	$(EM_ENV) $(CC_WASM) -o $(HEADLESS_PROBE_JS) \
 		$(HEADLESS_PROBE_C) \
-		$(CORE_DIR)/fileio/fileio.wasm.c \
-		$(CORE_DIR)/fileio/fileio_common.c \
-		$(CORE_DIR)/fetch_url/fetch_url.wasm.c \
-		$(CORE_DIR)/logger/log.c \
-		$(CORE_DIR)/path/path.c \
-		$(CORE_DIR)/uri/uri.c \
-		$(CORE_DIR)/vendor/cwalk/cwalk.c \
-		$(CORE_DIR)/vendor/logger-c/log.c \
 		-Isrc \
-		-I$(CORE_DIR) \
+		-I$(CORE_INC_DIR) \
+		$(CORE_WASM_ARCHIVE) \
 		$(WASM_COMMON_LDFLAGS) \
 		-s EXPORTED_FUNCTIONS='["_probe_fileio_init","_probe_fileio_write_text","_probe_fileio_exists","_probe_fileio_deinit"]' \
 		-O2

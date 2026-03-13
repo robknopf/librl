@@ -9,7 +9,7 @@
 #include "internal/rl_handle_pool.h"
 #include "internal/rl_color_store.h"
 #include "internal/rl_texture_store.h"
-#include "logger/log.h"
+#include "logger/logger.h"
 #include "path/path.h"
 #include "rlgl.h"
 

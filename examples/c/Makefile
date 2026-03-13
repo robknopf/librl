@@ -39,7 +39,7 @@ MODULE_LUA_WASM_ARCHIVE := $(MODULE_LUA_DIR)/lib/librl_lua.wasm.a
 MODULE_LUA_LIBLUA_DESKTOP_ARCHIVE := $(MODULE_LUA_DIR)/deps/liblua/lib/liblua.a
 MODULE_LUA_LIBLUA_WASM_ARCHIVE := $(MODULE_LUA_DIR)/deps/liblua/lib/liblua.wasm.a
 
-INCLUDES := -I$(ROOT)/include -I$(ROOT)/deps/wgutils -I$(ROOT)/deps/libraylib/include
+INCLUDES := -I$(ROOT)/include -I$(ROOT)/deps/wgutils/include -I$(ROOT)/deps/libraylib/include
 MODULE_DESKTOP_ARCHIVES :=
 MODULE_WASM_ARCHIVES :=
 ifeq ($(USES_MODULE_LUA),1)

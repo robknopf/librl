@@ -6,7 +6,7 @@
 
 #include "internal/exports.h"
 #include "internal/rl_handle_pool.h"
-#include "logger/log.h"
+#include "logger/logger.h"
 
 #define MAX_COLORS 256
 #define RL_COLOR_BUILTIN_COUNT 27

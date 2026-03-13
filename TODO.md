@@ -6,9 +6,98 @@
   - Add desktop websocket support (currently a stub; evaluate libwebsockets or upgraded libcurl 7.86+)
   - Add client→server communication for input states
   - Move to binary protocol (swappable serialization layer?)
+- HEADLESS follow-up:
+  - leverage `HEADLESS` beyond tests for Node/Bun/server-oriented builds
+  - define what runtime pieces no-op or return defaults in headless mode:
+    - input
+    - windowing
+    - frame pacing
+    - audio
+  - add a minimal runnable headless host path so wasm logic can execute outside the browser
+  - use that path to improve automated runtime verification beyond compile-only checks
+- API/docs sync:
+  - keep examples current as APIs change
+  - add a short wasm-only bridge table for scratch helpers (`*_to_scratch` and JS wrapper names)
+  - keep `README.md`, `docs/API.md`, `docs/BINDINGS.md`, and `docs/DEV_NOTES.md` aligned when the Lua/module surface changes
 - Naming convention cleanup:
   - Rename `async/wg_*` to drop the `wg_` prefix (align with `websocket_`, `fetch_url_`)
 - Audit bindings to ensure they haven't gotten stale (JS + Nim)
+- Frame command path hardening:
+  - current typed command path exists through `rl_module_frame_command_t` and the C example host buffer
+  - next step is to expand and harden it rather than redesign it from scratch
+  - decide whether to keep the current host-owned fixed-capacity buffer shape or promote a more general transient command queue/ring buffer
+  - grow the command set carefully as needed:
+    - clear background
+    - camera control / active camera intent
+    - draw text
+    - draw model
+    - draw sprite/texture
+    - play sound
+    - music control if it belongs in the transient command path
+  - clarify command ownership and overflow behavior
+  - document the current host/script contract around command emission and drain order
+- Hot reload lifecycle:
+  - current lifecycle is `get_config/init/load/update/unload/shutdown`
+  - current HCR state transfer hooks are `serialize/unserialize`
+  - define what survives reload vs what is reconstructed
+  - make error/reporting behavior predictable during reload
+- External ID mapping layer:
+  - add optional `external_id -> internal_handle` mapping
+  - allow caller-supplied IDs while preserving internal handle safety
+  - define replace/update behavior when an external ID is reused
+- Event system follow-up:
+  - add an explicit queue (`enqueue`) alongside immediate emit semantics
+  - add queue processing/drain API
+  - decide where queued events are drained:
+    - core update loop
+    - module update phase
+    - caller-owned explicit drain point
+  - if Lua gets a general event API later, decide whether script listeners bind to immediate events, queued events, or both
+
+## In Progress Conceptually
+
+- Thin host + externally-driven gameplay is now the active direction:
+  - host owns bootstrap, window/frame boundaries, networking, and resource execution
+  - a remote server is now the most promising gameplay driver for wasm/runtime iteration
+  - current reference implementation is `examples/remote`
+- Frame command transport is no longer hypothetical:
+  - typed command ABI exists in `include/rl_module.h`
+  - remote/server code now emits commands over the websocket protocol
+  - the host drains those commands in clear / audio / 3D / 2D passes
+
+## Research / Evaluation
+
+- Scripting backend evaluation:
+  - keep Lua as the reference implementation for module-hosted scripting
+  - compare TinyCC, daslang, and Haxe/cppia against the same module boundary
+  - evaluate:
+    - hot reload / edit-compile latency
+    - host API friction
+    - debugging quality
+    - wasm feasibility
+    - native production story without a permanent interpreter
+    - ergonomics for handle-based host calls
+  - Haxe/cppia-specific question:
+    - does it provide a strong "same source in dev + native production later" path without unacceptable C++/toolchain friction?
+- Event payload bridge for JS:
+  - add scratch-area read/write helpers for event payloads so JS can exchange structured payload data with C listeners
+  - define a stable payload layout/versioning strategy for JS/Nim/C safety
+  - re-evaluate the long-term role of JS bindings if in-wasm scripting becomes the primary gameplay path
+- Module SDK split:
+  - define a separate module SDK package/repo for out-of-tree module builds
+  - include stable `rl_module.h` ABI and documented versioning/compatibility policy
+  - define how wgutils is provided in the SDK for module portability
+  - keep module development in-tree until the SDK contract is stable
+- URI/path follow-up:
+  - add URL normalization examples to docs
+  - decide whether cache keys should canonicalize host casing
+- Asset versioning + manifest:
+  - add per-asset version metadata so cached files can be upgraded/replaced safely
+  - define a manifest format listing assets, versions, hashes, and URLs
+  - compare manifest vs local cache on startup/load and invalidate stale entries
+
+## Parked For Now
+
 - Lua bootstrap/import cleanup after Asyncify removal:
   - current startup path works, but it is still an adapter layer made of:
     - host-driven script preload
@@ -17,10 +106,6 @@
     - event-driven `script.import`
     - coroutine resume via `import_pump()`
   - current state is useful as a stopgap, not a final scripting model
-  - decide who owns boot-time script loading:
-    - host-owned preload/manifest
-    - or Lua-owned coroutine/scheduler model
-    - do not keep the current split-brain bootstrap longer than necessary
   - likely simplification path:
     - host localizes a single well-known Lua manifest/boot file up front
     - that file returns the preload/boot graph
@@ -57,99 +142,12 @@
     - `music.lua`
     - `camera3d.lua`
     - `font.lua`
-- Frame command path hardening:
-  - current typed command path exists through `rl_module_frame_command_t` and the C example host buffer
-  - next step is to expand and harden it rather than redesign it from scratch
-  - decide whether to keep the current host-owned fixed-capacity buffer shape or promote a more general transient command queue/ring buffer
-  - grow the command set carefully as needed:
-    - clear background
-    - camera control / active camera intent
-    - draw text
-    - draw model
-    - draw sprite/texture
-    - play sound
-    - music control if it belongs in the transient command path
-  - clarify command ownership and overflow behavior
-  - document the current host/script contract around command emission and drain order
-- Hot reload lifecycle:
-  - current lifecycle is `get_config/init/load/update/unload/shutdown`
-  - current HCR state transfer hooks are `serialize/unserialize`
-  - define what survives reload vs what is reconstructed
-  - make error/reporting behavior predictable during reload
-- External ID mapping layer:
-  - add optional `external_id -> internal_handle` mapping
-  - allow caller-supplied IDs while preserving internal handle safety
-  - define replace/update behavior when an external ID is reused
-- Event system follow-up:
-  - add an explicit queue (`enqueue`) alongside immediate emit semantics
-  - add queue processing/drain API
-  - decide where queued events are drained:
-    - core update loop
-    - module update phase
-    - caller-owned explicit drain point
-  - if Lua gets a general event API, decide whether script listeners bind to immediate events, queued events, or both
-- Wasm + scripting direction:
-  - decide whether wasm Lua should be:
+- Wasm + embedded scripting direction:
+  - decide later whether wasm Lua should be:
     - embedded Lua VM
     - JS-side Lua bridge
     - something else entirely
   - keep the thin-host boundary stable enough that this can be swapped without redesigning the runtime
-- API/docs sync:
-  - keep examples current as APIs change
-  - add a short wasm-only bridge table for scratch helpers (`*_to_scratch` and JS wrapper names)
-  - keep `README.md`, `docs/API.md`, `docs/BINDINGS.md`, and `docs/DEV_NOTES.md` aligned when the Lua/module surface changes
-- HEADLESS follow-up:
-  - leverage `HEADLESS` beyond tests for Node/Bun/server-oriented builds
-  - define what runtime pieces no-op or return defaults in headless mode:
-    - input
-    - windowing
-    - frame pacing
-    - audio
-  - add a minimal runnable headless host path so wasm logic can execute outside the browser
-  - use that path to improve automated runtime verification beyond compile-only checks
-
-## In Progress Conceptually
-
-- Thin host + scripted gameplay is now the active direction:
-  - host owns bootstrap, window/frame boundaries, and resource execution
-  - script owns gameplay state and emits transient frame commands
-  - current reference implementation is the Lua module plus `examples/c/main.c`
-- Frame command transport is no longer hypothetical:
-  - typed command ABI exists in `include/rl_module.h`
-  - Lua emits commands through the module host API
-  - the C example drains those commands in clear / audio / 3D / 2D passes
-- Lua-side wrapper modules exist and are the beginning of a script-facing standard library.
-
-## Research / Evaluation
-
-- Scripting backend evaluation:
-  - keep Lua as the reference implementation for module-hosted scripting
-  - compare TinyCC, daslang, and Haxe/cppia against the same module boundary
-  - evaluate:
-    - hot reload / edit-compile latency
-    - host API friction
-    - debugging quality
-    - wasm feasibility
-    - native production story without a permanent interpreter
-    - ergonomics for handle-based host calls
-  - Haxe/cppia-specific question:
-    - does it provide a strong "same source in dev + native production later" path without unacceptable C++/toolchain friction?
-- Event payload bridge for JS:
-  - add scratch-area read/write helpers for event payloads so JS can exchange structured payload data with C listeners
-  - define a stable payload layout/versioning strategy for JS/Nim/C safety
-  - re-evaluate the long-term role of JS bindings if in-wasm scripting becomes the primary gameplay path
-- Module SDK split:
-  - define a separate module SDK package/repo for out-of-tree module builds
-  - include stable `rl_module.h` ABI and documented versioning/compatibility policy
-  - define how wgutils is provided in the SDK for module portability
-  - keep module development in-tree until the SDK contract is stable
-- URI/path follow-up:
-  - add URL normalization examples to docs
-  - decide whether cache keys should canonicalize host casing
-- Asset versioning + manifest:
-  - add per-asset version metadata so cached files can be upgraded/replaced safely
-  - define a manifest format listing assets, versions, hashes, and URLs
-  - compare manifest vs local cache on startup/load and invalidate stale entries
 
 ## Parking Lot
 

@@ -2,7 +2,7 @@
 #include "internal/exports.h"
 #include "internal/rl_state.h"
 #include "raylib.h"
-#include "logger/log.h"
+#include "logger/logger.h"
 
 RL_KEEP
 void rl_window_init(int width, int height, const char *title, int flags) {

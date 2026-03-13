@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include "rl_scratch.h"
 #include <stddef.h>
-#include "logger/log.h"
+#include "logger/logger.h"
 
 RL_KEEP
 static rl_scratch_offsets_t rl_scratch_offsets;

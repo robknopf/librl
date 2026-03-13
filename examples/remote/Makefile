@@ -30,7 +30,7 @@ SRC := $(SRC_DIR)/main.c $(SRC_DIR)/rl_ws_client.c $(SRC_DIR)/rl_protocol.c $(SR
 OBJS := $(patsubst $(SRC_DIR)/%.c,$(OUT_DIR)/%.o,$(SRC))
 WASM_OBJS := $(patsubst $(SRC_DIR)/%.c,$(OUT_DIR)/%.wasm.o,$(SRC))
 
-INCLUDES := -Iinclude -I$(ROOT)/include -I$(ROOT)/deps/wgutils -I$(ROOT)/deps/libraylib/include 
+INCLUDES := -Iinclude -I$(ROOT)/include -I$(ROOT)/deps/wgutils/include -I$(ROOT)/deps/libraylib/include 
 LIBS := -L$(ROOT)/lib -lrl -lcurl -lm -lpthread -ldl -lX11
 WASM_LIBS := $(ROOT)/lib/librl.wasm.a -lm
 

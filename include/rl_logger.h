@@ -1,7 +1,7 @@
 #ifndef RL_LOGGER_H
 #define RL_LOGGER_H
 
-#include "logger/log.h" // IWYU pragma: export
+#include "logger/logger.h" // IWYU pragma: export
 
 #ifdef __cplusplus
 extern "C" {

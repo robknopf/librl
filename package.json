@@ -2,10 +2,12 @@
   "name": "librl",
   "private": true,
   "scripts": {
-    "dev": "npm-run-all --parallel serve watch:wasm",
+    "dev": "npm-run-all --parallel serve watch:c:wasm watch:remote:wasm",
     "serve": "vite",
-    "build:wasm": "make -C examples/c wasm",
-    "watch:wasm": "onchange \"src/**/*.c\" \"src/**/*.h\" \"include/**/*.h\" \"examples/c/**/*.c\" \"examples/c/**/*.h\" --exclude \"examples/c/out/**\" -- npm run build:wasm",
+    "build:remote:wasm": "make -C examples/remote wasm",
+    "watch:remote:wasm": "onchange \"src/**/*.c\" \"src/**/*.h\" \"include/**/*.h\" \"examples/remote/**/*.c\" \"examples/remote/**/*.h\" --exclude \"examples/remote/out/**\" -- npm run build:remote:wasm",
+    "build:c:wasm": "make -C examples/c wasm",
+    "watch:c:wasm": "onchange \"src/**/*.c\" \"src/**/*.h\" \"include/**/*.h\" \"examples/c/**/*.c\" \"examples/c/**/*.h\" --exclude \"examples/c/out/**\" -- npm run build:c:wasm",
     "gen:chrome-devtools-workspace": "python3 tools/generate_devtools_workspace.py",
     "install": "npm run gen:chrome-devtools-workspace"
   },

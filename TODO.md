@@ -2,6 +2,38 @@
 
 ## Active Next
 
+- Lua bootstrap/import cleanup after Asyncify removal:
+  - current startup path works, but it is still an adapter layer made of:
+    - host-driven script preload
+    - `boot.lua`
+    - local-only `require(...)`
+    - event-driven `script.import`
+    - coroutine resume via `import_pump()`
+  - current state is useful as a stopgap, not a final scripting model
+  - decide who owns boot-time script loading:
+    - host-owned preload/manifest
+    - or Lua-owned coroutine/scheduler model
+    - do not keep the current split-brain bootstrap longer than necessary
+  - likely simplification path:
+    - host localizes a single well-known Lua manifest/boot file up front
+    - that file returns the preload/boot graph
+    - host localizes the declared scripts before running lifecycle
+    - keep runtime async import as a separate feature, not the startup path
+  - delete complexity once that decision is made:
+    - `boot.lua` deferred lifecycle queue
+    - bootstrap coroutine glue
+    - startup-time `script.import` reliance
+  - re-evaluate whether startup should be:
+    - `boot.lua`
+    - `manifest.lua`
+    - or some other well-known host-owned entry file
+  - document the current interim rule clearly:
+    - `require(...)` is synchronous and local-only
+    - `import(...)` is async underneath
+    - coroutine import is available, but only inside managed coroutine flows
+  - HCR warning:
+    - do not build hot code reload on top of the current bootstrap shim
+    - simplify boot/import ownership first, or HCR will be a mess
 - Lua runtime follow-up:
   - track Lua event listener ownership by script/generation so reload cleanup can be selective
   - decide whether host fallback clear stays in `examples/c/main.c` or Lua fully owns frame clear

@@ -2,6 +2,13 @@
 
 ## Active Next
 
+- Remote client / networking:
+  - Add desktop websocket support (currently a stub; evaluate libwebsockets or upgraded libcurl 7.86+)
+  - Add client→server communication for input states
+  - Move to binary protocol (swappable serialization layer?)
+- Naming convention cleanup:
+  - Rename `async/wg_*` to drop the `wg_` prefix (align with `websocket_`, `fetch_url_`)
+- Audit bindings to ensure they haven't gotten stale (JS + Nim)
 - Lua bootstrap/import cleanup after Asyncify removal:
   - current startup path works, but it is still an adapter layer made of:
     - host-driven script preload

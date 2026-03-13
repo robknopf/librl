@@ -1,23 +1,17 @@
 #include "rl_ws_client.h"
 #include "rl_protocol.h"
 #include "rl_resource_handler.h"
+#include "websocket/websocket.h"
+#include "rl_frame.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#if defined(PLATFORM_WEB)
-#include <emscripten/emscripten.h>
-#include <emscripten/websocket.h>
-#endif
-
 #define MAX_MESSAGE_SIZE (1024 * 64)
 
 struct rl_ws_client_t {
-#if defined(PLATFORM_WEB)
-  EMSCRIPTEN_WEBSOCKET_T socket;
-#endif
+  websocket_t *ws;
   char url[256];
-  bool connected;
   bool has_pending_frame;
   rl_ws_frame_data_t pending_frame;
   char message_buffer[MAX_MESSAGE_SIZE];
@@ -26,64 +20,52 @@ struct rl_ws_client_t {
   double last_reconnect_attempt;
   double reconnect_delay;
   rl_resource_handler_t resource_handler;
-  // Bandwidth tracking
   size_t bytes_in_accum;
   size_t bytes_out_accum;
   double stats_timer;
   rl_ws_bandwidth_stats_t bandwidth_stats;
 };
 
-#if defined(PLATFORM_WEB)
-static EM_BOOL on_ws_open(int event_type, const EmscriptenWebSocketOpenEvent *event, void *user_data) {
+static void on_ws_open(websocket_t *ws, void *user_data) {
   rl_ws_client_t *client = (rl_ws_client_t *)user_data;
-  (void)event_type;
-  (void)event;
-  
+  (void)ws;
   printf("[WS] Connected to %s\n", client->url);
-  client->connected = true;
-  return EM_TRUE;
 }
 
-static EM_BOOL on_ws_error(int event_type, const EmscriptenWebSocketErrorEvent *event, void *user_data) {
+static void on_ws_error(websocket_t *ws, void *user_data) {
   rl_ws_client_t *client = (rl_ws_client_t *)user_data;
-  (void)event_type;
-  (void)event;
-  
+  (void)ws;
   printf("[WS] Error on %s. Will attempt to reconnect...\n", client->url);
-  client->connected = false;
-  return EM_TRUE;
-}
-
-static EM_BOOL on_ws_close(int event_type, const EmscriptenWebSocketCloseEvent *event, void *user_data) {
-  rl_ws_client_t *client = (rl_ws_client_t *)user_data;
-  (void)event_type;
-  
-  printf("[WS] Closed: code=%d, reason=%s. Will attempt to reconnect...\n", event->code, event->reason);
-  client->connected = false;
   client->reconnect_delay = 1.0;
-  return EM_TRUE;
 }
 
-static EM_BOOL on_ws_message(int event_type, const EmscriptenWebSocketMessageEvent *event, void *user_data) {
+static void on_ws_close(websocket_t *ws, int code, const char *reason, void *user_data) {
+  rl_ws_client_t *client = (rl_ws_client_t *)user_data;
+  (void)ws;
+  printf("[WS] Closed: code=%d, reason=%s. Will attempt to reconnect...\n", code, reason);
+  client->reconnect_delay = 1.0;
+}
+
+static void on_ws_message(websocket_t *ws, const char *data, int len, bool is_text, void *user_data) {
   rl_ws_client_t *client = (rl_ws_client_t *)user_data;
   static rl_protocol_requests_t requests;
   bool has_frame = false;
-  (void)event_type;
+  (void)ws;
   
-  if (!event->isText || event->numBytes >= MAX_MESSAGE_SIZE) {
-    return EM_TRUE;
+  if (!is_text || len >= MAX_MESSAGE_SIZE) {
+    return;
   }
   
-  client->bytes_in_accum += event->numBytes;
+  client->bytes_in_accum += (size_t)len;
   
-  memcpy(client->message_buffer, event->data, event->numBytes);
-  client->message_buffer[event->numBytes] = '\0';
+  memcpy(client->message_buffer, data, (size_t)len);
+  client->message_buffer[len] = '\0';
   
-  if (rl_protocol_parse_message(client->message_buffer, event->numBytes,
+  if (rl_protocol_parse_message(client->message_buffer, len,
                                  &client->pending_frame, &has_frame,
                                  &requests) != 0) {
     printf("[WS] Failed to parse message\n");
-    return EM_TRUE;
+    return;
   }
   
   if (has_frame) {
@@ -107,10 +89,14 @@ static EM_BOOL on_ws_message(int event_type, const EmscriptenWebSocketMessageEve
       }
     }
   }
-  
-  return EM_TRUE;
 }
-#endif
+
+static const websocket_callbacks_t ws_callbacks = {
+  on_ws_open,
+  on_ws_close,
+  on_ws_error,
+  on_ws_message
+};
 
 
 rl_ws_client_t *rl_ws_client_create(const char *url) {
@@ -126,35 +112,20 @@ rl_ws_client_t *rl_ws_client_create(const char *url) {
   }
   
   snprintf(client->url, sizeof(client->url), "%s", url);
-  client->connected = false;
   client->has_pending_frame = false;
   client->pending_response_count = 0;
   client->last_reconnect_attempt = 0.0;
   client->reconnect_delay = 1.0;
   rl_resource_handler_init(&client->resource_handler);
   
-#if defined(PLATFORM_WEB)
-  EmscriptenWebSocketCreateAttributes attrs;
-  emscripten_websocket_init_create_attributes(&attrs);
-  attrs.url = client->url;
-  
-  client->socket = emscripten_websocket_new(&attrs);
-  if (client->socket <= 0) {
+  client->ws = websocket_create(url, &ws_callbacks, client);
+  if (client->ws == NULL) {
     printf("[WS] Failed to create websocket\n");
     free(client);
     return NULL;
   }
   
-  emscripten_websocket_set_onopen_callback(client->socket, client, on_ws_open);
-  emscripten_websocket_set_onerror_callback(client->socket, client, on_ws_error);
-  emscripten_websocket_set_onclose_callback(client->socket, client, on_ws_close);
-  emscripten_websocket_set_onmessage_callback(client->socket, client, on_ws_message);
-  
-  printf("[WS] Connecting to %s...\n", client->url);
-#else
-  printf("[WS] Desktop websocket not implemented yet\n");
-#endif
-  
+  printf("[WS] Connecting to %s...\n", url);
   return client;
 }
 
@@ -164,22 +135,15 @@ void rl_ws_client_destroy(rl_ws_client_t *client) {
   }
   
   rl_resource_handler_cleanup(&client->resource_handler);
-  
-#if defined(PLATFORM_WEB)
-  if (client->socket > 0) {
-    emscripten_websocket_close(client->socket, 1000, "Client closing");
-    emscripten_websocket_delete(client->socket);
-  }
-#endif
-  
+  websocket_destroy(client->ws);
   free(client);
 }
 
 bool rl_ws_client_is_connected(const rl_ws_client_t *client) {
-  if (client == NULL) {
+  if (client == NULL || client->ws == NULL) {
     return false;
   }
-  return client->connected;
+  return websocket_is_connected(client->ws);
 }
 
 void rl_ws_client_poll(rl_ws_client_t *client) {
@@ -240,80 +204,66 @@ int rl_ws_client_get_pending_responses(rl_ws_client_t *client,
 void rl_ws_client_send_responses(rl_ws_client_t *client,
                                  const rl_resource_response_t *responses,
                                  int count) {
+  char send_buf[MAX_MESSAGE_SIZE];
+  int len = 0;
+  
   if (client == NULL || responses == NULL || count <= 0) {
     return;
   }
   
-  if (!client->connected) {
+  if (!websocket_is_connected(client->ws)) {
     printf("[WS] Cannot send responses: not connected\n");
     return;
   }
   
-#if defined(PLATFORM_WEB)
-  char send_buf[MAX_MESSAGE_SIZE];
-  int len = rl_protocol_serialize_responses(responses, count, send_buf, MAX_MESSAGE_SIZE);
-  
+  len = rl_protocol_serialize_responses(responses, count, send_buf, MAX_MESSAGE_SIZE);
   if (len > 0) {
     printf("[WS] Sending %d resource responses\n", count);
-    EMSCRIPTEN_RESULT result = emscripten_websocket_send_utf8_text(client->socket, send_buf);
-    if (result < 0) {
-      printf("[WS] Failed to send responses: %d\n", result);
+    if (websocket_send_text(client->ws, send_buf) != 0) {
+      printf("[WS] Failed to send responses\n");
     } else {
       printf("[WS] Responses sent successfully\n");
     }
     client->bytes_out_accum += (size_t)len;
   }
-#endif
 }
 
 void rl_ws_client_send_input(rl_ws_client_t *client, const char *input_json) {
-  if (client == NULL || input_json == NULL || !client->connected) {
+  if (client == NULL || input_json == NULL) {
     return;
   }
-  
-#if defined(PLATFORM_WEB)
-  emscripten_websocket_send_utf8_text(client->socket, input_json);
-#else
-  (void)input_json;
-#endif
+  websocket_send_text(client->ws, input_json);
 }
 
 void rl_ws_client_tick(rl_ws_client_t *client) {
+  double now = 0.0;
+  
   if (client == NULL) {
     return;
   }
   
-#if defined(PLATFORM_WEB)
-  double now = emscripten_get_now() / 1000.0;
+  now = rl_frame_get_time();
   
-  // Update bandwidth stats every second
   if (client->stats_timer == 0.0) {
     client->stats_timer = now;
   } else if (now - client->stats_timer >= 1.0) {
     double elapsed = now - client->stats_timer;
-    client->bandwidth_stats.bytes_in_per_sec = (float)(client->bytes_in_accum / elapsed);
-    client->bandwidth_stats.bytes_out_per_sec = (float)(client->bytes_out_accum / elapsed);
+    client->bandwidth_stats.bytes_in_per_sec = (float)((double)client->bytes_in_accum / elapsed);
+    client->bandwidth_stats.bytes_out_per_sec = (float)((double)client->bytes_out_accum / elapsed);
     client->bytes_in_accum = 0;
     client->bytes_out_accum = 0;
     client->stats_timer = now;
   }
   
-  if (!client->connected) {
+  if (!websocket_is_connected(client->ws)) {
     if (now - client->last_reconnect_attempt >= client->reconnect_delay) {
       printf("[WS] Attempting to reconnect to %s...\n", client->url);
       client->last_reconnect_attempt = now;
       
-      EmscriptenWebSocketCreateAttributes attrs;
-      emscripten_websocket_init_create_attributes(&attrs);
-      attrs.url = client->url;
+      websocket_destroy(client->ws);
+      client->ws = websocket_create(client->url, &ws_callbacks, client);
       
-      EMSCRIPTEN_WEBSOCKET_T new_socket = emscripten_websocket_new(&attrs);
-      if (new_socket > 0) {
-        client->socket = new_socket;
-        emscripten_websocket_set_onopen_callback(client->socket, client, on_ws_open);
-        emscripten_websocket_set_onerror_callback(client->socket, client, on_ws_error);
-        emscripten_websocket_set_onclose_callback(client->socket, client, on_ws_close);
-        emscripten_websocket_set_onmessage_callback(client->socket, client, on_ws_message);
+      if (client->ws != NULL) {
         client->reconnect_delay = 1.0;
       } else {
         client->reconnect_delay *= 2.0;
@@ -324,7 +274,6 @@ void rl_ws_client_tick(rl_ws_client_t *client) {
       }
     }
   }
-#endif
 }
 
 rl_ws_bandwidth_stats_t rl_ws_client_get_bandwidth_stats(const rl_ws_client_t *client) {

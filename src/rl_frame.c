@@ -1,4 +1,3 @@
-#include "rl.h"
 #include "internal/exports.h"
 #include "internal/rl_subsystems.h"
 #include "raylib.h"

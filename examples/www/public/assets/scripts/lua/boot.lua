@@ -1,5 +1,6 @@
 local ScriptAsync = require("script_async")
 
+---@diagnostic disable-next-line: deprecated
 local table_unpack = table.unpack or unpack
 
 local app = nil

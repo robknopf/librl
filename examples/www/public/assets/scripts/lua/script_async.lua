@@ -82,7 +82,7 @@ event_on("script.loaded", function(payload)
   local request = rid ~= nil and pending[rid] or nil
   local ok, result
 
-  if request == nil then
+  if request == nil or rid == nil then
     return
   end
 
@@ -108,7 +108,7 @@ event_on("script.error", function(payload)
   local rid, message = parse_error_payload(payload)
   local request = rid ~= nil and pending[rid] or nil
 
-  if request == nil then
+  if request == nil or rid == nil then
     return
   end
 

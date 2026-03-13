@@ -1,7 +1,7 @@
-#include "rl.h"
+#include "rl_frame_runner.h"
 #include "internal/exports.h"
 #include "raylib.h"
-#include "internal/rl_color_store.h"
+#include <string.h>
 
 #if defined(PLATFORM_WEB)
 #include <emscripten/emscripten.h>

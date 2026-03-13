@@ -64,7 +64,7 @@ void rl_debug_draw(void) {
                             rl_debug_state.fps_x,
                             rl_debug_state.fps_y,
                             rl_debug_state.fps_font_size,
-                            RL_COLOR_BLACK);
+                            RL_COLOR_DARKGRAY);
         return;
     }
 

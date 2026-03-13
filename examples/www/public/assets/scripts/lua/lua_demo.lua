@@ -91,13 +91,66 @@ function init()
 end
 
 function load()
-  sprite3d_logo = Sprite3D.load("assets/sprites/logo/wg-logo-bw-alpha.png")
-  logo_texture = Texture.load("assets/sprites/logo/wg-logo-bw-alpha.png")
-  blob_shadow_texture = Texture.load("assets/textures/blobshadow.png")
-  gumshoe_model = Model.load("assets/models/gumshoe/gumshoe.glb")
-  bg_music = Music.load("assets/music/ethernight_club.mp3")
-  click_sound = Sound.load("assets/sounds/click_004.ogg")
-  ui_font = Font.load("assets/fonts/Komika/KOMIKAH_.ttf", 24)
+  Sprite3D.load("assets/sprites/logo/wg-logo-bw-alpha.png", function(resource, err)
+    if err == nil then
+      sprite3d_logo = resource
+    else
+      log("error", "sprite3d load failed: " .. tostring(err))
+    end
+  end)
+
+  Texture.load("assets/sprites/logo/wg-logo-bw-alpha.png", function(resource, err)
+    if err == nil then
+      logo_texture = resource
+    else
+      log("error", "logo texture load failed: " .. tostring(err))
+    end
+  end)
+
+  Texture.load("assets/textures/blobshadow.png", function(resource, err)
+    if err == nil then
+      blob_shadow_texture = resource
+    else
+      log("error", "shadow texture load failed: " .. tostring(err))
+    end
+  end)
+
+  Model.load("assets/models/gumshoe/gumshoe.glb", function(resource, err)
+    if err == nil then
+      gumshoe_model = resource
+      gumshoe_model.animation_index = 1
+      gumshoe_model.animation_fps = 60.0
+    else
+      log("error", "model load failed: " .. tostring(err))
+    end
+  end)
+
+  Music.load("assets/music/ethernight_club.mp3", function(resource, err)
+    if err == nil then
+      bg_music = resource
+      bg_music:set_loop(true)
+      bg_music:set_volume(0.25)
+      bg_music:play()
+    else
+      log("error", "music load failed: " .. tostring(err))
+    end
+  end)
+
+  Sound.load("assets/sounds/click_004.ogg", function(resource, err)
+    if err == nil then
+      click_sound = resource
+    else
+      log("error", "sound load failed: " .. tostring(err))
+    end
+  end)
+
+  Font.load("assets/fonts/Komika/KOMIKAH_.ttf", 24, function(resource, err)
+    if err == nil then
+      ui_font = resource
+    else
+      log("error", "font load failed: " .. tostring(err))
+    end
+  end)
   accent_color = Color.create(221, 87, 54, 255)
   panel_color = Color.create(24, 107, 138, 255)
   shadow_color = Color.create(0, 0, 0, 64)
@@ -114,11 +167,6 @@ function load()
 
   if main_camera ~= nil then
     main_camera:set_active()
-  end
-
-  if gumshoe_model ~= nil then
-    gumshoe_model.animation_index = 1
-    gumshoe_model.animation_fps = 60.0
   end
   
   load_generation = load_generation + 1

@@ -1,7 +1,8 @@
 local Model = {}
 Model.__index = Model
+local ResourceAsync = require("resource_async")
 
-function Model.load(path)
+local function load_sync(path)
   local handle = load_model(path)
   if handle == nil or handle == 0 then
     return nil
@@ -19,6 +20,16 @@ function Model.load(path)
     animation_index = -1,
     animation_frame = 0,
   }, Model)
+end
+
+function Model.load(path, callback)
+  if type(callback) == "function" then
+    return ResourceAsync.request("model", path, nil, function()
+      return load_sync(path)
+    end, callback)
+  end
+
+  return load_sync(path)
 end
 
 function Model:draw(tint)

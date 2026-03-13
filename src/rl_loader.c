@@ -36,12 +36,11 @@ static char rl_loader_asset_host[RL_LOADER_MAX_ASSET_HOST_LENGTH] = RL_LOADER_DE
 
 typedef enum
 {
-    RL_LOADER_OP_KIND_NONE = 0,
-    RL_LOADER_OP_KIND_RESTORE = 1,
-    RL_LOADER_OP_KIND_PREPARE_FILE = 2,
-    RL_LOADER_OP_KIND_PREPARE_MODEL = 3,
-    RL_LOADER_OP_KIND_PREPARE_BATCH = 4
-} rl_loader_op_kind_t;
+    RL_LOADER_TASK_KIND_NONE = 0,
+    RL_LOADER_TASK_KIND_RESTORE_FS = 1,
+    RL_LOADER_TASK_KIND_IMPORT_ASSET = 2,
+    RL_LOADER_TASK_KIND_IMPORT_ASSETS = 3
+} rl_loader_task_kind_t;
 
 typedef enum
 {
@@ -52,9 +51,9 @@ typedef enum
     RL_LOADER_PREPARE_STATE_DONE = 4
 } rl_loader_prepare_state_t;
 
-struct rl_loader_op
+struct rl_loader_task
 {
-    rl_loader_op_kind_t kind;
+    rl_loader_task_kind_t kind;
     int status;
     bool done;
     bool should_cache_in_memory;
@@ -69,7 +68,7 @@ struct rl_loader_op
     char **batch_paths;
     size_t batch_count;
     size_t batch_index;
-    rl_loader_op_t *child_op;
+    rl_loader_task_t *child_task;
     fileio_sync_op_t *fileio_op;
     fetch_url_op_t *fetch_op;
 };
@@ -185,23 +184,22 @@ static bool rl_loader_should_memory_cache_path(const char *resolved_path)
            rl_loader_ext_eq(ext, ".png");
 }
 
-static bool rl_loader_is_model_path(const char *path)
+static bool rl_loader_is_dependency_bearing_asset_path(const char *path)
 {
     const char *ext = rl_loader_get_extension(path);
 
-    return ext != NULL &&
-           (rl_loader_ext_eq(ext, ".gltf") || rl_loader_ext_eq(ext, ".glb"));
+    return ext != NULL && rl_loader_ext_eq(ext, ".gltf");
 }
 
-static void rl_loader_op_complete(rl_loader_op_t *op, int status)
+static void rl_loader_task_complete(rl_loader_task_t *task, int status)
 {
-    if (!op) {
+    if (!task) {
         return;
     }
 
-    op->status = status;
-    op->done = true;
-    op->prepare_state = RL_LOADER_PREPARE_STATE_DONE;
+    task->status = status;
+    task->done = true;
+    task->prepare_state = RL_LOADER_PREPARE_STATE_DONE;
 }
 
 static void rl_loader_cache_memory_copy_if_needed(const char *resolved_path,
@@ -311,12 +309,12 @@ static int rl_loader_resolve_prepare_target(const char *filename,
     return 0;
 }
 
-static int rl_loader_append_dependency_path(rl_loader_op_t *op, const char *dependency_path)
+static int rl_loader_append_dependency_path(rl_loader_task_t *task, const char *dependency_path)
 {
     char **next_paths = NULL;
     char *copy = NULL;
 
-    if (!op || !dependency_path || dependency_path[0] == '\0') {
+    if (!task || !dependency_path || dependency_path[0] == '\0') {
         return -1;
     }
 
@@ -326,14 +324,14 @@ static int rl_loader_append_dependency_path(rl_loader_op_t *op, const char *depe
     }
     strcpy(copy, dependency_path);
 
-    next_paths = (char **)realloc(op->dependency_paths, sizeof(char *) * (op->dependency_count + 1));
+    next_paths = (char **)realloc(task->dependency_paths, sizeof(char *) * (task->dependency_count + 1));
     if (!next_paths) {
         free(copy);
         return -1;
     }
 
-    op->dependency_paths = next_paths;
-    op->dependency_paths[op->dependency_count++] = copy;
+    task->dependency_paths = next_paths;
+    task->dependency_paths[task->dependency_count++] = copy;
     return 0;
 }
 
@@ -375,7 +373,7 @@ static int rl_loader_dependency_uri_to_local_path(const char *root_dir,
     return resolved_path[0] != '\0' ? 0 : -1;
 }
 
-static int rl_loader_collect_gltf_dependency_uris(rl_loader_op_t *op,
+static int rl_loader_collect_gltf_dependency_uris(rl_loader_task_t *task,
                                                   const unsigned char *json_bytes,
                                                   size_t json_size)
 {
@@ -384,7 +382,7 @@ static int rl_loader_collect_gltf_dependency_uris(rl_loader_op_t *op,
     cJSON *images = NULL;
     cJSON *entry = NULL;
 
-    if (!op || !json_bytes || json_size == 0) {
+    if (!task || !json_bytes || json_size == 0) {
         return -1;
     }
 
@@ -405,14 +403,14 @@ static int rl_loader_collect_gltf_dependency_uris(rl_loader_op_t *op,
                 continue;
             }
 
-            rc = rl_loader_dependency_uri_to_local_path(op->root_dir,
+            rc = rl_loader_dependency_uri_to_local_path(task->root_dir,
                                                         uri->valuestring,
                                                         resolved_path,
                                                         sizeof(resolved_path));
             if (rc == 1) {
                 continue;
             }
-            if (rc != 0 || rl_loader_append_dependency_path(op, resolved_path) != 0) {
+            if (rc != 0 || rl_loader_append_dependency_path(task, resolved_path) != 0) {
                 cJSON_Delete(root);
                 return -1;
             }
@@ -431,14 +429,14 @@ static int rl_loader_collect_gltf_dependency_uris(rl_loader_op_t *op,
                 continue;
             }
 
-            rc = rl_loader_dependency_uri_to_local_path(op->root_dir,
+            rc = rl_loader_dependency_uri_to_local_path(task->root_dir,
                                                         uri->valuestring,
                                                         resolved_path,
                                                         sizeof(resolved_path));
             if (rc == 1) {
                 continue;
             }
-            if (rc != 0 || rl_loader_append_dependency_path(op, resolved_path) != 0) {
+            if (rc != 0 || rl_loader_append_dependency_path(task, resolved_path) != 0) {
                 cJSON_Delete(root);
                 return -1;
             }
@@ -449,25 +447,25 @@ static int rl_loader_collect_gltf_dependency_uris(rl_loader_op_t *op,
     return 0;
 }
 
-static int rl_loader_start_fetch(rl_loader_op_t *op, const char *path)
+static int rl_loader_start_fetch(rl_loader_task_t *task, const char *path)
 {
-    if (!op || !path || path[0] == '\0') {
+    if (!task || !path || path[0] == '\0') {
         return -1;
     }
 
-    if (op->fetch_op != NULL) {
-        fetch_url_op_free(op->fetch_op);
-        op->fetch_op = NULL;
+    if (task->fetch_op != NULL) {
+        fetch_url_op_free(task->fetch_op);
+        task->fetch_op = NULL;
     }
 
-    snprintf(op->pending_fetch_path, sizeof(op->pending_fetch_path), "%s", path);
-    op->fetch_op = fetch_url_with_path_begin(op->fetch_host, path, RL_LOADER_FETCH_TIMEOUT_MS);
-    return op->fetch_op != NULL ? 0 : -1;
+    snprintf(task->pending_fetch_path, sizeof(task->pending_fetch_path), "%s", path);
+    task->fetch_op = fetch_url_with_path_async(task->fetch_host, path, RL_LOADER_FETCH_TIMEOUT_MS);
+    return task->fetch_op != NULL ? 0 : -1;
 }
 
-static int rl_loader_handle_fetch_completion(rl_loader_op_t *op, fetch_url_result_t *fetch_result)
+static int rl_loader_handle_fetch_completion(rl_loader_task_t *task, fetch_url_result_t *fetch_result)
 {
-    if (!op || !fetch_result) {
+    if (!task || !fetch_result) {
         return -1;
     }
 
@@ -477,25 +475,21 @@ static int rl_loader_handle_fetch_completion(rl_loader_op_t *op, fetch_url_resul
         return -1;
     }
 
-    if (fileio_write(op->pending_fetch_path, fetch_result->data, fetch_result->size) != 0) {
+    if (fileio_write(task->pending_fetch_path, fetch_result->data, fetch_result->size) != 0) {
         free(fetch_result->data);
         fetch_result->data = NULL;
         return -1;
     }
 
-    rl_loader_cache_memory_copy_if_needed(op->pending_fetch_path,
+    rl_loader_cache_memory_copy_if_needed(task->pending_fetch_path,
                                           (const unsigned char *)fetch_result->data,
                                           fetch_result->size);
     return 0;
 }
 
-static rl_loader_op_t *rl_loader_begin_prepare_auto(const char *filename)
+static rl_loader_task_t *rl_loader_import_auto(const char *filename)
 {
-    if (rl_loader_is_model_path(filename)) {
-        return rl_loader_begin_prepare_model(filename);
-    }
-
-    return rl_loader_begin_prepare_file(filename);
+    return rl_loader_import_asset_async(filename);
 }
 
 static int rl_loader_clear_cache_dir(const char *abs_dir, const char *rel_dir)
@@ -666,72 +660,72 @@ const char *rl_loader_get_asset_host(void)
     return rl_loader_asset_host;
 }
 
-rl_loader_op_t *rl_loader_begin_restore(void)
+rl_loader_task_t *rl_loader_restore_fs_async(void)
 {
-    rl_loader_op_t *op = NULL;
+    rl_loader_task_t *task = NULL;
 
     if (!rl_loader_initialized) {
         return NULL;
     }
 
-    op = (rl_loader_op_t *)calloc(1, sizeof(rl_loader_op_t));
-    if (!op) {
+    task = (rl_loader_task_t *)calloc(1, sizeof(rl_loader_task_t));
+    if (!task) {
         return NULL;
     }
 
-    op->kind = RL_LOADER_OP_KIND_RESTORE;
-    op->fileio_op = fileio_restore_begin();
-    if (!op->fileio_op) {
-        free(op);
+    task->kind = RL_LOADER_TASK_KIND_RESTORE_FS;
+    task->fileio_op = fileio_restore_async();
+    if (!task->fileio_op) {
+        free(task);
         return NULL;
     }
 
-    return op;
+    return task;
 }
 
-rl_loader_op_t *rl_loader_begin_prepare_file(const char *filename)
+static rl_loader_task_t *rl_loader_import_single_asset(const char *filename)
 {
-    rl_loader_op_t *op = NULL;
+    rl_loader_task_t *task = NULL;
 
     if (!rl_loader_initialized || !filename || filename[0] == '\0') {
         return NULL;
     }
 
-    op = (rl_loader_op_t *)calloc(1, sizeof(rl_loader_op_t));
-    if (!op) {
+    task = (rl_loader_task_t *)calloc(1, sizeof(rl_loader_task_t));
+    if (!task) {
         return NULL;
     }
 
-    op->kind = RL_LOADER_OP_KIND_PREPARE_FILE;
-    op->prepare_state = RL_LOADER_PREPARE_STATE_INIT;
+    task->kind = RL_LOADER_TASK_KIND_IMPORT_ASSET;
+    task->prepare_state = RL_LOADER_PREPARE_STATE_INIT;
 
     if (rl_loader_resolve_prepare_target(filename,
-                                         op->fetch_host,
-                                         sizeof(op->fetch_host),
-                                         op->resolved_path,
-                                         sizeof(op->resolved_path)) != 0) {
-        free(op);
+                                         task->fetch_host,
+                                         sizeof(task->fetch_host),
+                                         task->resolved_path,
+                                         sizeof(task->resolved_path)) != 0) {
+        free(task);
         return NULL;
     }
 
-    op->should_cache_in_memory = rl_loader_should_memory_cache_path(op->resolved_path);
+    task->should_cache_in_memory = rl_loader_should_memory_cache_path(task->resolved_path);
 
-    if (fileio_exists(op->resolved_path)) {
-        rl_loader_op_complete(op, rl_loader_cache_local_file_if_needed(op->resolved_path));
-        return op;
+    if (fileio_exists(task->resolved_path)) {
+        rl_loader_task_complete(task, rl_loader_cache_local_file_if_needed(task->resolved_path));
+        return task;
     }
 
-    if (rl_loader_start_fetch(op, op->resolved_path) != 0) {
-        free(op);
+    if (rl_loader_start_fetch(task, task->resolved_path) != 0) {
+        free(task);
         return NULL;
     }
-    op->prepare_state = RL_LOADER_PREPARE_STATE_FETCHING_ROOT;
-    return op;
+    task->prepare_state = RL_LOADER_PREPARE_STATE_FETCHING_ROOT;
+    return task;
 }
 
-rl_loader_op_t *rl_loader_begin_prepare_model(const char *filename)
+rl_loader_task_t *rl_loader_import_asset_async(const char *filename)
 {
-    rl_loader_op_t *op = NULL;
+    rl_loader_task_t *task = NULL;
     const char *ext = NULL;
 
     if (!rl_loader_initialized || !filename || filename[0] == '\0') {
@@ -740,43 +734,43 @@ rl_loader_op_t *rl_loader_begin_prepare_model(const char *filename)
 
     ext = rl_loader_get_extension(filename);
     if (ext == NULL || !rl_loader_ext_eq(ext, ".gltf")) {
-        return rl_loader_begin_prepare_file(filename);
+        return rl_loader_import_single_asset(filename);
     }
 
-    op = (rl_loader_op_t *)calloc(1, sizeof(rl_loader_op_t));
-    if (!op) {
+    task = (rl_loader_task_t *)calloc(1, sizeof(rl_loader_task_t));
+    if (!task) {
         return NULL;
     }
 
-    op->kind = RL_LOADER_OP_KIND_PREPARE_MODEL;
-    op->prepare_state = RL_LOADER_PREPARE_STATE_INIT;
+    task->kind = RL_LOADER_TASK_KIND_IMPORT_ASSET;
+    task->prepare_state = RL_LOADER_PREPARE_STATE_INIT;
 
     if (rl_loader_resolve_prepare_target(filename,
-                                         op->fetch_host,
-                                         sizeof(op->fetch_host),
-                                         op->resolved_path,
-                                         sizeof(op->resolved_path)) != 0) {
-        free(op);
+                                         task->fetch_host,
+                                         sizeof(task->fetch_host),
+                                         task->resolved_path,
+                                         sizeof(task->resolved_path)) != 0) {
+        free(task);
         return NULL;
     }
 
-    rl_loader_get_parent_dir(op->resolved_path, op->root_dir, sizeof(op->root_dir));
+    rl_loader_get_parent_dir(task->resolved_path, task->root_dir, sizeof(task->root_dir));
 
-    if (fileio_exists(op->resolved_path)) {
-        op->prepare_state = RL_LOADER_PREPARE_STATE_PARSING_ROOT;
-        return op;
+    if (fileio_exists(task->resolved_path)) {
+        task->prepare_state = RL_LOADER_PREPARE_STATE_PARSING_ROOT;
+        return task;
     }
 
-    if (rl_loader_start_fetch(op, op->resolved_path) != 0) {
-        free(op);
+    if (rl_loader_start_fetch(task, task->resolved_path) != 0) {
+        free(task);
         return NULL;
     }
-    op->prepare_state = RL_LOADER_PREPARE_STATE_FETCHING_ROOT;
-    return op;
+    task->prepare_state = RL_LOADER_PREPARE_STATE_FETCHING_ROOT;
+    return task;
 }
 
 RL_KEEP
-rl_loader_op_t *rl_loader_begin_prepare_paths_from_scratch(size_t filename_count)
+rl_loader_task_t *rl_loader_import_assets_from_scratch_async(size_t filename_count)
 {
     const char *filenames[RL_SCRATCH_MAX_STRING_TABLE_ENTRIES];
     rl_scratch_t *scratch = NULL;
@@ -799,236 +793,238 @@ rl_loader_op_t *rl_loader_begin_prepare_paths_from_scratch(size_t filename_count
         filenames[i] = &scratch->string_bytes[offset];
     }
 
-    return rl_loader_begin_prepare_paths(filenames, filename_count);
+    return rl_loader_import_assets_async(filenames, filename_count);
 }
 
-rl_loader_op_t *rl_loader_begin_prepare_paths(const char *const *filenames, size_t filename_count)
+rl_loader_task_t *rl_loader_import_assets_async(const char *const *filenames, size_t filename_count)
 {
-    rl_loader_op_t *op = NULL;
+    rl_loader_task_t *task = NULL;
     size_t i = 0;
 
     if (!rl_loader_initialized || filenames == NULL || filename_count == 0) {
         return NULL;
     }
 
-    op = (rl_loader_op_t *)calloc(1, sizeof(rl_loader_op_t));
-    if (!op) {
+    task = (rl_loader_task_t *)calloc(1, sizeof(rl_loader_task_t));
+    if (!task) {
         return NULL;
     }
 
-    op->kind = RL_LOADER_OP_KIND_PREPARE_BATCH;
-    op->batch_paths = (char **)calloc(filename_count, sizeof(char *));
-    if (!op->batch_paths) {
-        free(op);
+    task->kind = RL_LOADER_TASK_KIND_IMPORT_ASSETS;
+    task->batch_paths = (char **)calloc(filename_count, sizeof(char *));
+    if (!task->batch_paths) {
+        free(task);
         return NULL;
     }
 
     for (i = 0; i < filename_count; i++) {
         if (filenames[i] == NULL || filenames[i][0] == '\0') {
-            rl_loader_free_op(op);
+            rl_loader_free_task(task);
             return NULL;
         }
 
-        op->batch_paths[i] = (char *)malloc(strlen(filenames[i]) + 1);
-        if (!op->batch_paths[i]) {
-            rl_loader_free_op(op);
+        task->batch_paths[i] = (char *)malloc(strlen(filenames[i]) + 1);
+        if (!task->batch_paths[i]) {
+            rl_loader_free_task(task);
             return NULL;
         }
-        strcpy(op->batch_paths[i], filenames[i]);
+        strcpy(task->batch_paths[i], filenames[i]);
     }
 
-    op->batch_count = filename_count;
-    return op;
+    task->batch_count = filename_count;
+    return task;
 }
 
-bool rl_loader_poll_op(rl_loader_op_t *op)
+bool rl_loader_poll_task(rl_loader_task_t *task)
 {
     fetch_url_result_t fetch_result = {0};
     fileio_read_result_t root_result = {0};
     int finish_rc = 0;
 
-    if (!op) {
+    if (!task) {
         return false;
     }
 
-    if (op->done) {
+    if (task->done) {
         return true;
     }
 
-    switch (op->kind) {
-        case RL_LOADER_OP_KIND_RESTORE:
-            if (op->fileio_op == NULL) {
-                rl_loader_op_complete(op, -1);
+    switch (task->kind) {
+        case RL_LOADER_TASK_KIND_RESTORE_FS:
+            if (task->fileio_op == NULL) {
+                rl_loader_task_complete(task, -1);
                 return true;
             }
-            if (!fileio_sync_poll(op->fileio_op)) {
+            if (!fileio_sync_poll(task->fileio_op)) {
                 return false;
             }
-            rl_loader_op_complete(op, fileio_sync_finish(op->fileio_op));
+            rl_loader_task_complete(task, fileio_sync_finish(task->fileio_op));
             return true;
-        case RL_LOADER_OP_KIND_PREPARE_FILE:
-            if (op->prepare_state != RL_LOADER_PREPARE_STATE_FETCHING_ROOT || op->fetch_op == NULL) {
-                rl_loader_op_complete(op, -1);
-                return true;
-            }
-            if (!fetch_url_poll(op->fetch_op)) {
-                return false;
-            }
-            finish_rc = fetch_url_finish(op->fetch_op, &fetch_result);
-            if (finish_rc != 0) {
-                rl_loader_op_complete(op, -1);
-                return true;
-            }
-            if (rl_loader_handle_fetch_completion(op, &fetch_result) != 0) {
-                free(fetch_result.data);
-                rl_loader_op_complete(op, -1);
-                return true;
-            }
-            free(fetch_result.data);
-            rl_loader_op_complete(op, 0);
-            return true;
-        case RL_LOADER_OP_KIND_PREPARE_MODEL:
-            if (op->prepare_state == RL_LOADER_PREPARE_STATE_FETCHING_ROOT ||
-                op->prepare_state == RL_LOADER_PREPARE_STATE_FETCHING_DEPENDENCY) {
-                if (op->fetch_op == NULL) {
-                    rl_loader_op_complete(op, -1);
+        case RL_LOADER_TASK_KIND_IMPORT_ASSET:
+            if (task->prepare_state == RL_LOADER_PREPARE_STATE_FETCHING_ROOT ||
+                task->prepare_state == RL_LOADER_PREPARE_STATE_FETCHING_DEPENDENCY) {
+                if (task->fetch_op == NULL) {
+                    rl_loader_task_complete(task, -1);
                     return true;
                 }
-                if (!fetch_url_poll(op->fetch_op)) {
+                if (!fetch_url_poll(task->fetch_op)) {
                     return false;
                 }
-                finish_rc = fetch_url_finish(op->fetch_op, &fetch_result);
+                finish_rc = fetch_url_finish(task->fetch_op, &fetch_result);
                 if (finish_rc != 0) {
-                    rl_loader_op_complete(op, -1);
+                    rl_loader_task_complete(task, -1);
                     return true;
                 }
-                if (rl_loader_handle_fetch_completion(op, &fetch_result) != 0) {
+                if (rl_loader_handle_fetch_completion(task, &fetch_result) != 0) {
                     free(fetch_result.data);
-                    rl_loader_op_complete(op, -1);
+                    rl_loader_task_complete(task, -1);
                     return true;
                 }
                 free(fetch_result.data);
-                if (op->prepare_state == RL_LOADER_PREPARE_STATE_FETCHING_ROOT) {
-                    op->prepare_state = RL_LOADER_PREPARE_STATE_PARSING_ROOT;
+                if (task->prepare_state == RL_LOADER_PREPARE_STATE_FETCHING_ROOT) {
+                    task->prepare_state = RL_LOADER_PREPARE_STATE_PARSING_ROOT;
                 } else {
-                    op->dependency_index++;
-                    op->prepare_state = RL_LOADER_PREPARE_STATE_PARSING_ROOT;
+                    task->dependency_index++;
+                    task->prepare_state = RL_LOADER_PREPARE_STATE_PARSING_ROOT;
                 }
             }
 
-            if (op->prepare_state == RL_LOADER_PREPARE_STATE_PARSING_ROOT) {
-                if (op->dependency_count == 0 && op->dependency_index == 0) {
-                    root_result = fileio_read(op->resolved_path);
+            if (task->prepare_state == RL_LOADER_PREPARE_STATE_PARSING_ROOT) {
+                if (!rl_loader_is_dependency_bearing_asset_path(task->resolved_path)) {
+                    rl_loader_task_complete(task, 0);
+                    return true;
+                }
+
+                if (task->dependency_count == 0 && task->dependency_index == 0) {
+                    root_result = fileio_read(task->resolved_path);
                     if (root_result.error != 0 || root_result.data == NULL || root_result.size == 0) {
                         free(root_result.data);
-                        rl_loader_op_complete(op, -1);
+                        rl_loader_task_complete(task, -1);
                         return true;
                     }
-                    if (rl_loader_collect_gltf_dependency_uris(op, root_result.data, root_result.size) != 0) {
+                    if (rl_loader_collect_gltf_dependency_uris(task, root_result.data, root_result.size) != 0) {
                         free(root_result.data);
-                        rl_loader_op_complete(op, -1);
+                        rl_loader_task_complete(task, -1);
                         return true;
                     }
                     free(root_result.data);
                 }
 
-                while (op->dependency_index < op->dependency_count &&
-                       fileio_exists(op->dependency_paths[op->dependency_index])) {
-                    rl_loader_cache_local_file_if_needed(op->dependency_paths[op->dependency_index]);
-                    op->dependency_index++;
+                while (task->dependency_index < task->dependency_count &&
+                       fileio_exists(task->dependency_paths[task->dependency_index])) {
+                    rl_loader_cache_local_file_if_needed(task->dependency_paths[task->dependency_index]);
+                    task->dependency_index++;
                 }
 
-                if (op->dependency_index >= op->dependency_count) {
-                    rl_loader_op_complete(op, 0);
+                if (task->dependency_index >= task->dependency_count) {
+                    rl_loader_task_complete(task, 0);
                     return true;
                 }
 
-                if (rl_loader_start_fetch(op, op->dependency_paths[op->dependency_index]) != 0) {
-                    rl_loader_op_complete(op, -1);
+                if (rl_loader_start_fetch(task, task->dependency_paths[task->dependency_index]) != 0) {
+                    rl_loader_task_complete(task, -1);
                     return true;
                 }
-                op->prepare_state = RL_LOADER_PREPARE_STATE_FETCHING_DEPENDENCY;
+                task->prepare_state = RL_LOADER_PREPARE_STATE_FETCHING_DEPENDENCY;
                 return false;
             }
 
-            rl_loader_op_complete(op, -1);
+            if (task->prepare_state != RL_LOADER_PREPARE_STATE_FETCHING_ROOT || task->fetch_op == NULL) {
+                rl_loader_task_complete(task, -1);
+                return true;
+            }
+            if (!fetch_url_poll(task->fetch_op)) {
+                return false;
+            }
+            finish_rc = fetch_url_finish(task->fetch_op, &fetch_result);
+            if (finish_rc != 0) {
+                rl_loader_task_complete(task, -1);
+                return true;
+            }
+            if (rl_loader_handle_fetch_completion(task, &fetch_result) != 0) {
+                free(fetch_result.data);
+                rl_loader_task_complete(task, -1);
+                return true;
+            }
+            free(fetch_result.data);
+            rl_loader_task_complete(task, 0);
             return true;
-        case RL_LOADER_OP_KIND_PREPARE_BATCH:
-            while (op->batch_index < op->batch_count) {
-                if (op->child_op == NULL) {
-                    op->child_op = rl_loader_begin_prepare_auto(op->batch_paths[op->batch_index]);
-                    if (op->child_op == NULL) {
-                        rl_loader_op_complete(op, -1);
+        case RL_LOADER_TASK_KIND_IMPORT_ASSETS:
+            while (task->batch_index < task->batch_count) {
+                if (task->child_task == NULL) {
+                    task->child_task = rl_loader_import_auto(task->batch_paths[task->batch_index]);
+                    if (task->child_task == NULL) {
+                        rl_loader_task_complete(task, -1);
                         return true;
                     }
                 }
 
-                if (!rl_loader_poll_op(op->child_op)) {
+                if (!rl_loader_poll_task(task->child_task)) {
                     return false;
                 }
 
-                finish_rc = rl_loader_finish_op(op->child_op);
+                finish_rc = rl_loader_finish_task(task->child_task);
                 if (finish_rc != 0) {
-                    rl_loader_op_complete(op, finish_rc);
+                    rl_loader_task_complete(task, finish_rc);
                     return true;
                 }
 
-                rl_loader_free_op(op->child_op);
-                op->child_op = NULL;
-                op->batch_index++;
+                rl_loader_free_task(task->child_task);
+                task->child_task = NULL;
+                task->batch_index++;
             }
 
-            rl_loader_op_complete(op, 0);
+            rl_loader_task_complete(task, 0);
             return true;
         default:
-            rl_loader_op_complete(op, -1);
+            rl_loader_task_complete(task, -1);
             return true;
     }
 }
 
-int rl_loader_finish_op(rl_loader_op_t *op)
+int rl_loader_finish_task(rl_loader_task_t *task)
 {
-    if (!op) {
+    if (!task) {
         return -1;
     }
 
-    if (!rl_loader_poll_op(op)) {
+    if (!rl_loader_poll_task(task)) {
         return 1;
     }
 
-    return op->status;
+    return task->status;
 }
 
-void rl_loader_free_op(rl_loader_op_t *op)
+void rl_loader_free_task(rl_loader_task_t *task)
 {
-    if (!op) {
+    if (!task) {
         return;
     }
 
-    if (op->fetch_op != NULL) {
-        fetch_url_op_free(op->fetch_op);
+    if (task->fetch_op != NULL) {
+        fetch_url_op_free(task->fetch_op);
     }
-    if (op->child_op != NULL) {
-        rl_loader_free_op(op->child_op);
+    if (task->child_task != NULL) {
+        rl_loader_free_task(task->child_task);
     }
-    if (op->fileio_op != NULL) {
-        fileio_sync_op_free(op->fileio_op);
+    if (task->fileio_op != NULL) {
+        fileio_sync_op_free(task->fileio_op);
     }
-    if (op->dependency_paths != NULL) {
+    if (task->dependency_paths != NULL) {
         size_t i = 0;
-        for (i = 0; i < op->dependency_count; i++) {
-            free(op->dependency_paths[i]);
+        for (i = 0; i < task->dependency_count; i++) {
+            free(task->dependency_paths[i]);
         }
-        free(op->dependency_paths);
+        free(task->dependency_paths);
     }
-    if (op->batch_paths != NULL) {
+    if (task->batch_paths != NULL) {
         size_t i = 0;
-        for (i = 0; i < op->batch_count; i++) {
-            free(op->batch_paths[i]);
+        for (i = 0; i < task->batch_count; i++) {
+            free(task->batch_paths[i]);
         }
-        free(op->batch_paths);
+        free(task->batch_paths);
     }
-    free(op);
+    free(task);
 }
 
 bool rl_loader_is_local(const char *filename)

@@ -1,4 +1,4 @@
-#include "rl_lua_module.h"
+#include "rl_module_lua.h"
 #include "rl_color.h"
 #include "rl_camera3d.h"
 #include "rl_font.h"
@@ -51,12 +51,12 @@
 #define RL_LUA_MODULE_MAX_SEARCH_PATHS 16
 #define RL_LUA_MODULE_MAX_EVENT_LISTENERS 128
 
-struct rl_lua_module_state_t;
+struct rl_module_lua_state_t;
 typedef struct rl_lua_event_listener_t {
     bool in_use;
     int callback_ref;
     char event_name[128];
-    struct rl_lua_module_state_t *state;
+    struct rl_module_lua_state_t *state;
 } rl_lua_event_listener_t;
 /*
  * The Lua module keeps its own small handle caches on top of librl's resource
@@ -105,7 +105,7 @@ typedef struct rl_lua_vm_t {
     int keyboard_keys_ref;
 } rl_lua_vm_t;
 
-typedef struct rl_lua_module_state_t {
+typedef struct rl_module_lua_state_t {
     rl_module_host_api_t host;
     rl_lua_vm_t vm;
     int serialized_state_ref;
@@ -122,7 +122,7 @@ typedef struct rl_lua_module_state_t {
     rl_lua_cached_font_t font_cache[RL_LUA_MODULE_MAX_CACHED_RESOURCES];
     rl_lua_cached_color_t color_cache[RL_LUA_MODULE_MAX_CACHED_RESOURCES];
     rl_lua_event_listener_t event_listeners[RL_LUA_MODULE_MAX_EVENT_LISTENERS];
-} rl_lua_module_state_t;
+} rl_module_lua_state_t;
 
 static void lua_module_on_do_string(void *payload, void *listener_user_data);
 static void lua_module_on_do_file(void *payload, void *listener_user_data);
@@ -167,14 +167,14 @@ static int lua_module_event_off_binding(lua_State *L);
 static int lua_module_event_emit_binding(lua_State *L);
 static int lua_module_require_searcher(lua_State *L);
 static const char *lua_module_debug_source(lua_Debug *ar, char *buffer, size_t buffer_size);
-static int lua_vm_call_update(rl_lua_module_state_t *state, float dt_seconds);
-static int lua_vm_call_init(rl_lua_module_state_t *state);
-static int lua_vm_call_load(rl_lua_module_state_t *state);
-static int lua_vm_call_unload(rl_lua_module_state_t *state);
-static int lua_vm_call_serialize(rl_lua_module_state_t *state);
-static int lua_vm_call_unserialize(rl_lua_module_state_t *state);
-static int lua_vm_call_get_config(rl_lua_module_state_t *state, rl_module_config_t *out_config);
-static int lua_vm_call_shutdown(rl_lua_module_state_t *state);
+static int lua_vm_call_update(rl_module_lua_state_t *state, float dt_seconds);
+static int lua_vm_call_init(rl_module_lua_state_t *state);
+static int lua_vm_call_load(rl_module_lua_state_t *state);
+static int lua_vm_call_unload(rl_module_lua_state_t *state);
+static int lua_vm_call_serialize(rl_module_lua_state_t *state);
+static int lua_vm_call_unserialize(rl_module_lua_state_t *state);
+static int lua_vm_call_get_config(rl_module_lua_state_t *state, rl_module_config_t *out_config);
+static int lua_vm_call_shutdown(rl_module_lua_state_t *state);
 static rl_handle_t lua_module_cached_load(rl_lua_cached_resource_t *cache,
                                           int cache_count,
                                           const char *path,
@@ -207,19 +207,19 @@ static bool lua_module_cached_destroy_color_handle(rl_lua_cached_color_t *cache,
                                                    int cache_count,
                                                    rl_handle_t handle);
 static int lua_vm_load_file_chunk(lua_State *L, const char *filename);
-static void lua_vm_install_searcher(rl_lua_module_state_t *state);
-static int lua_module_resolve_path(rl_lua_module_state_t *state, const char *filename, char *resolved_path, size_t resolved_path_size);
-static int lua_module_resolve_require_path(rl_lua_module_state_t *state, const char *module_name, char *resolved_path, size_t resolved_path_size);
+static void lua_vm_install_searcher(rl_module_lua_state_t *state);
+static int lua_module_resolve_path(rl_module_lua_state_t *state, const char *filename, char *resolved_path, size_t resolved_path_size);
+static int lua_module_resolve_require_path(rl_module_lua_state_t *state, const char *module_name, char *resolved_path, size_t resolved_path_size);
 static int lua_module_expand_search_path(const char *search_path, const char *name, char *resolved_path, size_t resolved_path_size);
 static int lua_module_is_explicit_path(const char *filename);
 static void lua_module_push_pick_result(lua_State *L, rl_pick_result_t result);
-static void lua_module_clear_serialized_state(rl_lua_module_state_t *state);
-static int lua_module_prepare_reload(rl_lua_module_state_t *state);
-static int lua_module_activate_script(rl_lua_module_state_t *state);
-static void lua_module_clear_event_listeners(rl_lua_module_state_t *state);
+static void lua_module_clear_serialized_state(rl_module_lua_state_t *state);
+static int lua_module_prepare_reload(rl_module_lua_state_t *state);
+static int lua_module_activate_script(rl_module_lua_state_t *state);
+static void lua_module_clear_event_listeners(rl_module_lua_state_t *state);
 static void lua_module_dispatch_script_event(void *payload, void *listener_user_data);
-static int rl_lua_module_get_config_impl(void *module_state, rl_module_config_t *out_config);
-static int rl_lua_module_start_impl(void *module_state);
+static int rl_module_lua_get_config_impl(void *module_state, rl_module_config_t *out_config);
+static int rl_module_lua_start_impl(void *module_state);
 
 static int parse_lua_log_level(lua_State *L, int idx, int *out_is_level)
 {
@@ -340,7 +340,7 @@ static int lua_vm_init(rl_lua_vm_t *vm)
     return 0;
 }
 
-static void lua_vm_bind_log(rl_lua_module_state_t *state)
+static void lua_vm_bind_log(rl_module_lua_state_t *state)
 {
     lua_State *L = NULL;
 
@@ -573,7 +573,7 @@ static int lua_vm_load_file_chunk(lua_State *L, const char *filename)
     return rc;
 }
 
-static int lua_module_resolve_path(rl_lua_module_state_t *state, const char *filename, char *resolved_path, size_t resolved_path_size)
+static int lua_module_resolve_path(rl_module_lua_state_t *state, const char *filename, char *resolved_path, size_t resolved_path_size)
 {
     int i = 0;
     int explicit_path = 0;
@@ -654,7 +654,7 @@ static int lua_module_is_explicit_path(const char *filename)
            strchr(filename, '/') != NULL;
 }
 
-static int lua_module_resolve_require_path(rl_lua_module_state_t *state, const char *module_name, char *resolved_path, size_t resolved_path_size)
+static int lua_module_resolve_require_path(rl_module_lua_state_t *state, const char *module_name, char *resolved_path, size_t resolved_path_size)
 {
     char module_rel[512];
     char module_suffix[512];
@@ -716,13 +716,13 @@ static int lua_module_resolve_require_path(rl_lua_module_state_t *state, const c
 
 static int lua_module_require_searcher(lua_State *L)
 {
-    rl_lua_module_state_t *state = NULL;
+    rl_module_lua_state_t *state = NULL;
     const char *module_name = NULL;
     char module_path[512];
     char error_message[640];
     int rc = 0;
 
-    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     module_name = luaL_checkstring(L, 1);
     if (module_name == NULL || module_name[0] == '\0') {
         lua_pushstring(L, "\n\tinvalid module name");
@@ -742,7 +742,7 @@ static int lua_module_require_searcher(lua_State *L)
     return 1;
 }
 
-static void lua_vm_install_searcher(rl_lua_module_state_t *state)
+static void lua_vm_install_searcher(rl_module_lua_state_t *state)
 {
     lua_State *L = NULL;
     int len = 0;
@@ -880,7 +880,7 @@ static bool lua_module_event_listener_matches(lua_State *L,
     return matches;
 }
 
-static rl_lua_event_listener_t *lua_module_find_event_listener(rl_lua_module_state_t *state,
+static rl_lua_event_listener_t *lua_module_find_event_listener(rl_module_lua_state_t *state,
                                                                lua_State *L,
                                                                const char *event_name,
                                                                int callback_index)
@@ -903,7 +903,7 @@ static rl_lua_event_listener_t *lua_module_find_event_listener(rl_lua_module_sta
     return NULL;
 }
 
-static rl_lua_event_listener_t *lua_module_alloc_event_listener(rl_lua_module_state_t *state)
+static rl_lua_event_listener_t *lua_module_alloc_event_listener(rl_module_lua_state_t *state)
 {
     int i = 0;
 
@@ -933,7 +933,7 @@ static void lua_module_push_event_payload(lua_State *L, void *payload)
 static void lua_module_dispatch_script_event(void *payload, void *listener_user_data)
 {
     rl_lua_event_listener_t *entry = (rl_lua_event_listener_t *)listener_user_data;
-    rl_lua_module_state_t *state = NULL;
+    rl_module_lua_state_t *state = NULL;
     lua_State *L = NULL;
     const char *err = NULL;
 
@@ -961,7 +961,7 @@ static void lua_module_dispatch_script_event(void *payload, void *listener_user_
     }
 }
 
-static void lua_module_clear_event_listeners(rl_lua_module_state_t *state)
+static void lua_module_clear_event_listeners(rl_module_lua_state_t *state)
 {
     int i = 0;
 
@@ -1257,16 +1257,16 @@ static bool lua_module_cached_destroy_color_handle(rl_lua_cached_color_t *cache,
     return false;
 }
 
-static int rl_lua_module_init_impl(const rl_module_host_api_t *host, void **module_state)
+static int rl_module_lua_init_impl(const rl_module_host_api_t *host, void **module_state)
 {
-    rl_lua_module_state_t *state = NULL;
+    rl_module_lua_state_t *state = NULL;
     int rc = 0;
 
     if (module_state == NULL) {
         return -1;
     }
 
-    state = (rl_lua_module_state_t *)rl_module_alloc(host, sizeof(*state));
+    state = (rl_module_lua_state_t *)rl_module_alloc(host, sizeof(*state));
     if (state == NULL) {
         rl_module_log(host, RL_MODULE_LOG_ERROR, "lua module init: allocation failed");
         return -1;
@@ -1297,9 +1297,9 @@ static int rl_lua_module_init_impl(const rl_module_host_api_t *host, void **modu
     return 0;
 }
 
-static void rl_lua_module_deinit_impl(void *module_state)
+static void rl_module_lua_deinit_impl(void *module_state)
 {
-    rl_lua_module_state_t *state = (rl_lua_module_state_t *)module_state;
+    rl_module_lua_state_t *state = (rl_module_lua_state_t *)module_state;
 
     if (state == NULL) {
         return;
@@ -1339,9 +1339,9 @@ static void rl_lua_module_deinit_impl(void *module_state)
     rl_module_free(&state->host, state);
 }
 
-static int rl_lua_module_update_impl(void *module_state, float dt_seconds)
+static int rl_module_lua_update_impl(void *module_state, float dt_seconds)
 {
-    rl_lua_module_state_t *state = (rl_lua_module_state_t *)module_state;
+    rl_module_lua_state_t *state = (rl_module_lua_state_t *)module_state;
 
     if (state == NULL) {
         return -1;
@@ -1394,7 +1394,7 @@ static const char *lua_module_debug_source(lua_Debug *ar, char *buffer, size_t b
     return buffer;
 }
 
-static int lua_vm_call_update(rl_lua_module_state_t *state, float dt_seconds)
+static int lua_vm_call_update(rl_module_lua_state_t *state, float dt_seconds)
 {
     lua_State *L = NULL;
     rl_mouse_state_t mouse_state = {0};
@@ -1470,7 +1470,7 @@ static int lua_vm_call_update(rl_lua_module_state_t *state, float dt_seconds)
     return 0;
 }
 
-static int lua_vm_call_lifecycle_noargs(rl_lua_module_state_t *state,
+static int lua_vm_call_lifecycle_noargs(rl_module_lua_state_t *state,
                                         const char *function_name,
                                         const char *error_message)
 {
@@ -1504,22 +1504,22 @@ static int lua_vm_call_lifecycle_noargs(rl_lua_module_state_t *state,
     return 0;
 }
 
-static int lua_vm_call_init(rl_lua_module_state_t *state)
+static int lua_vm_call_init(rl_module_lua_state_t *state)
 {
     return lua_vm_call_lifecycle_noargs(state, "init", "lua init failed");
 }
 
-static int lua_vm_call_load(rl_lua_module_state_t *state)
+static int lua_vm_call_load(rl_module_lua_state_t *state)
 {
     return lua_vm_call_lifecycle_noargs(state, "load", "lua load failed");
 }
 
-static int lua_vm_call_unload(rl_lua_module_state_t *state)
+static int lua_vm_call_unload(rl_module_lua_state_t *state)
 {
     return lua_vm_call_lifecycle_noargs(state, "unload", "lua unload failed");
 }
 
-static int lua_vm_call_get_config(rl_lua_module_state_t *state, rl_module_config_t *out_config)
+static int lua_vm_call_get_config(rl_module_lua_state_t *state, rl_module_config_t *out_config)
 {
     lua_State *L = NULL;
     int top = 0;
@@ -1591,7 +1591,7 @@ static int lua_vm_call_get_config(rl_lua_module_state_t *state, rl_module_config
     return 0;
 }
 
-static int lua_vm_call_serialize(rl_lua_module_state_t *state)
+static int lua_vm_call_serialize(rl_module_lua_state_t *state)
 {
     lua_State *L = NULL;
     int top = 0;
@@ -1632,7 +1632,7 @@ static int lua_vm_call_serialize(rl_lua_module_state_t *state)
     return 0;
 }
 
-static int lua_vm_call_unserialize(rl_lua_module_state_t *state)
+static int lua_vm_call_unserialize(rl_module_lua_state_t *state)
 {
     lua_State *L = NULL;
     int top = 0;
@@ -1667,12 +1667,12 @@ static int lua_vm_call_unserialize(rl_lua_module_state_t *state)
     return 0;
 }
 
-static int lua_vm_call_shutdown(rl_lua_module_state_t *state)
+static int lua_vm_call_shutdown(rl_module_lua_state_t *state)
 {
     return lua_vm_call_lifecycle_noargs(state, "shutdown", "lua shutdown failed");
 }
 
-static void lua_module_clear_serialized_state(rl_lua_module_state_t *state)
+static void lua_module_clear_serialized_state(rl_module_lua_state_t *state)
 {
     if (state == NULL || state->vm.state == NULL || state->serialized_state_ref == LUA_NOREF) {
         return;
@@ -1682,7 +1682,7 @@ static void lua_module_clear_serialized_state(rl_lua_module_state_t *state)
     state->serialized_state_ref = LUA_NOREF;
 }
 
-static int lua_module_prepare_reload(rl_lua_module_state_t *state)
+static int lua_module_prepare_reload(rl_module_lua_state_t *state)
 {
     if (state == NULL || !state->script_active) {
         return 0;
@@ -1709,7 +1709,7 @@ static int lua_module_prepare_reload(rl_lua_module_state_t *state)
     return 0;
 }
 
-static int lua_module_activate_script(rl_lua_module_state_t *state)
+static int lua_module_activate_script(rl_module_lua_state_t *state)
 {
     if (state == NULL || !state->host_started || !state->script_loaded || state->script_active) {
         return 0;
@@ -1733,9 +1733,9 @@ static int lua_module_activate_script(rl_lua_module_state_t *state)
     return 0;
 }
 
-static int rl_lua_module_get_config_impl(void *module_state, rl_module_config_t *out_config)
+static int rl_module_lua_get_config_impl(void *module_state, rl_module_config_t *out_config)
 {
-    rl_lua_module_state_t *state = (rl_lua_module_state_t *)module_state;
+    rl_module_lua_state_t *state = (rl_module_lua_state_t *)module_state;
 
     if (state == NULL || out_config == NULL) {
         return -1;
@@ -1744,9 +1744,9 @@ static int rl_lua_module_get_config_impl(void *module_state, rl_module_config_t 
     return lua_vm_call_get_config(state, out_config);
 }
 
-static int rl_lua_module_start_impl(void *module_state)
+static int rl_module_lua_start_impl(void *module_state)
 {
-    rl_lua_module_state_t *state = (rl_lua_module_state_t *)module_state;
+    rl_module_lua_state_t *state = (rl_module_lua_state_t *)module_state;
 
     if (state == NULL) {
         return -1;
@@ -1758,7 +1758,7 @@ static int rl_lua_module_start_impl(void *module_state)
 
 static int lua_module_log_binding(lua_State *L)
 {
-    rl_lua_module_state_t *state = NULL;
+    rl_module_lua_state_t *state = NULL;
     lua_Debug ar;
     char source_file_buffer[512];
     const char *source_file = "lua";
@@ -1768,7 +1768,7 @@ static int lua_module_log_binding(lua_State *L)
     int parsed_level = 0;
     const char *message = NULL;
 
-    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     if (state == NULL) {
         return 0;
     }
@@ -1804,10 +1804,10 @@ static int lua_module_log_binding(lua_State *L)
 
 static int lua_module_clear_binding(lua_State *L)
 {
-    rl_lua_module_state_t *state = NULL;
+    rl_module_lua_state_t *state = NULL;
     rl_module_frame_command_t command;
 
-    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     if (state == NULL) {
         return 0;
     }
@@ -1945,11 +1945,11 @@ static int lua_module_pick_sprite3d_binding(lua_State *L)
 
 static int lua_module_draw_text_binding(lua_State *L)
 {
-    rl_lua_module_state_t *state = NULL;
+    rl_module_lua_state_t *state = NULL;
     rl_module_frame_command_t command;
     const char *text = NULL;
 
-    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     if (state == NULL) {
         return 0;
     }
@@ -1970,10 +1970,10 @@ static int lua_module_draw_text_binding(lua_State *L)
 
 static int lua_module_draw_cube_binding(lua_State *L)
 {
-    rl_lua_module_state_t *state = NULL;
+    rl_module_lua_state_t *state = NULL;
     rl_module_frame_command_t command;
 
-    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     if (state == NULL) {
         return 0;
     }
@@ -1993,10 +1993,10 @@ static int lua_module_draw_cube_binding(lua_State *L)
 
 static int lua_module_draw_ground_texture_binding(lua_State *L)
 {
-    rl_lua_module_state_t *state = NULL;
+    rl_module_lua_state_t *state = NULL;
     rl_module_frame_command_t command;
 
-    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     if (state == NULL) {
         return 0;
     }
@@ -2016,10 +2016,10 @@ static int lua_module_draw_ground_texture_binding(lua_State *L)
 
 static int lua_module_draw_sprite3d_binding(lua_State *L)
 {
-    rl_lua_module_state_t *state = NULL;
+    rl_module_lua_state_t *state = NULL;
     rl_module_frame_command_t command;
 
-    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     if (state == NULL) {
         return 0;
     }
@@ -2038,10 +2038,10 @@ static int lua_module_draw_sprite3d_binding(lua_State *L)
 
 static int lua_module_draw_texture_binding(lua_State *L)
 {
-    rl_lua_module_state_t *state = NULL;
+    rl_module_lua_state_t *state = NULL;
     rl_module_frame_command_t command;
 
-    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     if (state == NULL) {
         return 0;
     }
@@ -2060,11 +2060,11 @@ static int lua_module_draw_texture_binding(lua_State *L)
 
 static int lua_module_draw_model_binding(lua_State *L)
 {
-    rl_lua_module_state_t *state = NULL;
+    rl_module_lua_state_t *state = NULL;
     rl_module_frame_command_t command;
     int arg_count = 0;
 
-    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     if (state == NULL) {
         return 0;
     }
@@ -2104,11 +2104,11 @@ static int lua_module_draw_model_binding(lua_State *L)
 
 static int lua_module_load_model_binding(lua_State *L)
 {
-    rl_lua_module_state_t *state = NULL;
+    rl_module_lua_state_t *state = NULL;
     const char *path = NULL;
     rl_handle_t handle = 0;
 
-    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     if (state == NULL) {
         lua_pushinteger(L, 0);
         return 1;
@@ -2124,7 +2124,7 @@ static int lua_module_load_model_binding(lua_State *L)
 
 static int lua_module_destroy_model_binding(lua_State *L)
 {
-    rl_lua_module_state_t *state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    rl_module_lua_state_t *state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     rl_handle_t handle = (rl_handle_t)luaL_checkinteger(L, 1);
     lua_pushboolean(L, state != NULL &&
                            lua_module_cached_destroy_handle(state->model_cache,
@@ -2136,11 +2136,11 @@ static int lua_module_destroy_model_binding(lua_State *L)
 
 static int lua_module_load_sprite3d_binding(lua_State *L)
 {
-    rl_lua_module_state_t *state = NULL;
+    rl_module_lua_state_t *state = NULL;
     const char *path = NULL;
     rl_handle_t handle = 0;
 
-    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     if (state == NULL) {
         lua_pushinteger(L, 0);
         return 1;
@@ -2156,7 +2156,7 @@ static int lua_module_load_sprite3d_binding(lua_State *L)
 
 static int lua_module_destroy_sprite3d_binding(lua_State *L)
 {
-    rl_lua_module_state_t *state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    rl_module_lua_state_t *state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     rl_handle_t handle = (rl_handle_t)luaL_checkinteger(L, 1);
     lua_pushboolean(L, state != NULL &&
                            lua_module_cached_destroy_handle(state->sprite3d_cache,
@@ -2168,11 +2168,11 @@ static int lua_module_destroy_sprite3d_binding(lua_State *L)
 
 static int lua_module_load_music_binding(lua_State *L)
 {
-    rl_lua_module_state_t *state = NULL;
+    rl_module_lua_state_t *state = NULL;
     const char *path = NULL;
     rl_handle_t handle = 0;
 
-    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     if (state == NULL) {
         lua_pushinteger(L, 0);
         return 1;
@@ -2188,7 +2188,7 @@ static int lua_module_load_music_binding(lua_State *L)
 
 static int lua_module_destroy_music_binding(lua_State *L)
 {
-    rl_lua_module_state_t *state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    rl_module_lua_state_t *state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     rl_handle_t handle = (rl_handle_t)luaL_checkinteger(L, 1);
     lua_pushboolean(L, state != NULL &&
                            lua_module_cached_destroy_handle(state->music_cache,
@@ -2200,11 +2200,11 @@ static int lua_module_destroy_music_binding(lua_State *L)
 
 static int lua_module_load_sound_binding(lua_State *L)
 {
-    rl_lua_module_state_t *state = NULL;
+    rl_module_lua_state_t *state = NULL;
     const char *path = NULL;
     rl_handle_t handle = 0;
 
-    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     if (state == NULL) {
         lua_pushinteger(L, 0);
         return 1;
@@ -2220,7 +2220,7 @@ static int lua_module_load_sound_binding(lua_State *L)
 
 static int lua_module_destroy_sound_binding(lua_State *L)
 {
-    rl_lua_module_state_t *state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    rl_module_lua_state_t *state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     rl_handle_t handle = (rl_handle_t)luaL_checkinteger(L, 1);
     lua_pushboolean(L, state != NULL &&
                            lua_module_cached_destroy_handle(state->sound_cache,
@@ -2232,11 +2232,11 @@ static int lua_module_destroy_sound_binding(lua_State *L)
 
 static int lua_module_load_texture_binding(lua_State *L)
 {
-    rl_lua_module_state_t *state = NULL;
+    rl_module_lua_state_t *state = NULL;
     const char *path = NULL;
     rl_handle_t handle = 0;
 
-    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     if (state == NULL) {
         lua_pushinteger(L, 0);
         return 1;
@@ -2252,7 +2252,7 @@ static int lua_module_load_texture_binding(lua_State *L)
 
 static int lua_module_destroy_texture_binding(lua_State *L)
 {
-    rl_lua_module_state_t *state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    rl_module_lua_state_t *state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     rl_handle_t handle = (rl_handle_t)luaL_checkinteger(L, 1);
     lua_pushboolean(L, state != NULL &&
                            lua_module_cached_destroy_handle(state->texture_cache,
@@ -2308,10 +2308,10 @@ static int lua_module_is_music_playing_binding(lua_State *L)
 
 static int lua_module_play_sound_binding(lua_State *L)
 {
-    rl_lua_module_state_t *state = NULL;
+    rl_module_lua_state_t *state = NULL;
     rl_module_frame_command_t command;
 
-    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     if (state == NULL) {
         return 0;
     }
@@ -2325,13 +2325,13 @@ static int lua_module_play_sound_binding(lua_State *L)
 
 static int lua_module_create_color_binding(lua_State *L)
 {
-    rl_lua_module_state_t *state = NULL;
+    rl_module_lua_state_t *state = NULL;
     int r = (int)luaL_checkinteger(L, 1);
     int g = (int)luaL_checkinteger(L, 2);
     int b = (int)luaL_checkinteger(L, 3);
     int a = (int)luaL_optinteger(L, 4, 255);
 
-    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     if (state == NULL) {
         lua_pushinteger(L, 0);
         return 1;
@@ -2345,10 +2345,10 @@ static int lua_module_create_color_binding(lua_State *L)
 
 static int lua_module_destroy_color_binding(lua_State *L)
 {
-    rl_lua_module_state_t *state = NULL;
+    rl_module_lua_state_t *state = NULL;
     rl_handle_t handle = (rl_handle_t)luaL_checkinteger(L, 1);
 
-    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     lua_pushboolean(L, state != NULL &&
                            lua_module_cached_destroy_color_handle(state->color_cache,
                                                                   RL_LUA_MODULE_MAX_CACHED_RESOURCES,
@@ -2358,12 +2358,12 @@ static int lua_module_destroy_color_binding(lua_State *L)
 
 static int lua_module_load_font_binding(lua_State *L)
 {
-    rl_lua_module_state_t *state = NULL;
+    rl_module_lua_state_t *state = NULL;
     const char *path = NULL;
     float size = 0.0f;
     rl_handle_t handle = 0;
 
-    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     if (state == NULL) {
         lua_pushinteger(L, 0);
         return 1;
@@ -2380,7 +2380,7 @@ static int lua_module_load_font_binding(lua_State *L)
 
 static int lua_module_destroy_font_binding(lua_State *L)
 {
-    rl_lua_module_state_t *state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    rl_module_lua_state_t *state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     rl_handle_t handle = (rl_handle_t)luaL_checkinteger(L, 1);
     lua_pushboolean(L, state != NULL &&
                            lua_module_cached_destroy_font_handle(state->font_cache,
@@ -2391,13 +2391,13 @@ static int lua_module_destroy_font_binding(lua_State *L)
 
 static int lua_module_event_on_binding(lua_State *L)
 {
-    rl_lua_module_state_t *state = NULL;
+    rl_module_lua_state_t *state = NULL;
     const char *event_name = NULL;
     rl_lua_event_listener_t *entry = NULL;
     int callback_ref = LUA_NOREF;
     int rc = -1;
 
-    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     event_name = luaL_checkstring(L, 1);
     luaL_checktype(L, 2, LUA_TFUNCTION);
 
@@ -2442,11 +2442,11 @@ static int lua_module_event_on_binding(lua_State *L)
 
 static int lua_module_event_off_binding(lua_State *L)
 {
-    rl_lua_module_state_t *state = NULL;
+    rl_module_lua_state_t *state = NULL;
     const char *event_name = NULL;
     rl_lua_event_listener_t *entry = NULL;
 
-    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     event_name = luaL_checkstring(L, 1);
     luaL_checktype(L, 2, LUA_TFUNCTION);
 
@@ -2472,12 +2472,12 @@ static int lua_module_event_off_binding(lua_State *L)
 
 static int lua_module_event_emit_binding(lua_State *L)
 {
-    rl_lua_module_state_t *state = NULL;
+    rl_module_lua_state_t *state = NULL;
     const char *event_name = NULL;
     const char *payload = NULL;
     int rc = -1;
 
-    state = (rl_lua_module_state_t *)lua_touserdata(L, lua_upvalueindex(1));
+    state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     event_name = luaL_checkstring(L, 1);
     if (!lua_isnoneornil(L, 2)) {
         payload = luaL_checkstring(L, 2);
@@ -2495,7 +2495,7 @@ static int lua_module_event_emit_binding(lua_State *L)
 
 static void lua_module_on_do_file(void *payload, void *listener_user_data)
 {
-    rl_lua_module_state_t *state = (rl_lua_module_state_t *)listener_user_data;
+    rl_module_lua_state_t *state = (rl_module_lua_state_t *)listener_user_data;
     const char *filename = (const char *)payload;
     char resolved_path[512] = {0};
     int rc = 0;
@@ -2535,7 +2535,7 @@ static void lua_module_on_do_file(void *payload, void *listener_user_data)
 
 static void lua_module_on_add_path(void *payload, void *listener_user_data)
 {
-    rl_lua_module_state_t *state = (rl_lua_module_state_t *)listener_user_data;
+    rl_module_lua_state_t *state = (rl_module_lua_state_t *)listener_user_data;
     const char *path = (const char *)payload;
     char normalized_path[256] = {0};
     int i = 0;
@@ -2564,7 +2564,7 @@ static void lua_module_on_add_path(void *payload, void *listener_user_data)
 
 static void lua_module_on_do_string(void *payload, void *listener_user_data)
 {
-    rl_lua_module_state_t *state = (rl_lua_module_state_t *)listener_user_data;
+    rl_module_lua_state_t *state = (rl_module_lua_state_t *)listener_user_data;
     const char *source = (const char *)payload;
     int rc = 0;
 
@@ -2593,5 +2593,5 @@ static void lua_module_on_do_string(void *payload, void *listener_user_data)
     }
 }
 
-RL_MODULE_DEFINE(rl_lua_module_get_api, "lua", rl_lua_module_init_impl, rl_lua_module_deinit_impl,
-                rl_lua_module_get_config_impl, rl_lua_module_start_impl, rl_lua_module_update_impl)
+RL_MODULE_DEFINE(rl_module_lua_get_api, "lua", rl_module_lua_init_impl, rl_module_lua_deinit_impl,
+                rl_module_lua_get_config_impl, rl_module_lua_start_impl, rl_module_lua_update_impl)

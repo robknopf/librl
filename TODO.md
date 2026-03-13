@@ -59,6 +59,15 @@
   - keep examples current as APIs change
   - add a short wasm-only bridge table for scratch helpers (`*_to_scratch` and JS wrapper names)
   - keep `README.md`, `docs/API.md`, `docs/BINDINGS.md`, and `docs/DEV_NOTES.md` aligned when the Lua/module surface changes
+- HEADLESS follow-up:
+  - leverage `HEADLESS` beyond tests for Node/Bun/server-oriented builds
+  - define what runtime pieces no-op or return defaults in headless mode:
+    - input
+    - windowing
+    - frame pacing
+    - audio
+  - add a minimal runnable headless host path so wasm logic can execute outside the browser
+  - use that path to improve automated runtime verification beyond compile-only checks
 
 ## In Progress Conceptually
 

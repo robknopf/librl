@@ -94,13 +94,12 @@ Notes:
   - `rl_window_init(width, height, title, flags)`
   - `RL_FLAG_MSAA_4X_HINT`
 - Loader helpers in Nim:
-  - `rl_loader_begin_restore()`
-  - `rl_loader_begin_prepare_file(filename)`
-  - `rl_loader_begin_prepare_model(filename)`
-  - `rl_loader_begin_prepare_paths(filenames, count)`
-  - `rl_loader_poll_op(op)`
-  - `rl_loader_finish_op(op)`
-  - `rl_loader_free_op(op)`
+  - `rl_loader_restore_fs_async()`
+  - `rl_loader_import_asset_async(filename)`
+  - `rl_loader_import_assets_async(filenames, count)`
+  - `rl_loader_poll_task(task)`
+  - `rl_loader_finish_task(task)`
+  - `rl_loader_free_task(task)`
   - `rl_loader_is_local(filename)`
   - `rl_loader_uncache_file(filename)`
   - `rl_loader_clear_cache()`

@@ -1,7 +1,8 @@
 local Texture = {}
 Texture.__index = Texture
+local ResourceAsync = require("resource_async")
 
-function Texture.load(path)
+local function load_sync(path)
   local handle = load_texture(path)
   if handle == nil or handle == 0 then
     return nil
@@ -14,6 +15,16 @@ function Texture.load(path)
     scale = 1.0,
     rotation = 0.0,
   }, Texture)
+end
+
+function Texture.load(path, callback)
+  if type(callback) == "function" then
+    return ResourceAsync.request("texture", path, nil, function()
+      return load_sync(path)
+    end, callback)
+  end
+
+  return load_sync(path)
 end
 
 function Texture:draw(tint)

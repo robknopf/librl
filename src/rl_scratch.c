@@ -177,6 +177,26 @@ void rl_scratch_deinit()
 RL_KEEP
 void rl_scratch_update()
 {
+#ifdef HEADLESS
+    rl_scratch.mouse.x = 0;
+    rl_scratch.mouse.y = 0;
+    rl_scratch.mouse.wheel = 0;
+    memset(rl_scratch.mouse.buttons, 0, sizeof(rl_scratch.mouse.buttons));
+
+    rl_scratch.keyboard.pressed_key = 0;
+    rl_scratch.keyboard.pressed_char = 0;
+    rl_scratch.keyboard.num_pressed_keys = 0;
+    rl_scratch.keyboard.num_pressed_chars = 0;
+    memset(rl_scratch.keyboard.keys, 0, sizeof(rl_scratch.keyboard.keys));
+    memset(rl_scratch.keyboard.pressed_keys, 0, sizeof(rl_scratch.keyboard.pressed_keys));
+    memset(rl_scratch.keyboard.pressed_chars, 0, sizeof(rl_scratch.keyboard.pressed_chars));
+
+    memset(&rl_scratch.gamepads.gamepad, 0, sizeof(rl_scratch.gamepads.gamepad));
+    rl_scratch.touchpoints.count = 0;
+    memset(&rl_scratch.touchpoints.touchpoint, 0, sizeof(rl_scratch.touchpoints.touchpoint));
+    return;
+#endif
+
     // TODO: num mouse buttons (currently assumed to be 3)
 
     // mouse

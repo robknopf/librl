@@ -27,7 +27,8 @@ UNIT_TEST_LIB_SRCS := \
 	$(CORE_DIR)/lru_cache/lru_cache.c \
 	$(CORE_DIR)/path/path.c \
 	$(ROOT_DIR)/src/rl_handle_pool.c \
-	$(ROOT_DIR)/src/rl_loader.c
+	$(ROOT_DIR)/src/rl_loader.c \
+	$(ROOT_DIR)/src/rl_scratch.c
 UNIT_TEST_EXTRA_LIB_SRCS := \
 	$(CORE_DIR)/logger/log.c \
 	$(CORE_DIR)/uri/uri.c \
@@ -71,13 +72,13 @@ test: test_desktop test_wasm
 	@echo "All smoke tests passed."
 
 unit_test_desktop:
-	$(CC_DESKTOP) $(CFLAGS) $(INCLUDES) -I$(UNIT_TEST_DIR) $(UNIT_TEST_MAIN) $(UNIT_TEST_SRCS) $(UNIT_TEST_LIB_SRCS) $(UNIT_TEST_EXTRA_LIB_SRCS) -o $(UNIT_TEST_DESKTOP_BIN)
+	$(CC_DESKTOP) $(CFLAGS) -DHEADLESS $(INCLUDES) -I$(UNIT_TEST_DIR) $(UNIT_TEST_MAIN) $(UNIT_TEST_SRCS) $(UNIT_TEST_LIB_SRCS) $(UNIT_TEST_EXTRA_LIB_SRCS) -o $(UNIT_TEST_DESKTOP_BIN)
 	@$(UNIT_TEST_DESKTOP_BIN) > /tmp/librl_unit_tests_desktop.log 2>&1 || (cat /tmp/librl_unit_tests_desktop.log && exit 1)
 	@tail -n 1 /tmp/librl_unit_tests_desktop.log
 
 unit_test_wasm: check_node
 	@mkdir -p "$(EM_CACHE_DIR)"
-	$(EM_ENV) $(CC_WASM) $(CFLAGS) $(INCLUDES) -I$(UNIT_TEST_DIR) $(UNIT_TEST_MAIN) $(UNIT_TEST_SRCS) $(UNIT_TEST_LIB_SRCS) $(UNIT_TEST_EXTRA_LIB_SRCS) -o $(UNIT_TEST_WASM_JS) -s ENVIRONMENT=node -s EXIT_RUNTIME=1
+	$(EM_ENV) $(CC_WASM) $(CFLAGS) -DHEADLESS $(INCLUDES) -I$(UNIT_TEST_DIR) $(UNIT_TEST_MAIN) $(UNIT_TEST_SRCS) $(UNIT_TEST_LIB_SRCS) $(UNIT_TEST_EXTRA_LIB_SRCS) -o $(UNIT_TEST_WASM_JS) -s ENVIRONMENT=node -s EXIT_RUNTIME=1
 	@$(NODE) $(UNIT_TEST_WASM_JS) > /tmp/librl_unit_tests_wasm.log 2>&1 || (cat /tmp/librl_unit_tests_wasm.log && exit 1)
 	@tail -n 1 /tmp/librl_unit_tests_wasm.log
 

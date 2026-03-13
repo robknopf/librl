@@ -207,15 +207,14 @@ Main responsibilities:
 - Asset-host configuration:
   - `rl_loader_set_asset_host(asset_host)`
   - `rl_loader_get_asset_host()`
-- Async restore / prepare operations:
-  - `rl_loader_begin_restore()`
-  - `rl_loader_begin_prepare_file(filename)`
-  - `rl_loader_begin_prepare_model(filename)`
-  - `rl_loader_begin_prepare_paths(filenames, count)`
-- Async operation lifecycle:
-  - `rl_loader_poll_op(op)`
-  - `rl_loader_finish_op(op)`
-  - `rl_loader_free_op(op)`
+- Async restore / import operations:
+  - `rl_loader_restore_fs_async()`
+  - `rl_loader_import_asset_async(filename)`
+  - `rl_loader_import_assets_async(filenames, count)`
+- Async task lifecycle:
+  - `rl_loader_poll_task(task)`
+  - `rl_loader_finish_task(task)`
+  - `rl_loader_free_task(task)`
 - Local cache queries and maintenance:
   - `rl_loader_is_local(filename)`
   - `rl_loader_uncache_file(filename)`
@@ -230,8 +229,8 @@ Notes:
   - begin one or more prepare operations
   - poll/finish those ops across frames
   - only then call APIs that synchronously consume the prepared assets
-- `rl_loader_begin_prepare_model(...)` is dependency-aware for model assets that may require additional files at load time.
-- `rl_loader_begin_prepare_paths(...)` is the convenience batch entry point used by the C example bootstrap flow.
+- `rl_loader_import_asset_async(...)` is dependency-aware for assets like `.gltf` that may require additional files at load time.
+- `rl_loader_import_assets_async(...)` is the convenience batch entry point used by the C example bootstrap flow.
 - URL and file-path normalization flow is centralized through `path_normalize()`.
 - URL normalization preserves scheme/authority/query/fragment and normalizes only URL path segments.
 
@@ -307,7 +306,7 @@ void run_lua_module_example(void)
 
     (void)rl_event_emit("lua.do_string", "print('hello from lua module')");
     (void)rl_event_emit("lua.add_path", "assets/scripts/lua");
-    (void)rl_event_emit("lua.do_file", "startup.lua");
+    (void)rl_event_emit("lua.do_file", "main.lua");
 
     if (rl_module_get_config_instance(lua.api, lua.state, &config) == 0) {
         /* host can now create the window/runtime from config */

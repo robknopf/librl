@@ -1,4 +1,4 @@
-#include "rl_lua_module.h"
+#include "rl_module_lua.h"
 #include "fileio/fileio.h"
 
 #include <stdio.h>
@@ -148,9 +148,9 @@ int main(void)
         "assert(event_count == 1)\n"
         "assert(event_payload == 'from_host')\n";
 
-    api = rl_lua_module_get_api();
+    api = rl_module_lua_get_api();
     if (api == NULL) {
-        fprintf(stderr, "rl_lua_module_get_api returned NULL\n");
+        fprintf(stderr, "rl_module_lua_get_api returned NULL\n");
         return 1;
     }
     if (api->abi_version != RL_MODULE_ABI_VERSION) {

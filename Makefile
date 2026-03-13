@@ -156,13 +156,12 @@ LDFLAGS_WASM = \
 		"_rl_text_measure", \
 		"_rl_text_measure_ex_to_scratch", \
 		"_rl_set_asset_host", \
-		"_rl_loader_begin_restore", \
-		"_rl_loader_begin_prepare_file", \
-		"_rl_loader_begin_prepare_model", \
-		"_rl_loader_begin_prepare_paths_from_scratch", \
-		"_rl_loader_poll_op", \
-		"_rl_loader_finish_op", \
-		"_rl_loader_free_op", \
+		"_rl_loader_restore_fs_async", \
+		"_rl_loader_import_asset_async", \
+		"_rl_loader_import_assets_from_scratch_async", \
+		"_rl_loader_poll_task", \
+		"_rl_loader_finish_task", \
+		"_rl_loader_free_task", \
 		"_rl_loader_is_local", \
 		"_rl_loader_uncache_file", \
 		"_rl_loader_clear_cache", \

@@ -1,5 +1,5 @@
-#ifndef RL_LUA_MODULE_H
-#define RL_LUA_MODULE_H
+#ifndef RL_MODULE_LUA_H
+#define RL_MODULE_LUA_H
 
 #include "rl_module.h"
 
@@ -12,10 +12,10 @@ extern "C" {
  * api->update, and rl_module_deinit_instance(...). VM internals remain
  * private to the module implementation.
  */
-const rl_module_api_t *rl_lua_module_get_api(void);
+const rl_module_api_t *rl_module_lua_get_api(void);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // RL_LUA_MODULE_H
+#endif // RL_MODULE_LUA_H

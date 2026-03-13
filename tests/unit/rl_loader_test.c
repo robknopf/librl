@@ -39,7 +39,7 @@ int test_rl_loader_run(void)
     int data_size = 0;
     int poll_count = 0;
     unsigned char *data = NULL;
-    rl_loader_op_t *op = NULL;
+    rl_loader_task_t *task = NULL;
     const char glb_payload[] = "glb-from-remote";
     const char txt_payload[] = "txt-from-remote";
     const char gltf_payload[] =
@@ -69,23 +69,23 @@ int test_rl_loader_run(void)
     TEST_ASSERT(rl_loader_init("cache_loader_test") == 0);
     TEST_ASSERT(test_raylib_callback_is_set());
 
-    op = rl_loader_begin_restore();
-    TEST_ASSERT(op != NULL);
-    TEST_ASSERT(rl_loader_poll_op(op) == true);
-    TEST_ASSERT(rl_loader_finish_op(op) == 0);
-    rl_loader_free_op(op);
-    op = NULL;
+    task = rl_loader_restore_fs_async();
+    TEST_ASSERT(task != NULL);
+    TEST_ASSERT(rl_loader_poll_task(task) == true);
+    TEST_ASSERT(rl_loader_finish_task(task) == 0);
+    rl_loader_free_task(task);
+    task = NULL;
 
     data = test_raylib_invoke_load_file_data_callback("assets/model.glb", &data_size);
     TEST_ASSERT(data == NULL);
 
     fetch_url_stub_set_response(200, glb_payload, sizeof(glb_payload) - 1);
-    op = rl_loader_begin_prepare_file("https://example.com/assets/model.glb?x=1#frag");
-    TEST_ASSERT(op != NULL);
-    TEST_ASSERT(rl_loader_poll_op(op) == true);
-    TEST_ASSERT(rl_loader_finish_op(op) == 0);
-    rl_loader_free_op(op);
-    op = NULL;
+    task = rl_loader_import_asset_async("https://example.com/assets/model.glb?x=1#frag");
+    TEST_ASSERT(task != NULL);
+    TEST_ASSERT(rl_loader_poll_task(task) == true);
+    TEST_ASSERT(rl_loader_finish_task(task) == 0);
+    rl_loader_free_task(task);
+    task = NULL;
     TEST_ASSERT(fetch_url_stub_get_call_count() == 1);
     TEST_ASSERT(strcmp(fetch_url_stub_get_last_host(), "https://example.com") == 0);
     TEST_ASSERT(strcmp(fetch_url_stub_get_last_path(), "assets/model.glb") == 0);
@@ -105,12 +105,12 @@ int test_rl_loader_run(void)
     free(data);
 
     fetch_url_stub_set_response(200, txt_payload, sizeof(txt_payload) - 1);
-    op = rl_loader_begin_prepare_file("assets/readme.txt");
-    TEST_ASSERT(op != NULL);
-    TEST_ASSERT(rl_loader_poll_op(op) == true);
-    TEST_ASSERT(rl_loader_finish_op(op) == 0);
-    rl_loader_free_op(op);
-    op = NULL;
+    task = rl_loader_import_asset_async("assets/readme.txt");
+    TEST_ASSERT(task != NULL);
+    TEST_ASSERT(rl_loader_poll_task(task) == true);
+    TEST_ASSERT(rl_loader_finish_task(task) == 0);
+    rl_loader_free_task(task);
+    task = NULL;
     TEST_ASSERT(fetch_url_stub_get_call_count() == 2);
     TEST_ASSERT(strcmp(fetch_url_stub_get_last_host(), custom_host) == 0);
     TEST_ASSERT(strcmp(fetch_url_stub_get_last_path(), "assets/readme.txt") == 0);
@@ -128,14 +128,14 @@ int test_rl_loader_run(void)
     fetch_url_stub_enqueue_response(200, gltf_payload, sizeof(gltf_payload) - 1);
     fetch_url_stub_enqueue_response(200, (const char *)mesh_payload, sizeof(mesh_payload));
     fetch_url_stub_enqueue_response(200, (const char *)tex_payload, sizeof(tex_payload));
-    op = rl_loader_begin_prepare_model("assets/scene.gltf");
-    TEST_ASSERT(op != NULL);
-    TEST_ASSERT(rl_loader_poll_op(op) == false);
-    TEST_ASSERT(rl_loader_poll_op(op) == false);
-    TEST_ASSERT(rl_loader_poll_op(op) == true);
-    TEST_ASSERT(rl_loader_finish_op(op) == 0);
-    rl_loader_free_op(op);
-    op = NULL;
+    task = rl_loader_import_asset_async("assets/scene.gltf");
+    TEST_ASSERT(task != NULL);
+    TEST_ASSERT(rl_loader_poll_task(task) == false);
+    TEST_ASSERT(rl_loader_poll_task(task) == false);
+    TEST_ASSERT(rl_loader_poll_task(task) == true);
+    TEST_ASSERT(rl_loader_finish_task(task) == 0);
+    rl_loader_free_task(task);
+    task = NULL;
     TEST_ASSERT(fetch_url_stub_get_call_count() == 5);
     TEST_ASSERT(rl_loader_is_local("assets/scene.gltf") == true);
     TEST_ASSERT(rl_loader_is_local("assets/mesh.bin") == true);
@@ -168,17 +168,17 @@ int test_rl_loader_run(void)
         fetch_url_stub_enqueue_response(200, batch_gltf_payload, sizeof(batch_gltf_payload) - 1);
         fetch_url_stub_enqueue_response(200, (const char *)batch_mesh_payload, sizeof(batch_mesh_payload));
         fetch_url_stub_enqueue_response(200, (const char *)batch_tex_payload, sizeof(batch_tex_payload));
-        op = rl_loader_begin_prepare_paths(batch_paths, 2);
-        TEST_ASSERT(op != NULL);
+        task = rl_loader_import_assets_async(batch_paths, 2);
+        TEST_ASSERT(task != NULL);
         poll_count = 0;
-        while (!rl_loader_poll_op(op) && poll_count < 8) {
+        while (!rl_loader_poll_task(task) && poll_count < 8) {
             poll_count++;
         }
         TEST_ASSERT(poll_count > 0);
         TEST_ASSERT(poll_count < 8);
-        TEST_ASSERT(rl_loader_finish_op(op) == 0);
-        rl_loader_free_op(op);
-        op = NULL;
+        TEST_ASSERT(rl_loader_finish_task(task) == 0);
+        rl_loader_free_task(task);
+        task = NULL;
     }
 
     TEST_ASSERT(rl_loader_is_local("assets/readme2.txt") == true);
@@ -200,12 +200,12 @@ int test_rl_loader_run(void)
     TEST_ASSERT(rl_loader_init("cache_loader_test") == 0);
     TEST_ASSERT(test_raylib_callback_is_set());
 
-    op = rl_loader_begin_restore();
-    TEST_ASSERT(op != NULL);
-    TEST_ASSERT(rl_loader_poll_op(op) == true);
-    TEST_ASSERT(rl_loader_finish_op(op) == 0);
-    rl_loader_free_op(op);
-    op = NULL;
+    task = rl_loader_restore_fs_async();
+    TEST_ASSERT(task != NULL);
+    TEST_ASSERT(rl_loader_poll_task(task) == true);
+    TEST_ASSERT(rl_loader_finish_task(task) == 0);
+    rl_loader_free_task(task);
+    task = NULL;
 
     data = test_raylib_invoke_load_file_data_callback("assets/readme.txt", &data_size);
     TEST_ASSERT(data == NULL);

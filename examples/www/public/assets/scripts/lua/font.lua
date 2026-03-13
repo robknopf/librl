@@ -1,7 +1,8 @@
 local Font = {}
 Font.__index = Font
+local ResourceAsync = require("resource_async")
 
-function Font.load(path, size)
+local function load_sync(path, size)
   local handle = load_font(path, size)
   if handle == nil or handle == 0 then
     return nil
@@ -11,6 +12,16 @@ function Font.load(path, size)
     handle = handle,
     size = size,
   }, Font)
+end
+
+function Font.load(path, size, callback)
+  if type(callback) == "function" then
+    return ResourceAsync.request("font", path, { size = size }, function()
+      return load_sync(path, size)
+    end, callback)
+  end
+
+  return load_sync(path, size)
 end
 
 function Font:draw(text, x, y, size, scale, tint)

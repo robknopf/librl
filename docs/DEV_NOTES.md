@@ -56,6 +56,35 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
   - file null: emits no source suffix
 - Keep redirected raylib logs source-light unless source info is reliable.
 
+## Naming Conventions
+
+- Prefer subsystem-first public API names:
+  - `rl_window_init`
+  - `rl_text_draw`
+  - `rl_frame_runner_run`
+  - `rl_module_lua_get_api`
+- For async starters that return a pollable task, make that explicit with `_async`:
+  - `rl_loader_import_asset_async`
+  - `rl_loader_restore_fs_async`
+  - `fileio_restore_async`
+  - `fetch_url_async`
+- Keep async task lifecycle verbs readable and non-suffixed:
+  - `*_poll_task`
+  - `*_finish_task`
+  - `*_free_task`
+- Callback entry points should use `on_<name>` when they are invoked by another system:
+  - `on_init`
+  - `on_tick`
+  - `on_shutdown`
+- Internal processing helpers should use `handle_<name>`:
+  - `handle_boot_restore`
+  - `handle_boot_prepare`
+- Avoid `<name>_handler` naming unless there is a strong reason.
+- Module implementation naming should follow `rl_module_<backend>_*`:
+  - file/header: `rl_module_lua.c`, `rl_module_lua.h`
+  - getter: `rl_module_lua_get_api()`
+- Module identity strings like `"lua"` are runtime identifiers, not a reason to use older `rl_lua_*` symbol naming.
+
 ## Audio API State
 
 - `rl_music` and `rl_sound` subsystems are available in C/JS/Nim bindings.
@@ -84,7 +113,7 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
   - sounds:
     - `rl_sound_create()` -> `LoadSound()`
     - in the vendored raylib, `raudio.c` uses its own private `LoadFileData()` helper that falls back to `fopen()` directly
-    - because of that, `rl_sound_create()` pre-caches the file with `rl_loader_cache_file()` before calling `LoadSound()`
+    - because of that, sound creation still assumes the file is already local before `LoadSound()` runs
 - Practical implication:
   - if a file-backed resource mysteriously ignores the loader callback path, check whether raylib is using a subsystem-local loader instead of the callback-aware `rcore` path
   - sound loading is the known case today
@@ -185,7 +214,7 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
 - Ordering in the C example:
   1. host initializes librl and Lua module
   2. host emits `lua.add_path("assets/scripts/lua")`
-  3. host emits `lua.do_file("lua_demo.lua")`
+  3. host emits `lua.do_file("main.lua")`
   4. host asks the module for config through `api->get_config`
   5. host creates window / sets target FPS
   6. host calls module `start`

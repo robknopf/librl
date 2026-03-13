@@ -179,7 +179,7 @@ typedef struct rl_module_entry_t {
  * Usage: rl_module_register(lua)
  * Note: argument is a token, not a string literal.
  */
-#define rl_module_register(name_token) { #name_token, rl_##name_token##_module_get_api }
+#define rl_module_register(name_token) { #name_token, rl_module_##name_token##_get_api }
 
 void rl_module_log(const rl_module_host_api_t *host, int level, const char *message);
 void rl_module_log_source(const rl_module_host_api_t *host, int level, const char *source_file,

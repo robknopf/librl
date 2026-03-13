@@ -1,7 +1,8 @@
 local Music = {}
 Music.__index = Music
+local ResourceAsync = require("resource_async")
 
-function Music.load(path)
+local function load_sync(path)
   local handle = load_music(path)
   if handle == nil or handle == 0 then
     return nil
@@ -10,6 +11,16 @@ function Music.load(path)
   return setmetatable({
     handle = handle,
   }, Music)
+end
+
+function Music.load(path, callback)
+  if type(callback) == "function" then
+    return ResourceAsync.request("music", path, nil, function()
+      return load_sync(path)
+    end, callback)
+  end
+
+  return load_sync(path)
 end
 
 function Music:play()

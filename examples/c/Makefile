@@ -96,7 +96,7 @@ $(MODULE_REGISTRY_SRC): FORCE | $(OUT_DIR)
 		echo '#include <string.h>'; \
 		echo ''; \
 		if [ "$(USES_MODULE_LUA)" = "1" ]; then \
-			echo 'extern const rl_module_api_t *rl_lua_module_get_api(void);'; \
+			echo 'extern const rl_module_api_t *rl_module_lua_get_api(void);'; \
 		fi; \
 		echo ''; \
 		echo 'static const rl_module_entry_t g_example_modules[] = {'; \

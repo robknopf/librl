@@ -1,8 +1,8 @@
 #include "rl_module_lua.h"
 #include "rl_color.h"
 #include "rl_camera3d.h"
+#include "rl_loader.h"
 #include "rl_font.h"
-#include "rl.h"
 #include "rl_model.h"
 #include "rl_music.h"
 #include "rl_pick.h"
@@ -10,6 +10,8 @@
 #include "rl_sprite3d.h"
 #include "rl_texture.h"
 #include "fileio/fileio.h"
+#include "rl_input.h"
+#include "rl_window.h"
 #include "path/path.h"
 
 #include <lua.h>

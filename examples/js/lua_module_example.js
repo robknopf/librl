@@ -103,8 +103,8 @@ function applyLetterboxCanvasStyle(canvas, idealWidth, idealHeight) {
     const canvas = document.getElementById("renderCanvas");
     const createExampleModule = await loadExampleModuleFactory();
     const mod = await createExampleModule(getEnv());
-    const idealWidth = 1024 * 4;
-    const idealHeight = 1280 * 4;
+    const idealWidth = 1024;
+    const idealHeight = 1280;
 
     console.log("WASM module initialized:", mod);
     console.log(`Letterbox target size: ${idealWidth}x${idealHeight}`);

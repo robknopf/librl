@@ -214,7 +214,7 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
 - Ordering in the C example:
   1. host initializes librl and Lua module
   2. host emits `lua.add_path("assets/scripts/lua")`
-  3. host emits `lua.do_file("main.lua")`
+  3. host emits `lua.do_file("boot.lua")`
   4. host asks the module for config through `api->get_config`
   5. host creates window / sets target FPS
   6. host calls module `start`

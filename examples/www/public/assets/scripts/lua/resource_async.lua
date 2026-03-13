@@ -4,11 +4,18 @@ local next_rid = 1
 local pending = {}
 
 local function parse_loaded_payload(payload)
-  local rid = tonumber(payload)
-  if rid == nil then
-    return nil
+  local text = tostring(payload or "")
+  local sep = string.find(text, "|", 1, true)
+  local rid = nil
+  local handle = nil
+
+  if sep == nil then
+    return tonumber(text), nil
   end
-  return rid
+
+  rid = tonumber(string.sub(text, 1, sep - 1))
+  handle = tonumber(string.sub(text, sep + 1))
+  return rid, handle
 end
 
 local function parse_error_payload(payload)
@@ -27,7 +34,7 @@ local function parse_error_payload(payload)
 end
 
 event_on("resource.loaded", function(payload)
-  local rid = parse_loaded_payload(payload)
+  local rid, handle = parse_loaded_payload(payload)
   local request = rid ~= nil and pending[rid] or nil
   local resource = nil
 
@@ -36,7 +43,7 @@ event_on("resource.loaded", function(payload)
   end
 
   pending[rid] = nil
-  resource = request.resolve()
+  resource = request.resolve(handle)
   if resource == nil then
     request.callback(nil, "resource create failed")
     return

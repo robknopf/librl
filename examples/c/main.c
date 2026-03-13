@@ -8,7 +8,8 @@
 #include <string.h>
 
 #define LUA_SCRIPT_ROOT "assets/scripts/lua"
-#define LUA_ENTRY_SCRIPT "main.lua"
+#define LUA_BOOT_SCRIPT "boot.lua"
+#define LUA_APP_MODULE "lua_demo"
 
 typedef enum example_boot_state_t {
   EXAMPLE_BOOT_RESTORE = 0,
@@ -20,8 +21,10 @@ typedef enum example_boot_state_t {
 
 typedef enum example_resource_kind_t {
   EXAMPLE_RESOURCE_KIND_NONE = 0,
+  EXAMPLE_RESOURCE_KIND_SCRIPT,
   EXAMPLE_RESOURCE_KIND_TEXTURE,
   EXAMPLE_RESOURCE_KIND_MODEL,
+  EXAMPLE_RESOURCE_KIND_SPRITE3D,
   EXAMPLE_RESOURCE_KIND_FONT,
   EXAMPLE_RESOURCE_KIND_SOUND,
   EXAMPLE_RESOURCE_KIND_MUSIC
@@ -30,12 +33,13 @@ typedef enum example_resource_kind_t {
 #define EXAMPLE_MAX_PENDING_RESOURCE_REQUESTS 64
 
 static const char *const EXAMPLE_ASSET_MANIFEST[] = {
-    LUA_SCRIPT_ROOT "/main.lua",
+    LUA_SCRIPT_ROOT "/boot.lua",
     LUA_SCRIPT_ROOT "/lua_demo.lua",
     LUA_SCRIPT_ROOT "/input_mapping.lua",
     LUA_SCRIPT_ROOT "/model.lua",
     LUA_SCRIPT_ROOT "/music.lua",
     LUA_SCRIPT_ROOT "/resource_async.lua",
+    LUA_SCRIPT_ROOT "/script_async.lua",
     LUA_SCRIPT_ROOT "/texture.lua",
     LUA_SCRIPT_ROOT "/sprite3d.lua",
     LUA_SCRIPT_ROOT "/sound.lua",
@@ -79,16 +83,75 @@ static void emit_resource_error(int rid, const char *message) {
   (void)rl_event_emit("resource.error", payload);
 }
 
+static void emit_script_error(int rid, const char *message) {
+  char payload[512];
+
+  (void)snprintf(payload, sizeof(payload), "%d|%s", rid,
+                 message != NULL ? message : "script import failed");
+  (void)rl_event_emit("script.error", payload);
+}
+
 static example_resource_kind_t parse_resource_kind(const char *kind) {
   if (kind == NULL) {
     return EXAMPLE_RESOURCE_KIND_NONE;
   }
   if (strcmp(kind, "texture") == 0) return EXAMPLE_RESOURCE_KIND_TEXTURE;
   if (strcmp(kind, "model") == 0) return EXAMPLE_RESOURCE_KIND_MODEL;
+  if (strcmp(kind, "sprite3d") == 0) return EXAMPLE_RESOURCE_KIND_SPRITE3D;
   if (strcmp(kind, "font") == 0) return EXAMPLE_RESOURCE_KIND_FONT;
   if (strcmp(kind, "sound") == 0) return EXAMPLE_RESOURCE_KIND_SOUND;
   if (strcmp(kind, "music") == 0) return EXAMPLE_RESOURCE_KIND_MUSIC;
   return EXAMPLE_RESOURCE_KIND_NONE;
+}
+
+static int parse_script_request_payload(const char *payload, int *out_rid,
+                                        char *path, size_t path_size) {
+  char buffer[512];
+  char *cursor = NULL;
+  char *rid_text = NULL;
+  char *path_text = NULL;
+
+  if (payload == NULL || out_rid == NULL || path == NULL || path_size == 0) {
+    return -1;
+  }
+
+  (void)snprintf(buffer, sizeof(buffer), "%s", payload);
+  rid_text = buffer;
+  cursor = strchr(rid_text, '|');
+  if (cursor == NULL) return -1;
+  *cursor++ = '\0';
+  path_text = cursor;
+  if (path_text == NULL || path_text[0] == '\0') {
+    return -1;
+  }
+
+  *out_rid = atoi(rid_text);
+  (void)snprintf(path, path_size, "%s", path_text);
+  return 0;
+}
+
+static rl_handle_t create_resource_handle(const example_resource_request_t *request) {
+  if (request == NULL) {
+    return 0;
+  }
+
+  switch (request->kind) {
+  case EXAMPLE_RESOURCE_KIND_TEXTURE:
+    return rl_texture_create(request->path);
+  case EXAMPLE_RESOURCE_KIND_MODEL:
+    return rl_model_create(request->path);
+  case EXAMPLE_RESOURCE_KIND_SPRITE3D:
+    return rl_sprite3d_create(request->path);
+  case EXAMPLE_RESOURCE_KIND_FONT:
+    return rl_font_create(request->path, request->size);
+  case EXAMPLE_RESOURCE_KIND_SOUND:
+    return rl_sound_create(request->path);
+  case EXAMPLE_RESOURCE_KIND_MUSIC:
+    return rl_music_create(request->path);
+  case EXAMPLE_RESOURCE_KIND_NONE:
+  default:
+    return 0;
+  }
 }
 
 static int parse_resource_request_payload(const char *payload, int *out_rid,
@@ -248,6 +311,7 @@ static void on_resource_load(void *payload, void *user_data) {
   case EXAMPLE_RESOURCE_KIND_MODEL:
     request->loader_task = rl_loader_import_asset_async(request->path);
     break;
+  case EXAMPLE_RESOURCE_KIND_SPRITE3D:
   case EXAMPLE_RESOURCE_KIND_TEXTURE:
   case EXAMPLE_RESOURCE_KIND_FONT:
   case EXAMPLE_RESOURCE_KIND_SOUND:
@@ -263,6 +327,38 @@ static void on_resource_load(void *payload, void *user_data) {
 
   if (request->loader_task == NULL) {
     emit_resource_error(rid, "failed to start resource prepare");
+    free_resource_request(request);
+  }
+}
+
+static void on_script_import(void *payload, void *user_data) {
+  example_context_t *context = (example_context_t *)user_data;
+  example_resource_request_t *request = NULL;
+  char path[256];
+  int rid = 0;
+
+  if (context == NULL) {
+    return;
+  }
+
+  if (parse_script_request_payload((const char *)payload, &rid, path,
+                                   sizeof(path)) != 0) {
+    emit_script_error(rid, "invalid script import request");
+    return;
+  }
+
+  request = alloc_resource_request(context);
+  if (request == NULL) {
+    emit_script_error(rid, "script request queue is full");
+    return;
+  }
+
+  request->rid = rid;
+  request->kind = EXAMPLE_RESOURCE_KIND_SCRIPT;
+  (void)snprintf(request->path, sizeof(request->path), "%s", path);
+  request->loader_task = rl_loader_import_asset_async(request->path);
+  if (request->loader_task == NULL) {
+    emit_script_error(rid, "failed to start script import");
     free_resource_request(request);
   }
 }
@@ -300,6 +396,10 @@ static void handle_boot_restore(example_context_t *context) {
       return;
     }
 
+    // debugging, clear the cache so we don't use stale assets
+    rl_loader_clear_cache();
+    //
+    
     context->loader_task = rl_loader_import_assets_async(
         EXAMPLE_ASSET_MANIFEST,
         sizeof(EXAMPLE_ASSET_MANIFEST) / sizeof(EXAMPLE_ASSET_MANIFEST[0]));
@@ -356,7 +456,13 @@ static void handle_boot_init_module(example_context_t *context) {
   (void)rl_event_on("lua.ready", on_module_ready, NULL);
   (void)rl_event_on("lua.error", on_module_error, NULL);
   (void)rl_event_emit("lua.add_path", LUA_SCRIPT_ROOT);
-  (void)rl_event_emit("lua.do_file", LUA_ENTRY_SCRIPT);
+  (void)rl_event_emit("lua.do_file", LUA_BOOT_SCRIPT);
+  {
+    char boot_command[256];
+    (void)snprintf(boot_command, sizeof(boot_command), "boot('%s', '%s')",
+                   LUA_SCRIPT_ROOT, LUA_APP_MODULE);
+    (void)rl_event_emit("lua.do_string", boot_command);
+  }
   if (rl_module_get_config_instance(script_module->api, script_module->state,
                                     script_config) != 0) {
     log_warn("Lua script get_config failed");
@@ -413,13 +519,35 @@ static void poll_resource_requests(example_context_t *context) {
     request->loader_task = NULL;
 
     if (rc != 0) {
-      emit_resource_error(request->rid, "resource prepare failed");
+      if (request->kind == EXAMPLE_RESOURCE_KIND_SCRIPT) {
+        emit_script_error(request->rid, "script import failed");
+      } else {
+        emit_resource_error(request->rid, "resource prepare failed");
+      }
       free_resource_request(request);
       continue;
     }
 
-    (void)snprintf(payload, sizeof(payload), "%d", request->rid);
-    (void)rl_event_emit("resource.loaded", payload);
+    if (request->kind == EXAMPLE_RESOURCE_KIND_SCRIPT) {
+      (void)snprintf(payload, sizeof(payload), "%d", request->rid);
+      (void)rl_event_emit("script.loaded", payload);
+      free_resource_request(request);
+      continue;
+    }
+
+    {
+      rl_handle_t handle = create_resource_handle(request);
+      if (handle == 0) {
+        emit_resource_error(request->rid, "resource create failed");
+        free_resource_request(request);
+        continue;
+      }
+
+      (void)snprintf(payload, sizeof(payload), "%d|%u", request->rid,
+                     (unsigned int)handle);
+      (void)rl_event_emit("resource.loaded", payload);
+    }
+
     free_resource_request(request);
   }
 }
@@ -449,6 +577,7 @@ static void on_shutdown(void *user_data) {
   (void)rl_event_off("lua.ready", on_module_ready, NULL);
   (void)rl_event_off("lua.error", on_module_error, NULL);
   (void)rl_event_off("resource.load", on_resource_load, context);
+  (void)rl_event_off("script.import", on_script_import, context);
   rl_deinit();
   rl_window_close();
 }
@@ -466,8 +595,8 @@ static void on_init(void *user_data) {
     return;
   }
 
-  rl_loader_clear_cache();
   (void)rl_event_on("resource.load", on_resource_load, context);
+  (void)rl_event_on("script.import", on_script_import, context);
 
   rl_window_init(context->script_config.width, context->script_config.height,
                  context->script_config.title, context->script_config.flags);

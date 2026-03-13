@@ -2,8 +2,7 @@ local Model = {}
 Model.__index = Model
 local ResourceAsync = require("resource_async")
 
-local function load_sync(path)
-  local handle = load_model(path)
+local function wrap_handle(handle)
   if handle == nil or handle == 0 then
     return nil
   end
@@ -22,11 +21,13 @@ local function load_sync(path)
   }, Model)
 end
 
+local function load_sync(path)
+  return wrap_handle(load_model(path))
+end
+
 function Model.load(path, callback)
   if type(callback) == "function" then
-    return ResourceAsync.request("model", path, nil, function()
-      return load_sync(path)
-    end, callback)
+    return ResourceAsync.request("model", path, nil, wrap_handle, callback)
   end
 
   return load_sync(path)

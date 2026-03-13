@@ -306,7 +306,7 @@ void run_lua_module_example(void)
 
     (void)rl_event_emit("lua.do_string", "print('hello from lua module')");
     (void)rl_event_emit("lua.add_path", "assets/scripts/lua");
-    (void)rl_event_emit("lua.do_file", "main.lua");
+    (void)rl_event_emit("lua.do_file", "boot.lua");
 
     if (rl_module_get_config_instance(lua.api, lua.state, &config) == 0) {
         /* host can now create the window/runtime from config */

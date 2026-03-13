@@ -2,8 +2,7 @@ local Sprite3D = {}
 Sprite3D.__index = Sprite3D
 local ResourceAsync = require("resource_async")
 
-local function load_sync(path)
-  local handle = load_sprite3d(path)
+local function wrap_handle(handle)
   if handle == nil or handle == 0 then
     return nil
   end
@@ -17,11 +16,13 @@ local function load_sync(path)
   }, Sprite3D)
 end
 
+local function load_sync(path)
+  return wrap_handle(load_sprite3d(path))
+end
+
 function Sprite3D.load(path, callback)
   if type(callback) == "function" then
-    return ResourceAsync.request("texture", path, nil, function()
-      return load_sync(path)
-    end, callback)
+    return ResourceAsync.request("sprite3d", path, nil, wrap_handle, callback)
   end
 
   return load_sync(path)

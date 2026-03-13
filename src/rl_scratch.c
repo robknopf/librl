@@ -51,6 +51,12 @@ const rl_scratch_offsets_t *rl_scratch_get_offsets(void)
             .y = offsetof(rl_scratch_t, touchpoints.touchpoint[0].y),
             .id = offsetof(rl_scratch_t, touchpoints.touchpoint[0].id), 
             .stride = sizeof(((rl_scratch_t *)0)->touchpoints.touchpoint[0]),
+        },
+        .string_table = {
+            .offsets = offsetof(rl_scratch_t, string_offsets),
+            .bytes = offsetof(rl_scratch_t, string_bytes),
+            .max_entries = RL_SCRATCH_MAX_STRING_TABLE_ENTRIES,
+            .max_bytes = RL_SCRATCH_MAX_STRING_TABLE_BYTES,
         }
     };
     return &rl_scratch_offsets;

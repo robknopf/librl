@@ -23,7 +23,7 @@ Main responsibilities:
 
 - Runtime lifecycle (`rl_init`, `rl_deinit`)
 - Window management (`rl_window_init(width, height, title, flags)`, size/position/title helpers)
-- Frame lifecycle (`rl_frame_runner_run`, `rl_frame_runner_request_stop`, `rl_frame_runner_set_target_fps`, `rl_frame_begin`, `rl_frame_end`, `rl_update`)
+- Frame lifecycle (`rl_frame_runner_run`, `rl_frame_runner_request_stop`, `rl_frame_runner_set_target_fps`, `rl_frame_begin`, `rl_frame_end`)
 - Basic drawing (text, rectangles, cubes, fps helpers)
 - 2D/3D mode switching
 - Mouse/keyboard input helpers (`rl_input_get_mouse*`, `rl_input_get_keyboard_state`)
@@ -158,19 +158,80 @@ Main responsibilities:
 - Billboard drawing in active 3D camera context
 - Sprite handle destruction
 
+## Debug (`include/rl_debug.h`)
+
+Main responsibilities:
+
+- Optional debug overlay helpers
+- Built-in FPS display configuration
+
+Notes:
+
+- `rl_debug_enable_fps(x, y, font_size, font_path)` enables an FPS overlay and optionally loads a custom font for it.
+- `rl_debug_disable()` turns the overlay off and releases any font owned by the debug subsystem.
+- The current implementation draws the debug overlay automatically during `rl_frame_end()`.
+
+## Frame Runner (`include/rl_frame_runner.h`)
+
+Main responsibilities:
+
+- Cross-platform frame loop entrypoint
+- Frame pacing configuration
+- Explicit run-loop stop request
+
+Notes:
+
+- `rl_frame_runner_run(init_fn, tick_fn, shutdown_fn, context)` is the high-level app loop helper used by the C example.
+- `init_fn` runs once at startup, `tick_fn` runs once per frame, and `shutdown_fn` runs once when the loop exits.
+- `rl_frame_runner_request_stop()` requests loop termination.
+- `rl_frame_runner_set_target_fps(...)` configures frame pacing policy independently of the lower-level frame begin/end calls.
+
+## Frame Commands (`include/rl_frame_commands.h`)
+
+Main responsibilities:
+
+- Fixed-capacity per-frame command buffer type (`rl_frame_command_buffer_t`)
+- Append helper for module-emitted frame commands
+- Ordered execution helpers for clear / audio / 3D / 2D passes
+
+Notes:
+
+- `rl_frame_commands_append(...)` appends one `rl_module_frame_command_t` into the buffer.
+- The command buffer is intentionally host-owned; `rl_frame_runner` does not depend on it.
+- The C example uses this subsystem to capture commands emitted by the Lua module, then drains them in phase order during each frame.
+
 ## Loader (`include/rl_loader.h`)
 
 Main responsibilities:
 
-- Loader subsystem init/deinit
-- Shared backing for cross-platform asset loading and cache behavior
-- Cache management APIs:
-  - `rl_loader_cache_file(filename)`
+- Asset-host configuration:
+  - `rl_loader_set_asset_host(asset_host)`
+  - `rl_loader_get_asset_host()`
+- Async restore / prepare operations:
+  - `rl_loader_begin_restore()`
+  - `rl_loader_begin_prepare_file(filename)`
+  - `rl_loader_begin_prepare_model(filename)`
+  - `rl_loader_begin_prepare_paths(filenames, count)`
+- Async operation lifecycle:
+  - `rl_loader_poll_op(op)`
+  - `rl_loader_finish_op(op)`
+  - `rl_loader_free_op(op)`
+- Local cache queries and maintenance:
+  - `rl_loader_is_local(filename)`
   - `rl_loader_uncache_file(filename)`
   - `rl_loader_clear_cache()`
 
 Notes:
 
+- The loader no longer performs hidden blocking fetches during synchronous file reads.
+- Synchronous consumers like raylib file callbacks are expected to read already-local files.
+- On wasm, the intended flow is:
+  - start restore once
+  - begin one or more prepare operations
+  - poll/finish those ops across frames
+  - only then call APIs that synchronously consume the prepared assets
+- `rl_loader_begin_prepare_model(...)` is dependency-aware for model assets that may require additional files at load time.
+- `rl_loader_begin_prepare_paths(...)` is the convenience batch entry point used by the C example bootstrap flow.
 - URL and file-path normalization flow is centralized through `path_normalize()`.
 - URL normalization preserves scheme/authority/query/fragment and normalizes only URL path segments.
 

@@ -15,6 +15,8 @@ extern "C" {
 #define RL_SCRATCH_MAX_NUM_GAMEPADS 4
 #define RL_SCRATCH_MAX_NUM_GAMEPAD_AXIS 4
 #define RL_SCRATCH_NUM_GAMEPAD_BUTTONS 16
+#define RL_SCRATCH_MAX_STRING_TABLE_ENTRIES 256
+#define RL_SCRATCH_MAX_STRING_TABLE_BYTES 8192
 
 typedef struct
 {
@@ -72,6 +74,9 @@ typedef struct
 
     rl_touchpoints_t touchpoints;
 
+    uint32_t string_offsets[RL_SCRATCH_MAX_STRING_TABLE_ENTRIES];
+    char string_bytes[RL_SCRATCH_MAX_STRING_TABLE_BYTES];
+
 } rl_scratch_t;
 
 // Offsets structure for JavaScript
@@ -120,6 +125,13 @@ typedef struct
         size_t y;         // offset to first touch point's y
         size_t stride;   // bytes between touch points
     } touchpoints;
+    struct
+    {
+        size_t offsets;
+        size_t bytes;
+        size_t max_entries;
+        size_t max_bytes;
+    } string_table;
 } rl_scratch_offsets_t;
 
 void rl_scratch_init();

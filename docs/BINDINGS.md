@@ -54,14 +54,11 @@ Notes:
     - `getPickStats()`
 - JS `initWindow(width, height, title, flags)` maps directly to C flags.
   - Example: `rl.initWindow(800, 600, "Title", rl.FLAG_MSAA_4X_HINT)`
-- Cache file helpers:
-  - `cacheFile(filename)`
+- Loader/cache helpers currently exposed in JS:
   - `uncacheFile(filename)`
   - `clearCache()`
-- IDBFS readiness helpers:
-  - `RL.isIdbfsReady()` returns true only after wasm-side restore from IndexedDB completes.
-  - `RL.waitForIdbfsReady(timeoutMs)` polls readiness and resolves to a boolean.
-  - During `RL.deinit()`, wasm marks readiness false immediately before triggering a best-effort async flush to IndexedDB.
+- JS still carries some older wasm cache/readiness convenience helpers.
+  - Treat those as compatibility wrappers until the JS binding is fully migrated to the new async loader-op API.
 
 ## Nim Binding
 
@@ -96,8 +93,15 @@ Notes:
 - Window config flags are exposed in Nim:
   - `rl_window_init(width, height, title, flags)`
   - `RL_FLAG_MSAA_4X_HINT`
-- Cache file helpers in Nim:
-  - `rl_loader_cache_file(filename)`
+- Loader helpers in Nim:
+  - `rl_loader_begin_restore()`
+  - `rl_loader_begin_prepare_file(filename)`
+  - `rl_loader_begin_prepare_model(filename)`
+  - `rl_loader_begin_prepare_paths(filenames, count)`
+  - `rl_loader_poll_op(op)`
+  - `rl_loader_finish_op(op)`
+  - `rl_loader_free_op(op)`
+  - `rl_loader_is_local(filename)`
   - `rl_loader_uncache_file(filename)`
   - `rl_loader_clear_cache()`
 

@@ -16,6 +16,7 @@ rl_loader_op_t *rl_loader_begin_restore(void);
 rl_loader_op_t *rl_loader_begin_prepare_file(const char *filename);
 rl_loader_op_t *rl_loader_begin_prepare_model(const char *filename);
 rl_loader_op_t *rl_loader_begin_prepare_paths(const char *const *filenames, size_t filename_count);
+rl_loader_op_t *rl_loader_begin_prepare_paths_from_scratch(size_t filename_count);
 bool rl_loader_poll_op(rl_loader_op_t *op);
 int rl_loader_finish_op(rl_loader_op_t *op);
 void rl_loader_free_op(rl_loader_op_t *op);

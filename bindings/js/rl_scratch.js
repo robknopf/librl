@@ -10,12 +10,14 @@
 //const HEAPF32 = Module.HEAPF32;
 
 var scratchAreaPtr = 0;
+var scratchAreaBytePtr = 0;
 var scratchAreaOffsets = {};
 
 Module.initScratchArea = () => {
 
     // Fetch scratch area pointer and offsets pointer (called once during initialization)
-    scratchAreaPtr = Module.ccall("rl_scratch_get", "number", [], []) >> 2; // Convert to 32-bit index
+    scratchAreaBytePtr = Module.ccall("rl_scratch_get", "number", [], []);
+    scratchAreaPtr = scratchAreaBytePtr >> 2; // Convert to 32-bit index
     const scratchAreaOffsetsPtr = Module.ccall("rl_scratch_get_offsets", "number", [], []) >> 2; // Convert to 32-bit index
 
 
@@ -59,6 +61,12 @@ Module.initScratchArea = () => {
             x: HEAP32[scratchAreaOffsetsPtr + 28],
             y: HEAP32[scratchAreaOffsetsPtr + 29],
             stride: HEAP32[scratchAreaOffsetsPtr + 30] >> 2, // Convert stride to 32-bit units
+        },
+        stringTable: {
+            offsets: HEAP32[scratchAreaOffsetsPtr + 31],
+            bytes: HEAP32[scratchAreaOffsetsPtr + 32],
+            maxEntries: HEAP32[scratchAreaOffsetsPtr + 33],
+            maxBytes: HEAP32[scratchAreaOffsetsPtr + 34],
         },
     };
 };
@@ -225,6 +233,34 @@ Module.getTouchpoint = (id) => {
         }
     }
     return null;
+}
+
+Module.writeScratchStringTable = (strings) => {
+    const values = Array.isArray(strings) ? strings : [];
+    const maxEntries = scratchAreaOffsets.stringTable.maxEntries;
+    const maxBytes = scratchAreaOffsets.stringTable.maxBytes;
+    const offsetsIndex = scratchAreaPtr + (scratchAreaOffsets.stringTable.offsets >> 2);
+    const bytesIndex = scratchAreaBytePtr + scratchAreaOffsets.stringTable.bytes;
+    let byteOffset = 0;
+
+    if (values.length > maxEntries) {
+        throw new Error(`scratch string table overflow: ${values.length} > ${maxEntries}`);
+    }
+
+    for (let i = 0; i < values.length; i++) {
+        const text = String(values[i] ?? "");
+        const encodedLength = lengthBytesUTF8(text) + 1;
+
+        if (byteOffset + encodedLength > maxBytes) {
+            throw new Error(`scratch string bytes overflow at index ${i}`);
+        }
+
+        HEAPU32[offsetsIndex + i] = byteOffset >>> 0;
+        stringToUTF8(text, bytesIndex + byteOffset, encodedLength);
+        byteOffset += encodedLength;
+    }
+
+    return values.length;
 }
 //}
 //return scratchAreaWrapper;

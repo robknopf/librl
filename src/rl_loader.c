@@ -17,6 +17,8 @@
 #include "lru_cache/lru_cache.h"
 #include "path/path.h"
 #include "vendor/cjson/cJSON.h"
+#include "rl_scratch.h"
+#include "internal/exports.h"
 
 #define RL_LOADER_DEFAULT_MOUNT_POINT "cache"
 #ifndef RL_LOADER_DEFAULT_ASSET_HOST
@@ -771,6 +773,33 @@ rl_loader_op_t *rl_loader_begin_prepare_model(const char *filename)
     }
     op->prepare_state = RL_LOADER_PREPARE_STATE_FETCHING_ROOT;
     return op;
+}
+
+RL_KEEP
+rl_loader_op_t *rl_loader_begin_prepare_paths_from_scratch(size_t filename_count)
+{
+    const char *filenames[RL_SCRATCH_MAX_STRING_TABLE_ENTRIES];
+    rl_scratch_t *scratch = NULL;
+    size_t i = 0;
+
+    if (filename_count == 0 || filename_count > RL_SCRATCH_MAX_STRING_TABLE_ENTRIES) {
+        return NULL;
+    }
+
+    scratch = (rl_scratch_t *)(uintptr_t)rl_scratch_get();
+    if (scratch == NULL) {
+        return NULL;
+    }
+
+    for (i = 0; i < filename_count; i++) {
+        uint32_t offset = scratch->string_offsets[i];
+        if (offset >= RL_SCRATCH_MAX_STRING_TABLE_BYTES) {
+            return NULL;
+        }
+        filenames[i] = &scratch->string_bytes[offset];
+    }
+
+    return rl_loader_begin_prepare_paths(filenames, filename_count);
 }
 
 rl_loader_op_t *rl_loader_begin_prepare_paths(const char *const *filenames, size_t filename_count)

@@ -65,6 +65,7 @@ type
   RLModuleEntry* {.importc: "rl_module_entry_t", header: "rl_module.h", bycopy.} = object
     name*: cstring
     get_api_fn*: RLModuleEntryGetApiFn
+  RLLoaderOp* {.importc: "rl_loader_op_t", header: "rl_loader.h", bycopy.} = object
 
 const
   RL_GRAY* = RLHandle(2)
@@ -90,7 +91,14 @@ proc rl_init*() {.importc, cdecl, header: "rl.h".}
 proc rl_deinit*() {.importc, cdecl, header: "rl.h".}
 proc rl_set_asset_host*(assetHost: cstring): cint {.importc, cdecl, header: "rl.h".}
 proc rl_get_asset_host*(): cstring {.importc, cdecl, header: "rl.h".}
-proc rl_loader_cache_file*(filename: cstring): cint {.importc, cdecl, header: "rl_loader.h".}
+proc rl_loader_begin_restore*(): ptr RLLoaderOp {.importc, cdecl, header: "rl_loader.h".}
+proc rl_loader_begin_prepare_file*(filename: cstring): ptr RLLoaderOp {.importc, cdecl, header: "rl_loader.h".}
+proc rl_loader_begin_prepare_model*(filename: cstring): ptr RLLoaderOp {.importc, cdecl, header: "rl_loader.h".}
+proc rl_loader_begin_prepare_paths*(filenames: ptr cstring, filenameCount: csize_t): ptr RLLoaderOp {.importc, cdecl, header: "rl_loader.h".}
+proc rl_loader_poll_op*(op: ptr RLLoaderOp): bool {.importc, cdecl, header: "rl_loader.h".}
+proc rl_loader_finish_op*(op: ptr RLLoaderOp): cint {.importc, cdecl, header: "rl_loader.h".}
+proc rl_loader_free_op*(op: ptr RLLoaderOp) {.importc, cdecl, header: "rl_loader.h".}
+proc rl_loader_is_local*(filename: cstring): bool {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_uncache_file*(filename: cstring): cint {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_clear_cache*(): cint {.importc, cdecl, header: "rl_loader.h".}
 proc rl_module_log*(host: ptr RLModuleHostApi, level: cint, message: cstring) {.importc, cdecl, header: "rl_module.h".}

@@ -125,14 +125,63 @@ const RL = {
         }
         moduleInstance.ccall('rl_deinit', null, [], []);
     },
-    cacheFile: (filename) => {
-        return moduleInstance.ccall('rl_loader_cache_file', 'number', ['string'], [filename]);
-    },
     uncacheFile: (filename) => {
         return moduleInstance.ccall('rl_loader_uncache_file', 'number', ['string'], [filename]);
     },
     clearCache: () => {
         return moduleInstance.ccall('rl_loader_clear_cache', 'number', [], []);
+    },
+    beginRestore: () => {
+        return moduleInstance.ccall('rl_loader_begin_restore', 'number', [], []);
+    },
+    beginPrepareFile: (filename) => {
+        return moduleInstance.ccall('rl_loader_begin_prepare_file', 'number', ['string'], [filename]);
+    },
+    beginPrepareModel: (filename) => {
+        return moduleInstance.ccall('rl_loader_begin_prepare_model', 'number', ['string'], [filename]);
+    },
+    beginPreparePaths: (filenames) => {
+        const count = moduleInstance.writeScratchStringTable(filenames);
+        return moduleInstance.ccall('rl_loader_begin_prepare_paths_from_scratch', 'number', ['number'], [count]);
+    },
+    pollLoaderOp: (op) => {
+        return moduleInstance.ccall('rl_loader_poll_op', 'number', ['number'], [op]) !== 0;
+    },
+    finishLoaderOp: (op) => {
+        return moduleInstance.ccall('rl_loader_finish_op', 'number', ['number'], [op]);
+    },
+    freeLoaderOp: (op) => {
+        return moduleInstance.ccall('rl_loader_free_op', null, ['number'], [op]);
+    },
+    isLocalFile: (filename) => {
+        return moduleInstance.ccall('rl_loader_is_local', 'number', ['string'], [filename]) !== 0;
+    },
+    waitForLoaderOp: async (op, pollMs = 16) => {
+        let rc = 0;
+
+        if (!op) {
+            return -1;
+        }
+
+        while (!RL.pollLoaderOp(op)) {
+            await new Promise((resolve) => setTimeout(resolve, pollMs));
+        }
+
+        rc = RL.finishLoaderOp(op);
+        RL.freeLoaderOp(op);
+        return rc;
+    },
+    restore: async () => {
+        return RL.waitForLoaderOp(RL.beginRestore());
+    },
+    prepareFile: async (filename) => {
+        return RL.waitForLoaderOp(RL.beginPrepareFile(filename));
+    },
+    prepareModel: async (filename) => {
+        return RL.waitForLoaderOp(RL.beginPrepareModel(filename));
+    },
+    preparePaths: async (filenames) => {
+        return RL.waitForLoaderOp(RL.beginPreparePaths(filenames));
     },
     emitEvent: (eventName, payload = 0) => {
         return moduleInstance.ccall('rl_event_emit', 'number', ['string', 'number'], [eventName, payload]);

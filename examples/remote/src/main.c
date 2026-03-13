@@ -3,7 +3,6 @@
 #include "rl_frame_runner.h"
 #include "rl_frame_commands.h"
 #include "rl_ws_client.h"
-#include "rl_resource_registry.h"
 #include "rl_color.h"
 #include "rl_font.h"
 #include "rl_loader.h"
@@ -15,7 +14,6 @@
 typedef struct remote_context_t {
   rl_ws_client_t *ws_client;
   rl_ws_frame_data_t current_frame;
-  rl_resource_registry_t *resource_registry;
   bool has_frame;
   int frames_received;
   int frames_rendered;
@@ -56,19 +54,11 @@ rl_loader_add_task(
 
   printf("[Remote] Initializing...\n");
   
-  context->resource_registry = rl_resource_registry_create();
-  if (context->resource_registry == NULL) {
-    printf("[Remote] Failed to create resource registry\n");
-    rl_frame_runner_request_stop();
-    return;
-  }
-  
   printf("[Remote] Connecting to %s\n", ws_url);
   
   context->ws_client = rl_ws_client_create(ws_url);
   if (context->ws_client == NULL) {
     printf("[Remote] Failed to create websocket client\n");
-    rl_resource_registry_destroy(context->resource_registry);
     rl_frame_runner_request_stop();
     return;
   }
@@ -99,11 +89,6 @@ static void on_shutdown(void *user_data) {
   if (context->ws_client != NULL) {
     rl_ws_client_destroy(context->ws_client);
     context->ws_client = NULL;
-  }
-  
-  if (context->resource_registry != NULL) {
-    rl_resource_registry_destroy(context->resource_registry);
-    context->resource_registry = NULL;
   }
   
   rl_window_close();

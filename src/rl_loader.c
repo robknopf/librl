@@ -1082,6 +1082,86 @@ int rl_loader_clear_cache(void)
     return 0;
 }
 
+#define RL_LOADER_MAX_MANAGED_TASKS 16
+#define RL_LOADER_MAX_TASK_PATH 256
+
+typedef struct rl_loader_managed_task_t {
+    rl_loader_task_t *task;
+    char path[RL_LOADER_MAX_TASK_PATH];
+    rl_loader_callback_fn on_success;
+    rl_loader_callback_fn on_failure;
+    void *user_data;
+    bool in_use;
+} rl_loader_managed_task_t;
+
+static rl_loader_managed_task_t rl_loader_managed_tasks[RL_LOADER_MAX_MANAGED_TASKS] = {{0}};
+
+int rl_loader_add_task(rl_loader_task_t *task,
+                       const char *path,
+                       rl_loader_callback_fn on_success,
+                       rl_loader_callback_fn on_failure,
+                       void *user_data)
+{
+    int i = 0;
+    rl_loader_managed_task_t *slot = NULL;
+
+    if (task == NULL) {
+        return -1;
+    }
+
+    for (i = 0; i < RL_LOADER_MAX_MANAGED_TASKS; i++) {
+        if (!rl_loader_managed_tasks[i].in_use) {
+            slot = &rl_loader_managed_tasks[i];
+            break;
+        }
+    }
+
+    if (slot == NULL) {
+        return -1;
+    }
+
+    slot->task = task;
+    slot->path[0] = '\0';
+    if (path != NULL) {
+        snprintf(slot->path, sizeof(slot->path), "%s", path);
+    }
+    slot->on_success = on_success;
+    slot->on_failure = on_failure;
+    slot->user_data = user_data;
+    slot->in_use = true;
+    return 0;
+}
+
+void rl_loader_tick(void)
+{
+    int i = 0;
+
+    for (i = 0; i < RL_LOADER_MAX_MANAGED_TASKS; i++) {
+        rl_loader_managed_task_t *slot = &rl_loader_managed_tasks[i];
+        int rc = 0;
+
+        if (!slot->in_use) {
+            continue;
+        }
+
+        if (!rl_loader_poll_task(slot->task)) {
+            continue;
+        }
+
+        rc = rl_loader_finish_task(slot->task);
+
+        if (rc == 0 && slot->on_success != NULL) {
+            slot->on_success(slot->path, slot->user_data);
+        } else if (rc != 0 && slot->on_failure != NULL) {
+            slot->on_failure(slot->path, slot->user_data);
+        }
+
+        rl_loader_free_task(slot->task);
+        slot->task = NULL;
+        slot->in_use = false;
+    }
+}
+
 int rl_loader_init(const char *mount_point)
 {
     const char *resolved_mount = mount_point;

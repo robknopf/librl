@@ -9,6 +9,7 @@ extern "C" {
 #endif
 
 typedef struct rl_loader_task rl_loader_task_t;
+typedef void (*rl_loader_callback_fn)(const char *path, void *user_data);
 
 int rl_loader_set_asset_host(const char *asset_host);
 const char *rl_loader_get_asset_host(void);
@@ -22,6 +23,13 @@ void rl_loader_free_task(rl_loader_task_t *task);
 bool rl_loader_is_local(const char *filename);
 int rl_loader_uncache_file(const char *filename);
 int rl_loader_clear_cache(void);
+
+int rl_loader_add_task(rl_loader_task_t *task,
+                       const char *path,
+                       rl_loader_callback_fn on_success,
+                       rl_loader_callback_fn on_failure,
+                       void *user_data);
+void rl_loader_tick(void);
 
 #ifdef __cplusplus
 }

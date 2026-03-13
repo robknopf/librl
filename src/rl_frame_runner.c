@@ -1,4 +1,5 @@
 #include "rl_frame_runner.h"
+#include "rl_loader.h"
 #include "internal/exports.h"
 #include "raylib.h"
 #include <string.h>
@@ -40,6 +41,8 @@ static void rl_frame_web_step(void) {
         return;
     }
 
+    rl_loader_tick();
+
     if (rl_frame_loop_state.tick_fn != NULL) {
         rl_frame_loop_state.tick_fn(rl_frame_loop_state.user_data);
     }
@@ -79,6 +82,7 @@ void rl_frame_runner_run(rl_frame_runner_init_fn init_fn,
     emscripten_set_main_loop(rl_frame_web_step, 0, 1);
 #else
     while (rl_frame_loop_state.running && !WindowShouldClose()) {
+        rl_loader_tick();
         rl_frame_loop_state.tick_fn(rl_frame_loop_state.user_data);
     }
     rl_frame_finish_run();

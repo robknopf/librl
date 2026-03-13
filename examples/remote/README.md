@@ -26,10 +26,20 @@ Server-driven rendering over WebSocket. Game logic runs on a Bun/TypeScript serv
 ### Resource Protocol
 
 Resources are created via a request/response protocol:
-- Server sends `resourceRequests` with a unique RID and type
+- Server sends `resourceRequests` packets with a unique RID and type
 - Client creates the resource (async for file-based assets) and responds with a handle
 - Server's `ResourceManager` resolves promises when handles arrive
 - Handles are then used in frame commands (e.g. `color: 42` in a DRAW_CUBE)
+
+### Packet Types
+
+WebSocket traffic is split by intent instead of compacting frame + resource data
+into the same packet:
+- `frame` packets carry only render/audio commands for the next frame
+- `resourceRequests` packets carry only resource creation requests
+- `resourceResponses` packets carry only client-side handle responses
+
+This keeps frame delivery disposable while resource traffic stays queueable.
 
 ### Async Loading
 
@@ -48,7 +58,7 @@ File-based resources (fonts, textures, models, sounds, music, sprite3ds) use asy
 | `game.ts` | Scene logic, resource loading, frame generation |
 | `resource_manager.ts` | Tracks resource requests/responses with promises |
 | `resource_protocol.ts` | Resource request/response type definitions |
-| `protocol.ts` | Combined message envelope types |
+| `protocol.ts` | Typed packet definitions for frame/resource traffic |
 | `types.ts` | Command type enum and command interfaces |
 
 ### Client

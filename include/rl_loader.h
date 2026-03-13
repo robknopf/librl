@@ -11,6 +11,12 @@ extern "C" {
 typedef struct rl_loader_task rl_loader_task_t;
 typedef void (*rl_loader_callback_fn)(const char *path, void *user_data);
 
+typedef enum rl_loader_add_task_result_t {
+  RL_LOADER_ADD_TASK_OK = 0,
+  RL_LOADER_ADD_TASK_ERR_INVALID = -1,
+  RL_LOADER_ADD_TASK_ERR_QUEUE_FULL = -2,
+} rl_loader_add_task_result_t;
+
 int rl_loader_set_asset_host(const char *asset_host);
 const char *rl_loader_get_asset_host(void);
 rl_loader_task_t *rl_loader_restore_fs_async(void);
@@ -24,11 +30,11 @@ bool rl_loader_is_local(const char *filename);
 int rl_loader_uncache_file(const char *filename);
 int rl_loader_clear_cache(void);
 
-int rl_loader_add_task(rl_loader_task_t *task,
-                       const char *path,
-                       rl_loader_callback_fn on_success,
-                       rl_loader_callback_fn on_failure,
-                       void *user_data);
+rl_loader_add_task_result_t rl_loader_add_task(rl_loader_task_t *task,
+                                               const char *path,
+                                               rl_loader_callback_fn on_success,
+                                               rl_loader_callback_fn on_failure,
+                                               void *user_data);
 void rl_loader_tick(void);
 
 #ifdef __cplusplus

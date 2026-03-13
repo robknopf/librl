@@ -49,6 +49,7 @@ static void on_ws_close(websocket_t *ws, int code, const char *reason, void *use
 static void on_ws_message(websocket_t *ws, const char *data, int len, bool is_text, void *user_data) {
   rl_ws_client_t *client = (rl_ws_client_t *)user_data;
   static rl_protocol_requests_t requests;
+  rl_protocol_message_type_t message_type = RL_PROTOCOL_MESSAGE_UNKNOWN;
   bool has_frame = false;
   (void)ws;
   
@@ -62,27 +63,29 @@ static void on_ws_message(websocket_t *ws, const char *data, int len, bool is_te
   client->message_buffer[len] = '\0';
   
   if (rl_protocol_parse_message(client->message_buffer, len,
+                                 &message_type,
                                  &client->pending_frame, &has_frame,
                                  &requests) != 0) {
     printf("[WS] Failed to parse message\n");
     return;
   }
   
-  if (has_frame) {
+  if (message_type == RL_PROTOCOL_MESSAGE_FRAME && has_frame) {
     client->has_pending_frame = true;
   }
   
-  if (requests.count > 0) {
+  if (message_type == RL_PROTOCOL_MESSAGE_RESOURCE_REQUESTS && requests.count > 0) {
     int response_count = rl_resource_handler_process_requests(
       &client->resource_handler,
       requests.items,
       requests.count,
-      client->pending_responses,
-      RL_WS_MAX_PENDING_RESPONSES
+      client->pending_responses + client->pending_response_count,
+      RL_WS_MAX_PENDING_RESPONSES - client->pending_response_count
     );
     
-    if (response_count >= 0 && response_count <= RL_WS_MAX_PENDING_RESPONSES) {
-      client->pending_response_count = response_count;
+    if (response_count >= 0 &&
+        client->pending_response_count + response_count <= RL_WS_MAX_PENDING_RESPONSES) {
+      client->pending_response_count += response_count;
       
       if (response_count > 0) {
         printf("[WS] Processed %d resource requests\n", response_count);

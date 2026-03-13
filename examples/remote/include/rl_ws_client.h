@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-#define RL_WS_MAX_PENDING_RESPONSES 32
+#define RL_WS_MAX_PENDING_RESPONSES 64
 
 typedef struct rl_ws_bandwidth_stats_t {
   float bytes_in_per_sec;

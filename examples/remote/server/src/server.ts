@@ -1,6 +1,10 @@
 import type { ServerWebSocket } from "bun";
 import { ResourceManager } from "./resource_manager";
-import type { ServerMessage, ClientMessage } from "./protocol";
+import type {
+  ServerFrameMessage,
+  ServerResourceRequestsMessage,
+  ClientMessage,
+} from "./protocol";
 import { createInitialGameState, loadResources, generateFrame } from "./game";
 import type { GameState } from "./game";
 
@@ -10,7 +14,17 @@ interface ClientData {
   game: GameState;
 }
 
-const PORT = 9001;
+const DEFAULT_PORT = 9001;
+const PORT = (() => {
+  const raw = process.env.PORT;
+  const parsed = raw ? Number.parseInt(raw, 10) : NaN;
+
+  if (Number.isFinite(parsed) && parsed > 0) {
+    return parsed;
+  }
+
+  return DEFAULT_PORT;
+})();
 const clients = new Set<ServerWebSocket<ClientData>>();
 
 const server = Bun.serve<ClientData>({
@@ -52,7 +66,7 @@ const server = Bun.serve<ClientData>({
         try {
           const data = JSON.parse(message) as ClientMessage;
           
-          if (data.resourceResponses) {
+          if (data.type === "resourceResponses" && data.resourceResponses) {
             for (const response of data.resourceResponses) {
               ws.data.resourceManager.handleResponse(response);
             }
@@ -91,13 +105,20 @@ setInterval(() => {
     try {
       const frame = generateFrame(dt, client.data.game, clients.size);
       const pendingRequests = client.data.resourceManager.getPendingRequests();
-      const message: ServerMessage = { frame };
-      
+
       if (pendingRequests.length > 0) {
-        message.resourceRequests = pendingRequests;
+        const requestMessage: ServerResourceRequestsMessage = {
+          type: "resourceRequests",
+          resourceRequests: pendingRequests,
+        };
+        client.send(JSON.stringify(requestMessage));
       }
-      
-      client.send(JSON.stringify(message));
+
+      const frameMessage: ServerFrameMessage = {
+        type: "frame",
+        frame,
+      };
+      client.send(JSON.stringify(frameMessage));
     } catch (e) {
       console.error(`[WS] Failed to send to ${client.data.id}:`, e);
     }

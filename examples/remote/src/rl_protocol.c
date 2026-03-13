@@ -332,10 +332,12 @@ static int parse_resource_request(const cJSON *req_json, rl_resource_request_t *
 }
 
 int rl_protocol_parse_message(const char *raw, int len,
+                               rl_protocol_message_type_t *out_type,
                                rl_ws_frame_data_t *out_frame,
                                bool *out_has_frame,
                                rl_protocol_requests_t *out_requests) {
   cJSON *root = NULL;
+  cJSON *type_obj = NULL;
   cJSON *frame_obj = NULL;
   cJSON *resource_requests = NULL;
   
@@ -343,6 +345,9 @@ int rl_protocol_parse_message(const char *raw, int len,
     return -1;
   }
   
+  if (out_type != NULL) {
+    *out_type = RL_PROTOCOL_MESSAGE_UNKNOWN;
+  }
   if (out_has_frame != NULL) {
     *out_has_frame = false;
   }
@@ -354,21 +359,35 @@ int rl_protocol_parse_message(const char *raw, int len,
   if (root == NULL) {
     return -1;
   }
-  
-  frame_obj = cJSON_GetObjectItem(root, "frame");
-  if (frame_obj != NULL && out_frame != NULL) {
-    if (parse_frame_object(frame_obj, out_frame) == 0) {
-      if (out_has_frame != NULL) {
-        *out_has_frame = true;
-      }
-    }
+
+  type_obj = cJSON_GetObjectItemCaseSensitive(root, "type");
+  if (!cJSON_IsString(type_obj) || type_obj->valuestring == NULL) {
+    cJSON_Delete(root);
+    return -1;
   }
-  
-  resource_requests = cJSON_GetObjectItem(root, "resourceRequests");
-  if (resource_requests != NULL && cJSON_IsArray(resource_requests) && out_requests != NULL) {
+
+  if (strcmp(type_obj->valuestring, "frame") == 0) {
+    frame_obj = cJSON_GetObjectItemCaseSensitive(root, "frame");
+    if (frame_obj == NULL || out_frame == NULL || parse_frame_object(frame_obj, out_frame) != 0) {
+      cJSON_Delete(root);
+      return -1;
+    }
+    if (out_type != NULL) {
+      *out_type = RL_PROTOCOL_MESSAGE_FRAME;
+    }
+    if (out_has_frame != NULL) {
+      *out_has_frame = true;
+    }
+  } else if (strcmp(type_obj->valuestring, "resourceRequests") == 0) {
     const cJSON *req_json = NULL;
     int count = 0;
-    
+
+    resource_requests = cJSON_GetObjectItemCaseSensitive(root, "resourceRequests");
+    if (!cJSON_IsArray(resource_requests) || out_requests == NULL) {
+      cJSON_Delete(root);
+      return -1;
+    }
+
     cJSON_ArrayForEach(req_json, resource_requests) {
       if (count >= RL_PROTOCOL_MAX_REQUESTS) {
         break;
@@ -378,6 +397,12 @@ int rl_protocol_parse_message(const char *raw, int len,
       }
     }
     out_requests->count = count;
+    if (out_type != NULL) {
+      *out_type = RL_PROTOCOL_MESSAGE_RESOURCE_REQUESTS;
+    }
+  } else {
+    cJSON_Delete(root);
+    return -1;
   }
   
   cJSON_Delete(root);
@@ -418,6 +443,7 @@ int rl_protocol_serialize_responses(const rl_resource_response_t *responses, int
     cJSON_AddItemToArray(responses_array, resp);
   }
   
+  cJSON_AddStringToObject(root, "type", "resourceResponses");
   cJSON_AddItemToObject(root, "resourceResponses", responses_array);
   
   json_str = cJSON_PrintUnformatted(root);

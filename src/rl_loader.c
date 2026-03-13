@@ -1096,17 +1096,20 @@ typedef struct rl_loader_managed_task_t {
 
 static rl_loader_managed_task_t rl_loader_managed_tasks[RL_LOADER_MAX_MANAGED_TASKS] = {{0}};
 
-int rl_loader_add_task(rl_loader_task_t *task,
-                       const char *path,
-                       rl_loader_callback_fn on_success,
-                       rl_loader_callback_fn on_failure,
-                       void *user_data)
+rl_loader_add_task_result_t rl_loader_add_task(rl_loader_task_t *task,
+                                               const char *path,
+                                               rl_loader_callback_fn on_success,
+                                               rl_loader_callback_fn on_failure,
+                                               void *user_data)
 {
     int i = 0;
     rl_loader_managed_task_t *slot = NULL;
 
     if (task == NULL) {
-        return -1;
+        if (on_failure != NULL) {
+            on_failure(path, user_data);
+        }
+        return RL_LOADER_ADD_TASK_ERR_INVALID;
     }
 
     for (i = 0; i < RL_LOADER_MAX_MANAGED_TASKS; i++) {
@@ -1117,7 +1120,11 @@ int rl_loader_add_task(rl_loader_task_t *task,
     }
 
     if (slot == NULL) {
-        return -1;
+        if (on_failure != NULL) {
+            on_failure(path, user_data);
+        }
+        rl_loader_free_task(task);
+        return RL_LOADER_ADD_TASK_ERR_QUEUE_FULL;
     }
 
     slot->task = task;
@@ -1129,7 +1136,7 @@ int rl_loader_add_task(rl_loader_task_t *task,
     slot->on_failure = on_failure;
     slot->user_data = user_data;
     slot->in_use = true;
-    return 0;
+    return RL_LOADER_ADD_TASK_OK;
 }
 
 void rl_loader_tick(void)

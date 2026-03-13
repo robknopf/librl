@@ -39,6 +39,7 @@ static void on_overlay_font_ready(const char *path, void *user_data) {
 static void on_init(void *user_data) {
   remote_context_t *context = (remote_context_t *)user_data;
   const char *ws_url = "ws://localhost:9001/ws";
+  rl_loader_add_task_result_t loader_rc = RL_LOADER_ADD_TASK_OK;
 
   if (context == NULL) {
     return;
@@ -49,8 +50,11 @@ static void on_init(void *user_data) {
   rl_frame_runner_set_target_fps(60);
 
   // In init:
-  rl_loader_add_task(rl_loader_import_asset_async(debug_font_path),
-                     debug_font_path, on_debug_font_ready, NULL, NULL);
+  loader_rc = rl_loader_add_task(rl_loader_import_asset_async(debug_font_path),
+                                 debug_font_path, on_debug_font_ready, NULL, NULL);
+  if (loader_rc != RL_LOADER_ADD_TASK_OK) {
+    printf("[Remote] Failed to queue debug font load (%d)\n", loader_rc);
+  }
 
   printf("[Remote] Initializing...\n");
 
@@ -69,8 +73,11 @@ static void on_init(void *user_data) {
 
   context->overlay_font = 0;
   context->overlay_font_size = 24;
-  rl_loader_add_task(rl_loader_import_asset_async(debug_font_path),
-                     debug_font_path, on_overlay_font_ready, NULL, context);
+  loader_rc = rl_loader_add_task(rl_loader_import_asset_async(debug_font_path),
+                                 debug_font_path, on_overlay_font_ready, NULL, context);
+  if (loader_rc != RL_LOADER_ADD_TASK_OK) {
+    printf("[Remote] Failed to queue overlay font load (%d)\n", loader_rc);
+  }
 }
 
 static void on_shutdown(void *user_data) {

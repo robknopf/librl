@@ -11,13 +11,16 @@ Server                                         Client
   │  createColor(221,87,54,255)                  │
   │    → queues {rid:1, type:0, r,g,b,a}        │
   │                                              │
-  │  Frame loop sends:                           │
-  │  { frame: {...},                             │
+  │  Frame loop sends request packet:            │
+  │  { type:"resourceRequests",                  │
   │    resourceRequests: [{rid:1, ...}] }───────►│
+  │                                              │
+  │  Frame loop sends frame packet:              │
+  │  { type:"frame", frame: {...} }─────────────►│
   │                                              │
   │                               rl_color_create() → handle 42
   │                                              │
-  │  { resourceResponses:                        │
+  │  { type:"resourceResponses",                 │
   │    [{rid:1, handle:42, success:true}] }◄─────│
   │                                              │
   │  Promise resolves → accentColor = 42         │
@@ -35,7 +38,7 @@ Server                                         Client
 1. **Server** calls `rm.createTexture("assets/foo.png")` — returns a Promise
 2. **ResourceManager** assigns a RID, stores promise, queues request
 3. **Frame loop** picks up pending requests via `getPendingRequests()` (each sent only once)
-4. **Client** receives request in the frame message, starts async load
+4. **Client** receives request in a resource-request packet, starts async load
 5. **Client** polls `rl_loader_poll_task()` each frame until asset is fetched
 6. **Client** calls `rl_loader_finish_task()` then creates the resource handle
 7. **Client** sends response with `{rid, handle, success}`
@@ -82,7 +85,7 @@ on_tick():
 - **`resource_manager.ts`** — Promise-based resource request tracking. Helpers: `createColor`, `createFont`, `createTexture`, `createModel`, `createSound`, `createMusic`, `createCamera3D`, `createSprite3D`.
 - **`resource_protocol.ts`** — TypeScript interfaces for request/response types.
 - **`types.ts`** — Command type enum and command interfaces.
-- **`protocol.ts`** — Message envelope (`ServerMessage`, `ClientMessage`).
+- **`protocol.ts`** — Typed packet definitions (`frame`, `resourceRequests`, `resourceResponses`).
 
 ## Adding a New Resource Type
 

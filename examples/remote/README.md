@@ -77,9 +77,9 @@ File-based resources (fonts, textures, models, sounds, music, sprite3ds) use asy
 ```bash
 ./start_server.sh
 # or manually:
-cd server && bun run --watch src/server.ts
+cd server && PORT=9001 bun run --watch src/server.ts
 ```
-Server listens on `ws://localhost:9001/ws`. Uses `--watch` for auto-reload on TS changes.
+Server listens on `ws://localhost:9001/ws` by default, or `ws://localhost:$RL_REMOTE_WS_PORT/ws` if `RL_REMOTE_WS_PORT` is set. Uses `--watch` for auto-reload on TS changes.
 
 ### 2. Build the client
 
@@ -97,6 +97,12 @@ make desktop
 
 ### 3. Open in browser
 Navigate to the remote example page. The client connects, loads resources, and renders the server-driven scene.
+
+Client websocket URL overrides:
+- Desktop: set `RL_REMOTE_WS_PROTOCOL` / `RL_REMOTE_WS_HOST` / `RL_REMOTE_WS_PORT`, e.g. `RL_REMOTE_WS_PROTOCOL=ws RL_REMOTE_WS_HOST=localhost RL_REMOTE_WS_PORT=9011 ./out/main`
+- Browser: pass `?protocol=ws&host=localhost&port=9011` in the page URL
+- Browser default: if no query override is present, the wasm client uses `ws` on HTTP pages and `wss` on HTTPS pages, targeting `<page-host>:9001`
+- Server: set `RL_REMOTE_WS_PORT=9011` before `./start_server.sh` or `bun run`
 
 ## Command Types
 

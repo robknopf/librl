@@ -42,11 +42,30 @@ async function loadExampleModuleFactory(maxAttempts = 120, delayMs = 500) {
 
 function getEnv() {
   var env = {};
+  var params = new URLSearchParams(window.location.search);
+  var protocolFromQuery = params.get("protocol");
+  var hostFromQuery = params.get("host");
+  var portFromQuery = params.get("port");
+  var wsProtocol = window.location.protocol === "https:" ? "wss" : "ws";
+  var defaultHost = window.location.hostname || "localhost";
+  var defaultPort = "9001";
+  var protocol = protocolFromQuery && protocolFromQuery.length > 0 ? protocolFromQuery : wsProtocol;
+  var host = hostFromQuery && hostFromQuery.length > 0 ? hostFromQuery : defaultHost;
+  var port = portFromQuery && portFromQuery.length > 0 ? portFromQuery : defaultPort;
 
   env.canvas = document.getElementById('renderCanvas');
   var output = ensureOutputElement();
   output.textContent = "";
   var outputLog = createOutputLogger(output);
+
+  env.preRun = env.preRun || [];
+  env.preRun.push(function () {
+    if (typeof ENV !== "undefined") {
+      ENV.RL_REMOTE_WS_PROTOCOL = protocol;
+      ENV.RL_REMOTE_WS_HOST = host;
+      ENV.RL_REMOTE_WS_PORT = port;
+    }
+  });
 
   env.print = function (...args) {
     const line = args.length > 1 ? args.join(" ") : String(args[0] ?? "");

@@ -54,11 +54,14 @@ make wasm
 ### Server won't start
 - Ensure Bun is installed: `bun --version`
 - Check port 9001 is available: `lsof -i :9001`
+- Or run on another port: `RL_REMOTE_WS_PORT=9011 ./start_server.sh`
 
 ### Client won't connect
 - Verify server is running: `curl http://localhost:9001`
 - Check browser console for WebSocket errors
 - Ensure URL matches: `ws://localhost:9001/ws`
+- For browser wasm, override with `?protocol=ws&host=localhost&port=9011`
+- For desktop, override with `RL_REMOTE_WS_PROTOCOL=ws RL_REMOTE_WS_HOST=localhost RL_REMOTE_WS_PORT=9011 ./out/main`
 
 ### Resources not loading
 - Check server logs for `[Game] ... ready` messages

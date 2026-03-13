@@ -26,6 +26,32 @@ static remote_context_t g_remote_context = {0};
 //char *debug_font_path = "assets/fonts/Komika/KOMIKAH_.ttf";
 char *debug_font_path = "assets/fonts/Voltaire/Voltaire-Regular.ttf";
 
+#define REMOTE_DEFAULT_HOST "localhost"
+#define REMOTE_DEFAULT_PORT "9001"
+#define REMOTE_DEFAULT_PROTOCOL "ws"
+#define REMOTE_DEFAULT_WS_PATH "/ws"
+
+static const char *get_remote_ws_url(void) {
+  static char ws_url[256] = {0};
+  const char *protocol = getenv("RL_REMOTE_WS_PROTOCOL");
+  const char *host = getenv("RL_REMOTE_WS_HOST");
+  const char *port = getenv("RL_REMOTE_WS_PORT");
+
+  if (protocol == NULL || protocol[0] == '\0') {
+    protocol = REMOTE_DEFAULT_PROTOCOL;
+  }
+  if (host == NULL || host[0] == '\0') {
+    host = REMOTE_DEFAULT_HOST;
+  }
+  if (port == NULL || port[0] == '\0') {
+    port = REMOTE_DEFAULT_PORT;
+  }
+
+  snprintf(ws_url, sizeof(ws_url), "%s://%s:%s%s", protocol, host, port,
+           REMOTE_DEFAULT_WS_PATH);
+  return ws_url;
+}
+
 static void on_debug_font_ready(const char *path, void *user_data) {
   (void)user_data;
   rl_debug_enable_fps(10, 10, 24, path);
@@ -38,7 +64,7 @@ static void on_overlay_font_ready(const char *path, void *user_data) {
 
 static void on_init(void *user_data) {
   remote_context_t *context = (remote_context_t *)user_data;
-  const char *ws_url = "ws://localhost:9001/ws";
+  const char *ws_url = get_remote_ws_url();
   rl_loader_add_task_result_t loader_rc = RL_LOADER_ADD_TASK_OK;
 
   if (context == NULL) {

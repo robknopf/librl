@@ -56,6 +56,13 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
   - file null: emits no source suffix
 - Keep redirected raylib logs source-light unless source info is reliable.
 
+## Repo Policy
+
+- Do not preserve backward compatibility by default in this repo.
+- Prefer the cleaner API/architecture change unless compatibility is explicitly requested.
+- Do not add compatibility aliases, fallback names, or dual old/new code paths "just in case".
+- If a rename or contract change is the right fix, make the breaking change and update callers/docs/bindings in the same pass.
+
 ## Naming Conventions
 
 - Prefer subsystem-first public API names:

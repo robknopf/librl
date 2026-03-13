@@ -16,7 +16,7 @@ interface ClientData {
 
 const DEFAULT_PORT = 9001;
 const PORT = (() => {
-  const raw = process.env.PORT;
+  const raw = process.env.RL_REMOTE_WS_PORT || process.env.PORT;
   const parsed = raw ? Number.parseInt(raw, 10) : NaN;
 
   if (Number.isFinite(parsed) && parsed > 0) {

@@ -28,16 +28,16 @@ struct rl_ws_client_t {
 };
 
 static void process_ws_open(rl_ws_client_t *client) {
-  log_info("[WS] Connected to %s\n", client->url);
+  log_info("[WS] Connected to %s", client->url);
 }
 
 static void process_ws_error(rl_ws_client_t *client) {
-  log_error("[WS] Error on %s. Will attempt to reconnect...\n", client->url);
+  log_error("[WS] Error on %s. Will attempt to reconnect...", client->url);
   client->reconnect_delay = 1.0;
 }
 
 static void process_ws_close(rl_ws_client_t *client, int code, const char *reason) {
-  log_info("[WS] Closed: code=%d, reason=%s. Will attempt to reconnect...\n", code, reason);
+  log_info("[WS] Closed: code=%d, reason=%s. Will attempt to reconnect...", code, reason);
   client->reconnect_delay = 1.0;
 }
 
@@ -59,7 +59,7 @@ static void process_ws_message(rl_ws_client_t *client, const char *data, int len
                                 &message_type,
                                 &client->pending_frame, &has_frame,
                                 &requests) != 0) {
-    log_error("[WS] Failed to parse message\n");
+    log_error("[WS] Failed to parse message");
     return;
   }
 
@@ -80,7 +80,7 @@ static void process_ws_message(rl_ws_client_t *client, const char *data, int len
       client->pending_response_count += response_count;
 
       if (response_count > 0) {
-        log_debug("[WS] Processed %d resource requests\n", response_count);
+        log_debug("[WS] Processed %d resource requests", response_count);
       }
     }
   }
@@ -139,12 +139,12 @@ rl_ws_client_t *rl_ws_client_create(const char *url) {
   
   client->ws = websocket_create(url, &ws_callbacks, client);
   if (client->ws == NULL) {
-    log_error("[WS] Failed to create websocket\n");
+    log_error("[WS] Failed to create websocket");
     free(client);
     return NULL;
   }
   
-  log_info("[WS] Connecting to %s...\n", url);
+  log_info("[WS] Connecting to %s...", url);
   return client;
 }
 
@@ -234,17 +234,17 @@ void rl_ws_client_send_responses(rl_ws_client_t *client,
   }
   
   if (!websocket_is_connected(client->ws)) {
-    log_warn("[WS] Cannot send responses: not connected\n");
+    log_warn("[WS] Cannot send responses: not connected");
     return;
   }
   
   len = rl_protocol_serialize_responses(responses, count, send_buf, MAX_MESSAGE_SIZE);
   if (len > 0) {
-    log_debug("[WS] Sending %d resource responses\n", count);
+    log_debug("[WS] Sending %d resource responses", count);
     if (websocket_send_text(client->ws, send_buf) != 0) {
-      log_warn("[WS] Failed to send responses\n");
+      log_warn("[WS] Failed to send responses");
     } else {
-      log_debug("[WS] Responses sent successfully\n");
+      log_debug("[WS] Responses sent successfully");
     }
     client->bytes_out_accum += (size_t)len;
   }
@@ -279,7 +279,7 @@ void rl_ws_client_tick(rl_ws_client_t *client) {
   
   if (!websocket_is_connected(client->ws)) {
     if (now - client->last_reconnect_attempt >= client->reconnect_delay) {
-      log_info("[WS] Attempting to reconnect to %s...\n", client->url);
+      log_info("[WS] Attempting to reconnect to %s...", client->url);
       client->last_reconnect_attempt = now;
       
       websocket_destroy(client->ws);
@@ -292,7 +292,7 @@ void rl_ws_client_tick(rl_ws_client_t *client) {
         if (client->reconnect_delay > 30.0) {
           client->reconnect_delay = 30.0;
         }
-        log_warn("[WS] Reconnect failed. Next attempt in %.1f seconds\n", client->reconnect_delay);
+        log_warn("[WS] Reconnect failed. Next attempt in %.1f seconds", client->reconnect_delay);
       }
     }
   }

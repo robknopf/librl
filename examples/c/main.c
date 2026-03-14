@@ -232,17 +232,20 @@ static const char *get_asset_host(void) {
 
 static void module_log(void *user_data, int level, const char *message) {
   (void)user_data;
-  log_message(level, "module", 0, "%s", message != NULL ? message : "(null)");
+  rl_logger_message_source((rl_log_level_t)level, "module", 0, "%s",
+                           message != NULL ? message : "(null)");
 }
 
 static void module_log_source(void *user_data, int level,
                               const char *source_file, int source_line,
                               const char *message) {
   (void)user_data;
-  log_message(level,
-              source_file != NULL && source_file[0] != '\0' ? source_file
-                                                            : "module",
-              source_line, "%s", message != NULL ? message : "(null)");
+  rl_logger_message_source((rl_log_level_t)level,
+                           source_file != NULL && source_file[0] != '\0'
+                               ? source_file
+                               : "module",
+                           source_line, "%s",
+                           message != NULL ? message : "(null)");
 }
 
 static int module_event_on(void *host_user_data, const char *event_name,
@@ -662,7 +665,7 @@ static void on_tick(void *user_data) {
 
 int main(void) {
   g_asset_host = get_asset_host();
-  rl_logger_set_level(LOG_LEVEL_DEBUG);
+  rl_logger_set_level(RL_LOGGER_LEVEL_DEBUG);
 
   g_example_context.script_config =
       (rl_module_config_t){800, 600, 60, RL_WINDOW_FLAG_MSAA_4X_HINT,

@@ -79,16 +79,16 @@ static void on_init(void *user_data) {
   loader_rc = rl_loader_add_task(rl_loader_import_asset_async(debug_font_path),
                                  debug_font_path, on_debug_font_ready, NULL, NULL);
   if (loader_rc != RL_LOADER_ADD_TASK_OK) {
-    log_error("[Remote] Failed to queue debug font load (%d)\n", loader_rc);
+    log_error("[Remote] Failed to queue debug font load (%d)", loader_rc);
   }
 
-  log_info("[Remote] Initializing...\n");
+  log_info("[Remote] Initializing...");
 
-  log_info("[Remote] Connecting to %s\n", ws_url);
+  log_info("[Remote] Connecting to %s", ws_url);
 
   context->ws_client = rl_ws_client_create(ws_url);
   if (context->ws_client == NULL) {
-    log_error("[Remote] Failed to create websocket client\n");
+    log_error("[Remote] Failed to create websocket client");
     rl_frame_runner_request_stop();
     return;
   }
@@ -102,7 +102,7 @@ static void on_init(void *user_data) {
   loader_rc = rl_loader_add_task(rl_loader_import_asset_async(debug_font_path),
                                  debug_font_path, on_overlay_font_ready, NULL, context);
   if (loader_rc != RL_LOADER_ADD_TASK_OK) {
-    log_error("[Remote] Failed to queue overlay font load (%d)\n", loader_rc);
+    log_error("[Remote] Failed to queue overlay font load (%d)", loader_rc);
   }
 }
 
@@ -113,9 +113,10 @@ static void on_shutdown(void *user_data) {
     return;
   }
 
-  log_info("[Remote] Shutting down...\n");
-  log_debug("[Remote] Frames received: %d, rendered: %d\n",
-         context->frames_received, context->frames_rendered);
+  log_info("[Remote] Shutting down...");
+  log_debug("[Remote] Frames received: %d, rendered: %d",
+            context->frames_received,
+            context->frames_rendered);
 
   if (context->ws_client != NULL) {
     rl_ws_client_destroy(context->ws_client);

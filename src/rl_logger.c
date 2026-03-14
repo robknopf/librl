@@ -1,8 +1,29 @@
 #include "raylib.h"
 #include "rl_logger.h"
+#include "logger/logger.h"
 
 #include <stdarg.h>
 #include <stdio.h>
+
+static int rl_logger_to_wgutils_level(rl_log_level_t level)
+{
+    switch (level) {
+        case RL_LOGGER_LEVEL_TRACE:
+            return LOG_LEVEL_TRACE;
+        case RL_LOGGER_LEVEL_DEBUG:
+            return LOG_LEVEL_DEBUG;
+        case RL_LOGGER_LEVEL_INFO:
+            return LOG_LEVEL_INFO;
+        case RL_LOGGER_LEVEL_WARN:
+            return LOG_LEVEL_WARN;
+        case RL_LOGGER_LEVEL_ERROR:
+            return LOG_LEVEL_ERROR;
+        case RL_LOGGER_LEVEL_FATAL:
+            return LOG_LEVEL_FATAL;
+        default:
+            return LOG_LEVEL_INFO;
+    }
+}
 
 static void rl_logger_reroute_raylib_log(int log_level, const char *text, va_list args)
 {
@@ -41,29 +62,61 @@ static void rl_logger_reroute_raylib_log(int log_level, const char *text, va_lis
     log_message(level, "raylib", 0, "%s", msg);
 }
 
-void rl_logger_set_level(int level)
+void rl_logger_message(rl_log_level_t level, const char *format, ...)
+{
+    char message[2048];
+    va_list args;
+
+    va_start(args, format);
+    vsnprintf(message, sizeof(message), format, args);
+    va_end(args);
+
+    log_message(rl_logger_to_wgutils_level(level), "app", 0, "%s", message);
+}
+
+void rl_logger_message_source(rl_log_level_t level,
+                              const char *source_file,
+                              int source_line,
+                              const char *format,
+                              ...)
+{
+    char message[2048];
+    va_list args;
+
+    va_start(args, format);
+    vsnprintf(message, sizeof(message), format, args);
+    va_end(args);
+
+    log_message(rl_logger_to_wgutils_level(level),
+                source_file != NULL && source_file[0] != '\0' ? source_file : "app",
+                source_line,
+                "%s",
+                message);
+}
+
+void rl_logger_set_level(rl_log_level_t level)
 {
     int raylib_level = LOG_INFO;
 
     log_set_log_level((size_t)level);
 
     switch (level) {
-        case LOG_LEVEL_TRACE:
+        case RL_LOGGER_LEVEL_TRACE:
             raylib_level = LOG_TRACE;
             break;
-        case LOG_LEVEL_DEBUG:
+        case RL_LOGGER_LEVEL_DEBUG:
             raylib_level = LOG_DEBUG;
             break;
-        case LOG_LEVEL_INFO:
+        case RL_LOGGER_LEVEL_INFO:
             raylib_level = LOG_INFO;
             break;
-        case LOG_LEVEL_WARN:
+        case RL_LOGGER_LEVEL_WARN:
             raylib_level = LOG_WARNING;
             break;
-        case LOG_LEVEL_ERROR:
+        case RL_LOGGER_LEVEL_ERROR:
             raylib_level = LOG_ERROR;
             break;
-        case LOG_LEVEL_FATAL:
+        case RL_LOGGER_LEVEL_FATAL:
             raylib_level = LOG_FATAL;
             break;
         default:

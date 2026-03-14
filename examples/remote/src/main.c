@@ -4,6 +4,8 @@
 #include "rl_frame_commands.h"
 #include "rl_frame_runner.h"
 #include "rl_loader.h"
+#include "rl_input.h"
+#include "rl_protocol.h"
 #include "rl_text.h"
 #include "rl_window.h"
 #include "rl_ws_client.h"
@@ -165,8 +167,13 @@ static void draw_status_overlay(remote_context_t *context, const char *message) 
 static void on_tick(void *user_data) {
   remote_context_t *context = (remote_context_t *)user_data;
   static rl_resource_response_t responses[RL_WS_MAX_PENDING_RESPONSES];
+  static rl_pick_response_t pick_responses[RL_PROTOCOL_MAX_PICK_RESPONSES];
   int response_count = 0;
+  int pick_response_count = 0;
   bool is_connected = false;
+  rl_mouse_state_t mouse_state = {0};
+  rl_keyboard_state_t keyboard_state = {0};
+  vec2_t screen_size = {0};
 
   if (context == NULL) {
     return;
@@ -180,10 +187,25 @@ static void on_tick(void *user_data) {
 
   rl_ws_client_poll(context->ws_client);
 
+  mouse_state = rl_input_get_mouse_state();
+  keyboard_state = rl_input_get_keyboard_state();
+  screen_size = rl_window_get_screen_size();
+  rl_ws_client_send_input_state(context->ws_client,
+                                &mouse_state,
+                                &keyboard_state,
+                                (int)screen_size.x,
+                                (int)screen_size.y);
+
   response_count = rl_ws_client_get_pending_responses(
       context->ws_client, responses, RL_WS_MAX_PENDING_RESPONSES);
   if (response_count > 0) {
     rl_ws_client_send_responses(context->ws_client, responses, response_count);
+  }
+
+  pick_response_count = rl_ws_client_get_pending_pick_responses(
+      context->ws_client, pick_responses, RL_PROTOCOL_MAX_PICK_RESPONSES);
+  if (pick_response_count > 0) {
+    rl_ws_client_send_pick_responses(context->ws_client, pick_responses, pick_response_count);
   }
 
   // Poll async resource loads (fonts, textures, models, etc.)
@@ -212,6 +234,7 @@ static void on_tick(void *user_data) {
     draw_status_overlay(context, "Connected. Waiting for first frame...");
   } else {
     rl_frame_commands_execute_clear(&context->current_frame.commands);
+    rl_frame_commands_execute_audio(&context->current_frame.commands);
 
     rl_begin_mode_3d();
     rl_frame_commands_execute_3d(&context->current_frame.commands);

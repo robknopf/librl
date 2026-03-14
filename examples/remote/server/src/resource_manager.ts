@@ -12,6 +12,7 @@ import type {
   CreateMusicRequest,
   CreateCamera3DRequest,
   CreateSprite3DRequest,
+  DestroyResourceRequest,
 } from "./resource_protocol";
 import { ResourceRequestType } from "./resource_protocol";
 
@@ -161,5 +162,12 @@ export class ResourceManager {
       type: ResourceRequestType.CREATE_SPRITE3D,
       filename,
     } as Omit<CreateSprite3DRequest, "rid">);
+  }
+
+  async destroyResource(handle: number): Promise<void> {
+    await this.createResource({
+      type: ResourceRequestType.DESTROY_RESOURCE,
+      handle,
+    } as Omit<DestroyResourceRequest, "rid">);
   }
 }

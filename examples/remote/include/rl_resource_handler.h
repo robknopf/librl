@@ -9,6 +9,7 @@ extern "C" {
 #endif
 
 #define RL_RESOURCE_HANDLER_MAX_PENDING 32
+#define RL_RESOURCE_HANDLER_MAX_TRACKED 256
 
 typedef struct rl_pending_resource_load_t {
   bool in_use;
@@ -21,6 +22,11 @@ typedef struct rl_pending_resource_load_t {
 
 typedef struct rl_resource_handler_t {
   rl_pending_resource_load_t pending[RL_RESOURCE_HANDLER_MAX_PENDING];
+  struct {
+    bool in_use;
+    rl_resource_request_type_t type;
+    rl_handle_t handle;
+  } tracked[RL_RESOURCE_HANDLER_MAX_TRACKED];
 } rl_resource_handler_t;
 
 // Initialize the resource handler
@@ -40,6 +46,9 @@ int rl_resource_handler_process_requests(rl_resource_handler_t *handler,
 int rl_resource_handler_poll(rl_resource_handler_t *handler,
                               rl_resource_response_t *responses,
                               int max_responses);
+
+// Destroy all tracked remote-created resources and clear pending async loads.
+void rl_resource_handler_reset(rl_resource_handler_t *handler);
 
 // Clean up all pending loads
 void rl_resource_handler_cleanup(rl_resource_handler_t *handler);

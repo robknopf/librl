@@ -87,6 +87,62 @@ on_tick():
 - **`types.ts`** — Command type enum and command interfaces.
 - **`protocol.ts`** — Typed packet definitions (`frame`, `resourceRequests`, `resourceResponses`).
 
+## Why Remote Exists
+
+- The remote path exists because HCR/Asyncify/browser-hosted scripting was clearly heading toward a large maintenance problem.
+- The "clean" answer for local scripting would have been a fully-declared manifest/bootstrap model, but in practice the module had become the game, not a thin scripting host.
+- Remote forces the boundary to be explicit:
+  - what is frame state
+  - what is persistent resource state
+  - what needs request/response behavior
+  - what belongs to transport vs runtime vs game objects
+- That pressure is useful. It flushes out the actual `librl` runtime/API shape instead of letting local VM conveniences hide design problems.
+
+## Possible Module Direction
+
+- `remote` may eventually become a real module type, similar in spirit to the old `lua` module.
+- The difference is backend, not architecture:
+  - `lua` hosted gameplay in a local VM
+  - `remote` would host gameplay over a transport such as WebSocket
+- If that happens, the game/runtime-facing API should feel the same whether it is:
+  - local and in-process
+  - remote and transport-backed
+- That means current remote server code should be treated as a runtime experiment, not just an example app.
+
+## Boundary Notes
+
+- Build server-side gameplay code as if it may later collapse into a direct/in-process runtime.
+- `server.ts` should stay transport-only:
+  - websocket
+  - encode/decode
+  - connection lifecycle
+- `game.ts` or later runtime/module code should own:
+  - init/destroy
+  - tick
+  - connect/disconnect policy
+  - object/resource lifecycle
+  - request/response semantics
+- Avoid baking game-specific concepts into transport/protocol layers.
+- Prefer generic request/response and evented broker patterns over per-feature ad hoc RID handling.
+- Object wrappers like `Model` should own:
+  - load
+  - transform/state
+  - draw emission
+  - pick request
+  - destroy
+
+## Proxy Naming Note
+
+- Some current server-side helpers are effectively transport/runtime-backed stand-ins for future direct `rl_*` calls.
+- It may be useful to think of these as **proxies**:
+  - they look object-like or API-like
+  - today they serialize over the remote connection
+  - later they may call real `rl_*` functions directly
+- This is a useful mental model when designing APIs:
+  - keep the surface clean and runtime-facing
+  - do not let transport details leak upward
+  - assume a future backend may bypass WebSocket entirely
+
 ## Adding a New Resource Type
 
 1. Add enum value to `rl_resource_request_type_t` in `rl_resource_protocol.h`

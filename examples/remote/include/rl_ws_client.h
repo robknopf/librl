@@ -3,6 +3,7 @@
 
 #include "rl_frame_commands.h"
 #include "rl_resource_protocol.h"
+#include "rl_types.h"
 #include <stdbool.h>
 
 #ifdef __cplusplus
@@ -23,6 +24,7 @@ typedef struct rl_ws_frame_data_t {
 } rl_ws_frame_data_t;
 
 typedef struct rl_ws_client_t rl_ws_client_t;
+struct rl_pick_response_t;
 
 rl_ws_client_t *rl_ws_client_create(const char *url);
 void rl_ws_client_destroy(rl_ws_client_t *client);
@@ -44,7 +46,17 @@ void rl_ws_client_send_responses(rl_ws_client_t *client,
                                  const rl_resource_response_t *responses,
                                  int count);
 
-void rl_ws_client_send_input(rl_ws_client_t *client, const char *input_json);
+void rl_ws_client_send_input_state(rl_ws_client_t *client,
+                                   const rl_mouse_state_t *mouse,
+                                   const rl_keyboard_state_t *keyboard,
+                                   int screen_width,
+                                   int screen_height);
+int rl_ws_client_get_pending_pick_responses(rl_ws_client_t *client,
+                                            struct rl_pick_response_t *responses,
+                                            int max_responses);
+void rl_ws_client_send_pick_responses(rl_ws_client_t *client,
+                                      const struct rl_pick_response_t *responses,
+                                      int count);
 rl_ws_bandwidth_stats_t rl_ws_client_get_bandwidth_stats(const rl_ws_client_t *client);
 
 #ifdef __cplusplus

@@ -17,6 +17,7 @@ typedef struct
     Music music;
     unsigned char *data;
     int data_size;
+    unsigned int ref_count;
     bool loop;
     char path[256];
 } rl_music_entry_t;
@@ -41,6 +42,24 @@ static rl_music_entry_t *rl_music_get_entry(rl_handle_t handle)
     return &rl_music_entries[index];
 }
 
+static rl_handle_t rl_music_find_by_path(const char *normalized_path)
+{
+    if (!normalized_path || normalized_path[0] == '\0') {
+        return 0;
+    }
+
+    for (uint16_t i = 1; i < MAX_MUSIC; i++) {
+        if (!rl_music_entries[i].in_use) {
+            continue;
+        }
+        if (strcmp(rl_music_entries[i].path, normalized_path) == 0) {
+            return rl_handle_pool_handle_from_index(&rl_music_pool, i);
+        }
+    }
+
+    return 0;
+}
+
 static void rl_music_entry_reset(rl_music_entry_t *entry)
 {
     if (entry == NULL) {
@@ -50,6 +69,7 @@ static void rl_music_entry_reset(rl_music_entry_t *entry)
     entry->music = (Music){0};
     entry->data = NULL;
     entry->data_size = 0;
+    entry->ref_count = 0;
     entry->loop = false;
     entry->path[0] = '\0';
 }
@@ -101,6 +121,15 @@ rl_handle_t rl_music_create(const char *filename)
     }
 
     path_normalize(filename, normalized_path, sizeof(normalized_path));
+    handle = rl_music_find_by_path(normalized_path);
+    if (handle != 0) {
+        entry = rl_music_get_entry(handle);
+        if (entry != NULL) {
+            entry->ref_count++;
+        }
+        return handle;
+    }
+
     music_ext = rl_music_extension_or_default(normalized_path);
 
     music_data = LoadFileData(normalized_path, &music_data_size);
@@ -131,6 +160,7 @@ rl_handle_t rl_music_create(const char *filename)
     entry->music = loaded_music;
     entry->data = music_data;
     entry->data_size = music_data_size;
+    entry->ref_count = 1;
     entry->loop = false;
     snprintf(entry->path, sizeof(entry->path), "%s", normalized_path);
     return handle;
@@ -141,6 +171,14 @@ void rl_music_destroy(rl_handle_t handle)
 {
     rl_music_entry_t *entry = rl_music_get_entry(handle);
     if (entry == NULL) {
+        return;
+    }
+
+    if (entry->ref_count > 0) {
+        entry->ref_count--;
+    }
+
+    if (entry->ref_count > 0) {
         return;
     }
 

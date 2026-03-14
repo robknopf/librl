@@ -4,6 +4,8 @@
 #include "websocket/websocket.h"
 #include "rl_logger.h"
 #include "rl_frame.h"
+#include "rl_music.h"
+#include "rl_pick.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,6 +20,8 @@ struct rl_ws_client_t {
   char message_buffer[MAX_MESSAGE_SIZE];
   rl_resource_response_t pending_responses[RL_WS_MAX_PENDING_RESPONSES];
   int pending_response_count;
+  rl_pick_response_t pending_pick_responses[RL_PROTOCOL_MAX_PICK_RESPONSES];
+  int pending_pick_response_count;
   double last_reconnect_attempt;
   double reconnect_delay;
   rl_resource_handler_t resource_handler;
@@ -43,8 +47,11 @@ static void process_ws_close(rl_ws_client_t *client, int code, const char *reaso
 
 static void process_ws_message(rl_ws_client_t *client, const char *data, int len, bool is_text) {
   static rl_protocol_requests_t requests;
+  static rl_protocol_pick_requests_t pick_requests;
+  static rl_protocol_music_commands_t music_commands;
   rl_protocol_message_type_t message_type = RL_PROTOCOL_MESSAGE_UNKNOWN;
   bool has_frame = false;
+  int i = 0;
 
   if (!is_text || len >= MAX_MESSAGE_SIZE) {
     return;
@@ -58,7 +65,9 @@ static void process_ws_message(rl_ws_client_t *client, const char *data, int len
   if (rl_protocol_parse_message(client->message_buffer, len,
                                 &message_type,
                                 &client->pending_frame, &has_frame,
-                                &requests) != 0) {
+                                &requests,
+                                &pick_requests,
+                                &music_commands) != 0) {
     log_error("[WS] Failed to parse message");
     return;
   }
@@ -83,6 +92,102 @@ static void process_ws_message(rl_ws_client_t *client, const char *data, int len
         log_debug("[WS] Processed %d resource requests", response_count);
       }
     }
+  }
+
+  if (message_type == RL_PROTOCOL_MESSAGE_PICK_REQUESTS && pick_requests.count > 0) {
+    int base_count = client->pending_pick_response_count;
+
+    for (i = 0; i < pick_requests.count &&
+                client->pending_pick_response_count < RL_PROTOCOL_MAX_PICK_RESPONSES; i++) {
+      const rl_pick_request_t *request = &pick_requests.items[i];
+      rl_pick_response_t *response =
+          &client->pending_pick_responses[client->pending_pick_response_count];
+
+      memset(response, 0, sizeof(*response));
+      response->rid = request->rid;
+
+      switch (request->type) {
+        case RL_PICK_REQUEST_MODEL: {
+          rl_pick_result_t pick = rl_pick_model(request->data.model.camera,
+                                                request->data.model.handle,
+                                                request->data.model.mouse_x,
+                                                request->data.model.mouse_y,
+                                                request->data.model.x,
+                                                request->data.model.y,
+                                                request->data.model.z,
+                                                request->data.model.scale,
+                                                request->data.model.rotation_x,
+                                                request->data.model.rotation_y,
+                                                request->data.model.rotation_z);
+          response->hit = pick.hit;
+          response->distance = pick.distance;
+          response->point = pick.point;
+          response->normal = pick.normal;
+          client->pending_pick_response_count++;
+          break;
+        }
+
+        case RL_PICK_REQUEST_SPRITE3D: {
+          rl_pick_result_t pick = rl_pick_sprite3d(request->data.sprite3d.camera,
+                                                   request->data.sprite3d.handle,
+                                                   request->data.sprite3d.mouse_x,
+                                                   request->data.sprite3d.mouse_y,
+                                                   request->data.sprite3d.x,
+                                                   request->data.sprite3d.y,
+                                                   request->data.sprite3d.z,
+                                                   request->data.sprite3d.size);
+          response->hit = pick.hit;
+          response->distance = pick.distance;
+          response->point = pick.point;
+          response->normal = pick.normal;
+          client->pending_pick_response_count++;
+          break;
+        }
+
+        default:
+          break;
+      }
+    }
+
+    if (client->pending_pick_response_count > base_count) {
+      log_debug("[WS] Processed %d pick requests",
+                client->pending_pick_response_count - base_count);
+    }
+  }
+
+  if (message_type == RL_PROTOCOL_MESSAGE_MUSIC_COMMANDS && music_commands.count > 0) {
+    for (i = 0; i < music_commands.count; i++) {
+      const rl_music_command_t *command = &music_commands.items[i];
+
+      switch (command->type) {
+        case RL_MUSIC_COMMAND_PLAY:
+          (void)rl_music_play(command->handle);
+          break;
+        case RL_MUSIC_COMMAND_PAUSE:
+          (void)rl_music_pause(command->handle);
+          break;
+        case RL_MUSIC_COMMAND_STOP:
+          (void)rl_music_stop(command->handle);
+          break;
+        case RL_MUSIC_COMMAND_SET_LOOP:
+          (void)rl_music_set_loop(command->handle, command->loop);
+          break;
+        case RL_MUSIC_COMMAND_SET_VOLUME:
+          (void)rl_music_set_volume(command->handle, command->volume);
+          break;
+        default:
+          break;
+      }
+    }
+  }
+
+  if (message_type == RL_PROTOCOL_MESSAGE_RESET) {
+    log_info("[WS] Resetting remote client state");
+    client->has_pending_frame = false;
+    memset(&client->pending_frame, 0, sizeof(client->pending_frame));
+    client->pending_response_count = 0;
+    client->pending_pick_response_count = 0;
+    rl_resource_handler_reset(&client->resource_handler);
   }
 }
 
@@ -133,6 +238,7 @@ rl_ws_client_t *rl_ws_client_create(const char *url) {
   snprintf(client->url, sizeof(client->url), "%s", url);
   client->has_pending_frame = false;
   client->pending_response_count = 0;
+  client->pending_pick_response_count = 0;
   client->last_reconnect_attempt = 0.0;
   client->reconnect_delay = 1.0;
   rl_resource_handler_init(&client->resource_handler);
@@ -250,11 +356,86 @@ void rl_ws_client_send_responses(rl_ws_client_t *client,
   }
 }
 
-void rl_ws_client_send_input(rl_ws_client_t *client, const char *input_json) {
-  if (client == NULL || input_json == NULL) {
+void rl_ws_client_send_input_state(rl_ws_client_t *client,
+                                   const rl_mouse_state_t *mouse,
+                                   const rl_keyboard_state_t *keyboard,
+                                   int screen_width,
+                                   int screen_height) {
+  char send_buf[MAX_MESSAGE_SIZE];
+  int len = 0;
+
+  if (client == NULL || mouse == NULL || keyboard == NULL || client->ws == NULL) {
     return;
   }
-  websocket_send_text(client->ws, input_json);
+
+  if (!websocket_is_connected(client->ws)) {
+    return;
+  }
+
+  len = rl_protocol_serialize_input_state(mouse, keyboard, screen_width, screen_height,
+                                          send_buf, MAX_MESSAGE_SIZE);
+  if (len <= 0) {
+    log_warn("[WS] Failed to serialize input state");
+    return;
+  }
+
+  if (websocket_send_text(client->ws, send_buf) != 0) {
+    log_warn("[WS] Failed to send input state");
+    return;
+  }
+
+  client->bytes_out_accum += (size_t)len;
+}
+
+int rl_ws_client_get_pending_pick_responses(rl_ws_client_t *client,
+                                            rl_pick_response_t *responses,
+                                            int max_responses) {
+  int count = 0;
+  int i = 0;
+
+  if (client == NULL || responses == NULL || max_responses <= 0) {
+    return 0;
+  }
+
+  count = client->pending_pick_response_count;
+  if (count > max_responses) {
+    count = max_responses;
+  }
+
+  for (i = 0; i < count; i++) {
+    responses[i] = client->pending_pick_responses[i];
+  }
+  client->pending_pick_response_count = 0;
+
+  return count;
+}
+
+void rl_ws_client_send_pick_responses(rl_ws_client_t *client,
+                                      const rl_pick_response_t *responses,
+                                      int count) {
+  char send_buf[MAX_MESSAGE_SIZE];
+  int len = 0;
+
+  if (client == NULL || responses == NULL || count <= 0 || client->ws == NULL) {
+    return;
+  }
+
+  if (!websocket_is_connected(client->ws)) {
+    return;
+  }
+
+  len = rl_protocol_serialize_pick_responses(responses, count, send_buf, MAX_MESSAGE_SIZE);
+  if (len <= 0) {
+    log_warn("[WS] Failed to serialize pick responses");
+    return;
+  }
+
+  if (websocket_send_text(client->ws, send_buf) != 0) {
+    log_warn("[WS] Failed to send pick responses");
+    return;
+  }
+
+  client->bytes_out_accum += (size_t)len;
 }
 
 void rl_ws_client_tick(rl_ws_client_t *client) {

@@ -11,6 +11,84 @@
 #include <stdio.h>
 #include <string.h>
 
+static void tracked_slot_reset(rl_resource_handler_t *handler, int index) {
+  if (handler == NULL || index < 0 || index >= RL_RESOURCE_HANDLER_MAX_TRACKED) {
+    return;
+  }
+
+  handler->tracked[index].in_use = false;
+  handler->tracked[index].type = 0;
+  handler->tracked[index].handle = 0;
+}
+
+static int find_free_tracked_slot(rl_resource_handler_t *handler) {
+  int i = 0;
+
+  if (handler == NULL) {
+    return -1;
+  }
+
+  for (i = 0; i < RL_RESOURCE_HANDLER_MAX_TRACKED; i++) {
+    if (!handler->tracked[i].in_use) {
+      return i;
+    }
+  }
+
+  return -1;
+}
+
+static void track_created_handle(rl_resource_handler_t *handler,
+                                 rl_resource_request_type_t type,
+                                 rl_handle_t handle) {
+  int index = 0;
+
+  if (handler == NULL || handle == 0) {
+    return;
+  }
+
+  index = find_free_tracked_slot(handler);
+  if (index < 0) {
+    log_warn("[ResourceHandler] No free tracked slots for handle %u",
+             (unsigned int)handle);
+    return;
+  }
+
+  handler->tracked[index].in_use = true;
+  handler->tracked[index].type = type;
+  handler->tracked[index].handle = handle;
+}
+
+static void destroy_handle_for_type(rl_resource_request_type_t type, rl_handle_t handle) {
+  switch (type) {
+    case RL_RESOURCE_REQUEST_CREATE_COLOR:
+      rl_color_destroy(handle);
+      break;
+    case RL_RESOURCE_REQUEST_CREATE_FONT:
+      rl_font_destroy(handle);
+      break;
+    case RL_RESOURCE_REQUEST_CREATE_TEXTURE:
+      rl_texture_destroy(handle);
+      break;
+    case RL_RESOURCE_REQUEST_CREATE_MODEL:
+      rl_model_destroy(handle);
+      break;
+    case RL_RESOURCE_REQUEST_CREATE_SOUND:
+      rl_sound_destroy(handle);
+      break;
+    case RL_RESOURCE_REQUEST_CREATE_MUSIC:
+      rl_music_destroy(handle);
+      break;
+    case RL_RESOURCE_REQUEST_CREATE_CAMERA3D:
+      rl_camera3d_destroy(handle);
+      break;
+    case RL_RESOURCE_REQUEST_CREATE_SPRITE3D:
+      rl_sprite3d_destroy(handle);
+      break;
+    default:
+      break;
+  }
+}
+
 static rl_handle_t process_create_color(const rl_resource_request_create_color_t *data) {
   return rl_color_create(data->r, data->g, data->b, data->a);
 }
@@ -115,6 +193,9 @@ int rl_resource_handler_process_requests(rl_resource_handler_t *handler,
         responses[count].rid = req->rid;
         responses[count].handle = handle;
         responses[count].success = (handle != 0);
+        if (handle != 0) {
+          track_created_handle(handler, req->type, handle);
+        }
         count++;
         break;
       case RL_RESOURCE_REQUEST_CREATE_CAMERA3D:
@@ -122,6 +203,9 @@ int rl_resource_handler_process_requests(rl_resource_handler_t *handler,
         responses[count].rid = req->rid;
         responses[count].handle = handle;
         responses[count].success = (handle != 0);
+        if (handle != 0) {
+          track_created_handle(handler, req->type, handle);
+        }
         count++;
         break;
       case RL_RESOURCE_REQUEST_CREATE_FONT:
@@ -222,6 +306,9 @@ int rl_resource_handler_poll(rl_resource_handler_t *handler,
     responses[count].rid = pending->rid;
     responses[count].handle = handle;
     responses[count].success = (handle != 0);
+    if (handle != 0) {
+      track_created_handle(handler, pending->type, handle);
+    }
     count++;
     
     pending->in_use = false;
@@ -230,13 +317,13 @@ int rl_resource_handler_poll(rl_resource_handler_t *handler,
   return count;
 }
 
-void rl_resource_handler_cleanup(rl_resource_handler_t *handler) {
+void rl_resource_handler_reset(rl_resource_handler_t *handler) {
   int i = 0;
-  
+
   if (handler == NULL) {
     return;
   }
-  
+
   for (i = 0; i < RL_RESOURCE_HANDLER_MAX_PENDING; i++) {
     if (handler->pending[i].in_use && handler->pending[i].loader_task != NULL) {
       rl_loader_free_task(handler->pending[i].loader_task);
@@ -244,4 +331,17 @@ void rl_resource_handler_cleanup(rl_resource_handler_t *handler) {
     handler->pending[i].in_use = false;
     handler->pending[i].loader_task = NULL;
   }
+
+  for (i = RL_RESOURCE_HANDLER_MAX_TRACKED - 1; i >= 0; i--) {
+    if (!handler->tracked[i].in_use || handler->tracked[i].handle == 0) {
+      continue;
+    }
+
+    destroy_handle_for_type(handler->tracked[i].type, handler->tracked[i].handle);
+    tracked_slot_reset(handler, i);
+  }
+}
+
+void rl_resource_handler_cleanup(rl_resource_handler_t *handler) {
+  rl_resource_handler_reset(handler);
 }

@@ -1,7 +1,7 @@
 -Iinclude
 -I../../include
--I../../deps/wgutils/include
--I../../deps/libraylib/include
--I../../modules/lua/include
 -I${EMSDK}/upstream/emscripten/cache/sysroot/include
 -DPLATFORM_DESKTOP
+
+
+-I../../deps/wgutils/include

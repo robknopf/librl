@@ -60,6 +60,8 @@
   - host owns bootstrap, window/frame boundaries, networking, and resource execution
   - a remote server is now the most promising gameplay driver for wasm/runtime iteration
   - current reference implementation is `examples/remote`
+  - current remote example still reaches into `wgutils` directly (`json/json.h`, `websocket/websocket.h`)
+  - once the remote client shape is settled, move the transport/protocol pieces into `rl` proper so examples can consume librl without knowing about that dependency layer
 - Frame command transport is no longer hypothetical:
   - typed command ABI exists in `include/rl_module.h`
   - remote/server code now emits commands over the websocket protocol

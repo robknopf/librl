@@ -2,6 +2,7 @@
 #include "rl_protocol.h"
 #include "rl_resource_handler.h"
 #include "websocket/websocket.h"
+#include "rl_logger.h"
 #include "rl_frame.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,72 +27,87 @@ struct rl_ws_client_t {
   rl_ws_bandwidth_stats_t bandwidth_stats;
 };
 
+static void process_ws_open(rl_ws_client_t *client) {
+  log_info("[WS] Connected to %s\n", client->url);
+}
+
+static void process_ws_error(rl_ws_client_t *client) {
+  log_error("[WS] Error on %s. Will attempt to reconnect...\n", client->url);
+  client->reconnect_delay = 1.0;
+}
+
+static void process_ws_close(rl_ws_client_t *client, int code, const char *reason) {
+  log_info("[WS] Closed: code=%d, reason=%s. Will attempt to reconnect...\n", code, reason);
+  client->reconnect_delay = 1.0;
+}
+
+static void process_ws_message(rl_ws_client_t *client, const char *data, int len, bool is_text) {
+  static rl_protocol_requests_t requests;
+  rl_protocol_message_type_t message_type = RL_PROTOCOL_MESSAGE_UNKNOWN;
+  bool has_frame = false;
+
+  if (!is_text || len >= MAX_MESSAGE_SIZE) {
+    return;
+  }
+
+  client->bytes_in_accum += (size_t)len;
+
+  memcpy(client->message_buffer, data, (size_t)len);
+  client->message_buffer[len] = '\0';
+
+  if (rl_protocol_parse_message(client->message_buffer, len,
+                                &message_type,
+                                &client->pending_frame, &has_frame,
+                                &requests) != 0) {
+    log_error("[WS] Failed to parse message\n");
+    return;
+  }
+
+  if (message_type == RL_PROTOCOL_MESSAGE_FRAME && has_frame) {
+    client->has_pending_frame = true;
+  }
+
+  if (message_type == RL_PROTOCOL_MESSAGE_RESOURCE_REQUESTS && requests.count > 0) {
+    int response_count = rl_resource_handler_process_requests(
+        &client->resource_handler,
+        requests.items,
+        requests.count,
+        client->pending_responses + client->pending_response_count,
+        RL_WS_MAX_PENDING_RESPONSES - client->pending_response_count);
+
+    if (response_count >= 0 &&
+        client->pending_response_count + response_count <= RL_WS_MAX_PENDING_RESPONSES) {
+      client->pending_response_count += response_count;
+
+      if (response_count > 0) {
+        log_debug("[WS] Processed %d resource requests\n", response_count);
+      }
+    }
+  }
+}
+
 static void on_ws_open(websocket_t *ws, void *user_data) {
   rl_ws_client_t *client = (rl_ws_client_t *)user_data;
   (void)ws;
-  printf("[WS] Connected to %s\n", client->url);
+  process_ws_open(client);
 }
 
 static void on_ws_error(websocket_t *ws, void *user_data) {
   rl_ws_client_t *client = (rl_ws_client_t *)user_data;
   (void)ws;
-  printf("[WS] Error on %s. Will attempt to reconnect...\n", client->url);
-  client->reconnect_delay = 1.0;
+  process_ws_error(client);
 }
 
 static void on_ws_close(websocket_t *ws, int code, const char *reason, void *user_data) {
   rl_ws_client_t *client = (rl_ws_client_t *)user_data;
   (void)ws;
-  printf("[WS] Closed: code=%d, reason=%s. Will attempt to reconnect...\n", code, reason);
-  client->reconnect_delay = 1.0;
+  process_ws_close(client, code, reason);
 }
 
 static void on_ws_message(websocket_t *ws, const char *data, int len, bool is_text, void *user_data) {
   rl_ws_client_t *client = (rl_ws_client_t *)user_data;
-  static rl_protocol_requests_t requests;
-  rl_protocol_message_type_t message_type = RL_PROTOCOL_MESSAGE_UNKNOWN;
-  bool has_frame = false;
   (void)ws;
-  
-  if (!is_text || len >= MAX_MESSAGE_SIZE) {
-    return;
-  }
-  
-  client->bytes_in_accum += (size_t)len;
-  
-  memcpy(client->message_buffer, data, (size_t)len);
-  client->message_buffer[len] = '\0';
-  
-  if (rl_protocol_parse_message(client->message_buffer, len,
-                                 &message_type,
-                                 &client->pending_frame, &has_frame,
-                                 &requests) != 0) {
-    printf("[WS] Failed to parse message\n");
-    return;
-  }
-  
-  if (message_type == RL_PROTOCOL_MESSAGE_FRAME && has_frame) {
-    client->has_pending_frame = true;
-  }
-  
-  if (message_type == RL_PROTOCOL_MESSAGE_RESOURCE_REQUESTS && requests.count > 0) {
-    int response_count = rl_resource_handler_process_requests(
-      &client->resource_handler,
-      requests.items,
-      requests.count,
-      client->pending_responses + client->pending_response_count,
-      RL_WS_MAX_PENDING_RESPONSES - client->pending_response_count
-    );
-    
-    if (response_count >= 0 &&
-        client->pending_response_count + response_count <= RL_WS_MAX_PENDING_RESPONSES) {
-      client->pending_response_count += response_count;
-      
-      if (response_count > 0) {
-        printf("[WS] Processed %d resource requests\n", response_count);
-      }
-    }
-  }
+  process_ws_message(client, data, len, is_text);
 }
 
 static const websocket_callbacks_t ws_callbacks = {
@@ -123,12 +139,12 @@ rl_ws_client_t *rl_ws_client_create(const char *url) {
   
   client->ws = websocket_create(url, &ws_callbacks, client);
   if (client->ws == NULL) {
-    printf("[WS] Failed to create websocket\n");
+    log_error("[WS] Failed to create websocket\n");
     free(client);
     return NULL;
   }
   
-  printf("[WS] Connecting to %s...\n", url);
+  log_info("[WS] Connecting to %s...\n", url);
   return client;
 }
 
@@ -150,7 +166,10 @@ bool rl_ws_client_is_connected(const rl_ws_client_t *client) {
 }
 
 void rl_ws_client_poll(rl_ws_client_t *client) {
-  (void)client;
+  if (client == NULL || client->ws == NULL) {
+    return;
+  }
+  websocket_poll(client->ws);
 }
 
 bool rl_ws_client_has_frame(const rl_ws_client_t *client) {
@@ -215,17 +234,17 @@ void rl_ws_client_send_responses(rl_ws_client_t *client,
   }
   
   if (!websocket_is_connected(client->ws)) {
-    printf("[WS] Cannot send responses: not connected\n");
+    log_warn("[WS] Cannot send responses: not connected\n");
     return;
   }
   
   len = rl_protocol_serialize_responses(responses, count, send_buf, MAX_MESSAGE_SIZE);
   if (len > 0) {
-    printf("[WS] Sending %d resource responses\n", count);
+    log_debug("[WS] Sending %d resource responses\n", count);
     if (websocket_send_text(client->ws, send_buf) != 0) {
-      printf("[WS] Failed to send responses\n");
+      log_warn("[WS] Failed to send responses\n");
     } else {
-      printf("[WS] Responses sent successfully\n");
+      log_debug("[WS] Responses sent successfully\n");
     }
     client->bytes_out_accum += (size_t)len;
   }
@@ -260,7 +279,7 @@ void rl_ws_client_tick(rl_ws_client_t *client) {
   
   if (!websocket_is_connected(client->ws)) {
     if (now - client->last_reconnect_attempt >= client->reconnect_delay) {
-      printf("[WS] Attempting to reconnect to %s...\n", client->url);
+      log_info("[WS] Attempting to reconnect to %s...\n", client->url);
       client->last_reconnect_attempt = now;
       
       websocket_destroy(client->ws);
@@ -273,7 +292,7 @@ void rl_ws_client_tick(rl_ws_client_t *client) {
         if (client->reconnect_delay > 30.0) {
           client->reconnect_delay = 30.0;
         }
-        printf("[WS] Reconnect failed. Next attempt in %.1f seconds\n", client->reconnect_delay);
+        log_warn("[WS] Reconnect failed. Next attempt in %.1f seconds\n", client->reconnect_delay);
       }
     }
   }

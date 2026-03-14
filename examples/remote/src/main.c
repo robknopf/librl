@@ -9,7 +9,7 @@
 #include "rl_ws_client.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include "rl_logger.h"
 
 typedef struct remote_context_t {
   rl_ws_client_t *ws_client;
@@ -79,16 +79,16 @@ static void on_init(void *user_data) {
   loader_rc = rl_loader_add_task(rl_loader_import_asset_async(debug_font_path),
                                  debug_font_path, on_debug_font_ready, NULL, NULL);
   if (loader_rc != RL_LOADER_ADD_TASK_OK) {
-    printf("[Remote] Failed to queue debug font load (%d)\n", loader_rc);
+    log_error("[Remote] Failed to queue debug font load (%d)\n", loader_rc);
   }
 
-  printf("[Remote] Initializing...\n");
+  log_info("[Remote] Initializing...\n");
 
-  printf("[Remote] Connecting to %s\n", ws_url);
+  log_info("[Remote] Connecting to %s\n", ws_url);
 
   context->ws_client = rl_ws_client_create(ws_url);
   if (context->ws_client == NULL) {
-    printf("[Remote] Failed to create websocket client\n");
+    log_error("[Remote] Failed to create websocket client\n");
     rl_frame_runner_request_stop();
     return;
   }
@@ -102,7 +102,7 @@ static void on_init(void *user_data) {
   loader_rc = rl_loader_add_task(rl_loader_import_asset_async(debug_font_path),
                                  debug_font_path, on_overlay_font_ready, NULL, context);
   if (loader_rc != RL_LOADER_ADD_TASK_OK) {
-    printf("[Remote] Failed to queue overlay font load (%d)\n", loader_rc);
+    log_error("[Remote] Failed to queue overlay font load (%d)\n", loader_rc);
   }
 }
 
@@ -113,8 +113,8 @@ static void on_shutdown(void *user_data) {
     return;
   }
 
-  printf("[Remote] Shutting down...\n");
-  printf("[Remote] Frames received: %d, rendered: %d\n",
+  log_info("[Remote] Shutting down...\n");
+  log_debug("[Remote] Frames received: %d, rendered: %d\n",
          context->frames_received, context->frames_rendered);
 
   if (context->ws_client != NULL) {
@@ -125,10 +125,47 @@ static void on_shutdown(void *user_data) {
   rl_window_close();
 }
 
+static void draw_status_overlay(remote_context_t *context, const char *message) {
+  vec2_t screen = rl_window_get_screen_size();
+  int title_font_size = 36;
+  int body_font_size = 24;
+  int title_width = rl_text_measure("Remote Client", title_font_size);
+  int body_width = rl_text_measure(message, body_font_size);
+  int center_x = (int)(screen.x * 0.5f);
+  int center_y = (int)(screen.y * 0.5f);
+
+  rl_text_draw("Remote Client",
+               center_x - (title_width / 2),
+               center_y - 48,
+               title_font_size,
+               RL_COLOR_DARKGRAY);
+  rl_text_draw(message,
+               center_x - (body_width / 2),
+               center_y + 8,
+               body_font_size,
+               RL_COLOR_GRAY);
+
+  if (context->overlay_font != 0 && context->ws_client != NULL) {
+    char stats_buf[128];
+    rl_ws_bandwidth_stats_t bw =
+        rl_ws_client_get_bandwidth_stats(context->ws_client);
+    vec2_t text_size;
+
+    snprintf(stats_buf, sizeof(stats_buf), "in: %.1f kb/s  out: %.1f kb/s",
+             bw.bytes_in_per_sec / 1024.0f, bw.bytes_out_per_sec / 1024.0f);
+    text_size = rl_text_measure_ex(context->overlay_font, stats_buf,
+                                   context->overlay_font_size, 1.0f);
+    rl_text_draw_ex(context->overlay_font, stats_buf,
+                    (int)(screen.x - text_size.x - 10), 10,
+                    context->overlay_font_size, 1.0f, RL_COLOR_DARKGRAY);
+  }
+}
+
 static void on_tick(void *user_data) {
   remote_context_t *context = (remote_context_t *)user_data;
   static rl_resource_response_t responses[RL_WS_MAX_PENDING_RESPONSES];
   int response_count = 0;
+  bool is_connected = false;
 
   if (context == NULL) {
     return;
@@ -155,43 +192,47 @@ static void on_tick(void *user_data) {
     rl_ws_client_send_responses(context->ws_client, responses, response_count);
   }
 
-  if (!rl_ws_client_is_connected(context->ws_client)) {
-    return;
-  }
+  is_connected = rl_ws_client_is_connected(context->ws_client);
 
-  if (rl_ws_client_has_frame(context->ws_client)) {
+  if (is_connected && rl_ws_client_has_frame(context->ws_client)) {
     if (rl_ws_client_get_frame(context->ws_client, &context->current_frame)) {
       context->has_frame = true;
       context->frames_received++;
     }
   }
 
-  if (!context->has_frame || context->current_frame.commands.count == 0) {
-    return;
-  }
   rl_frame_begin();
-  rl_frame_commands_execute_clear(&context->current_frame.commands);
 
-  rl_begin_mode_3d();
-  rl_frame_commands_execute_3d(&context->current_frame.commands);
-  rl_end_mode_3d();
+  if (!is_connected) {
+    rl_frame_clear_background(RL_COLOR_LIGHTGRAY);
+    draw_status_overlay(context, "Waiting for remote server...");
+  } else if (!context->has_frame || context->current_frame.commands.count == 0) {
+    rl_frame_clear_background(RL_COLOR_LIGHTGRAY);
+    draw_status_overlay(context, "Connected. Waiting for first frame...");
+  } else {
+    rl_frame_commands_execute_clear(&context->current_frame.commands);
 
-  rl_frame_commands_execute_2d(&context->current_frame.commands);
+    rl_begin_mode_3d();
+    rl_frame_commands_execute_3d(&context->current_frame.commands);
+    rl_end_mode_3d();
 
-  // Draw local overlay (bandwidth stats)
-  if (context->overlay_font != 0) {
-    char stats_buf[128];
-    rl_ws_bandwidth_stats_t bw =
-        rl_ws_client_get_bandwidth_stats(context->ws_client);
-    vec2_t screen = rl_window_get_screen_size();
+    rl_frame_commands_execute_2d(&context->current_frame.commands);
 
-    snprintf(stats_buf, sizeof(stats_buf), "in: %.1f kb/s  out: %.1f kb/s",
-             bw.bytes_in_per_sec / 1024.0f, bw.bytes_out_per_sec / 1024.0f);
-    vec2_t text_size =
-        rl_text_measure_ex(context->overlay_font, stats_buf, context->overlay_font_size, 1.0f);
-    rl_text_draw_ex(context->overlay_font, stats_buf,
-                    (int)(screen.x - text_size.x - 10), 10, context->overlay_font_size, 1.0f,
-                    RL_COLOR_DARKGRAY);
+    if (context->overlay_font != 0) {
+      char stats_buf[128];
+      rl_ws_bandwidth_stats_t bw =
+          rl_ws_client_get_bandwidth_stats(context->ws_client);
+      vec2_t screen = rl_window_get_screen_size();
+      vec2_t text_size;
+
+      snprintf(stats_buf, sizeof(stats_buf), "in: %.1f kb/s  out: %.1f kb/s",
+               bw.bytes_in_per_sec / 1024.0f, bw.bytes_out_per_sec / 1024.0f);
+      text_size = rl_text_measure_ex(context->overlay_font, stats_buf,
+                                     context->overlay_font_size, 1.0f);
+      rl_text_draw_ex(context->overlay_font, stats_buf,
+                      (int)(screen.x - text_size.x - 10), 10,
+                      context->overlay_font_size, 1.0f, RL_COLOR_DARKGRAY);
+    }
   }
 
   rl_frame_end();

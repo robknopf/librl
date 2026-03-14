@@ -33,6 +33,7 @@ Navigate to the remote example page. You should see:
 
 # Terminal 2
 make desktop
+RL_REMOTE_WS_PROTOCOL=ws RL_REMOTE_WS_HOST=localhost RL_REMOTE_WS_PORT=9001 \
 ./out/main
 ```
 

@@ -11,6 +11,7 @@ CORE_INC_DIR := $(ROOT_DIR)/deps/wgutils/include
 CORE_LIB_DIR := $(ROOT_DIR)/deps/wgutils/lib
 CORE_DESKTOP_ARCHIVE := $(CORE_LIB_DIR)/libwgutils.a
 CORE_WASM_ARCHIVE := $(CORE_LIB_DIR)/libwgutils.wasm.a
+CORE_DESKTOP_LINK_FILE := $(CORE_LIB_DIR)/libwgutils.desktop.link
 UNIT_TEST_DIR := $(ROOT_DIR)/tests/unit
 HEADLESS_PROBE_C := $(ROOT_DIR)/tests/headless/fileio_probe_wasm.c
 HEADLESS_PROBE_JS := $(ROOT_DIR)/tests/headless/fileio_probe.js
@@ -65,7 +66,7 @@ test: test_desktop test_wasm
 
 unit_test_desktop:
 	@$(MAKE) -C $(ROOT_DIR)/deps/wgutils desktop
-	$(CC_DESKTOP) $(CFLAGS) -DHEADLESS $(INCLUDES) -I$(UNIT_TEST_DIR) $(UNIT_TEST_MAIN) $(UNIT_TEST_SRCS) $(UNIT_TEST_LIB_SRCS) $(CORE_DESKTOP_ARCHIVE) -lcurl -o $(UNIT_TEST_DESKTOP_BIN)
+	$(CC_DESKTOP) $(CFLAGS) -DHEADLESS $(INCLUDES) -I$(UNIT_TEST_DIR) $(UNIT_TEST_MAIN) $(UNIT_TEST_SRCS) $(UNIT_TEST_LIB_SRCS) $(CORE_DESKTOP_ARCHIVE) $$(cat $(CORE_DESKTOP_LINK_FILE)) -o $(UNIT_TEST_DESKTOP_BIN)
 	@$(UNIT_TEST_DESKTOP_BIN) > /tmp/librl_unit_tests_desktop.log 2>&1 || (cat /tmp/librl_unit_tests_desktop.log && exit 1)
 	@tail -n 1 /tmp/librl_unit_tests_desktop.log
 

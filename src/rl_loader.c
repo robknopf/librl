@@ -16,7 +16,7 @@
 #include "fetch_url/fetch_url.h"
 #include "lru_cache/lru_cache.h"
 #include "path/path.h"
-#include "vendor/cjson/cJSON.h"
+#include "json/json.h"
 #include "rl_scratch.h"
 #include "internal/exports.h"
 
@@ -377,73 +377,76 @@ static int rl_loader_collect_gltf_dependency_uris(rl_loader_task_t *task,
                                                   const unsigned char *json_bytes,
                                                   size_t json_size)
 {
-    cJSON *root = NULL;
-    cJSON *buffers = NULL;
-    cJSON *images = NULL;
-    cJSON *entry = NULL;
+    json_value_t *root = NULL;
+    const json_value_t *buffers = NULL;
+    const json_value_t *images = NULL;
+    const json_value_t *entry = NULL;
+    int index = 0;
 
     if (!task || !json_bytes || json_size == 0) {
         return -1;
     }
 
-    root = cJSON_ParseWithLength((const char *)json_bytes, json_size);
+    root = json_parse_with_length((const char *)json_bytes, json_size);
     if (!root) {
         return -1;
     }
 
-    buffers = cJSON_GetObjectItemCaseSensitive(root, "buffers");
-    if (cJSON_IsArray(buffers)) {
-        cJSON_ArrayForEach(entry, buffers)
-        {
-            cJSON *uri = cJSON_GetObjectItemCaseSensitive(entry, "uri");
+    buffers = json_object_get(root, "buffers");
+    if (json_is_array(buffers)) {
+        for (index = 0; index < json_array_size(buffers); ++index) {
+            const json_value_t *uri = NULL;
             char resolved_path[FILEIO_MAX_PATH_LENGTH * 2] = {0};
             int rc = 0;
 
-            if (!cJSON_IsString(uri) || uri->valuestring == NULL) {
+            entry = json_array_get(buffers, index);
+            uri = json_object_get(entry, "uri");
+            if (!json_is_string(uri) || json_get_string(uri) == NULL) {
                 continue;
             }
 
             rc = rl_loader_dependency_uri_to_local_path(task->root_dir,
-                                                        uri->valuestring,
+                                                        json_get_string(uri),
                                                         resolved_path,
                                                         sizeof(resolved_path));
             if (rc == 1) {
                 continue;
             }
             if (rc != 0 || rl_loader_append_dependency_path(task, resolved_path) != 0) {
-                cJSON_Delete(root);
+                json_delete(root);
                 return -1;
             }
         }
     }
 
-    images = cJSON_GetObjectItemCaseSensitive(root, "images");
-    if (cJSON_IsArray(images)) {
-        cJSON_ArrayForEach(entry, images)
-        {
-            cJSON *uri = cJSON_GetObjectItemCaseSensitive(entry, "uri");
+    images = json_object_get(root, "images");
+    if (json_is_array(images)) {
+        for (index = 0; index < json_array_size(images); ++index) {
+            const json_value_t *uri = NULL;
             char resolved_path[FILEIO_MAX_PATH_LENGTH * 2] = {0};
             int rc = 0;
 
-            if (!cJSON_IsString(uri) || uri->valuestring == NULL) {
+            entry = json_array_get(images, index);
+            uri = json_object_get(entry, "uri");
+            if (!json_is_string(uri) || json_get_string(uri) == NULL) {
                 continue;
             }
 
             rc = rl_loader_dependency_uri_to_local_path(task->root_dir,
-                                                        uri->valuestring,
+                                                        json_get_string(uri),
                                                         resolved_path,
                                                         sizeof(resolved_path));
             if (rc == 1) {
                 continue;
             }
             if (rc != 0 || rl_loader_append_dependency_path(task, resolved_path) != 0) {
-                cJSON_Delete(root);
+                json_delete(root);
                 return -1;
             }
         }
     }
 
-    cJSON_Delete(root);
+    json_delete(root);
     return 0;
 }
 

@@ -7,6 +7,7 @@
 #include "rl_music.h"
 #include "rl_camera3d.h"
 #include "rl_sprite3d.h"
+#include "rl_logger.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -44,13 +45,13 @@ static bool start_async_load(rl_resource_handler_t *handler, uint32_t rid,
                               const char *filename, float size) {
   rl_pending_resource_load_t *pending = find_free_pending(handler);
   if (pending == NULL) {
-    printf("[ResourceHandler] No free pending slots\n");
+    log_error("[ResourceHandler] No free pending slots\n");
     return false;
   }
   
   pending->loader_task = rl_loader_import_asset_async(filename);
   if (pending->loader_task == NULL) {
-    printf("[ResourceHandler] Failed to start loader for: %s\n", filename);
+    log_error("[ResourceHandler] Failed to start loader for: %s\n", filename);
     return false;
   }
   
@@ -60,7 +61,7 @@ static bool start_async_load(rl_resource_handler_t *handler, uint32_t rid,
   snprintf(pending->filename, sizeof(pending->filename), "%s", filename);
   pending->size = size;
   
-  printf("[ResourceHandler] Started async load: %s (rid=%u)\n", filename, rid);
+  log_debug("[ResourceHandler] Started async load: %s (rid=%u)\n", filename, rid);
   return true;
 }
 
@@ -158,7 +159,7 @@ int rl_resource_handler_process_requests(rl_resource_handler_t *handler,
         break;
       }
       case RL_RESOURCE_REQUEST_DESTROY:
-        printf("[ResourceHandler] Warning: destroy not implemented yet (handle: %u)\n",
+        log_warn("[ResourceHandler] Warning: destroy not implemented yet (handle: %u)\n",
                (unsigned int)req->data.destroy.handle);
         responses[count].rid = req->rid;
         responses[count].handle = 0;
@@ -166,7 +167,7 @@ int rl_resource_handler_process_requests(rl_resource_handler_t *handler,
         count++;
         break;
       default:
-        printf("[ResourceHandler] Unknown request type: %d\n", req->type);
+        log_warn("[ResourceHandler] Unknown request type: %d\n", req->type);
         break;
     }
   }
@@ -206,7 +207,7 @@ int rl_resource_handler_poll(rl_resource_handler_t *handler,
     pending->loader_task = NULL;
     
     if (rc != 0) {
-      printf("[ResourceHandler] Loader failed for: %s\n", pending->filename);
+      log_error("[ResourceHandler] Loader failed for: %s\n", pending->filename);
       responses[count].rid = pending->rid;
       responses[count].handle = 0;
       responses[count].success = false;
@@ -216,7 +217,7 @@ int rl_resource_handler_poll(rl_resource_handler_t *handler,
     }
     
     handle = create_handle_for_type(pending->type, pending->filename, pending->size);
-    printf("[ResourceHandler] Loaded %s -> handle %u\n", pending->filename, (unsigned int)handle);
+    log_info("[ResourceHandler] Loaded %s -> handle %u\n", pending->filename, (unsigned int)handle);
     
     responses[count].rid = pending->rid;
     responses[count].handle = handle;

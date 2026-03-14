@@ -115,4 +115,5 @@ Client-side only. `rl_ws_client_t` accumulates `bytes_in` / `bytes_out` and comp
 - No input forwarding from client to server
 - JSON protocol — binary (MessagePack) would reduce bandwidth significantly
 - Camera is set active on creation; no command to change it per-frame
-- Desktop WebSocket client is stubbed (WASM only for now)
+- Desktop websocket callbacks are normalized through `websocket_poll()` so
+  higher layers can treat wasm and desktop the same way

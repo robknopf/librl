@@ -23,6 +23,8 @@ import { rl } from "/lib/librl.js";
 // For remote->wasm build: cd examples/remote && make wasm (or wasm-debug)
 import { createOutputLogger, ensureOutputElement } from "/examples/js/ansi_output.js";
 
+const WASM_STARTUP_TIMEOUT_MS = 15000;
+
 async function loadExampleModuleFactory(maxAttempts = 120, delayMs = 500) {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
@@ -79,7 +81,41 @@ function getEnv() {
     outputLog(line);
   };
 
+  let lastStatus = null;
+  env.setStatus = function (status) {
+    if (!status || status === lastStatus) {
+      return;
+    }
+    lastStatus = status;
+    outputLog(`[wasm] ${status}`);
+  };
+
+  env.onAbort = function (what) {
+    const message = what ? String(what) : "WASM startup aborted";
+    console.error(message);
+    outputLog(`[wasm] ${message}`);
+  };
+
   return env;
+}
+
+async function waitForModuleWithTimeout(createExampleModule, env, timeoutMs = WASM_STARTUP_TIMEOUT_MS) {
+  let timeoutId = 0;
+
+  try {
+    return await Promise.race([
+      createExampleModule(env),
+      new Promise((_, reject) => {
+        timeoutId = window.setTimeout(() => {
+          reject(new Error(`Timed out after ${timeoutMs}ms while loading the wasm module`));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) {
+      window.clearTimeout(timeoutId);
+    }
+  }
 }
 
 function applyLetterboxCanvasStyle(canvas, idealWidth, idealHeight) {
@@ -121,7 +157,8 @@ function applyLetterboxCanvasStyle(canvas, idealWidth, idealHeight) {
   try {
     const canvas = document.getElementById("renderCanvas");
     const createExampleModule = await loadExampleModuleFactory();
-    const mod = await createExampleModule(getEnv());
+    const env = getEnv();
+    const mod = await waitForModuleWithTimeout(createExampleModule, env);
     const idealWidth = 1024;
     const idealHeight = 1280;
 
@@ -135,5 +172,9 @@ function applyLetterboxCanvasStyle(canvas, idealWidth, idealHeight) {
     // mod._main(0, 0);
   } catch (e) {
     console.error(e);
+    const output = ensureOutputElement();
+    const outputLog = createOutputLogger(output);
+    const message = e instanceof Error ? e.message : String(e);
+    outputLog(`[wasm] startup failed: ${message}`);
   }
 })();

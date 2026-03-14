@@ -8,7 +8,7 @@ Server-driven rendering over WebSocket. Game logic runs on a Bun/TypeScript serv
 ┌─────────────────────────────┐    WebSocket (JSON)    ┌─────────────────────────────┐
 │  Server (Bun + TypeScript)  │◄──────────────────────►│  Thin Client (C + librl)    │
 │                             │                        │                             │
-│  game.ts    - scene logic   │  Frame commands ──────►│  rl_json_parser - decode     │
+│  game.ts    - scene logic   │  Frame commands ──────►│  rl_protocol - decode        │
 │  server.ts  - WS service    │  Resource requests ───►│  rl_resource_handler - load  │
 │  resource_manager.ts        │◄── Resource responses  │  rl_ws_client - transport    │
 │  resource_protocol.ts       │                        │  main.c - render loop        │
@@ -66,10 +66,9 @@ File-based resources (fonts, textures, models, sounds, music, sprite3ds) use asy
 |------|---------|
 | `main.c` | Init, render loop, local overlay (bandwidth stats) |
 | `rl_ws_client.h/c` | WebSocket transport, reconnection, bandwidth tracking |
-| `rl_json_parser.h/c` | JSON → `rl_frame_command_buffer_t` deserialization |
+| `rl_protocol.h/c` | JSON packet parsing + resource response serialization |
 | `rl_resource_handler.h/c` | Processes resource requests, async loading |
 | `rl_resource_protocol.h` | C resource request/response structs and enums |
-| `rl_resource_registry.h/c` | Handle storage for created resources |
 
 ## Build & Run
 
@@ -77,7 +76,7 @@ File-based resources (fonts, textures, models, sounds, music, sprite3ds) use asy
 ```bash
 ./start_server.sh
 # or manually:
-cd server && PORT=9001 bun run --watch src/server.ts
+cd server && RL_REMOTE_WS_PORT=9001 bun run --watch src/server.ts
 ```
 Server listens on `ws://localhost:9001/ws` by default, or `ws://localhost:$RL_REMOTE_WS_PORT/ws` if `RL_REMOTE_WS_PORT` is set. Uses `--watch` for auto-reload on TS changes.
 
@@ -149,7 +148,6 @@ The server recreates the `lua_demo.lua` scene in TypeScript (`game.ts`):
 - [ ] Switch to binary format (MessagePack or custom)
 - [ ] Add input forwarding (client → server)
 - [ ] Add compression for command buffers
-- [ ] Desktop WebSocket library (mongoose) for standalone client
 - [ ] In-process mode (bypass WebSocket for local development)
 - [ ] Delta encoding for command buffers
 - [ ] Resource destruction / lifecycle management

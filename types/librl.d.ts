@@ -87,7 +87,7 @@ export interface RLApi {
   clearEventListeners(eventName: string): number;
   getEventListenerCount(eventName: string): number;
 
-  initWindow(width: number, height: number, title: string, flags?: number): void;
+  openWindow(width: number, height: number, title: string, flags?: number): void;
   closeWindow(): void;
   setWindowSize(width: number, height: number): void;
   setWindowPosition(x: number, y: number): void;
@@ -148,7 +148,13 @@ export interface RLApi {
   setTargetFPS(fps: number): void;
 
   createModel(path: string): Promise<RLHandle>;
-  drawModel(model: RLHandle, x: number, y: number, z: number, scale: number, tint: RLHandle): void;
+  modelSetTransform(
+    model: RLHandle,
+    positionX: number, positionY: number, positionZ: number,
+    rotationX: number, rotationY: number, rotationZ: number,
+    scaleX: number, scaleY: number, scaleZ: number
+  ): boolean;
+  drawModel(model: RLHandle, tint: RLHandle): void;
   isModelValid(model: RLHandle): boolean;
   isModelValidStrict(model: RLHandle): boolean;
   modelAnimationCount(model: RLHandle): number;
@@ -198,7 +204,8 @@ export interface RLApi {
 
   createSprite3D(path: string): Promise<RLHandle>;
   createSprite3DFromTexture(texture: RLHandle): RLHandle;
-  drawSprite3D(sprite: RLHandle, x: number, y: number, z: number, size: number, tint: RLHandle): void;
+  sprite3DSetTransform(sprite: RLHandle, positionX: number, positionY: number, positionZ: number, size: number): boolean;
+  drawSprite3D(sprite: RLHandle, tint: RLHandle): void;
   destroySprite3D(sprite: RLHandle): void;
 
   DEFAULT: number;

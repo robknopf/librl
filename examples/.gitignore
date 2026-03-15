@@ -6,3 +6,4 @@ deps/
 cache/
 node_modules/
 !.gitkeep
+dist/

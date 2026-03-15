@@ -17,6 +17,7 @@
 #include "rl_model.h"
 #include "rl_music.h"
 #include "rl_pick.h"
+#include "rl_shape.h"
 #include "rl_scratch.h"
 #include "rl_sound.h"
 #include "rl_sprite3d.h"
@@ -40,8 +41,6 @@ void rl_disable_lighting();
 int rl_is_lighting_enabled();
 void rl_set_light_direction(float x, float y, float z);
 void rl_set_light_ambient(float ambient);
-void rl_draw_cube(float position_x, float position_y, float position_z,
-                  float width, float height, float length, rl_handle_t color);
 void rl_update_to_scratch(void);
 void rl_update(void);
 #ifdef __cplusplus

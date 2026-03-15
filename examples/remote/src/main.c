@@ -51,6 +51,8 @@ static const char *get_remote_ws_url(void) {
 
   snprintf(ws_url, sizeof(ws_url), "%s://%s:%s%s", protocol, host, port,
            REMOTE_DEFAULT_WS_PATH);
+
+  log_error(ws_url);
   return ws_url;
 }
 
@@ -235,6 +237,7 @@ static void on_tick(void *user_data) {
   } else {
     rl_frame_commands_execute_clear(&context->current_frame.commands);
     rl_frame_commands_execute_audio(&context->current_frame.commands);
+    rl_frame_commands_execute_state(&context->current_frame.commands);
 
     rl_begin_mode_3d();
     rl_frame_commands_execute_3d(&context->current_frame.commands);

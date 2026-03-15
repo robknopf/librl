@@ -97,7 +97,8 @@ LDFLAGS_WASM = \
 	"_rl_is_lighting_enabled", \
 	"_rl_set_light_direction", \
 	"_rl_set_light_ambient", \
-	"_rl_draw_cube", \
+	"_rl_shape_draw_cube", \
+	"_rl_shape_draw_rectangle", \
 	"_rl_color_create", \
 	"_rl_color_destroy", \
 	"_rl_text_draw", \

@@ -1,7 +1,7 @@
 #include "internal/exports.h"
-#include "internal/rl_subsystems.h"
+#include "internal/rl_debug.h"
 #include "raylib.h"
-#include "internal/rl_color_store.h"
+#include "internal/rl_color.h"
 
 RL_KEEP
 void rl_frame_begin() {
@@ -33,13 +33,6 @@ void rl_frame_begin_mode_2d(rl_handle_t camera) {
 RL_KEEP
 void rl_frame_end_mode_2d() {
     EndMode2D();
-}
-
-RL_KEEP
-void rl_frame_draw_rectangle(int x, int y, int width, int height,
-                             rl_handle_t color) {
-    Color c = rl_color_get(color);
-    DrawRectangle(x, y, width, height, c);
 }
 
 RL_KEEP

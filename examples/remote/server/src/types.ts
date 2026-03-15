@@ -8,6 +8,9 @@ export enum CommandType {
   DRAW_TEXTURE = 5,
   DRAW_CUBE = 6,
   DRAW_GROUND_TEXTURE = 7,
+  SET_CAMERA3D = 8,
+  SET_MODEL_TRANSFORM = 9,
+  SET_SPRITE3D_TRANSFORM = 10,
 }
 
 export type Handle = number;
@@ -32,10 +35,6 @@ export interface DrawSprite3DCommand {
   type: CommandType.DRAW_SPRITE3D;
   sprite: Handle;
   tint: Handle;
-  x: number;
-  y: number;
-  z: number;
-  size: number;
 }
 
 export interface PlaySoundCommand {
@@ -47,13 +46,6 @@ export interface DrawModelCommand {
   type: CommandType.DRAW_MODEL;
   model: Handle;
   tint: Handle;
-  x: number;
-  y: number;
-  z: number;
-  scale: number;
-  rotationX: number;
-  rotationY: number;
-  rotationZ: number;
   animationIndex: number;
   animationFrame: number;
 }
@@ -90,6 +82,45 @@ export interface DrawGroundTextureCommand {
   length: number;
 }
 
+export interface SetCamera3DCommand {
+  type: CommandType.SET_CAMERA3D;
+  camera: Handle;
+  positionX: number;
+  positionY: number;
+  positionZ: number;
+  targetX: number;
+  targetY: number;
+  targetZ: number;
+  upX: number;
+  upY: number;
+  upZ: number;
+  fovy: number;
+  projection: number;
+}
+
+export interface SetModelTransformCommand {
+  type: CommandType.SET_MODEL_TRANSFORM;
+  model: Handle;
+  positionX: number;
+  positionY: number;
+  positionZ: number;
+  rotationX: number;
+  rotationY: number;
+  rotationZ: number;
+  scaleX: number;
+  scaleY: number;
+  scaleZ: number;
+}
+
+export interface SetSprite3DTransformCommand {
+  type: CommandType.SET_SPRITE3D_TRANSFORM;
+  sprite: Handle;
+  positionX: number;
+  positionY: number;
+  positionZ: number;
+  size: number;
+}
+
 export type Command =
   | ClearCommand
   | DrawTextCommand
@@ -98,9 +129,12 @@ export type Command =
   | DrawModelCommand
   | DrawTextureCommand
   | DrawCubeCommand
-  | DrawGroundTextureCommand;
+  | DrawGroundTextureCommand
+  | SetCamera3DCommand
+  | SetModelTransformCommand
+  | SetSprite3DTransformCommand;
 
-export interface FrameBuffer {
+export interface FrameSnapshot {
   frameNumber: number;
   deltaTime: number;
   commands: Command[];

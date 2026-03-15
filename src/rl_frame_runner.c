@@ -1,6 +1,7 @@
 #include "rl_frame_runner.h"
 #include "rl_loader.h"
 #include "internal/exports.h"
+#include "internal/rl_loader.h"
 #include "raylib.h"
 #include <string.h>
 
@@ -14,6 +15,7 @@ typedef struct rl_frame_loop_state_t {
     rl_frame_runner_shutdown_fn shutdown_fn;
     void *user_data;
     int running;
+    int init_complete;
 } rl_frame_loop_state_t;
 
 static rl_frame_loop_state_t rl_frame_loop_state = {0};
@@ -43,6 +45,23 @@ static void rl_frame_web_step(void) {
 
     rl_loader_tick();
 
+    if (!rl_frame_loop_state.init_complete) {
+        if (!rl_loader_is_ready()) {
+            return;
+        }
+
+        if (rl_frame_loop_state.init_fn != NULL) {
+            rl_frame_loop_state.init_fn(rl_frame_loop_state.user_data);
+        }
+        rl_frame_loop_state.init_complete = 1;
+
+        if (!rl_frame_loop_state.running) {
+            emscripten_cancel_main_loop();
+            rl_frame_finish_run();
+            return;
+        }
+    }
+
     if (rl_frame_loop_state.tick_fn != NULL) {
         rl_frame_loop_state.tick_fn(rl_frame_loop_state.user_data);
     }
@@ -68,21 +87,29 @@ void rl_frame_runner_run(rl_frame_runner_init_fn init_fn,
     rl_frame_loop_state.shutdown_fn = shutdown_fn;
     rl_frame_loop_state.user_data = user_data;
     rl_frame_loop_state.running = 1;
-
-    if (rl_frame_loop_state.init_fn != NULL) {
-        rl_frame_loop_state.init_fn(rl_frame_loop_state.user_data);
-    }
-
-    if (!rl_frame_loop_state.running) {
-        rl_frame_finish_run();
-        return;
-    }
+    rl_frame_loop_state.init_complete = 0;
 
 #if defined(PLATFORM_WEB)
     emscripten_set_main_loop(rl_frame_web_step, 0, 1);
 #else
     while (rl_frame_loop_state.running && !WindowShouldClose()) {
         rl_loader_tick();
+
+        if (!rl_frame_loop_state.init_complete) {
+            if (!rl_loader_is_ready()) {
+                continue;
+            }
+
+            if (rl_frame_loop_state.init_fn != NULL) {
+                rl_frame_loop_state.init_fn(rl_frame_loop_state.user_data);
+            }
+            rl_frame_loop_state.init_complete = 1;
+
+            if (!rl_frame_loop_state.running) {
+                break;
+            }
+        }
+
         rl_frame_loop_state.tick_fn(rl_frame_loop_state.user_data);
     }
     rl_frame_finish_run();

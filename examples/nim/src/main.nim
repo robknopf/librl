@@ -72,8 +72,10 @@ proc main() =
     rl_frame_clear_background(RL_RAYWHITE)
     rl_begin_mode_3d()
     discard rl_model_animate(gumshoe, deltaTime.cfloat)
-    rl_model_draw(gumshoe, 0.0, 0.0, 0.0, 1.0, RL_RAYWHITE)
-    rl_sprite3d_draw(sprite, 0.0, 0.0, 0.0, 1.0, RL_RAYWHITE)
+    discard rl_model_set_transform(gumshoe, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0)
+    rl_model_draw(gumshoe, RL_RAYWHITE)
+    discard rl_sprite3d_set_transform(sprite, 0.0, 0.0, 0.0, 1.0)
+    rl_sprite3d_draw(sprite, RL_RAYWHITE)
     rl_end_mode_3d()
 
     let screen = rl_window_get_screen_size()

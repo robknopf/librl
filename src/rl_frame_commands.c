@@ -63,6 +63,57 @@ void rl_frame_commands_execute_audio(
     }
 }
 
+void rl_frame_commands_execute_state(
+    const rl_frame_command_buffer_t *frame_commands) {
+    int i = 0;
+
+    if (frame_commands == NULL) {
+        return;
+    }
+
+    for (i = 0; i < frame_commands->count; i++) {
+        const rl_module_frame_command_t *command = &frame_commands->commands[i];
+        switch (command->type) {
+        case RL_MODULE_FRAME_CMD_SET_CAMERA3D:
+            (void)rl_camera3d_set(command->data.set_camera3d.camera,
+                                  command->data.set_camera3d.position_x,
+                                  command->data.set_camera3d.position_y,
+                                  command->data.set_camera3d.position_z,
+                                  command->data.set_camera3d.target_x,
+                                  command->data.set_camera3d.target_y,
+                                  command->data.set_camera3d.target_z,
+                                  command->data.set_camera3d.up_x,
+                                  command->data.set_camera3d.up_y,
+                                  command->data.set_camera3d.up_z,
+                                  command->data.set_camera3d.fovy,
+                                  command->data.set_camera3d.projection);
+            (void)rl_camera3d_set_active(command->data.set_camera3d.camera);
+            break;
+        case RL_MODULE_FRAME_CMD_SET_MODEL_TRANSFORM:
+            (void)rl_model_set_transform(command->data.set_model_transform.model,
+                                         command->data.set_model_transform.position_x,
+                                         command->data.set_model_transform.position_y,
+                                         command->data.set_model_transform.position_z,
+                                         command->data.set_model_transform.rotation_x,
+                                         command->data.set_model_transform.rotation_y,
+                                         command->data.set_model_transform.rotation_z,
+                                         command->data.set_model_transform.scale_x,
+                                         command->data.set_model_transform.scale_y,
+                                         command->data.set_model_transform.scale_z);
+            break;
+        case RL_MODULE_FRAME_CMD_SET_SPRITE3D_TRANSFORM:
+            (void)rl_sprite3d_set_transform(command->data.set_sprite3d_transform.sprite,
+                                            command->data.set_sprite3d_transform.position_x,
+                                            command->data.set_sprite3d_transform.position_y,
+                                            command->data.set_sprite3d_transform.position_z,
+                                            command->data.set_sprite3d_transform.size);
+            break;
+        default:
+            break;
+        }
+    }
+}
+
 void rl_frame_commands_execute_3d(
     const rl_frame_command_buffer_t *frame_commands) {
     int i = 0;
@@ -81,31 +132,20 @@ void rl_frame_commands_execute_3d(
                                           command->data.draw_model.animation_frame);
             }
             rl_model_draw(command->data.draw_model.model,
-                          command->data.draw_model.x,
-                          command->data.draw_model.y,
-                          command->data.draw_model.z,
-                          command->data.draw_model.scale,
-                          command->data.draw_model.rotation_x,
-                          command->data.draw_model.rotation_y,
-                          command->data.draw_model.rotation_z,
                           command->data.draw_model.tint);
             break;
         case RL_MODULE_FRAME_CMD_DRAW_SPRITE3D:
             rl_sprite3d_draw(command->data.draw_sprite3d.sprite,
-                             command->data.draw_sprite3d.x,
-                             command->data.draw_sprite3d.y,
-                             command->data.draw_sprite3d.z,
-                             command->data.draw_sprite3d.size,
                              command->data.draw_sprite3d.tint);
             break;
         case RL_MODULE_FRAME_CMD_DRAW_CUBE:
-            rl_draw_cube(command->data.draw_cube.x,
-                         command->data.draw_cube.y,
-                         command->data.draw_cube.z,
-                         command->data.draw_cube.width,
-                         command->data.draw_cube.height,
-                         command->data.draw_cube.length,
-                         command->data.draw_cube.color);
+            rl_shape_draw_cube(command->data.draw_cube.x,
+                               command->data.draw_cube.y,
+                               command->data.draw_cube.z,
+                               command->data.draw_cube.width,
+                               command->data.draw_cube.height,
+                               command->data.draw_cube.length,
+                               command->data.draw_cube.color);
             break;
         case RL_MODULE_FRAME_CMD_DRAW_GROUND_TEXTURE:
             rl_texture_draw_ground(command->data.draw_ground_texture.texture,

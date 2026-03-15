@@ -3,16 +3,8 @@
 
 import type {
   AnyResourceRequest,
+  AnyResourceRequestInput,
   ResourceResponse,
-  CreateColorRequest,
-  CreateFontRequest,
-  CreateTextureRequest,
-  CreateModelRequest,
-  CreateSoundRequest,
-  CreateMusicRequest,
-  CreateCamera3DRequest,
-  CreateSprite3DRequest,
-  DestroyResourceRequest,
 } from "./resource_protocol";
 import { ResourceRequestType } from "./resource_protocol";
 
@@ -30,7 +22,7 @@ export class ResourceManager {
   private readonly REQUEST_TIMEOUT_MS = 5000;
 
   // Create a resource and return a promise that resolves with the handle
-  async createResource(request: Omit<AnyResourceRequest, "rid">): Promise<number> {
+  async createResource(request: AnyResourceRequestInput): Promise<number> {
     const rid = this.nextRid++;
     const fullRequest = { ...request, rid } as AnyResourceRequest;
 
@@ -103,7 +95,7 @@ export class ResourceManager {
       g,
       b,
       a,
-    } as Omit<CreateColorRequest, "rid">);
+    });
   }
 
   async createFont(filename: string, fontSize: number): Promise<number> {
@@ -111,35 +103,35 @@ export class ResourceManager {
       type: ResourceRequestType.CREATE_FONT,
       filename,
       fontSize,
-    } as Omit<CreateFontRequest, "rid">);
+    });
   }
 
   async createTexture(filename: string): Promise<number> {
     return this.createResource({
       type: ResourceRequestType.CREATE_TEXTURE,
       filename,
-    } as Omit<CreateTextureRequest, "rid">);
+    });
   }
 
   async createModel(filename: string): Promise<number> {
     return this.createResource({
       type: ResourceRequestType.CREATE_MODEL,
       filename,
-    } as Omit<CreateModelRequest, "rid">);
+    });
   }
 
   async createSound(filename: string): Promise<number> {
     return this.createResource({
       type: ResourceRequestType.CREATE_SOUND,
       filename,
-    } as Omit<CreateSoundRequest, "rid">);
+    });
   }
 
   async createMusic(filename: string): Promise<number> {
     return this.createResource({
       type: ResourceRequestType.CREATE_MUSIC,
       filename,
-    } as Omit<CreateMusicRequest, "rid">);
+    });
   }
 
   async createCamera3D(
@@ -154,20 +146,22 @@ export class ResourceManager {
       targetX, targetY, targetZ,
       upX, upY, upZ,
       fovy, projection,
-    } as Omit<CreateCamera3DRequest, "rid">);
+    });
   }
 
   async createSprite3D(filename: string): Promise<number> {
     return this.createResource({
       type: ResourceRequestType.CREATE_SPRITE3D,
       filename,
-    } as Omit<CreateSprite3DRequest, "rid">);
+    });
   }
 
   async destroyResource(handle: number): Promise<void> {
     await this.createResource({
       type: ResourceRequestType.DESTROY_RESOURCE,
       handle,
-    } as Omit<DestroyResourceRequest, "rid">);
+    });
   }
 }
+
+export const SharedResourceManager = new ResourceManager();

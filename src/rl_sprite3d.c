@@ -8,13 +8,13 @@
 #include <math.h>
 
 #include "internal/exports.h"
-#include "internal/rl_camera3d_store.h"
-#include "internal/rl_color_store.h"
+#include "internal/rl_camera3d.h"
+#include "internal/rl_color.h"
 #include "internal/rl_handle_pool.h"
-#include "internal/rl_sprite3d_store.h"
+#include "internal/rl_sprite3d.h"
 #include "logger/logger.h"
 #include "rl_texture.h"
-#include "internal/rl_texture_store.h"
+#include "internal/rl_texture.h"
 
 #define MAX_SPRITE3D 1024
 
@@ -22,6 +22,10 @@ typedef struct
 {
     bool in_use;
     rl_handle_t texture;
+    float position_x;
+    float position_y;
+    float position_z;
+    float size;
 } rl_sprite3d_t;
 
 static rl_sprite3d_t rl_sprite3d[MAX_SPRITE3D];
@@ -64,6 +68,10 @@ rl_handle_t rl_sprite3d_create(const char *filename)
     rl_handle_pool_resolve(&rl_sprite3d_pool, handle, &index);
 
     rl_sprite3d[index].texture = texture;
+    rl_sprite3d[index].position_x = 0.0f;
+    rl_sprite3d[index].position_y = 0.0f;
+    rl_sprite3d[index].position_z = 0.0f;
+    rl_sprite3d[index].size = 1.0f;
     rl_sprite3d[index].in_use = true;
 
     return handle;
@@ -88,13 +96,34 @@ rl_handle_t rl_sprite3d_create_from_texture(rl_handle_t texture)
     rl_handle_pool_resolve(&rl_sprite3d_pool, handle, &index);
 
     rl_sprite3d[index].texture = texture;
+    rl_sprite3d[index].position_x = 0.0f;
+    rl_sprite3d[index].position_y = 0.0f;
+    rl_sprite3d[index].position_z = 0.0f;
+    rl_sprite3d[index].size = 1.0f;
     rl_sprite3d[index].in_use = true;
     return handle;
 }
 
 RL_KEEP
-void rl_sprite3d_draw(rl_handle_t handle, float position_x, float position_y,
-                      float position_z, float size, rl_handle_t tint)
+bool rl_sprite3d_set_transform(rl_handle_t handle,
+                               float position_x, float position_y,
+                               float position_z, float size)
+{
+    rl_sprite3d_t *sprite = rl_sprite3d_get(handle);
+
+    if (sprite == NULL) {
+        return false;
+    }
+
+    sprite->position_x = position_x;
+    sprite->position_y = position_y;
+    sprite->position_z = position_z;
+    sprite->size = size;
+    return true;
+}
+
+RL_KEEP
+void rl_sprite3d_draw(rl_handle_t handle, rl_handle_t tint)
 {
     rl_sprite3d_t *sprite = rl_sprite3d_get(handle);
     Texture2D *texture = NULL;
@@ -114,7 +143,11 @@ void rl_sprite3d_draw(rl_handle_t handle, float position_x, float position_y,
         return;
     }
 
-    DrawBillboard(camera, *texture, (Vector3){position_x, position_y, position_z}, size, rl_color_get(tint));
+    DrawBillboard(camera,
+                  *texture,
+                  (Vector3){sprite->position_x, sprite->position_y, sprite->position_z},
+                  sprite->size,
+                  rl_color_get(tint));
 }
 
 RL_KEEP
@@ -246,6 +279,10 @@ void rl_sprite3d_init(void)
     {
         rl_sprite3d[i].in_use = false;
         rl_sprite3d[i].texture = 0;
+        rl_sprite3d[i].position_x = 0.0f;
+        rl_sprite3d[i].position_y = 0.0f;
+        rl_sprite3d[i].position_z = 0.0f;
+        rl_sprite3d[i].size = 1.0f;
     }
 }
 

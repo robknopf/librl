@@ -2,27 +2,41 @@ import type { ServerWebSocket } from "bun";
 import type { ClientMessage, ServerMessage } from "./protocol";
 import type { GameClient } from "./game";
 import { createGameRuntime } from "./game";
+import { readFileSync } from "fs";
 
 interface ClientData {
   id: string;
 }
 
+const ENABLE_TLS = true
+const TLS_CERT =
+  process.env.RL_REMOTE_TLS_CERT ||
+  "/home/rknopf/keys/doomgiver.local/cert.pem";
+const TLS_KEY =
+  process.env.RL_REMOTE_TLS_KEY ||
+  "/home/rknopf/keys/doomgiver.local/privkey.pem";
+
 const DEFAULT_PORT = 9001;
 const PORT = (() => {
   const raw = process.env.RL_REMOTE_WS_PORT || process.env.PORT;
   const parsed = raw ? Number.parseInt(raw, 10) : NaN;
-
   if (Number.isFinite(parsed) && parsed > 0) {
     return parsed;
   }
-
   return DEFAULT_PORT;
 })();
+
+const DEFAULT_HOST = "0.0.0.0";
+const HOST = process.env.RL_REMOTE_WS_HOST || DEFAULT_HOST;
+
 
 const clients = new Map<string, ServerWebSocket<ClientData>>();
 const game = createGameRuntime();
 
-function sendMessage(ws: ServerWebSocket<ClientData>, message: ServerMessage): void {
+function sendMessage(
+  ws: ServerWebSocket<ClientData>,
+  message: ServerMessage,
+): void {
   ws.send(JSON.stringify(message));
 }
 
@@ -41,7 +55,16 @@ function createGameClient(ws: ServerWebSocket<ClientData>): GameClient {
 game.init();
 
 const server = Bun.serve<ClientData>({
+  hostname:"0.0.0.0",
   port: PORT,
+  ...(ENABLE_TLS && TLS_CERT && TLS_KEY
+    ? {
+        tls: {
+          cert: readFileSync(TLS_CERT),
+          key: readFileSync(TLS_KEY),
+        },
+      }
+    : {}),
   fetch(req, server) {
     const url = new URL(req.url);
 
@@ -81,7 +104,10 @@ const server = Bun.serve<ClientData>({
         const data = JSON.parse(message) as ClientMessage;
         game.onMessage(ws.data.id, data);
       } catch (error) {
-        console.error(`[WS] Failed to parse message from ${ws.data.id}:`, error);
+        console.error(
+          `[WS] Failed to parse message from ${ws.data.id}:`,
+          error,
+        );
       }
     },
 
@@ -93,7 +119,8 @@ const server = Bun.serve<ClientData>({
   },
 });
 
-console.log(`[Server] Listening on ws://localhost:${PORT}/ws`);
+const scheme = ENABLE_TLS && TLS_CERT && TLS_KEY ? "wss" : "ws";
+console.log(`[Server] Listening on ${scheme}://${HOST}:${PORT}/ws`);
 
 const TARGET_FPS = 60;
 const FRAME_TIME = 1000 / TARGET_FPS;

@@ -10,9 +10,7 @@ This directory contains **internal-only** headers used to share implementation d
 
 ## What Belongs Here
 
-- Internal subsystem lifecycle wiring (`rl_subsystems.h`)
-- Internal store/access headers (`*_store.h`)
-- Internal cross-module runtime state (`rl_camera3d_store.h`)
+- Per-module internal headers (`rl_*.h`) for private lifecycle hooks and cross-`src/*.c` declarations
 - Export/attribute implementation helpers (`exports.h`)
 
 ## What Does Not Belong Here

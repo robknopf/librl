@@ -1,15 +1,12 @@
 #include <math.h>
 #include <stdbool.h>
-#include <stdio.h>
 
 #include "raylib.h"
 #include "rl.h"
 #include "rl_camera3d.h"
-#include "logger/logger.h"
 //#include "rl_color.h"
 #include "internal/exports.h"
-#include "internal/rl_camera3d_store.h"
-#include "internal/rl_color_store.h"
+#include "internal/rl_camera3d.h"
 #include "internal/rl_handle_pool.h"
 
 // This module owns 3D camera tracking used by sprite3d and all simple lighting state.
@@ -352,27 +349,6 @@ void rl_set_light_ambient(float ambient)
         ambient = 1.0f;
     }
     rl_light_ambient = ambient;
-}
-
-RL_KEEP
-void rl_draw_cube(float position_x, float position_y, float position_z,
-                  float width, float height, float length, rl_handle_t color)
-{
-    Color c = rl_color_get(color);
-    if (!rl_lighting_enabled || !rl_lighting_try_init()) {
-        DrawCube((Vector3){position_x, position_y, position_z}, width, height, length, c);
-        return;
-    }
-
-    float direction[3] = {rl_light_direction.x, rl_light_direction.y, rl_light_direction.z};
-    float tint[4] = {c.r / 255.0f, c.g / 255.0f, c.b / 255.0f, c.a / 255.0f};
-    SetShaderValue(rl_lighting_shader, rl_light_dir_loc, direction, SHADER_UNIFORM_VEC3);
-    SetShaderValue(rl_lighting_shader, rl_light_ambient_loc, &rl_light_ambient, SHADER_UNIFORM_FLOAT);
-    SetShaderValue(rl_lighting_shader, rl_light_tint_loc, tint, SHADER_UNIFORM_VEC4);
-
-    BeginShaderMode(rl_lighting_shader);
-    DrawCube((Vector3){position_x, position_y, position_z}, width, height, length, WHITE);
-    EndShaderMode();
 }
 
 void rl_camera3d_init(void)

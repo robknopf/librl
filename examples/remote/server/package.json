@@ -3,10 +3,16 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "bun run --watch src/server.ts",
-    "start": "bun run src/server.ts"
+    "dev": "bun run --parallel server",
+    "server":"bun run --watch src/server.ts",
+    "start": "bun run src/server.ts",
+    "typecheck": "tsc --noEmit",
+    "typecheck:watch": "tsc --noEmit --watch"
   },
   "dependencies": {
     "@types/bun": "latest"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
   }
 }

@@ -1,10 +1,22 @@
 #include "rl.h"
 #include "internal/exports.h"
+#include "internal/rl_camera3d.h"
+#include "internal/rl_color.h"
+#include "internal/rl_debug.h"
+#include "internal/rl_event.h"
+#include "internal/rl_font.h"
+#include "internal/rl_loader.h"
+#include "internal/rl_logger.h"
+#include "internal/rl_model.h"
+#include "internal/rl_music.h"
+#include "internal/rl_sound.h"
+#include "internal/rl_scratch.h"
 #include "internal/rl_state.h"
+#include "internal/rl_sprite3d.h"
+#include "internal/rl_texture.h"
 #include "raylib.h"
 #include "rl_loader.h"
 #include "logger/logger.h"
-#include "internal/rl_subsystems.h"
 
 
 bool initialized = false;

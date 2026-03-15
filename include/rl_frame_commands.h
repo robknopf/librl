@@ -21,6 +21,8 @@ void rl_frame_commands_execute_clear(
     const rl_frame_command_buffer_t *frame_commands);
 void rl_frame_commands_execute_audio(
     const rl_frame_command_buffer_t *frame_commands);
+void rl_frame_commands_execute_state(
+    const rl_frame_command_buffer_t *frame_commands);
 void rl_frame_commands_execute_3d(
     const rl_frame_command_buffer_t *frame_commands);
 void rl_frame_commands_execute_2d(

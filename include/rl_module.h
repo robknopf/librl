@@ -24,7 +24,10 @@ typedef enum rl_module_frame_command_type_t {
     RL_MODULE_FRAME_CMD_DRAW_MODEL = 4,
     RL_MODULE_FRAME_CMD_DRAW_TEXTURE = 5,
     RL_MODULE_FRAME_CMD_DRAW_CUBE = 6,
-    RL_MODULE_FRAME_CMD_DRAW_GROUND_TEXTURE = 7
+    RL_MODULE_FRAME_CMD_DRAW_GROUND_TEXTURE = 7,
+    RL_MODULE_FRAME_CMD_SET_CAMERA3D = 8,
+    RL_MODULE_FRAME_CMD_SET_MODEL_TRANSFORM = 9,
+    RL_MODULE_FRAME_CMD_SET_SPRITE3D_TRANSFORM = 10
 } rl_module_frame_command_type_t;
 
 #define RL_MODULE_FRAME_TEXT_MAX 256
@@ -46,10 +49,6 @@ typedef struct rl_module_frame_draw_text_t {
 typedef struct rl_module_frame_draw_sprite3d_t {
     rl_handle_t sprite;
     rl_handle_t tint;
-    float x;
-    float y;
-    float z;
-    float size;
 } rl_module_frame_draw_sprite3d_t;
 
 typedef struct rl_module_frame_play_sound_t {
@@ -59,13 +58,6 @@ typedef struct rl_module_frame_play_sound_t {
 typedef struct rl_module_frame_draw_model_t {
     rl_handle_t model;
     rl_handle_t tint;
-    float x;
-    float y;
-    float z;
-    float scale;
-    float rotation_x;
-    float rotation_y;
-    float rotation_z;
     int animation_index;
     int animation_frame;
 } rl_module_frame_draw_model_t;
@@ -99,6 +91,42 @@ typedef struct rl_module_frame_draw_ground_texture_t {
     float length;
 } rl_module_frame_draw_ground_texture_t;
 
+typedef struct rl_module_frame_set_camera3d_t {
+    rl_handle_t camera;
+    float position_x;
+    float position_y;
+    float position_z;
+    float target_x;
+    float target_y;
+    float target_z;
+    float up_x;
+    float up_y;
+    float up_z;
+    float fovy;
+    int projection;
+} rl_module_frame_set_camera3d_t;
+
+typedef struct rl_module_frame_set_model_transform_t {
+    rl_handle_t model;
+    float position_x;
+    float position_y;
+    float position_z;
+    float rotation_x;
+    float rotation_y;
+    float rotation_z;
+    float scale_x;
+    float scale_y;
+    float scale_z;
+} rl_module_frame_set_model_transform_t;
+
+typedef struct rl_module_frame_set_sprite3d_transform_t {
+    rl_handle_t sprite;
+    float position_x;
+    float position_y;
+    float position_z;
+    float size;
+} rl_module_frame_set_sprite3d_transform_t;
+
 typedef struct rl_module_frame_command_t {
     int type;
     union {
@@ -110,6 +138,9 @@ typedef struct rl_module_frame_command_t {
         rl_module_frame_draw_texture_t draw_texture;
         rl_module_frame_draw_cube_t draw_cube;
         rl_module_frame_draw_ground_texture_t draw_ground_texture;
+        rl_module_frame_set_camera3d_t set_camera3d;
+        rl_module_frame_set_model_transform_t set_model_transform;
+        rl_module_frame_set_sprite3d_transform_t set_sprite3d_transform;
     } data;
 } rl_module_frame_command_t;
 

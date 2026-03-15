@@ -1,6 +1,6 @@
 #include "rl_debug.h"
 
-#include "internal/rl_subsystems.h"
+#include "internal/rl_debug.h"
 #include "rl_color.h"
 #include "rl_font.h"
 #include "rl_text.h"

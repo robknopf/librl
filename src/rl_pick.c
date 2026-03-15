@@ -3,9 +3,9 @@
 #include <raylib.h>
 #include <raymath.h>
 #include "internal/exports.h"
-#include "internal/rl_camera3d_store.h"
-#include "internal/rl_model_store.h"
-#include "internal/rl_sprite3d_store.h"
+#include "internal/rl_camera3d.h"
+#include "internal/rl_model.h"
+#include "internal/rl_sprite3d.h"
 #include "rl_scratch.h"
 
 static rl_pick_stats_t rl_pick_stats = {0};

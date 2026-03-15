@@ -1,9 +1,9 @@
-import type { FrameBuffer } from "./types";
+import type { FrameSnapshot } from "./types";
 import type { AnyResourceRequest, ResourceResponse } from "./resource_protocol";
 
 export interface ServerFrameMessage {
   type: "frame";
-  frame: FrameBuffer;
+  frame: FrameSnapshot;
 }
 
 export interface ServerResourceRequestsMessage {

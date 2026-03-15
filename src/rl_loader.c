@@ -8,6 +8,7 @@
 #include <limits.h>
 #include <ctype.h>
 #include <errno.h>
+#include <time.h>
 #include <dirent.h>
 #include <sys/stat.h>
 
@@ -29,10 +30,26 @@
 #define RL_LOADER_CACHE_MAX_ENTRY_BYTES (8u * 1024u * 1024u)
 #define RL_LOADER_MAX_ASSET_HOST_LENGTH 256u
 #define RL_LOADER_FETCH_TIMEOUT_MS 5000
+#define RL_LOADER_RESTORE_TIMEOUT_MS 5000
 
 static bool rl_loader_initialized = false;
 static lru_cache_t *rl_loader_memory_cache = NULL;
 static char rl_loader_asset_host[RL_LOADER_MAX_ASSET_HOST_LENGTH] = RL_LOADER_DEFAULT_ASSET_HOST;
+static fileio_sync_op_t *rl_loader_restore_barrier = NULL;
+static bool rl_loader_restore_ready = false;
+static bool rl_loader_restore_failed = false;
+static clock_t rl_loader_restore_started_at = 0;
+
+static void rl_loader_init_asset_host_from_env(void)
+{
+    const char *env_asset_host = getenv("RL_ASSET_HOST");
+
+    if (env_asset_host == NULL || env_asset_host[0] == '\0') {
+        return;
+    }
+
+    rl_loader_set_asset_host(env_asset_host);
+}
 
 typedef enum
 {
@@ -72,6 +89,11 @@ struct rl_loader_task
     fileio_sync_op_t *fileio_op;
     fetch_url_op_t *fetch_op;
 };
+
+static void rl_loader_task_complete(rl_loader_task_t *task, int status);
+static int rl_loader_cache_local_file_if_needed(const char *resolved_path);
+static void rl_loader_get_parent_dir(const char *resolved_path, char *buffer, size_t buffer_size);
+static int rl_loader_start_fetch(rl_loader_task_t *task, const char *path);
 
 static bool rl_loader_is_http_url(const char *path)
 {
@@ -189,6 +211,97 @@ static bool rl_loader_is_dependency_bearing_asset_path(const char *path)
     const char *ext = rl_loader_get_extension(path);
 
     return ext != NULL && rl_loader_ext_eq(ext, ".gltf");
+}
+
+static bool rl_loader_restore_barrier_poll(void)
+{
+    int restore_rc = 0;
+    clock_t now = 0;
+    double elapsed_ms = 0.0;
+
+    if (rl_loader_restore_ready) {
+        return true;
+    }
+
+    if (rl_loader_restore_barrier == NULL) {
+        rl_loader_restore_ready = true;
+        return true;
+    }
+
+    now = clock();
+    if (rl_loader_restore_started_at != 0 && now != (clock_t)-1) {
+        elapsed_ms = ((double)(now - rl_loader_restore_started_at) * 1000.0) / (double)CLOCKS_PER_SEC;
+        if (elapsed_ms >= (double)RL_LOADER_RESTORE_TIMEOUT_MS) {
+            fileio_sync_op_free(rl_loader_restore_barrier);
+            rl_loader_restore_barrier = NULL;
+            rl_loader_restore_ready = true;
+            rl_loader_restore_failed = true;
+            TraceLog(LOG_WARNING, "rl_loader: cache restore timed out after %d ms; falling back to network fetch",
+                     RL_LOADER_RESTORE_TIMEOUT_MS);
+            return true;
+        }
+    }
+
+    if (!fileio_sync_poll(rl_loader_restore_barrier)) {
+        return false;
+    }
+
+    restore_rc = fileio_sync_finish(rl_loader_restore_barrier);
+    fileio_sync_op_free(rl_loader_restore_barrier);
+    rl_loader_restore_barrier = NULL;
+    rl_loader_restore_ready = true;
+    rl_loader_restore_failed = (restore_rc != 0);
+    if (rl_loader_restore_failed) {
+        TraceLog(LOG_WARNING, "rl_loader: cache restore failed; falling back to network fetch");
+    }
+
+    return true;
+}
+
+static int rl_loader_prepare_single_asset(rl_loader_task_t *task)
+{
+    if (!task) {
+        return -1;
+    }
+
+    task->should_cache_in_memory = rl_loader_should_memory_cache_path(task->resolved_path);
+
+    if (fileio_exists(task->resolved_path)) {
+        rl_loader_task_complete(task, rl_loader_cache_local_file_if_needed(task->resolved_path));
+        return 0;
+    }
+
+    if (rl_loader_start_fetch(task, task->resolved_path) != 0) {
+        return -1;
+    }
+    task->prepare_state = RL_LOADER_PREPARE_STATE_FETCHING_ROOT;
+    return 0;
+}
+
+static int rl_loader_prepare_import_asset(rl_loader_task_t *task)
+{
+    if (!task) {
+        return -1;
+    }
+
+    task->should_cache_in_memory = rl_loader_should_memory_cache_path(task->resolved_path);
+
+    if (!rl_loader_is_dependency_bearing_asset_path(task->resolved_path)) {
+        return rl_loader_prepare_single_asset(task);
+    }
+
+    rl_loader_get_parent_dir(task->resolved_path, task->root_dir, sizeof(task->root_dir));
+
+    if (fileio_exists(task->resolved_path)) {
+        task->prepare_state = RL_LOADER_PREPARE_STATE_PARSING_ROOT;
+        return 0;
+    }
+
+    if (rl_loader_start_fetch(task, task->resolved_path) != 0) {
+        return -1;
+    }
+    task->prepare_state = RL_LOADER_PREPARE_STATE_FETCHING_ROOT;
+    return 0;
 }
 
 static void rl_loader_task_complete(rl_loader_task_t *task, int status)
@@ -710,19 +823,6 @@ static rl_loader_task_t *rl_loader_import_single_asset(const char *filename)
         free(task);
         return NULL;
     }
-
-    task->should_cache_in_memory = rl_loader_should_memory_cache_path(task->resolved_path);
-
-    if (fileio_exists(task->resolved_path)) {
-        rl_loader_task_complete(task, rl_loader_cache_local_file_if_needed(task->resolved_path));
-        return task;
-    }
-
-    if (rl_loader_start_fetch(task, task->resolved_path) != 0) {
-        free(task);
-        return NULL;
-    }
-    task->prepare_state = RL_LOADER_PREPARE_STATE_FETCHING_ROOT;
     return task;
 }
 
@@ -757,18 +857,6 @@ rl_loader_task_t *rl_loader_import_asset_async(const char *filename)
         return NULL;
     }
 
-    rl_loader_get_parent_dir(task->resolved_path, task->root_dir, sizeof(task->root_dir));
-
-    if (fileio_exists(task->resolved_path)) {
-        task->prepare_state = RL_LOADER_PREPARE_STATE_PARSING_ROOT;
-        return task;
-    }
-
-    if (rl_loader_start_fetch(task, task->resolved_path) != 0) {
-        free(task);
-        return NULL;
-    }
-    task->prepare_state = RL_LOADER_PREPARE_STATE_FETCHING_ROOT;
     return task;
 }
 
@@ -864,6 +952,18 @@ bool rl_loader_poll_task(rl_loader_task_t *task)
             rl_loader_task_complete(task, fileio_sync_finish(task->fileio_op));
             return true;
         case RL_LOADER_TASK_KIND_IMPORT_ASSET:
+            if (task->prepare_state == RL_LOADER_PREPARE_STATE_INIT) {
+                if (!rl_loader_restore_barrier_poll()) {
+                    return false;
+                }
+                if (rl_loader_prepare_import_asset(task) != 0) {
+                    rl_loader_task_complete(task, -1);
+                    return true;
+                }
+                if (task->done) {
+                    return true;
+                }
+            }
             if (task->prepare_state == RL_LOADER_PREPARE_STATE_FETCHING_ROOT ||
                 task->prepare_state == RL_LOADER_PREPARE_STATE_FETCHING_DEPENDENCY) {
                 if (task->fetch_op == NULL) {
@@ -1085,6 +1185,11 @@ int rl_loader_clear_cache(void)
     return 0;
 }
 
+bool rl_loader_is_ready(void)
+{
+    return rl_loader_restore_barrier_poll();
+}
+
 #define RL_LOADER_MAX_MANAGED_TASKS 16
 #define RL_LOADER_MAX_TASK_PATH 256
 
@@ -1146,6 +1251,8 @@ void rl_loader_tick(void)
 {
     int i = 0;
 
+    rl_loader_restore_barrier_poll();
+
     for (i = 0; i < RL_LOADER_MAX_MANAGED_TASKS; i++) {
         rl_loader_managed_task_t *slot = &rl_loader_managed_tasks[i];
         int rc = 0;
@@ -1188,6 +1295,13 @@ int rl_loader_init(const char *mount_point)
         return -1;
     }
 
+    rl_loader_init_asset_host_from_env();
+
+    rl_loader_restore_barrier = fileio_restore_async();
+    rl_loader_restore_ready = (rl_loader_restore_barrier == NULL);
+    rl_loader_restore_failed = false;
+    rl_loader_restore_started_at = clock();
+
     // One shared byte cache for loader callbacks across all modules.
     rl_loader_memory_cache = lru_cache_create(RL_LOADER_CACHE_MAX_BYTES, RL_LOADER_CACHE_MAX_ENTRIES);
 
@@ -1206,6 +1320,13 @@ void rl_loader_deinit(void)
     SetLoadFileDataCallback(NULL);
     lru_cache_destroy(rl_loader_memory_cache);
     rl_loader_memory_cache = NULL;
+    if (rl_loader_restore_barrier != NULL) {
+        fileio_sync_op_free(rl_loader_restore_barrier);
+        rl_loader_restore_barrier = NULL;
+    }
+    rl_loader_restore_ready = false;
+    rl_loader_restore_failed = false;
+    rl_loader_restore_started_at = 0;
     fileio_deinit();
     rl_loader_initialized = false;
 }

@@ -3,8 +3,8 @@
 #include <raylib.h>
 
 #include "internal/exports.h"
-#include "internal/rl_color_store.h"
-#include "internal/rl_font_store.h"
+#include "internal/rl_color.h"
+#include "internal/rl_font.h"
 #include "rl_scratch.h"
 
 RL_KEEP

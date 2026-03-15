@@ -40,7 +40,7 @@ console.log(`Will use ${sslKeysPaths ? "SSL" : "non-SSL"} connection`);
 export default defineConfig({
   publicDir: "public",
   root: "./examples/www",
-  base: "",
+  base: "./",
   assetsInclude: ["**/*.glb", "**/*.gltf"],
   build: {
     assetsDir: "bundles",
@@ -93,7 +93,10 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 4444,
     strictPort: true,
-
+    cors:true,
+    headers:{
+      "access-control-allow-origin":"*"
+    },
     open: false,
     https: sslKeysPaths
       ? {

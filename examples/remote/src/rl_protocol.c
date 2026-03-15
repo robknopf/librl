@@ -87,10 +87,6 @@ static int parse_command(const json_value_t *cmd_json, rl_module_frame_command_t
       if (json_object_get_int_value(cmd_json, "tint", &tint)) {
         out_cmd->data.draw_sprite3d.tint = (rl_handle_t)tint;
       }
-      (void)json_read_float_field(cmd_json, "x", &out_cmd->data.draw_sprite3d.x);
-      (void)json_read_float_field(cmd_json, "y", &out_cmd->data.draw_sprite3d.y);
-      (void)json_read_float_field(cmd_json, "z", &out_cmd->data.draw_sprite3d.z);
-      (void)json_read_float_field(cmd_json, "size", &out_cmd->data.draw_sprite3d.size);
       break;
     }
 
@@ -114,13 +110,6 @@ static int parse_command(const json_value_t *cmd_json, rl_module_frame_command_t
       if (json_object_get_int_value(cmd_json, "tint", &tint)) {
         out_cmd->data.draw_model.tint = (rl_handle_t)tint;
       }
-      (void)json_read_float_field(cmd_json, "x", &out_cmd->data.draw_model.x);
-      (void)json_read_float_field(cmd_json, "y", &out_cmd->data.draw_model.y);
-      (void)json_read_float_field(cmd_json, "z", &out_cmd->data.draw_model.z);
-      (void)json_read_float_field(cmd_json, "scale", &out_cmd->data.draw_model.scale);
-      (void)json_read_float_field(cmd_json, "rotationX", &out_cmd->data.draw_model.rotation_x);
-      (void)json_read_float_field(cmd_json, "rotationY", &out_cmd->data.draw_model.rotation_y);
-      (void)json_read_float_field(cmd_json, "rotationZ", &out_cmd->data.draw_model.rotation_z);
       if (json_object_get_int_value(cmd_json, "animationIndex", &animation_index)) {
         out_cmd->data.draw_model.animation_index = animation_index;
       }
@@ -177,6 +166,60 @@ static int parse_command(const json_value_t *cmd_json, rl_module_frame_command_t
       (void)json_read_float_field(cmd_json, "z", &out_cmd->data.draw_ground_texture.z);
       (void)json_read_float_field(cmd_json, "width", &out_cmd->data.draw_ground_texture.width);
       (void)json_read_float_field(cmd_json, "length", &out_cmd->data.draw_ground_texture.length);
+      break;
+    }
+
+    case RL_MODULE_FRAME_CMD_SET_CAMERA3D: {
+      int camera = 0;
+      int projection = 0;
+
+      if (json_object_get_int_value(cmd_json, "camera", &camera)) {
+        out_cmd->data.set_camera3d.camera = (rl_handle_t)camera;
+      }
+      (void)json_read_float_field(cmd_json, "positionX", &out_cmd->data.set_camera3d.position_x);
+      (void)json_read_float_field(cmd_json, "positionY", &out_cmd->data.set_camera3d.position_y);
+      (void)json_read_float_field(cmd_json, "positionZ", &out_cmd->data.set_camera3d.position_z);
+      (void)json_read_float_field(cmd_json, "targetX", &out_cmd->data.set_camera3d.target_x);
+      (void)json_read_float_field(cmd_json, "targetY", &out_cmd->data.set_camera3d.target_y);
+      (void)json_read_float_field(cmd_json, "targetZ", &out_cmd->data.set_camera3d.target_z);
+      (void)json_read_float_field(cmd_json, "upX", &out_cmd->data.set_camera3d.up_x);
+      (void)json_read_float_field(cmd_json, "upY", &out_cmd->data.set_camera3d.up_y);
+      (void)json_read_float_field(cmd_json, "upZ", &out_cmd->data.set_camera3d.up_z);
+      (void)json_read_float_field(cmd_json, "fovy", &out_cmd->data.set_camera3d.fovy);
+      if (json_object_get_int_value(cmd_json, "projection", &projection)) {
+        out_cmd->data.set_camera3d.projection = projection;
+      }
+      break;
+    }
+
+    case RL_MODULE_FRAME_CMD_SET_MODEL_TRANSFORM: {
+      int model = 0;
+
+      if (json_object_get_int_value(cmd_json, "model", &model)) {
+        out_cmd->data.set_model_transform.model = (rl_handle_t)model;
+      }
+      (void)json_read_float_field(cmd_json, "positionX", &out_cmd->data.set_model_transform.position_x);
+      (void)json_read_float_field(cmd_json, "positionY", &out_cmd->data.set_model_transform.position_y);
+      (void)json_read_float_field(cmd_json, "positionZ", &out_cmd->data.set_model_transform.position_z);
+      (void)json_read_float_field(cmd_json, "rotationX", &out_cmd->data.set_model_transform.rotation_x);
+      (void)json_read_float_field(cmd_json, "rotationY", &out_cmd->data.set_model_transform.rotation_y);
+      (void)json_read_float_field(cmd_json, "rotationZ", &out_cmd->data.set_model_transform.rotation_z);
+      (void)json_read_float_field(cmd_json, "scaleX", &out_cmd->data.set_model_transform.scale_x);
+      (void)json_read_float_field(cmd_json, "scaleY", &out_cmd->data.set_model_transform.scale_y);
+      (void)json_read_float_field(cmd_json, "scaleZ", &out_cmd->data.set_model_transform.scale_z);
+      break;
+    }
+
+    case RL_MODULE_FRAME_CMD_SET_SPRITE3D_TRANSFORM: {
+      int sprite = 0;
+
+      if (json_object_get_int_value(cmd_json, "sprite", &sprite)) {
+        out_cmd->data.set_sprite3d_transform.sprite = (rl_handle_t)sprite;
+      }
+      (void)json_read_float_field(cmd_json, "positionX", &out_cmd->data.set_sprite3d_transform.position_x);
+      (void)json_read_float_field(cmd_json, "positionY", &out_cmd->data.set_sprite3d_transform.position_y);
+      (void)json_read_float_field(cmd_json, "positionZ", &out_cmd->data.set_sprite3d_transform.position_z);
+      (void)json_read_float_field(cmd_json, "size", &out_cmd->data.set_sprite3d_transform.size);
       break;
     }
 

@@ -9,6 +9,7 @@ WASM_COMMON_LDFLAGS ?= \
 	-s WASM=1 \
 	-lidbfs.js \
 	-lwebsocket.js \
+	--pre-js src/module_env.pre.js \
 	-s USE_GLFW=3 \
 	-s FETCH=1 \
 	-s EXPORT_ES6=1 \
@@ -18,7 +19,7 @@ WASM_COMMON_LDFLAGS ?= \
 	-s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' \
 	-s ALLOW_MEMORY_GROWTH=1 \
 	-s STACK_SIZE=262144 \
-	-s STACK_OVERFLOW_CHECK=2
+	-s STACK_OVERFLOW_CHECK=0
 CFLAGS_WASM ?= $(WASM_PLATFORM_CFLAGS)
 LDFLAGS_WASM ?= $(WASM_COMMON_LDFLAGS)
 

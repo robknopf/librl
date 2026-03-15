@@ -18,18 +18,25 @@ import { rl } from "/lib/librl.js";
 })();
 */
 
+function getRemoteModuleUrl() {
+  const pageUrl = new URL(window.location.href);
+  return new URL("./examples/remote/out/main.js", pageUrl).href;
+}
+
 // Testing Remote example
 // This assumes vite/Live Server has mounted /examples and is serving www
 // For remote->wasm build: cd examples/remote && make wasm (or wasm-debug)
-import { createOutputLogger, ensureOutputElement } from "/examples/js/ansi_output.js";
+import { createOutputLogger, ensureOutputElement } from "./ansi_output.js";
 
 const WASM_STARTUP_TIMEOUT_MS = 15000;
+const moduleUrl = getRemoteModuleUrl();
+const moduleDir = new URL("./", moduleUrl);
 
 async function loadExampleModuleFactory(maxAttempts = 120, delayMs = 500) {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       // Cache-bust retries so a prior missing-module fetch does not stick.
-      const mod = await import(/* @vite-ignore */`/examples/remote/out/main.js?t=${Date.now()}`);
+      const mod = await import(/* @vite-ignore */ moduleUrl);
       return mod.default;
     } catch (err) {
       if (attempt === maxAttempts) {
@@ -39,7 +46,7 @@ async function loadExampleModuleFactory(maxAttempts = 120, delayMs = 500) {
     }
   }
 
-  throw new Error("Unable to load /examples/remote/out/main.js");
+  throw new Error("Unable to load examples/remote/out/main.js");
 }
 
 function getEnv() {
@@ -48,26 +55,30 @@ function getEnv() {
   var protocolFromQuery = params.get("protocol");
   var hostFromQuery = params.get("host");
   var portFromQuery = params.get("port");
+  var assetHostFromQuery = params.get("asset_host");
   var wsProtocol = window.location.protocol === "https:" ? "wss" : "ws";
   var defaultHost = window.location.hostname || "localhost";
   var defaultPort = "9001";
+  const defaultAssetHost = new URL(".", window.location.href).href.replace(/\/$/, "");
+  var assetHost = assetHostFromQuery && assetHostFromQuery.length > 0
+    ? assetHostFromQuery
+    : defaultAssetHost;
   var protocol = protocolFromQuery && protocolFromQuery.length > 0 ? protocolFromQuery : wsProtocol;
   var host = hostFromQuery && hostFromQuery.length > 0 ? hostFromQuery : defaultHost;
   var port = portFromQuery && portFromQuery.length > 0 ? portFromQuery : defaultPort;
 
   env.canvas = document.getElementById('renderCanvas');
+  env.env = {
+    RL_REMOTE_WS_PROTOCOL: protocol,
+    RL_REMOTE_WS_HOST: host,
+    RL_REMOTE_WS_PORT: port,
+    RL_ASSET_HOST: assetHost,
+  };
   var output = ensureOutputElement();
   output.textContent = "";
   var outputLog = createOutputLogger(output);
 
-  env.preRun = env.preRun || [];
-  env.preRun.push(function () {
-    if (typeof ENV !== "undefined") {
-      ENV.RL_REMOTE_WS_PROTOCOL = protocol;
-      ENV.RL_REMOTE_WS_HOST = host;
-      ENV.RL_REMOTE_WS_PORT = port;
-    }
-  });
+  console.log(env);
 
   env.print = function (...args) {
     const line = args.length > 1 ? args.join(" ") : String(args[0] ?? "");
@@ -94,6 +105,10 @@ function getEnv() {
     const message = what ? String(what) : "WASM startup aborted";
     console.error(message);
     outputLog(`[wasm] ${message}`);
+  };
+
+  env.locateFile = function (path) {
+    return new URL(path, moduleDir).href;
   };
 
   return env;
@@ -166,7 +181,7 @@ function applyLetterboxCanvasStyle(canvas, idealWidth, idealHeight) {
     console.log(`Letterbox target size: ${idealWidth}x${idealHeight}`);
 
     applyLetterboxCanvasStyle(canvas, idealWidth, idealHeight);
-    
+
     // main() auto-runs by default in this build. If you later add -sNO_INITIAL_RUN=1,
     // uncomment the following line:
     // mod._main(0, 0);

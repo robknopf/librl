@@ -90,6 +90,17 @@ export type AnyResourceRequest =
   | CreateSprite3DRequest
   | DestroyResourceRequest;
 
+export type AnyResourceRequestInput =
+  | Omit<CreateColorRequest, "rid">
+  | Omit<CreateFontRequest, "rid">
+  | Omit<CreateTextureRequest, "rid">
+  | Omit<CreateModelRequest, "rid">
+  | Omit<CreateSoundRequest, "rid">
+  | Omit<CreateMusicRequest, "rid">
+  | Omit<CreateCamera3DRequest, "rid">
+  | Omit<CreateSprite3DRequest, "rid">
+  | Omit<DestroyResourceRequest, "rid">;
+
 // Response from client
 export interface ResourceResponse {
   rid: number; // Matches request RID

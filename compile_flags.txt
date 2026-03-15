@@ -1,6 +1,6 @@
 -I.
 -Isrc
--Ideps/wgutils
+-Ideps/wgutils/include
 -Iinclude
 -Ideps/libraylib/include
 -I${EMSDK}/upstream/emscripten/cache/sysroot/include

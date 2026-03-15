@@ -10,10 +10,9 @@
 #include <string.h>
 
 #include "internal/exports.h"
-#include "internal/rl_color_store.h"
+#include "internal/rl_color.h"
 #include "internal/rl_handle_pool.h"
-#include "internal/rl_model_store.h"
-#include "logger/logger.h"
+#include "internal/rl_model.h"
 #include "path/path.h"
 
 #define MAX_MODELS 255
@@ -44,6 +43,15 @@ typedef struct
 {
     bool in_use;
     rl_handle_t asset_handle;
+    float position_x;
+    float position_y;
+    float position_z;
+    float rotation_x;
+    float rotation_y;
+    float rotation_z;
+    float scale_x;
+    float scale_y;
+    float scale_z;
     int selected_animation;
     float animation_time;
     float animation_speed;
@@ -130,6 +138,15 @@ static void rl_model_instance_reset(rl_model_instance_t *instance)
     }
     instance->in_use = false;
     instance->asset_handle = 0;
+    instance->position_x = 0.0f;
+    instance->position_y = 0.0f;
+    instance->position_z = 0.0f;
+    instance->rotation_x = 0.0f;
+    instance->rotation_y = 0.0f;
+    instance->rotation_z = 0.0f;
+    instance->scale_x = 1.0f;
+    instance->scale_y = 1.0f;
+    instance->scale_z = 1.0f;
     instance->selected_animation = -1;
     instance->animation_time = 0.0f;
     instance->animation_speed = 1.0f;
@@ -637,11 +654,31 @@ bool rl_model_animate(rl_handle_t handle, float delta_seconds)
 }
 
 RL_KEEP
-void rl_model_draw(rl_handle_t handle,
-                   float position_x, float position_y, float position_z,
-                   float scale,
-                   float rotation_x, float rotation_y, float rotation_z,
-                   rl_handle_t tint)
+bool rl_model_set_transform(rl_handle_t handle,
+                            float position_x, float position_y, float position_z,
+                            float rotation_x, float rotation_y, float rotation_z,
+                            float scale_x, float scale_y, float scale_z)
+{
+    rl_model_instance_t *instance = rl_model_instance_get(handle);
+
+    if (instance == NULL) {
+        return false;
+    }
+
+    instance->position_x = position_x;
+    instance->position_y = position_y;
+    instance->position_z = position_z;
+    instance->rotation_x = rotation_x;
+    instance->rotation_y = rotation_y;
+    instance->rotation_z = rotation_z;
+    instance->scale_x = scale_x;
+    instance->scale_y = scale_y;
+    instance->scale_z = scale_z;
+    return true;
+}
+
+RL_KEEP
+void rl_model_draw(rl_handle_t handle, rl_handle_t tint)
 {
     rl_model_instance_t *instance = rl_model_instance_get(handle);
     rl_model_asset_t *asset = NULL;
@@ -659,16 +696,16 @@ void rl_model_draw(rl_handle_t handle,
         return;
     }
 
-    rotation_quat = QuaternionFromEuler(rotation_x * DEG2RAD,
-                                        rotation_y * DEG2RAD,
-                                        rotation_z * DEG2RAD);
+    rotation_quat = QuaternionFromEuler(instance->rotation_x * DEG2RAD,
+                                        instance->rotation_y * DEG2RAD,
+                                        instance->rotation_z * DEG2RAD);
     QuaternionToAxisAngle(rotation_quat, &rotation_axis, &rotation_angle);
 
     DrawModelEx(*(asset->model),
-                (Vector3){position_x, position_y, position_z},
+                (Vector3){instance->position_x, instance->position_y, instance->position_z},
                 rotation_axis,
                 rotation_angle * RAD2DEG,
-                (Vector3){scale, scale, scale},
+                (Vector3){instance->scale_x, instance->scale_y, instance->scale_z},
                 rl_color_get(tint));
 }
 

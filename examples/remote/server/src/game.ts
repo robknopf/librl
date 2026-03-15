@@ -1,7 +1,38 @@
-import type { FrameBuffer, Command } from "./types";
+import type { FrameSnapshot } from "./types";
 import { CommandType } from "./types";
-import { ResourceManager } from "./resource_manager";
+import {
+  type rl_frame_command_buffer_t,
+  rl_frame_commands_append,
+  rl_frame_commands_reset,
+} from "./rl/rl_frame_commands";
+import {
+  begin_frame_snapshot,
+  end_frame_snapshot,
+  rl_frame_begin,
+  rl_frame_clear_background,
+  rl_frame_end,
+} from "./rl/rl_frame";
+import {
+  create_frame_command_buffer,
+  destroy_frame_command_buffer,
+  set_frame_command_buffer,
+} from "./frame_command_buffer";
+import {
+  rl_loader_add_task,
+  rl_loader_add_task_result_t,
+  rl_loader_import_asset_async,
+  rl_loader_tick,
+} from "./rl/rl_loader";
+import { rl_color_create } from "./rl/rl_color";
+import { rl_font_create } from "./rl/rl_font";
+import { rl_music_create } from "./rl/rl_music";
+import { rl_sound_create, rl_sound_play } from "./rl/rl_sound";
+import { rl_text_draw_ex } from "./rl/rl_text";
+import { SharedResourceManager } from "./resource_manager";
 import { Model } from "./model";
+import { Camera3D } from "./camera3d";
+import { Sprite3D } from "./sprite3d";
+import { Texture } from "./texture";
 import type {
   ClientInputState,
   ClientMessage,
@@ -61,27 +92,31 @@ export interface GameRuntime {
 }
 
 interface GameState {
+  resourceBootstrapStarted: boolean;
   resourcesReady: boolean;
-  raywhiteHandle: number | null;
-  whiteHandle: number | null;
-  accentColor: number | null;
-  panelColor: number | null;
-  shadowColor: number | null;
-  fontHandle: number | null;
-  logoSprite3d: number | null;
-  logoTexture: number | null;
-  blobShadowTexture: number | null;
-  gumshoeModel: Model | null;
-  clickSound: number | null;
+  resourceLoadFailed: boolean;
+  assets: {
+    raywhite: number;
+    white: number;
+    accentColor: number;
+    panelColor: number;
+    shadowColor: number;
+    font: number;
+    logoSprite3d: Sprite3D | null;
+    logoTexture: Texture | null;
+    blobShadowTexture: Texture | null;
+    clickSound: number;
+    camera3d: Camera3D | null;
+  };
   bgMusic: number | null;
+  gumshoeModel: Model | null;
   musicPlaying: boolean;
-  cameraHandle: number | null;
 }
 
 interface GameSession {
   client: GameClient;
-  resourceManager: ResourceManager;
   state: GameState;
+  frameCommandBuffer: rl_frame_command_buffer_t;
   lastInput: ClientInputState | null;
   lastPickResult: RemotePickResult | null;
   pendingMusicCommands: MusicCommand[];
@@ -94,63 +129,26 @@ let frameNumber = 0;
 
 function createInitialGameState(): GameState {
   return {
+    resourceBootstrapStarted: false,
     resourcesReady: false,
-    raywhiteHandle: null,
-    whiteHandle: null,
-    accentColor: null,
-    panelColor: null,
-    shadowColor: null,
-    fontHandle: null,
-    logoSprite3d: null,
-    logoTexture: null,
-    blobShadowTexture: null,
-    gumshoeModel: null,
-    clickSound: null,
+    resourceLoadFailed: false,
+    assets: {
+      raywhite: 0,
+      white: 0,
+      accentColor: 0,
+      panelColor: 0,
+      shadowColor: 0,
+      font: 0,
+      logoSprite3d: null,
+      logoTexture: null,
+      blobShadowTexture: null,
+      clickSound: 0,
+      camera3d: null,
+    },
     bgMusic: null,
+    gumshoeModel: null,
     musicPlaying: false,
-    cameraHandle: null,
   };
-}
-
-async function loadResources(state: GameState, rm: ResourceManager): Promise<void> {
-  state.raywhiteHandle = await rm.createColor(245, 245, 245, 255);
-  state.whiteHandle = await rm.createColor(255, 255, 255, 255);
-  state.accentColor = await rm.createColor(221, 87, 54, 255);
-  state.panelColor = await rm.createColor(24, 107, 138, 255);
-  state.shadowColor = await rm.createColor(0, 0, 0, 64);
-  console.log(`[Game] Colors ready`);
-
-  state.cameraHandle = await rm.createCamera3D(
-    12.0, 12.0, 12.0,
-    0.0, 1.0, 0.0,
-    0.0, 1.0, 0.0,
-    45.0, CAMERA_PERSPECTIVE,
-  );
-  console.log(`[Game] Camera ready: ${state.cameraHandle}`);
-
-  state.fontHandle = await rm.createFont("assets/fonts/Komika/KOMIKAH_.ttf", 24);
-  console.log(`[Game] Font ready: ${state.fontHandle}`);
-
-  state.logoTexture = await rm.createTexture("assets/sprites/logo/wg-logo-bw-alpha.png");
-  console.log(`[Game] Logo texture ready: ${state.logoTexture}`);
-  
-  state.logoSprite3d = await rm.createSprite3D("assets/sprites/logo/wg-logo-bw-alpha.png");
-  console.log(`[Game] Sprite3D ready: ${state.logoSprite3d}`);
-
-  state.blobShadowTexture = await rm.createTexture("assets/textures/blobshadow.png");
-  console.log(`[Game] Blob shadow ready: ${state.blobShadowTexture}`);
-
-  state.gumshoeModel = await Model.load("assets/models/gumshoe/gumshoe.glb", rm);
-  console.log(`[Game] Gumshoe model ready: ${state.gumshoeModel.handle}`);
-
-  state.clickSound = await rm.createSound("assets/sounds/click_004.ogg");
-  console.log(`[Game] Click sound ready: ${state.clickSound}`);
-
-  state.bgMusic = await rm.createMusic("assets/music/ethernight_club.mp3");
-  console.log(`[Game] Background music ready: ${state.bgMusic}`);
-
-  state.resourcesReady = true;
-  console.log(`[Game] All resources ready`);
 }
 
 function lx(x: number, sx: number): number {
@@ -203,37 +201,44 @@ function updateGumshoeModel(model: Model | null, timeS: number): void {
   model.animationFrame = pose.animationFrame;
 }
 
-function getInitialServerMessages(state: GameState): ServerMessage[] {
-  const messages: ServerMessage[] = [
-    { type: "reset", reason: "session_start" },
-  ];
+function drawText(
+  font: number,
+  color: number,
+  value: string,
+  x: number,
+  y: number,
+  fontSize: number,
+  spacing: number,
+): void {
+  if (font === 0 || color === 0) {
+    return;
+  }
 
+  rl_text_draw_ex(font, value, x, y, fontSize, spacing, color);
+}
+
+function queueInitialMusicCommands(state: GameState, session: GameSession): void {
   if (!state.bgMusic) {
-    return messages;
+    return;
   }
 
   state.musicPlaying = true;
-  messages.push({
-    type: "musicCommands",
-    musicCommands: [
-      {
+  session.pendingMusicCommands.push(
+    {
         type: MusicCommandType.SET_LOOP,
         handle: state.bgMusic,
-        loop: true,
-      },
-      {
+      loop: true,
+    },
+    {
         type: MusicCommandType.SET_VOLUME,
         handle: state.bgMusic,
-        volume: 0.25,
-      },
-      {
+      volume: 0.25,
+    },
+    {
         type: MusicCommandType.PLAY,
         handle: state.bgMusic,
-      },
-    ],
-  });
-
-  return messages;
+    },
+  );
 }
 
 function getMusicCommandsForInput(
@@ -292,17 +297,28 @@ function buttonLabel(state: number): string {
   return "up";
 }
 
-function generateFrame(
+function generateFrameSnapshot(
   dt: number,
   timeS: number,
   state: GameState,
+  frame_commands: rl_frame_command_buffer_t,
   clientCount: number,
   input: ClientInputState | null,
-): FrameBuffer {
-  const commands: Command[] = [];
+): FrameSnapshot {
+  rl_frame_commands_reset(frame_commands);
+  set_frame_command_buffer(frame_commands);
+  const frame_snapshot: FrameSnapshot = {
+    frameNumber: frameNumber++,
+    deltaTime: dt,
+    commands: frame_commands.commands,
+  };
+  begin_frame_snapshot(frame_snapshot, frame_commands, timeS);
+  rl_frame_begin();
 
   if (!state.resourcesReady) {
-    return { frameNumber: frameNumber++, deltaTime: dt, commands };
+    rl_frame_end();
+    end_frame_snapshot();
+    return frame_snapshot;
   }
 
   const { screenW, screenH, sx, sy, su } = getLayoutMetrics(input);
@@ -312,55 +328,14 @@ function generateFrame(
 
   updateGumshoeModel(state.gumshoeModel, timeS);
 
-  commands.push({
-    type: CommandType.CLEAR,
-    color: state.raywhiteHandle!,
-  });
+  rl_frame_clear_background(state.assets.raywhite);
+  state.assets.camera3d?.sync();
 
-  if (state.fontHandle) {
-    commands.push({
-      type: CommandType.DRAW_TEXT,
-      font: state.fontHandle,
-      color: state.accentColor!,
-      x: lx(24, sx),
-      y: ly(140, sy) + wobble * sy,
-      fontSize: 32 * su,
-      spacing: su,
-      text: "server-driven frame",
-    });
-
-    commands.push({
-      type: CommandType.DRAW_TEXT,
-      font: state.fontHandle,
-      color: state.accentColor!,
-      x: lx(24, sx),
-      y: ly(170, sy),
-      fontSize: 20 * su,
-      spacing: su,
-      text: `frame=${frameNumber} t=${timeS.toFixed(2)}`,
-    });
-
-    commands.push({
-      type: CommandType.DRAW_TEXT,
-      font: state.fontHandle,
-      color: state.panelColor!,
-      x: lx(24, sx),
-      y: ly(200, sy),
-      fontSize: 20 * su,
-      spacing: su,
-      text: `screen=(${screenW}, ${screenH}) clients=${clientCount}`,
-    });
-
-    commands.push({
-      type: CommandType.DRAW_TEXT,
-      font: state.fontHandle,
-      color: state.panelColor!,
-      x: lx(24, sx),
-      y: ly(230, sy),
-      fontSize: 20 * su,
-      spacing: su,
-      text: "Remote rendering via WebSocket",
-    });
+  if (state.assets.font !== 0) {
+    drawText(state.assets.font, state.assets.accentColor, "server-driven frame", lx(24, sx), ly(140, sy) + wobble * sy, 32 * su, su);
+    drawText(state.assets.font, state.assets.accentColor, `frame=${frameNumber} t=${timeS.toFixed(2)}`, lx(24, sx), ly(170, sy), 20 * su, su);
+    drawText(state.assets.font, state.assets.panelColor, `screen=(${screenW}, ${screenH}) clients=${clientCount}`, lx(24, sx), ly(200, sy), 20 * su, su);
+    drawText(state.assets.font, state.assets.panelColor, "Remote rendering via WebSocket", lx(24, sx), ly(230, sy), 20 * su, su);
   }
 
   {
@@ -373,68 +348,57 @@ function generateFrame(
       logoSize += 0.5;
     }
 
-    if (state.blobShadowTexture && state.shadowColor) {
+    if (state.assets.blobShadowTexture && state.assets.shadowColor !== 0) {
       const height = Math.max(0.0, logoY - groundY);
       const t = Math.min(Math.max(height / (baseSize * 2.5 + 0.0001), 0.0), 1.0);
       const shadowSize = Math.max(baseSize * logoSize * (1 - t) * (1 - t), 0.05);
 
-      commands.push({
-        type: CommandType.DRAW_GROUND_TEXTURE,
-        texture: state.blobShadowTexture,
-        tint: state.shadowColor,
-        x: 0.0,
-        y: groundY + 0.01,
-        z: 0.0,
-        width: shadowSize,
-        length: shadowSize,
-      });
+      state.assets.blobShadowTexture.drawGround(
+        0.0,
+        groundY + 0.01,
+        0.0,
+        shadowSize,
+        shadowSize,
+        state.assets.shadowColor,
+      );
     }
 
-    if (state.logoSprite3d && state.whiteHandle) {
-      commands.push({
-        type: CommandType.DRAW_SPRITE3D,
-        sprite: state.logoSprite3d,
-        tint: state.whiteHandle,
-        x: 0.0,
-        y: logoY,
-        z: 0.0,
-        size: logoSize,
-      });
+    if (state.assets.logoSprite3d && state.assets.white !== 0) {
+      state.assets.logoSprite3d.x = 0.0;
+      state.assets.logoSprite3d.y = logoY;
+      state.assets.logoSprite3d.z = 0.0;
+      state.assets.logoSprite3d.size = logoSize;
+      state.assets.logoSprite3d.draw(state.assets.white);
     }
   }
 
-  if (state.logoTexture && state.whiteHandle) {
-    commands.push({
-      type: CommandType.DRAW_TEXTURE,
-      texture: state.logoTexture,
-      tint: state.whiteHandle,
-      x: lx(520.0, sx),
-      y: ly(36.0, sy),
-      scale: 0.35 * su,
-      rotation: Math.sin(timeS * 1.5) * 8.0,
-    });
+  if (state.assets.logoTexture && state.assets.white !== 0) {
+    state.assets.logoTexture.drawEx(
+      lx(520.0, sx),
+      ly(36.0, sy),
+      0.35 * su,
+      Math.sin(timeS * 1.5) * 8.0,
+      state.assets.white,
+    );
   }
 
-  if (state.gumshoeModel && state.whiteHandle) {
-    state.gumshoeModel.draw(commands, state.whiteHandle);
+  if (state.gumshoeModel && state.assets.white !== 0) {
+    state.gumshoeModel.draw(state.assets.white);
   }
 
-  return {
-    frameNumber: frameNumber++,
-    deltaTime: dt,
-    commands,
-  };
+  rl_frame_end();
+  end_frame_snapshot();
+  return frame_snapshot;
 }
 
-function appendDebugOverlay(
-  frame: FrameBuffer,
+function drawDebugOverlay(
   session: GameSession,
   timeS: number,
   clientCount: number,
 ): void {
   const { state, lastInput, lastPickResult } = session;
 
-  if (!lastInput || !state.fontHandle || !state.panelColor) {
+  if (!lastInput || state.assets.font === 0 || state.assets.panelColor === 0) {
     return;
   }
 
@@ -453,96 +417,74 @@ function appendDebugOverlay(
   const upDown = keyboard.keysDown.includes(265);
   const downDown = keyboard.keysDown.includes(264);
 
-  frame.commands.push({
-    type: CommandType.DRAW_TEXT,
-    font: state.fontHandle,
-    color: state.panelColor,
-    x: 24 * layout.sx,
-    y: 260 * layout.sy,
-    fontSize: 20 * layout.su,
-    spacing: layout.su,
-    text:
-      `mouse=(${mouse.x}, ${mouse.y}) ` +
-      `buttons=(L:${buttonLabel(mouse.left)} ` +
-      `R:${buttonLabel(mouse.right)} ` +
-      `M:${buttonLabel(mouse.middle)}) ` +
-      `wheel=${mouse.wheel}`,
-  });
+  drawText(
+    state.assets.font,
+    state.assets.panelColor,
+    `mouse=(${mouse.x}, ${mouse.y}) buttons=(L:${buttonLabel(mouse.left)} R:${buttonLabel(mouse.right)} M:${buttonLabel(mouse.middle)}) wheel=${mouse.wheel}`,
+    24 * layout.sx,
+    260 * layout.sy,
+    20 * layout.su,
+    layout.su,
+  );
 
-  frame.commands.push({
-    type: CommandType.DRAW_TEXT,
-    font: state.fontHandle,
-    color: state.panelColor,
-    x: 24 * layout.sx,
-    y: 290 * layout.sy,
-    fontSize: 20 * layout.su,
-    spacing: layout.su,
-    text:
-      `kbd space=${spaceDown ? "down" : "up"} ` +
-      `arrows=(${leftDown ? "L" : "-"} ${rightDown ? "R" : "-"} ` +
-      `${upDown ? "U" : "-"} ${downDown ? "D" : "-"})`,
-  });
+  drawText(
+    state.assets.font,
+    state.assets.panelColor,
+    `kbd space=${spaceDown ? "down" : "up"} arrows=(${leftDown ? "L" : "-"} ${rightDown ? "R" : "-"} ${upDown ? "U" : "-"} ${downDown ? "D" : "-"})`,
+    24 * layout.sx,
+    290 * layout.sy,
+    20 * layout.su,
+    layout.su,
+  );
 
-  frame.commands.push({
-    type: CommandType.DRAW_TEXT,
-    font: state.fontHandle,
-    color: state.panelColor,
-    x: 24 * layout.sx,
-    y: 320 * layout.sy,
-    fontSize: 20 * layout.su,
-    spacing: layout.su,
-    text:
-      `pressed counts=(${keyboard.pressedKeys.length}/${keyboard.pressedChars.length}) ` +
-      `chars="${String.fromCharCode(...keyboard.pressedChars.filter((ch) => ch >= 32 && ch <= 255)).slice(0, 24)}"`,
-  });
+  drawText(
+    state.assets.font,
+    state.assets.panelColor,
+    `pressed counts=(${keyboard.pressedKeys.length}/${keyboard.pressedChars.length}) chars="${String.fromCharCode(...keyboard.pressedChars.filter((ch) => ch >= 32 && ch <= 255)).slice(0, 24)}"`,
+    24 * layout.sx,
+    320 * layout.sy,
+    20 * layout.su,
+    layout.su,
+  );
 
   if (
     mouseLeftPressed || mouseRightPressed || mouseMiddlePressed ||
     mouseLeftReleased || mouseRightReleased || mouseMiddleReleased
   ) {
-    frame.commands.push({
-      type: CommandType.DRAW_TEXT,
-      font: state.fontHandle,
-      color: state.panelColor,
-      x: 24 * layout.sx,
-      y: 350 * layout.sy,
-      fontSize: 20 * layout.su,
-      spacing: layout.su,
-      text:
-        `edges=(L:${mouseLeftPressed ? "press" : mouseLeftReleased ? "release" : "-"} ` +
-        `R:${mouseRightPressed ? "press" : mouseRightReleased ? "release" : "-"} ` +
-        `M:${mouseMiddlePressed ? "press" : mouseMiddleReleased ? "release" : "-"})`,
-    });
+    drawText(
+      state.assets.font,
+      state.assets.panelColor,
+      `edges=(L:${mouseLeftPressed ? "press" : mouseLeftReleased ? "release" : "-"} R:${mouseRightPressed ? "press" : mouseRightReleased ? "release" : "-"} M:${mouseMiddlePressed ? "press" : mouseMiddleReleased ? "release" : "-"})`,
+      24 * layout.sx,
+      350 * layout.sy,
+      20 * layout.su,
+      layout.su,
+    );
   }
 
   if (lastPickResult) {
-    frame.commands.push({
-      type: CommandType.DRAW_TEXT,
-      font: state.fontHandle,
-      color: state.accentColor ?? state.panelColor,
-      x: 24 * layout.sx,
-      y: 380 * layout.sy,
-      fontSize: 20 * layout.su,
-      spacing: layout.su,
-      text: lastPickResult.hit
-        ? `pick: hit d=${lastPickResult.distance.toFixed(2)} @ (` +
-          `${lastPickResult.point.x.toFixed(2)}, ` +
-          `${lastPickResult.point.y.toFixed(2)}, ` +
-          `${lastPickResult.point.z.toFixed(2)})`
+    drawText(
+      state.assets.font,
+      state.assets.accentColor || state.assets.panelColor,
+      lastPickResult.hit
+        ? `pick: hit d=${lastPickResult.distance.toFixed(2)} @ (${lastPickResult.point.x.toFixed(2)}, ${lastPickResult.point.y.toFixed(2)}, ${lastPickResult.point.z.toFixed(2)})`
         : "pick: miss",
-    });
+      24 * layout.sx,
+      380 * layout.sy,
+      20 * layout.su,
+      layout.su,
+    );
   }
 
-  frame.commands.push({
-    type: CommandType.DRAW_TEXT,
-    font: state.fontHandle,
-    color: state.accentColor ?? state.panelColor,
-    x: 24 * layout.sx,
-    y: 410 * layout.sy,
-    fontSize: 20 * layout.su,
-    spacing: layout.su,
-    text: `music(M): ${state.musicPlaying ? "playing" : "paused"} clients=${clientCount} t=${timeS.toFixed(2)}`,
-  });
+  drawText(
+    state.assets.font,
+    state.assets.accentColor || state.assets.panelColor,
+    `music(M): ${state.musicPlaying ? "playing" : "paused"} clients=${clientCount} t=${timeS.toFixed(2)}`,
+    24 * layout.sx,
+    410 * layout.sy,
+    20 * layout.su,
+    layout.su,
+  );
 }
 
 function flushPendingMusicCommands(session: GameSession): void {
@@ -576,7 +518,7 @@ function queueGumshoePickRequest(session: GameSession, timeS: number): void {
 
   if (
     lastInput == null ||
-    state.cameraHandle == null ||
+    state.assets.camera3d == null ||
     state.gumshoeModel == null
   ) {
     return;
@@ -586,7 +528,7 @@ function queueGumshoePickRequest(session: GameSession, timeS: number): void {
 
   const request = state.gumshoeModel.createPickRequest(
     session.nextPickRid,
-    state.cameraHandle,
+    state.assets.camera3d.handle ?? 0,
     lastInput.mouse.x,
     lastInput.mouse.y,
   );
@@ -613,6 +555,167 @@ function applyPickResponse(session: GameSession, response: PickResponse): void {
   };
 }
 
+function markResourceLoadFailed(session: GameSession, path: string): void {
+  session.state.resourceLoadFailed = true;
+  console.error(`[Game] Failed to load resource: ${path}`);
+  session.client.disconnect();
+}
+
+function refreshResourceReadiness(session: GameSession): void {
+  const { state } = session;
+
+  if (state.resourcesReady || state.resourceLoadFailed) {
+    return;
+  }
+
+  if (
+    state.assets.raywhite === 0 ||
+    state.assets.white === 0 ||
+    state.assets.accentColor === 0 ||
+    state.assets.panelColor === 0 ||
+    state.assets.shadowColor === 0 ||
+    state.assets.font === 0 ||
+    state.assets.logoSprite3d == null ||
+    state.assets.logoTexture == null ||
+    state.assets.blobShadowTexture == null ||
+    state.gumshoeModel == null ||
+    state.gumshoeModel.handle == null ||
+    state.assets.clickSound === 0 ||
+    state.bgMusic == null ||
+    state.assets.camera3d == null
+  ) {
+    return;
+  }
+
+  state.resourcesReady = true;
+  console.log(`[Game] All resources ready`);
+  queueInitialMusicCommands(state, session);
+}
+
+function queueAssetCreateTask(
+  session: GameSession,
+  path: string,
+  on_success: () => void,
+): void {
+  const task = rl_loader_import_asset_async(path);
+  const rc = rl_loader_add_task(
+    task,
+    path,
+    () => on_success(),
+    (failedPath) => markResourceLoadFailed(session, failedPath),
+    undefined,
+  );
+
+  if (rc !== rl_loader_add_task_result_t.RL_LOADER_ADD_TASK_OK) {
+    markResourceLoadFailed(session, path);
+  }
+}
+
+function beginLoadResources(session: GameSession): void {
+  const { state } = session;
+
+  if (state.resourceBootstrapStarted) {
+    return;
+  }
+
+  state.resourceBootstrapStarted = true;
+
+  void Promise.all([
+    rl_color_create(245, 245, 245, 255),
+    rl_color_create(255, 255, 255, 255),
+    rl_color_create(221, 87, 54, 255),
+    rl_color_create(24, 107, 138, 255),
+    rl_color_create(0, 0, 0, 64),
+  ])
+    .then(([raywhite, white, accent, panel, shadow]) => {
+      state.assets.raywhite = raywhite;
+      state.assets.white = white;
+      state.assets.accentColor = accent;
+      state.assets.panelColor = panel;
+      state.assets.shadowColor = shadow;
+      console.log(`[Game] Colors ready`);
+      refreshResourceReadiness(session);
+    })
+    .catch(() => markResourceLoadFailed(session, "colors"));
+
+  void Camera3D.create(
+    12.0, 12.0, 12.0,
+    0.0, 1.0, 0.0,
+    0.0, 1.0, 0.0,
+    45.0, CAMERA_PERSPECTIVE,
+  )
+    .then((camera) => {
+      state.assets.camera3d = camera;
+      console.log(`[Game] Camera ready: ${state.assets.camera3d.handle}`);
+      refreshResourceReadiness(session);
+    })
+    .catch(() => markResourceLoadFailed(session, "camera3d"));
+
+  queueAssetCreateTask(session, "assets/fonts/Komika/KOMIKAH_.ttf", () => {
+    void rl_font_create("assets/fonts/Komika/KOMIKAH_.ttf", 24)
+      .then((handle) => {
+        state.assets.font = handle;
+        console.log(`[Game] Font ready: ${state.assets.font}`);
+        refreshResourceReadiness(session);
+      })
+      .catch(() => markResourceLoadFailed(session, "assets/fonts/Komika/KOMIKAH_.ttf"));
+  });
+
+  queueAssetCreateTask(session, "assets/sprites/logo/wg-logo-bw-alpha.png", () => {
+    void Promise.all([
+      Texture.load("assets/sprites/logo/wg-logo-bw-alpha.png"),
+      Sprite3D.load("assets/sprites/logo/wg-logo-bw-alpha.png"),
+    ])
+      .then(([texture, sprite]) => {
+        state.assets.logoTexture = texture;
+        state.assets.logoSprite3d = sprite;
+        console.log(`[Game] Logo texture ready: ${state.assets.logoTexture.handle}`);
+        console.log(`[Game] Sprite3D ready: ${state.assets.logoSprite3d.handle}`);
+        refreshResourceReadiness(session);
+      })
+      .catch(() => markResourceLoadFailed(session, "assets/sprites/logo/wg-logo-bw-alpha.png"));
+  });
+
+  queueAssetCreateTask(session, "assets/textures/blobshadow.png", () => {
+    void Texture.load("assets/textures/blobshadow.png")
+      .then((texture) => {
+        state.assets.blobShadowTexture = texture;
+        console.log(`[Game] Blob shadow ready: ${state.assets.blobShadowTexture.handle}`);
+        refreshResourceReadiness(session);
+      })
+      .catch(() => markResourceLoadFailed(session, "assets/textures/blobshadow.png"));
+  });
+
+  state.gumshoeModel = new Model("assets/models/gumshoe/gumshoe.glb");
+  state.gumshoeModel.load(
+    (model) => {
+      console.log(`[Game] Gumshoe model ready: ${model.handle}`);
+      refreshResourceReadiness(session);
+    },
+    (path) => markResourceLoadFailed(session, path),
+  );
+
+  queueAssetCreateTask(session, "assets/sounds/click_004.ogg", () => {
+    void rl_sound_create("assets/sounds/click_004.ogg")
+      .then((handle) => {
+        state.assets.clickSound = handle;
+        console.log(`[Game] Click sound ready: ${state.assets.clickSound}`);
+        refreshResourceReadiness(session);
+      })
+      .catch(() => markResourceLoadFailed(session, "assets/sounds/click_004.ogg"));
+  });
+
+  queueAssetCreateTask(session, "assets/music/ethernight_club.mp3", () => {
+    void rl_music_create("assets/music/ethernight_club.mp3")
+      .then((handle) => {
+        state.bgMusic = handle;
+        console.log(`[Game] Background music ready: ${state.bgMusic}`);
+        refreshResourceReadiness(session);
+      })
+      .catch(() => markResourceLoadFailed(session, "assets/music/ethernight_club.mp3"));
+  });
+}
+
 class RemoteGameRuntime implements GameRuntime {
   private sessions = new Map<string, GameSession>();
   private timeS = 0.0;
@@ -632,22 +735,22 @@ class RemoteGameRuntime implements GameRuntime {
   private async disposeSession(session: GameSession): Promise<void> {
     if (session.state.gumshoeModel) {
       try {
-        await session.state.gumshoeModel.destroy(session.resourceManager);
+        await session.state.gumshoeModel.destroy();
       } catch (error) {
         console.warn("[Game] Failed to destroy model cleanly:", error);
       }
       session.state.gumshoeModel = null;
     }
 
-    session.resourceManager.clear();
+    destroy_frame_command_buffer(session.frameCommandBuffer);
   }
 
   async onConnect(client: GameClient): Promise<void> {
     console.log("[GAME]: client connected")
     const session: GameSession = {
       client,
-      resourceManager: new ResourceManager(),
       state: createInitialGameState(),
+      frameCommandBuffer: create_frame_command_buffer(),
       lastInput: null,
       lastPickResult: null,
       pendingMusicCommands: [],
@@ -658,24 +761,7 @@ class RemoteGameRuntime implements GameRuntime {
 
     this.sessions.set(client.id, session);
     client.send({ type: "reset", reason: "session_start" });
-
-    try {
-      await loadResources(session.state, session.resourceManager);
-      if (!this.sessions.has(client.id)) {
-        return;
-      }
-
-      for (const message of getInitialServerMessages(session.state)) {
-        if (message.type === "musicCommands") {
-          session.pendingMusicCommands.push(...message.musicCommands);
-        } else if (message.type !== "reset") {
-          client.send(message);
-        }
-      }
-    } catch (error) {
-      console.error(`[Game] Failed to load resources for ${client.id}:`, error);
-      client.disconnect();
-    }
+    beginLoadResources(session);
   }
 
   onDisconnect(clientId: string): void {
@@ -698,7 +784,7 @@ class RemoteGameRuntime implements GameRuntime {
 
     if (message.type === "resourceResponses" && message.resourceResponses) {
       for (const response of message.resourceResponses) {
-        session.resourceManager.handleResponse(response);
+        SharedResourceManager.handleResponse(response);
       }
       return;
     }
@@ -717,31 +803,31 @@ class RemoteGameRuntime implements GameRuntime {
 
   tick(dt: number): void {
     this.timeS += dt;
+    rl_loader_tick();
 
     if (this.sessions.size === 0) {
       return;
     }
 
     for (const session of this.sessions.values()) {
-      const pendingRequests = session.resourceManager.getPendingRequests();
+      const pendingRequests = SharedResourceManager.getPendingRequests();
       const clientCount = this.sessions.size;
-      const frame = generateFrame(
+      const frame = generateFrameSnapshot(
         dt,
         this.timeS,
         session.state,
+        session.frameCommandBuffer,
         clientCount,
         session.lastInput,
       );
+      const frame_commands = session.frameCommandBuffer;
 
       if (session.lastInput) {
         if (isButtonPressed(session.lastInput.mouse.left)) {
           queueGumshoePickRequest(session, this.timeS);
 
-          if (session.state.clickSound) {
-            frame.commands.push({
-              type: CommandType.PLAY_SOUND,
-              sound: session.state.clickSound,
-            });
+          if (session.state.assets.clickSound !== 0) {
+            rl_sound_play(session.state.assets.clickSound);
           }
         }
 
@@ -750,7 +836,7 @@ class RemoteGameRuntime implements GameRuntime {
         );
       }
 
-      appendDebugOverlay(frame, session, this.timeS, clientCount);
+      drawDebugOverlay(session, this.timeS, clientCount);
 
       if (pendingRequests.length > 0) {
         session.client.send({

@@ -125,7 +125,7 @@ proc rl_event_emit*(eventName: cstring, payload: pointer): cint {.importc, cdecl
 proc rl_event_listener_count*(eventName: cstring): cint {.importc, cdecl, header: "rl_event.h".}
 proc rl_update*() {.importc, cdecl, header: "rl.h".}
 proc rl_frame_get_time*(): cdouble {.importc, cdecl, header: "rl.h".}
-proc rl_window_init*(width: cint, height: cint, title: cstring, flags: cint) {.importc, cdecl, header: "rl.h".}
+proc rl_window_open*(width: cint, height: cint, title: cstring, flags: cint) {.importc, cdecl, header: "rl.h".}
 proc rl_window_get_monitor_count*(): cint {.importc, cdecl, header: "rl.h".}
 proc rl_window_get_current_monitor*(): cint {.importc, cdecl, header: "rl.h".}
 proc rl_window_set_monitor*(monitor: cint) {.importc, cdecl, header: "rl.h".}
@@ -182,7 +182,13 @@ proc rl_color_destroy*(color: RLHandle) {.importc, cdecl, header: "rl_color.h".}
 proc rl_font_create*(filename: cstring, fontSize: cfloat): RLHandle {.importc, cdecl, header: "rl_font.h".}
 proc rl_font_destroy*(font: RLHandle) {.importc, cdecl, header: "rl_font.h".}
 proc rl_model_create*(filename: cstring): RLHandle {.importc, cdecl, header: "rl_model.h".}
-proc rl_model_draw*(model: RLHandle, x: cfloat, y: cfloat, z: cfloat, scale: cfloat, tint: RLHandle) {.importc, cdecl, header: "rl_model.h".}
+proc rl_model_set_transform*(
+  model: RLHandle,
+  positionX: cfloat, positionY: cfloat, positionZ: cfloat,
+  rotationX: cfloat, rotationY: cfloat, rotationZ: cfloat,
+  scaleX: cfloat, scaleY: cfloat, scaleZ: cfloat
+): bool {.importc, cdecl, header: "rl_model.h".}
+proc rl_model_draw*(model: RLHandle, tint: RLHandle) {.importc, cdecl, header: "rl_model.h".}
 proc rl_model_is_valid*(model: RLHandle): bool {.importc, cdecl, header: "rl_model.h".}
 proc rl_model_is_valid_strict*(model: RLHandle): bool {.importc, cdecl, header: "rl_model.h".}
 proc rl_model_animation_count*(model: RLHandle): cint {.importc, cdecl, header: "rl_model.h".}
@@ -237,5 +243,10 @@ proc rl_texture_create*(filename: cstring): RLHandle {.importc, cdecl, header: "
 proc rl_texture_destroy*(texture: RLHandle) {.importc, cdecl, header: "rl_texture.h".}
 proc rl_sprite3d_create*(filename: cstring): RLHandle {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_create_from_texture*(texture: RLHandle): RLHandle {.importc, cdecl, header: "rl_sprite3d.h".}
-proc rl_sprite3d_draw*(sprite: RLHandle, x: cfloat, y: cfloat, z: cfloat, size: cfloat, tint: RLHandle) {.importc, cdecl, header: "rl_sprite3d.h".}
+proc rl_sprite3d_set_transform*(
+  sprite: RLHandle,
+  positionX: cfloat, positionY: cfloat, positionZ: cfloat,
+  size: cfloat
+): bool {.importc, cdecl, header: "rl_sprite3d.h".}
+proc rl_sprite3d_draw*(sprite: RLHandle, tint: RLHandle) {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_destroy*(sprite: RLHandle) {.importc, cdecl, header: "rl_sprite3d.h".}

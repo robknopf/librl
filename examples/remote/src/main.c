@@ -30,7 +30,7 @@ char *debug_font_path = "assets/fonts/Voltaire/Voltaire-Regular.ttf";
 
 #define REMOTE_DEFAULT_HOST "localhost"
 #define REMOTE_DEFAULT_PORT "9001"
-#define REMOTE_DEFAULT_PROTOCOL "ws"
+#define REMOTE_DEFAULT_PROTOCOL "wss"
 #define REMOTE_DEFAULT_WS_PATH "/ws"
 
 static const char *get_remote_ws_url(void) {
@@ -52,7 +52,6 @@ static const char *get_remote_ws_url(void) {
   snprintf(ws_url, sizeof(ws_url), "%s://%s:%s%s", protocol, host, port,
            REMOTE_DEFAULT_WS_PATH);
 
-  log_error(ws_url);
   return ws_url;
 }
 
@@ -75,7 +74,7 @@ static void on_init(void *user_data) {
     return;
   }
 
-  rl_window_init(1024, 1280, "librl Remote Client",
+  rl_window_open(1024, 1280, "librl Remote Client",
                  RL_WINDOW_FLAG_MSAA_4X_HINT);
   rl_frame_runner_set_target_fps(60);
 

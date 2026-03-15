@@ -8,6 +8,15 @@ NODE ?= $(shell command -v node 2>/dev/null || command -v nodejs 2>/dev/null)
 CHROME ?= $(shell command -v google-chrome 2>/dev/null || command -v chromium-browser 2>/dev/null || command -v chromium 2>/dev/null)
 EM_CACHE_DIR ?= $(abspath .emcache)
 EM_ENV := EM_CACHE=$(EM_CACHE_DIR)
+V ?= 0
+
+ifeq ($(V),1)
+Q :=
+DETAILS = $(info $(1))
+else
+Q := @
+DETAILS =
+endif
 
 WASM_PLATFORM_CFLAGS ?= -DPLATFORM_WEB
 WASM_COMMON_LDFLAGS ?= \
@@ -64,7 +73,7 @@ LDFLAGS_WASM = \
 	"_rl_deinit", \
 	"_rl_update_to_scratch", \
 	"_rl_frame_get_time", \
-	"_rl_window_init", \
+	"_rl_window_open", \
 	"_rl_window_set_title", \
 	"_rl_window_set_size", \
 	"_rl_window_close", \
@@ -110,6 +119,7 @@ LDFLAGS_WASM = \
 	"_rl_font_create", \
 	"_rl_font_destroy", \
 	"_rl_model_create", \
+	"_rl_model_set_transform", \
 	"_rl_model_draw", \
 	"_rl_model_is_valid", \
 	"_rl_model_is_valid_strict", \
@@ -156,6 +166,7 @@ LDFLAGS_WASM = \
 	"_rl_texture_draw_ground", \
 	"_rl_sprite3d_create", \
 	"_rl_sprite3d_create_from_texture", \
+	"_rl_sprite3d_set_transform", \
 	"_rl_sprite3d_draw", \
 	"_rl_sprite3d_destroy", \
 		"_rl_text_measure", \
@@ -232,8 +243,10 @@ OUT_INC_DIR = include
 TYPES_DIR = types
 TYPE_LIBRL_DECL = $(TYPES_DIR)/librl.d.ts
 OUT_LIBRL_DECL = $(OUT_LIB_DIR)/librl.d.ts
-OUT_WASM ?= $(OUT_LIB_DIR)/$(LIBRL_BASENAME).js
+OUT_WASM ?= $(OUT_LIB_DIR)/$(LIBRL_BASENAME)$(DEV_SUFFIX).js
+# Browser-consumable Emscripten module output (.js + companion .wasm).
 OUT_WASM_ARCHIVE ?= $(OUT_LIB_DIR)/$(LIBRL_BASENAME)$(DEV_SUFFIX).wasm.a
+# Static wasm archive for linking librl into another wasm application.
 OUT_DESKTOP ?= $(OUT_LIB_DIR)/$(LIBRL_BASENAME)$(DEV_SUFFIX).a
 
 # Default target
@@ -279,72 +292,75 @@ ensure_deps:
 
 wgutils_desktop: ensure_deps
 	@if [ -f "$(WGUTILS_DESKTOP_ARCHIVE)" ]; then \
-		echo "Using existing wgutils desktop archive: $(WGUTILS_DESKTOP_ARCHIVE)"; \
+		echo "[wgutils_desktop] Using existing wgutils desktop archive: $(WGUTILS_DESKTOP_ARCHIVE)"; \
 	else \
-		echo "Missing wgutils desktop archive: $(WGUTILS_DESKTOP_ARCHIVE)"; \
+		echo "[wgutils_desktop] Missing wgutils desktop archive: $(WGUTILS_DESKTOP_ARCHIVE)"; \
 		$(MAKE) -C $(WGUTILS_ROOT) desktop; \
 	fi
 
 wgutils_wasm: ensure_deps
 	@if [ -f "$(WGUTILS_WASM_ARCHIVE)" ]; then \
-		echo "Using existing wgutils wasm archive: $(WGUTILS_WASM_ARCHIVE)"; \
+		echo "[wgutils_wasm] Using existing wgutils wasm archive: $(WGUTILS_WASM_ARCHIVE)"; \
 	else \
-		echo "Missing wgutils wasm archive: $(WGUTILS_WASM_ARCHIVE)"; \
+		echo "[wgutils_wasm] Missing wgutils wasm archive: $(WGUTILS_WASM_ARCHIVE)"; \
 		$(MAKE) -C $(WGUTILS_ROOT) wasm; \
 	fi
 
 libraylib_wasm: ensure_deps
 	@if [ -f "$(LIBRAYLIB_WASM_ARCHIVE)" ]; then \
-		echo "Using existing raylib wasm archive: $(LIBRAYLIB_WASM_ARCHIVE)"; \
+		echo "[libraylib_wasm] Using existing raylib wasm archive: $(LIBRAYLIB_WASM_ARCHIVE)"; \
 	else \
-		echo "Missing raylib wasm archive: $(LIBRAYLIB_WASM_ARCHIVE)"; \
+		echo "[libraylib_wasm] Missing raylib wasm archive: $(LIBRAYLIB_WASM_ARCHIVE)"; \
 		$(MAKE) -C $(LIBRAYLIB_ROOT) DEV=$(DEV) CUSTOM_CFLAGS="$(LIBRAYLIB_CUSTOM_CFLAGS)" wasm; \
 	fi
 
 libraylib_desktop: ensure_deps
 	@if [ -f "$(LIBRAYLIB_DESKTOP_ARCHIVE)" ]; then \
-		echo "Using existing raylib desktop archive: $(LIBRAYLIB_DESKTOP_ARCHIVE)"; \
+		echo "[libraylib_desktop] Using existing raylib desktop archive: $(LIBRAYLIB_DESKTOP_ARCHIVE)"; \
 	else \
-		echo "Missing raylib desktop archive: $(LIBRAYLIB_DESKTOP_ARCHIVE)"; \
+		echo "[libraylib_desktop] Missing raylib desktop archive: $(LIBRAYLIB_DESKTOP_ARCHIVE)"; \
 		$(MAKE) -C $(LIBRAYLIB_ROOT) DEV=$(DEV) CUSTOM_CFLAGS="$(LIBRAYLIB_CUSTOM_CFLAGS)" desktop; \
 	fi
 
 # WebAssembly static build
 wasm: libraylib_wasm wgutils_wasm ensure_out_dir
-	$(info Building WASM with sources: $(WASM_SRCS))
-	$(info LDFLAGS_WASM: $(LDFLAGS_WASM))
-	$(info CFLAGS: $(CFLAGS))
-	@mkdir -p "$(EM_CACHE_DIR)"
-	$(EM_ENV) $(CC_WASM) -o $(OUT_WASM) $(WASM_SRCS) $(WGUTILS_WASM_ARCHIVE) $(LDFLAGS_WASM) $(CFLAGS_WASM) $(CFLAGS) $(INCLUDES) $(LIBS_WASM)
+	$(info [wasm] Building WASM module: $(OUT_WASM))
+	$(call DETAILS,[wasm] Sources: $(WASM_SRCS))
+	$(call DETAILS,[wasm] LDFLAGS_WASM: $(LDFLAGS_WASM))
+	$(call DETAILS,[wasm] CFLAGS: $(CFLAGS))
+	$(Q)mkdir -p "$(EM_CACHE_DIR)"
+	$(Q)$(EM_ENV) $(CC_WASM) -o $(OUT_WASM) $(WASM_SRCS) $(WGUTILS_WASM_ARCHIVE) $(LDFLAGS_WASM) $(CFLAGS_WASM) $(CFLAGS) $(INCLUDES) $(LIBS_WASM)
 
 # WebAssembly static library build
 wasm_archive: libraylib_wasm wgutils_wasm ensure_out_dir ensure_obj_dir $(WASM_OBJS)
-	$(info Building WASM archive with objects: $(WASM_OBJS))
-	$(info Adding raylib wasm archive: $(LIBRAYLIB_WASM_ARCHIVE))
-	$(info Adding wgutils wasm archive: $(WGUTILS_WASM_ARCHIVE))
-	@test -f "$(LIBRAYLIB_WASM_ARCHIVE)" || (echo "Missing raylib wasm archive: $(LIBRAYLIB_WASM_ARCHIVE)" && exit 1)
-	@test -f "$(WGUTILS_WASM_ARCHIVE)" || (echo "Missing wgutils wasm archive: $(WGUTILS_WASM_ARCHIVE)" && exit 1)
-	rm -rf $(OBJ_WASM_DIR)/.raylib_unpack
-	rm -rf $(OBJ_WASM_DIR)/.wgutils_unpack
-	mkdir -p $(OBJ_WASM_DIR)/.raylib_unpack $(OBJ_WASM_DIR)/.wgutils_unpack
-	@mkdir -p "$(EM_CACHE_DIR)"
-	cd $(OBJ_WASM_DIR)/.raylib_unpack && $(EM_ENV) emar x $(abspath $(LIBRAYLIB_WASM_ARCHIVE))
-	cd $(OBJ_WASM_DIR)/.wgutils_unpack && $(EM_ENV) emar x $(abspath $(WGUTILS_WASM_ARCHIVE))
-	$(EM_ENV) emar rcs $(OUT_WASM_ARCHIVE) $(WASM_OBJS) $(OBJ_WASM_DIR)/.raylib_unpack/*.o $(OBJ_WASM_DIR)/.wgutils_unpack/*.o
+	$(info [wasm_archive] Building WASM static archive: $(OUT_WASM_ARCHIVE))
+	$(call DETAILS,[wasm_archive] Objects: $(WASM_OBJS))
+	$(info [wasm_archive] Adding raylib wasm archive: $(LIBRAYLIB_WASM_ARCHIVE))
+	$(info [wasm_archive] Adding wgutils wasm archive: $(WGUTILS_WASM_ARCHIVE))
+	$(Q)test -f "$(LIBRAYLIB_WASM_ARCHIVE)" || (echo "Missing raylib wasm archive: $(LIBRAYLIB_WASM_ARCHIVE)" && exit 1)
+	$(Q)test -f "$(WGUTILS_WASM_ARCHIVE)" || (echo "Missing wgutils wasm archive: $(WGUTILS_WASM_ARCHIVE)" && exit 1)
+	$(Q)rm -rf $(OBJ_WASM_DIR)/.raylib_unpack
+	$(Q)rm -rf $(OBJ_WASM_DIR)/.wgutils_unpack
+	$(Q)mkdir -p $(OBJ_WASM_DIR)/.raylib_unpack $(OBJ_WASM_DIR)/.wgutils_unpack
+	$(Q)mkdir -p "$(EM_CACHE_DIR)"
+	$(Q)cd $(OBJ_WASM_DIR)/.raylib_unpack && $(EM_ENV) emar x $(abspath $(LIBRAYLIB_WASM_ARCHIVE))
+	$(Q)cd $(OBJ_WASM_DIR)/.wgutils_unpack && $(EM_ENV) emar x $(abspath $(WGUTILS_WASM_ARCHIVE))
+	$(Q)$(EM_ENV) emar rcs $(OUT_WASM_ARCHIVE) $(WASM_OBJS) $(OBJ_WASM_DIR)/.raylib_unpack/*.o $(OBJ_WASM_DIR)/.wgutils_unpack/*.o
 
 # Desktop static library build
 desktop: libraylib_desktop wgutils_desktop ensure_out_dir ensure_obj_dir $(DESKTOP_OBJS)
-	$(info Building Desktop (static) with sources: $(DESKTOP_SRCS))
-	$(info Adding raylib archive: $(LIBRAYLIB_DESKTOP_ARCHIVE))
-	$(info Adding wgutils archive: $(WGUTILS_DESKTOP_ARCHIVE))
-	@test -f "$(LIBRAYLIB_DESKTOP_ARCHIVE)" || (echo "Missing raylib archive: $(LIBRAYLIB_DESKTOP_ARCHIVE)" && exit 1)
-	@test -f "$(WGUTILS_DESKTOP_ARCHIVE)" || (echo "Missing wgutils archive: $(WGUTILS_DESKTOP_ARCHIVE)" && exit 1)
-	rm -rf $(OBJ_DESKTOP_DIR)/.raylib_unpack
-	rm -rf $(OBJ_DESKTOP_DIR)/.wgutils_unpack
-	mkdir -p $(OBJ_DESKTOP_DIR)/.raylib_unpack $(OBJ_DESKTOP_DIR)/.wgutils_unpack
-	cd $(OBJ_DESKTOP_DIR)/.raylib_unpack && ar x $(abspath $(LIBRAYLIB_DESKTOP_ARCHIVE))
-	cd $(OBJ_DESKTOP_DIR)/.wgutils_unpack && ar x $(abspath $(WGUTILS_DESKTOP_ARCHIVE))
-	ar rcs $(OUT_DESKTOP) $(DESKTOP_OBJS) $(OBJ_DESKTOP_DIR)/.raylib_unpack/*.o $(OBJ_DESKTOP_DIR)/.wgutils_unpack/*.o
+	$(info [desktop] Building Desktop static archive: $(OUT_DESKTOP))
+	$(call DETAILS,[desktop] Sources: $(DESKTOP_SRCS))
+	$(info [desktop] Adding raylib archive: $(LIBRAYLIB_DESKTOP_ARCHIVE))
+	$(info [desktop] Adding wgutils archive: $(WGUTILS_DESKTOP_ARCHIVE))
+	$(Q)test -f "$(LIBRAYLIB_DESKTOP_ARCHIVE)" || (echo "Missing raylib archive: $(LIBRAYLIB_DESKTOP_ARCHIVE)" && exit 1)
+	$(Q)test -f "$(WGUTILS_DESKTOP_ARCHIVE)" || (echo "Missing wgutils archive: $(WGUTILS_DESKTOP_ARCHIVE)" && exit 1)
+	$(Q)rm -rf $(OBJ_DESKTOP_DIR)/.raylib_unpack
+	$(Q)rm -rf $(OBJ_DESKTOP_DIR)/.wgutils_unpack
+	$(Q)mkdir -p $(OBJ_DESKTOP_DIR)/.raylib_unpack $(OBJ_DESKTOP_DIR)/.wgutils_unpack
+	$(Q)cd $(OBJ_DESKTOP_DIR)/.raylib_unpack && ar x $(abspath $(LIBRAYLIB_DESKTOP_ARCHIVE))
+	$(Q)cd $(OBJ_DESKTOP_DIR)/.wgutils_unpack && ar x $(abspath $(WGUTILS_DESKTOP_ARCHIVE))
+	$(Q)ar rcs $(OUT_DESKTOP) $(DESKTOP_OBJS) $(OBJ_DESKTOP_DIR)/.raylib_unpack/*.o $(OBJ_DESKTOP_DIR)/.wgutils_unpack/*.o
 
 uri_test test_desktop test_wasm test unit_test_desktop unit_test_wasm probe_idbfs_build probe_idbfs check_node check_chrome check_probe_python:
 	@$(MAKE) -C tests $@ \
@@ -357,30 +373,30 @@ uri_test test_desktop test_wasm test unit_test_desktop unit_test_wasm probe_idbf
 # Compile Desktop source files to object files
 $(OBJ_DESKTOP_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
-	$(CC_DESKTOP) $(CFLAGS_DESKTOP) $(CFLAGS) $(INCLUDES) -c $< -o $@
+	$(Q)$(CC_DESKTOP) $(CFLAGS_DESKTOP) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 # Compile WASM source files to object files
 $(OBJ_WASM_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
-	@mkdir -p "$(EM_CACHE_DIR)"
-	$(EM_ENV) $(CC_WASM) $(CFLAGS_WASM) $(CFLAGS) $(INCLUDES) -c $< -o $@
+	$(Q)mkdir -p "$(EM_CACHE_DIR)"
+	$(Q)$(EM_ENV) $(CC_WASM) $(CFLAGS_WASM) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 # Ensure the output directory exists
 ensure_out_dir:
-	mkdir -p $(OUT_LIB_DIR)
-	mkdir -p $(OUT_INC_DIR)
-	@test -f "$(TYPE_LIBRL_DECL)" || (echo "Missing type declaration: $(TYPE_LIBRL_DECL)" && exit 1)
-	cp "$(TYPE_LIBRL_DECL)" "$(OUT_LIBRL_DECL)"
+	$(Q)mkdir -p $(OUT_LIB_DIR)
+	$(Q)mkdir -p $(OUT_INC_DIR)
+	$(Q)test -f "$(TYPE_LIBRL_DECL)" || (echo "Missing type declaration: $(TYPE_LIBRL_DECL)" && exit 1)
+	$(Q)cp "$(TYPE_LIBRL_DECL)" "$(OUT_LIBRL_DECL)"
 
 # Ensure the object directory exists
 ensure_obj_dir:
-	mkdir -p $(OBJ_DESKTOP_DIR)
-	mkdir -p $(OBJ_WASM_DIR)
+	$(Q)mkdir -p $(OBJ_DESKTOP_DIR)
+	$(Q)mkdir -p $(OBJ_WASM_DIR)
 
 # Clean up
 clean:
-	rm -rf $(OUT_LIB_DIR)
-	rm -rf $(OBJ_BASE_DIR)
+	$(Q)rm -rf $(OUT_LIB_DIR)
+	$(Q)rm -rf $(OBJ_BASE_DIR)
 #	@$(MAKE) -C $(LIBRAYLIB_ROOT) clean
 
 

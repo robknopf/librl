@@ -92,7 +92,7 @@ void rl_frame_runner_run(rl_frame_runner_init_fn init_fn,
 #if defined(PLATFORM_WEB)
     emscripten_set_main_loop(rl_frame_web_step, 0, 1);
 #else
-    while (rl_frame_loop_state.running && !WindowShouldClose()) {
+    while (rl_frame_loop_state.running) {
         rl_loader_tick();
 
         if (!rl_frame_loop_state.init_complete) {
@@ -108,6 +108,10 @@ void rl_frame_runner_run(rl_frame_runner_init_fn init_fn,
             if (!rl_frame_loop_state.running) {
                 break;
             }
+        }
+
+        if (WindowShouldClose()) {
+            break;
         }
 
         rl_frame_loop_state.tick_fn(rl_frame_loop_state.user_data);

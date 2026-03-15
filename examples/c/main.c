@@ -581,7 +581,6 @@ static void on_shutdown(void *user_data) {
   (void)rl_event_off("lua.error", on_module_error, NULL);
   (void)rl_event_off("resource.load", on_resource_load, context);
   (void)rl_event_off("script.import", on_script_import, context);
-  rl_deinit();
   rl_window_close();
 }
 
@@ -601,7 +600,7 @@ static void on_init(void *user_data) {
   (void)rl_event_on("resource.load", on_resource_load, context);
   (void)rl_event_on("script.import", on_script_import, context);
 
-  rl_window_init(context->script_config.width, context->script_config.height,
+  rl_window_open(context->script_config.width, context->script_config.height,
                  context->script_config.title, context->script_config.flags);
   rl_frame_runner_set_target_fps(context->script_config.target_fps > 0
                                      ? context->script_config.target_fps

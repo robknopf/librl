@@ -280,7 +280,7 @@ const RL = {
         return moduleInstance.ccall('rl_event_listener_count', 'number', ['string'], [eventName]);
     },
 
-    initWindow: (width, height, title, flags = 0) => {
+    openWindow: (width, height, title, flags = 0) => {
         let windowFlags = Number.isInteger(flags) ? flags : 0;
 
         // we default to keeping the canvas the same aspect ratio as the ideal dimensions
@@ -312,7 +312,7 @@ const RL = {
         });
 
 
-        moduleInstance.ccall('rl_window_init', null, ['number', 'number', 'string', 'number'], [width, height, title, windowFlags]);
+        moduleInstance.ccall('rl_window_open', null, ['number', 'number', 'string', 'number'], [width, height, title, windowFlags]);
         // force an initial resize event
         window.dispatchEvent(new Event('resize'));
     },
@@ -396,7 +396,7 @@ const RL = {
     },
     drawCube: (positionX, positionY, positionZ, width, height, length, color) => {
         return moduleInstance.ccall(
-            'rl_draw_cube',
+            'rl_shape_draw_cube',
             null,
             ['number', 'number', 'number', 'number', 'number', 'number', 'number'],
             [positionX, positionY, positionZ, width, height, length, color]
@@ -529,8 +529,19 @@ const RL = {
     createModel: (path) => moduleInstance.ccall(
         "rl_model_create", "number", ["string"], [path], { async: true } // async: true, it uses fetch
     ),
-    drawModel: (model, x, y, z, scale, tint) => moduleInstance.ccall(
-        "rl_model_draw", null, ["number", "number", "number", "number", "number", "number"], [model, x, y, z, scale, tint]
+    modelSetTransform: (
+        model,
+        positionX, positionY, positionZ,
+        rotationX, rotationY, rotationZ,
+        scaleX, scaleY, scaleZ
+    ) => moduleInstance.ccall(
+        "rl_model_set_transform",
+        "number",
+        ["number", "number", "number", "number", "number", "number", "number", "number", "number", "number"],
+        [model, positionX, positionY, positionZ, rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ]
+    ) !== 0,
+    drawModel: (model, tint) => moduleInstance.ccall(
+        "rl_model_draw", null, ["number", "number"], [model, tint]
     ),
     isModelValid: (model) => moduleInstance.ccall(
         "rl_model_is_valid", "number", ["number"], [model]
@@ -685,8 +696,11 @@ const RL = {
     createSprite3DFromTexture: (texture) => moduleInstance.ccall(
         "rl_sprite3d_create_from_texture", "number", ["number"], [texture]
     ),
-    drawSprite3D: (sprite, x, y, z, size, tint) => moduleInstance.ccall(
-        "rl_sprite3d_draw", null, ["number", "number", "number", "number", "number", "number"], [sprite, x, y, z, size, tint]
+    sprite3DSetTransform: (sprite, positionX, positionY, positionZ, size) => moduleInstance.ccall(
+        "rl_sprite3d_set_transform", "number", ["number", "number", "number", "number", "number"], [sprite, positionX, positionY, positionZ, size]
+    ) !== 0,
+    drawSprite3D: (sprite, tint) => moduleInstance.ccall(
+        "rl_sprite3d_draw", null, ["number", "number"], [sprite, tint]
     ),
     destroySprite3D: (sprite) => moduleInstance.ccall(
         "rl_sprite3d_destroy", null, ["number"], [sprite]

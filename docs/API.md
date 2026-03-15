@@ -22,9 +22,8 @@ This document summarizes the current public C API exposed by `include/*.h`.  As 
 Main responsibilities:
 
 - Runtime lifecycle (`rl_init`, `rl_deinit`)
-- Window management (`rl_window_init(width, height, title, flags)`, size/position/title helpers)
 - Frame lifecycle (`rl_frame_runner_run`, `rl_frame_runner_request_stop`, `rl_frame_runner_set_target_fps`, `rl_frame_begin`, `rl_frame_end`)
-- Basic drawing (text, rectangles, cubes, fps helpers)
+- Basic drawing (text, fps helpers)
 - 2D/3D mode switching
 - Mouse/keyboard input helpers (`rl_input_get_mouse*`, `rl_input_get_keyboard_state`)
 - Basic lighting toggles and parameters
@@ -33,10 +32,32 @@ Main responsibilities:
 
 Header note:
 
-- `rl.h` is the primary/core header for runtime/window/draw APIs.
+- `rl.h` is the primary/core header for runtime/frame/draw APIs.
 - Shared base types (`rl_handle_t`, math/data structs) live in `rl_types.h`.
 - For many integrations, including only `rl.h` is enough.
-- If you need subsystem-specific APIs (model/font/color/loader/scratch), include their corresponding headers explicitly.
+- If you need subsystem-specific APIs (window/model/font/color/loader/scratch/shape), include their corresponding headers explicitly.
+
+## Window (`include/rl_window.h`)
+
+Main responsibilities:
+
+- Window open/close lifecycle (`rl_window_open(width, height, title, flags)`, `rl_window_close()`)
+- Size/position/title helpers
+- Monitor/screen/window queries
+
+Notes:
+
+- `rl_init()` initializes the runtime/subsystems; it does not open a window.
+- `rl_window_close()` is window-only lifecycle and no longer performs hidden `rl_deinit()` work.
+
+## Shape (`include/rl_shape.h`)
+
+Main responsibilities:
+
+- Immediate shape drawing helpers
+- Current primitives:
+  - `rl_shape_draw_cube(...)`
+  - `rl_shape_draw_rectangle(...)`
 
 ## Camera3D (`include/rl_camera3d.h`)
 
@@ -86,7 +107,9 @@ Notes:
 
 - `rl_model_create()` requires a ready window/graphics context.
 - On model load failure, the implementation substitutes a visible placeholder cube.
-- Current draw/pick flow now carries full XYZ rotation.
+- Model instances now own transform state.
+- Use `rl_model_set_transform(...)` to update position / XYZ rotation / non-uniform scale on the instance.
+- `rl_model_draw(handle, tint)` draws using the stored transform.
 
 ## Picking (`include/rl_pick.h`)
 
@@ -101,7 +124,7 @@ Notes:
 
 - `rl_pick_model(...)` currently targets one model handle at a time.
 - `rl_pick_sprite3d(...)` targets one sprite handle at a time and uses billboard-quad collision.
-- Transform inputs mirror the current model draw style (position + uniform scale + XYZ rotation).
+- Pick inputs still take explicit transform values and have not yet been collapsed to instance-owned state.
 - Picking now uses broad-phase culling before narrow-phase tests:
   - models: world-space AABB ray test
   - sprite3d billboards: bounding-sphere ray test
@@ -155,8 +178,14 @@ Main responsibilities:
 Main responsibilities:
 
 - 3D sprite creation from path or texture handle
+- Instance-owned billboard transform (`rl_sprite3d_set_transform(...)`)
 - Billboard drawing in active 3D camera context
 - Sprite handle destruction
+
+Notes:
+
+- Sprite3D instances now own position/size state.
+- `rl_sprite3d_draw(handle, tint)` draws using the stored transform.
 
 ## Debug (`include/rl_debug.h`)
 

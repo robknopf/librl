@@ -8,7 +8,14 @@ interface ClientData {
   id: string;
 }
 
-const ENABLE_TLS = true
+const DEFAULT_ENABLE_TLS = true;
+const REQUESTED_PROTOCOL = process.env.RL_REMOTE_WS_PROTOCOL?.toLowerCase();
+const ENABLE_TLS =
+  REQUESTED_PROTOCOL === "wss"
+    ? true
+    : REQUESTED_PROTOCOL === "ws"
+      ? false
+      : DEFAULT_ENABLE_TLS;
 const TLS_CERT =
   process.env.RL_REMOTE_TLS_CERT ||
   "/home/rknopf/keys/doomgiver.local/cert.pem";
@@ -55,7 +62,7 @@ function createGameClient(ws: ServerWebSocket<ClientData>): GameClient {
 game.init();
 
 const server = Bun.serve<ClientData>({
-  hostname:"0.0.0.0",
+  hostname: HOST,
   port: PORT,
   ...(ENABLE_TLS && TLS_CERT && TLS_KEY
     ? {

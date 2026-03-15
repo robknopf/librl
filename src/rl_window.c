@@ -5,9 +5,9 @@
 #include "logger/logger.h"
 
 RL_KEEP
-void rl_window_init(int width, int height, const char *title, int flags) {
+void rl_window_open(int width, int height, const char *title, int flags) {
     if (!initialized) {
-        log_error("rl_window_init() called before rl_init()");
+        log_error("rl_window_open() called before rl_init()");
         return;
     }
     if (flags != 0) {
@@ -117,8 +117,7 @@ void rl_window_set_position(int x, int y) {
 
 RL_KEEP
 void rl_window_close() {
-    if (initialized) {
-        rl_deinit();
+    if (IsWindowReady()) {
+        CloseWindow();
     }
-    CloseWindow();
 }

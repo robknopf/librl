@@ -22,7 +22,7 @@ extern "C" {
 #define RL_WINDOW_FLAG_WINDOW_HIGHDPI 0x00002000u
 #define RL_WINDOW_FLAG_INTERLACED_HINT 0x00010000u
 
-void rl_window_init(int width, int height, const char *title, int flags);
+void rl_window_open(int width, int height, const char *title, int flags);
 void rl_window_set_title(const char *title);
 void rl_window_set_size(int width, int height);
 vec2_t rl_window_get_screen_size(void);

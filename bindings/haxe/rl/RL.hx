@@ -19,6 +19,15 @@ extern class RL {
   static inline var FLAG_MSAA_4X_HINT: Int = 0x00000020;
   static inline var FLAG_VSYNC_HINT: Int = 0x00000040;
 
+  // --- Camera projections (rl_camera3d.h) ---
+  static inline var CAMERA_PERSPECTIVE: Int = 0;
+  static inline var CAMERA_ORTHOGRAPHIC: Int = 1;
+
+  // --- Loader add_task result codes (rl_loader.h) ---
+  static inline var LOADER_ADD_TASK_OK: Int = 0;
+  static inline var LOADER_ADD_TASK_ERR_INVALID: Int = -1;
+  static inline var LOADER_ADD_TASK_ERR_QUEUE_FULL: Int = -2;
+
   // --- Core lifecycle ---
   @:native("rl_init")
   static function init(): Void;
@@ -56,12 +65,56 @@ extern class RL {
   @:native("rl_set_target_fps")
   static function setTargetFps(fps: Int): Void;
 
+  // --- Colors (rl_color.h) ---
+  @:native("rl_color_create")
+  static function colorCreate(r: Int, g: Int, b: Int, a: Int): Int;
+
+  @:native("rl_color_destroy")
+  static function colorDestroy(color: Int): Void;
+
+  // --- Fonts (rl_font.h, rl_text.h) ---
+  @:native("rl_font_create")
+  static function fontCreate(filename: String, fontSize: Float): Int;
+
+  @:native("rl_font_destroy")
+  static function fontDestroy(font: Int): Void;
+
+  @:native("rl_text_draw_ex")
+  static function textDrawEx(font: Int, text: String, x: Int, y: Int, fontSize: Float, spacing: Float, color: Int): Void;
+
+  @:native("rl_text_measure_ex")
+  static function textMeasureEx(font: Int, text: String, fontSize: Float, spacing: Float): RLVec2;
+
+  @:native("rl_text_draw_fps_ex")
+  static function textDrawFpsEx(font: Int, x: Int, y: Int, fontSize: Int, color: Int): Void;
+
   // --- Asset host ---
   @:native("rl_set_asset_host")
   static function setAssetHost(assetHost: String): Int;
 
   @:native("rl_get_asset_host")
   static function getAssetHost(): String;
+
+  // --- Loader (rl_loader.h) ---
+  @:native("rl_loader_import_asset_async")
+  static function loaderImportAssetAsync(filename: String): RLLoaderTaskPtr;
+
+  @:native("rl_loader_poll_task")
+  static function loaderPollTask(task: RLLoaderTaskPtr): Bool;
+
+  @:native("rl_loader_finish_task")
+  static function loaderFinishTask(task: RLLoaderTaskPtr): Int;
+
+  @:native("rl_loader_free_task")
+  static function loaderFreeTask(task: RLLoaderTaskPtr): Void;
+
+  @:native("rl_loader_is_local")
+  static function loaderIsLocal(filename: String): Bool;
+
+  @:native("rl_loader_add_task")
+  static function loaderAddTask(task: RLLoaderTaskPtr, path: String,
+    onSuccess: cpp.Pointer<cpp.Void>, onFailure: cpp.Pointer<cpp.Void>,
+    userData: cpp.Pointer<cpp.Void>): Int;
 
   // --- Lighting ---
   @:native("rl_enable_lighting")
@@ -140,6 +193,81 @@ extern class RL {
 
   @:native("rl_window_set_position")
   static function windowSetPosition(x: Int, y: Int): Void;
+
+  // --- 3D camera (rl_camera3d.h) ---
+  @:native("rl_camera3d_create")
+  static function camera3dCreate(
+    positionX: Float, positionY: Float, positionZ: Float,
+    targetX: Float, targetY: Float, targetZ: Float,
+    upX: Float, upY: Float, upZ: Float,
+    fovy: Float, projection: Int
+  ): Int;
+
+  @:native("rl_camera3d_set")
+  static function camera3dSet(
+    camera: Int,
+    positionX: Float, positionY: Float, positionZ: Float,
+    targetX: Float, targetY: Float, targetZ: Float,
+    upX: Float, upY: Float, upZ: Float,
+    fovy: Float, projection: Int
+  ): Bool;
+
+  @:native("rl_camera3d_set_active")
+  static function camera3dSetActive(camera: Int): Bool;
+
+  @:native("rl_camera3d_destroy")
+  static function camera3dDestroy(camera: Int): Void;
+
+  // --- Models (rl_model.h) ---
+  @:native("rl_model_create")
+  static function modelCreate(filename: String): Int;
+
+  @:native("rl_model_set_transform")
+  static function modelSetTransform(
+    model: Int,
+    positionX: Float, positionY: Float, positionZ: Float,
+    rotationX: Float, rotationY: Float, rotationZ: Float,
+    scaleX: Float, scaleY: Float, scaleZ: Float
+  ): Bool;
+
+  @:native("rl_model_draw")
+  static function modelDraw(model: Int, tint: Int): Void;
+
+  @:native("rl_model_set_animation")
+  static function modelSetAnimation(model: Int, animationIndex: Int): Bool;
+
+  @:native("rl_model_set_animation_speed")
+  static function modelSetAnimationSpeed(model: Int, speed: Float): Bool;
+
+  @:native("rl_model_set_animation_loop")
+  static function modelSetAnimationLoop(model: Int, shouldLoop: Bool): Bool;
+
+  @:native("rl_model_animate")
+  static function modelAnimate(model: Int, deltaSeconds: Float): Bool;
+
+  @:native("rl_model_destroy")
+  static function modelDestroy(model: Int): Void;
+
+  // --- Sprite3D (rl_sprite3d.h) ---
+  @:native("rl_sprite3d_create")
+  static function sprite3dCreate(filename: String): Int;
+
+  @:native("rl_sprite3d_set_transform")
+  static function sprite3dSetTransform(
+    sprite: Int,
+    positionX: Float, positionY: Float, positionZ: Float,
+    size: Float
+  ): Bool;
+
+  @:native("rl_sprite3d_draw")
+  static function sprite3dDraw(sprite: Int, tint: Int): Void;
+
+  @:native("rl_sprite3d_destroy")
+  static function sprite3dDestroy(sprite: Int): Void;
+
+  // --- Input (rl_input.h) ---
+  @:native("rl_input_get_mouse_state")
+  static function inputGetMouseState(): RLMouseState;
 }
 
 #if cpp
@@ -150,6 +278,24 @@ extern class RLVec2 {
   var x: Float;
   var y: Float;
 }
+
+@:include("rl_types.h")
+@:native("rl_mouse_state_t")
+@:structAccess
+extern class RLMouseState {
+  public var x: Int;
+  public var y: Int;
+  public var wheel: Int;
+  public var left: Int;
+  public var right: Int;
+  public var middle: Int;
+}
+
+@:include("rl_loader.h")
+@:native("rl_loader_task_t")
+extern class RLLoaderTask {}
+
+typedef RLLoaderTaskPtr = cpp.RawPointer<RLLoaderTask>;
 #else
 typedef RLVec2 = {
   var x: Float;

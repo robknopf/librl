@@ -40,6 +40,7 @@ type
   RLModuleEventOffFn* = proc(hostUserData: pointer, eventName: cstring,
                              listener: RLModuleEventListenerFn, listenerUserData: pointer): cint {.cdecl.}
   RLModuleEventEmitFn* = proc(hostUserData: pointer, eventName: cstring, payload: pointer): cint {.cdecl.}
+  RLLoaderCallbackFn* = proc(path: cstring, userData: pointer) {.cdecl.}
   RLInitFn* = proc(userData: pointer) {.cdecl.}
   RLTickFn* = proc(userData: pointer) {.cdecl.}
   RLShutdownFn* = proc(userData: pointer) {.cdecl.}
@@ -114,6 +115,9 @@ const
   RL_MODULE_LOG_WARN* = 3.cint
   RL_MODULE_LOG_ERROR* = 4.cint
   RL_MODULE_ABI_VERSION* = 1.cint
+  RL_LOADER_ADD_TASK_OK* = 0.cint
+  RL_LOADER_ADD_TASK_ERR_INVALID* = (-1).cint
+  RL_LOADER_ADD_TASK_ERR_QUEUE_FULL* = (-2).cint
 
 proc rl_init*() {.importc, cdecl, header: "rl.h".}
 proc rl_deinit*() {.importc, cdecl, header: "rl.h".}
@@ -121,10 +125,20 @@ proc rl_set_asset_host*(assetHost: cstring): cint {.importc, cdecl, header: "rl.
 proc rl_get_asset_host*(): cstring {.importc, cdecl, header: "rl.h".}
 proc rl_loader_restore_fs_async*(): ptr RLLoaderTask {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_import_asset_async*(filename: cstring): ptr RLLoaderTask {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_import_assets_async*(filenames: ptr cstring, filenameCount: csize_t): ptr RLLoaderTask {.importc, cdecl, header: "rl_loader.h".}
+proc rl_loader_import_assets_async_raw(filenames: ptr cstring, filenameCount: csize_t): ptr RLLoaderTask {.importc: "rl_loader_import_assets_async", cdecl, header: "rl_loader.h".}
+
+proc rl_loader_import_assets_async*(filenames: openArray[string]): ptr RLLoaderTask =
+  var cstrs = newSeq[cstring](filenames.len)
+  for i, s in filenames:
+    cstrs[i] = s.cstring
+  return rl_loader_import_assets_async_raw(addr cstrs[0], cstrs.len.csize_t)
+
 proc rl_loader_poll_task*(task: ptr RLLoaderTask): bool {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_finish_task*(task: ptr RLLoaderTask): cint {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_free_task*(task: ptr RLLoaderTask) {.importc, cdecl, header: "rl_loader.h".}
+proc rl_loader_add_task*(task: ptr RLLoaderTask, path: cstring,
+                         onSuccess: RLLoaderCallbackFn, onFailure: RLLoaderCallbackFn,
+                         userData: pointer): cint {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_is_local*(filename: cstring): bool {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_uncache_file*(filename: cstring): cint {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_clear_cache*(): cint {.importc, cdecl, header: "rl_loader.h".}

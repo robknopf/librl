@@ -21,10 +21,30 @@
       <!-- <audio id="bgm" loop="true" src="assets/audio/ethernight.mp3"></audio> -->
       <!-- <div id="ui"></div> -->
       <canvas class="emscripten" id="renderCanvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
-     <!-- <script type="module" src="examples/js/pick_example.js" async></script> -->
-     <!-- <script type="module" src="examples/js/simple_example.js" async></script>  -->
-     <!-- <script type="module" src="examples/js/lua_module_example.js" async></script> -->
-     <script type="module" src="./remote_example.entry.js" async></script>
+     <script type="module">
+       const examples = {
+         remote:     "./remote_example.js",
+         simple:     "./simple_example.js",
+         pick:       "./pick_example.js",
+         lua:        "./lua_module_example.js",
+         nim:        "./nim_example.js",
+         haxe:       "./haxe_example.js",
+       };
+       const params = new URLSearchParams(window.location.search);
+       const name = params.get("example") || "remote";
+       const src = examples[name];
+       if (src) {
+         import(/* @vite-ignore */ src);
+       } else {
+         const valid = Object.keys(examples).join(", ");
+         console.error(`Unknown example "${name}". Valid: ${valid}`);
+         document.getElementById("renderCanvas").style.display = "none";
+         const msg = document.createElement("p");
+         msg.style.cssText = "color:#c62828;font-family:monospace;padding:1em";
+         msg.textContent = `Unknown example "${name}". Valid options: ${valid}`;
+         document.getElementById("gameContainer").appendChild(msg);
+       }
+     </script>
     </div>
     <div id="outputContainer" class="collapsed">
       <div id="outputHeader" class="collapsed">Console</div>

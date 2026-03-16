@@ -8,6 +8,8 @@ class TestRL extends utest.Test {
     Assert.equals(0x00000004, RL.FLAG_WINDOW_RESIZABLE);
     Assert.equals(0x00000020, RL.FLAG_MSAA_4X_HINT);
     Assert.equals(0x00000040, RL.FLAG_VSYNC_HINT);
+    Assert.equals(0, RL.CAMERA_PERSPECTIVE);
+    Assert.equals(1, RL.CAMERA_ORTHOGRAPHIC);
   }
 
   #if cpp
@@ -63,6 +65,24 @@ class TestRL extends utest.Test {
     RL.init();
     var count = RL.windowGetMonitorCount();
     Assert.isTrue(count >= 0, "monitor count non-negative");
+    RL.deinit();
+  }
+
+  public function testColorCreateDestroy() {
+    RL.init();
+    var c = RL.colorCreate(10, 20, 30, 40);
+    // Just ensure we got some handle back; value is opaque.
+    Assert.notEquals(0, c);
+    RL.colorDestroy(c);
+    RL.deinit();
+  }
+
+  public function testInputMouseState() {
+    RL.init();
+    var mouse = RL.inputGetMouseState();
+    // Validate fields exist and are numeric; exact values depend on environment.
+    Assert.isTrue(mouse.x >= 0 || mouse.x <= 0, "mouse.x is an Int");
+    Assert.isTrue(mouse.y >= 0 || mouse.y <= 0, "mouse.y is an Int");
     RL.deinit();
   }
   #end

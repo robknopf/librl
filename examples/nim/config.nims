@@ -1,7 +1,5 @@
 import std/os
 
-  # So, we put a fake guard (when declared(task)) so the linter doesn't complain.
-
 when declared(switch):
   switch("path", "src")
   switch("path", "../../bindings/nim")
@@ -15,7 +13,47 @@ const
   mainEntry = "src/main.nim"
   outFile = "main"
 
-task build, "Build desktop Nim test binary":
+when defined(emscripten):
+  switch("os", "linux")
+  switch("cpu", "wasm32")
+  switch("cc", "clang")
+  switch("mm", "arc")
+
+  when defined(windows):
+    switch("clang.exe", "emcc.bat")
+    switch("clang.linkerexe", "emcc.bat")
+  else:
+    switch("clang.exe", "emcc")
+    switch("clang.linkerexe", "emcc")
+
+  switch("exceptions", "goto")
+  switch("define", "noSignalHandler")
+  switch("threads", "off")
+  switch("define", "useMalloc")
+
+  switch("passC", "-I" & includeDir)
+  switch("passC", "-DPLATFORM_WEB")
+  switch("passC", "-Wno-incompatible-function-pointer-types")
+
+  switch("passL", libDir / "librl.wasm.a")
+  switch("passL", "-s USE_GLFW=3")
+  switch("passL", "-s FETCH=1")
+  switch("passL", "-s MIN_WEBGL_VERSION=2")
+  switch("passL", "-s MAX_WEBGL_VERSION=2")
+  switch("passL", "-s ALLOW_MEMORY_GROWTH=1")
+  switch("passL", "-s INITIAL_MEMORY=67108864")
+  switch("passL", "-lidbfs.js")
+  switch("passL", "-s WASM=1")
+  switch("passL", "-s MODULARIZE=1")
+  switch("passL", "-s EXPORT_ES6=1")
+
+  switch("passL", "-O2")
+  switch("define", "release")
+
+  switch("nimcache", "build/wasm/nimcache")
+  switch("out", outDir / "wasm" / "main.js")
+
+task build, "Build desktop Nim binary":
   mkDir(outDir)
   let entry = getCurrentDir() / mainEntry
   let outBin = outDir / outFile
@@ -31,9 +69,17 @@ task build, "Build desktop Nim test binary":
     " --passL:-lX11" &
     " " & entry
 
+task build_wasm, "Build WASM Nim binary via Emscripten":
+  mkDir(outDir / "wasm")
+  let entry = getCurrentDir() / mainEntry
+  exec "nim c -d:emscripten -d:release " & entry
+
 task clean, "Clean Nim build outputs":
   let cacheDir = getCurrentDir() / "cache"
+  let buildDir = getCurrentDir() / "build"
   if dirExists(outDir):
     rmDir(outDir)
   if dirExists(cacheDir):
     rmDir(cacheDir)
+  if dirExists(buildDir):
+    rmDir(buildDir)

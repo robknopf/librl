@@ -1,11 +1,13 @@
 import { CommandType } from "../types";
 import { ResourceRequestType } from "../resource_protocol";
-import { SharedResourceManager } from "../resource_manager";
+import type { ResourceManager } from "../resource_manager";
+import { WorldResources } from "../world_resource_manager";
 import { get_frame_command_buffer } from "../frame_command_buffer";
 import { rl_frame_commands_append } from "./rl_frame_commands";
 import { rl_texture_create } from "./rl_texture";
 
 const rl_sprite3d_handles = new Set<number>();
+let rl_sprite3d_resource_manager: ResourceManager = WorldResources;
 interface rl_sprite3d_state_t {
   position_x: number;
   position_y: number;
@@ -14,8 +16,12 @@ interface rl_sprite3d_state_t {
 }
 const rl_sprite3d_states = new Map<number, rl_sprite3d_state_t>();
 
+export function set_resource_manager(resourceManager: ResourceManager): void {
+  rl_sprite3d_resource_manager = resourceManager;
+}
+
 export async function rl_sprite3d_create(filename: string): Promise<number> {
-  const handle = await SharedResourceManager.createResource({
+  const handle = await rl_sprite3d_resource_manager.createResource({
     type: ResourceRequestType.CREATE_SPRITE3D,
     filename,
   });
@@ -95,5 +101,5 @@ export async function rl_sprite3d_destroy(handle: number): Promise<void> {
 
   rl_sprite3d_handles.delete(handle);
   rl_sprite3d_states.delete(handle);
-  await SharedResourceManager.destroyResource(handle);
+  await rl_sprite3d_resource_manager.destroyResource(handle);
 }

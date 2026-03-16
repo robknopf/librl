@@ -33,7 +33,7 @@ static int json_read_string_field(const json_value_t *object, const char *key, c
   return 0;
 }
 
-static int parse_command(const json_value_t *cmd_json, rl_module_frame_command_t *out_cmd)
+static int parse_command(const json_value_t *cmd_json, rl_render_command_t *out_cmd)
 {
   int type = 0;
 
@@ -48,7 +48,7 @@ static int parse_command(const json_value_t *cmd_json, rl_module_frame_command_t
   out_cmd->type = type;
 
   switch (type) {
-    case RL_MODULE_FRAME_CMD_CLEAR: {
+    case RL_RENDER_CMD_CLEAR: {
       int color = 0;
       if (json_object_get_int_value(cmd_json, "color", &color)) {
         out_cmd->data.clear.color = (rl_handle_t)color;
@@ -56,7 +56,7 @@ static int parse_command(const json_value_t *cmd_json, rl_module_frame_command_t
       break;
     }
 
-    case RL_MODULE_FRAME_CMD_DRAW_TEXT: {
+    case RL_RENDER_CMD_DRAW_TEXT: {
       int font = 0;
       int color = 0;
       const char *text = NULL;
@@ -72,12 +72,12 @@ static int parse_command(const json_value_t *cmd_json, rl_module_frame_command_t
       (void)json_read_float_field(cmd_json, "fontSize", &out_cmd->data.draw_text.font_size);
       (void)json_read_float_field(cmd_json, "spacing", &out_cmd->data.draw_text.spacing);
       if (json_object_get_string_value(cmd_json, "text", &text)) {
-        snprintf(out_cmd->data.draw_text.text, RL_MODULE_FRAME_TEXT_MAX, "%s", text);
+        snprintf(out_cmd->data.draw_text.text, RL_FRAME_TEXT_MAX, "%s", text);
       }
       break;
     }
 
-    case RL_MODULE_FRAME_CMD_DRAW_SPRITE3D: {
+    case RL_RENDER_CMD_DRAW_SPRITE3D: {
       int sprite = 0;
       int tint = 0;
 
@@ -90,15 +90,63 @@ static int parse_command(const json_value_t *cmd_json, rl_module_frame_command_t
       break;
     }
 
-    case RL_MODULE_FRAME_CMD_PLAY_SOUND: {
+    case RL_RENDER_CMD_PLAY_SOUND: {
       int sound = 0;
       if (json_object_get_int_value(cmd_json, "sound", &sound)) {
         out_cmd->data.play_sound.sound = (rl_handle_t)sound;
       }
+      (void)json_read_float_field(cmd_json, "volume", &out_cmd->data.play_sound.volume);
+      (void)json_read_float_field(cmd_json, "pitch", &out_cmd->data.play_sound.pitch);
+      (void)json_read_float_field(cmd_json, "pan", &out_cmd->data.play_sound.pan);
       break;
     }
 
-    case RL_MODULE_FRAME_CMD_DRAW_MODEL: {
+    case RL_RENDER_CMD_PLAY_MUSIC: {
+      int music = 0;
+      if (json_object_get_int_value(cmd_json, "music", &music)) {
+        out_cmd->data.play_music.music = (rl_handle_t)music;
+      }
+      break;
+    }
+
+    case RL_RENDER_CMD_PAUSE_MUSIC: {
+      int music = 0;
+      if (json_object_get_int_value(cmd_json, "music", &music)) {
+        out_cmd->data.pause_music.music = (rl_handle_t)music;
+      }
+      break;
+    }
+
+    case RL_RENDER_CMD_STOP_MUSIC: {
+      int music = 0;
+      if (json_object_get_int_value(cmd_json, "music", &music)) {
+        out_cmd->data.stop_music.music = (rl_handle_t)music;
+      }
+      break;
+    }
+
+    case RL_RENDER_CMD_SET_MUSIC_LOOP: {
+      int music = 0;
+      bool loop = false;
+      if (json_object_get_int_value(cmd_json, "music", &music)) {
+        out_cmd->data.set_music_loop.music = (rl_handle_t)music;
+      }
+      if (json_object_get_bool_value(cmd_json, "loop", &loop)) {
+        out_cmd->data.set_music_loop.loop = loop;
+      }
+      break;
+    }
+
+    case RL_RENDER_CMD_SET_MUSIC_VOLUME: {
+      int music = 0;
+      if (json_object_get_int_value(cmd_json, "music", &music)) {
+        out_cmd->data.set_music_volume.music = (rl_handle_t)music;
+      }
+      (void)json_read_float_field(cmd_json, "volume", &out_cmd->data.set_music_volume.volume);
+      break;
+    }
+
+    case RL_RENDER_CMD_DRAW_MODEL: {
       int model = 0;
       int tint = 0;
       int animation_index = 0;
@@ -119,7 +167,7 @@ static int parse_command(const json_value_t *cmd_json, rl_module_frame_command_t
       break;
     }
 
-    case RL_MODULE_FRAME_CMD_DRAW_TEXTURE: {
+    case RL_RENDER_CMD_DRAW_TEXTURE: {
       int texture = 0;
       int tint = 0;
 
@@ -136,7 +184,7 @@ static int parse_command(const json_value_t *cmd_json, rl_module_frame_command_t
       break;
     }
 
-    case RL_MODULE_FRAME_CMD_DRAW_CUBE: {
+    case RL_RENDER_CMD_DRAW_CUBE: {
       int color = 0;
 
       if (json_object_get_int_value(cmd_json, "color", &color)) {
@@ -151,7 +199,7 @@ static int parse_command(const json_value_t *cmd_json, rl_module_frame_command_t
       break;
     }
 
-    case RL_MODULE_FRAME_CMD_DRAW_GROUND_TEXTURE: {
+    case RL_RENDER_CMD_DRAW_GROUND_TEXTURE: {
       int texture = 0;
       int tint = 0;
 
@@ -169,7 +217,7 @@ static int parse_command(const json_value_t *cmd_json, rl_module_frame_command_t
       break;
     }
 
-    case RL_MODULE_FRAME_CMD_SET_CAMERA3D: {
+    case RL_RENDER_CMD_SET_CAMERA3D: {
       int camera = 0;
       int projection = 0;
 
@@ -192,7 +240,7 @@ static int parse_command(const json_value_t *cmd_json, rl_module_frame_command_t
       break;
     }
 
-    case RL_MODULE_FRAME_CMD_SET_MODEL_TRANSFORM: {
+    case RL_RENDER_CMD_SET_MODEL_TRANSFORM: {
       int model = 0;
 
       if (json_object_get_int_value(cmd_json, "model", &model)) {
@@ -210,7 +258,7 @@ static int parse_command(const json_value_t *cmd_json, rl_module_frame_command_t
       break;
     }
 
-    case RL_MODULE_FRAME_CMD_SET_SPRITE3D_TRANSFORM: {
+    case RL_RENDER_CMD_SET_SPRITE3D_TRANSFORM: {
       int sprite = 0;
 
       if (json_object_get_int_value(cmd_json, "sprite", &sprite)) {
@@ -230,25 +278,16 @@ static int parse_command(const json_value_t *cmd_json, rl_module_frame_command_t
   return 0;
 }
 
-static int parse_frame_object(const json_value_t *json_obj, rl_ws_frame_data_t *out_frame)
+static int parse_commands_array(const json_value_t *commands, rl_frame_command_buffer_t *out_commands)
 {
-  const json_value_t *commands = NULL;
   int cmd_count = 0;
   int i = 0;
 
-  if (json_obj == NULL || out_frame == NULL) {
+  if (!json_is_array(commands) || out_commands == NULL) {
     return -1;
   }
 
-  memset(out_frame, 0, sizeof(rl_ws_frame_data_t));
-
-  (void)json_object_get_int_value(json_obj, "frameNumber", &out_frame->frame_number);
-  (void)json_read_float_field(json_obj, "deltaTime", &out_frame->delta_time);
-
-  commands = json_object_get(json_obj, "commands");
-  if (!json_is_array(commands)) {
-    return -1;
-  }
+  out_commands->count = 0;
 
   cmd_count = json_array_size(commands);
   if (cmd_count > RL_FRAME_COMMAND_CAPACITY) {
@@ -257,17 +296,47 @@ static int parse_frame_object(const json_value_t *json_obj, rl_ws_frame_data_t *
 
   for (i = 0; i < cmd_count; ++i) {
     const json_value_t *cmd_json = json_array_get(commands, i);
-    if (parse_command(cmd_json, &out_frame->commands.commands[out_frame->commands.count]) == 0) {
-      out_frame->commands.count++;
+    if (parse_command(cmd_json, &out_commands->commands[out_commands->count]) == 0) {
+      out_commands->count++;
     }
   }
 
   return 0;
 }
 
+static int parse_frame_begin_object(const json_value_t *json_obj, rl_ws_frame_data_t *out_frame)
+{
+  if (json_obj == NULL || out_frame == NULL) {
+    return -1;
+  }
+
+  memset(out_frame, 0, sizeof(rl_ws_frame_data_t));
+  (void)json_object_get_int_value(json_obj, "frameNumber", &out_frame->frame_number);
+  (void)json_read_float_field(json_obj, "deltaTime", &out_frame->delta_time);
+  out_frame->commands.count = 0;
+  return 0;
+}
+
+static int parse_frame_chunk_object(const json_value_t *json_obj, rl_ws_frame_data_t *out_frame)
+{
+  const json_value_t *commands = NULL;
+
+  if (json_obj == NULL || out_frame == NULL) {
+    return -1;
+  }
+
+  memset(out_frame, 0, sizeof(rl_ws_frame_data_t));
+  commands = json_object_get(json_obj, "commands");
+  if (parse_commands_array(commands, &out_frame->commands) != 0) {
+    return -1;
+  }
+  return 0;
+}
+
 static int parse_resource_request(const json_value_t *req_json, rl_resource_request_t *out)
 {
   int rid = 0;
+  int handle = 0;
   int type = 0;
 
   if (req_json == NULL || out == NULL) {
@@ -275,12 +344,14 @@ static int parse_resource_request(const json_value_t *req_json, rl_resource_requ
   }
 
   if (!json_object_get_int_value(req_json, "rid", &rid) ||
+      !json_object_get_int_value(req_json, "handle", &handle) ||
       !json_object_get_int_value(req_json, "type", &type)) {
     return -1;
   }
 
   memset(out, 0, sizeof(rl_resource_request_t));
   out->rid = (uint32_t)rid;
+  out->handle = (rl_handle_t)handle;
   out->type = (rl_resource_request_type_t)type;
 
   switch (out->type) {
@@ -432,43 +503,12 @@ static int parse_pick_request(const json_value_t *req_json, rl_pick_request_t *o
   return 0;
 }
 
-static int parse_music_command(const json_value_t *cmd_json, rl_music_command_t *out)
-{
-  int type = 0;
-  int handle = 0;
-  bool loop = false;
-  double volume = 0.0;
-
-  if (cmd_json == NULL || out == NULL) {
-    return -1;
-  }
-
-  if (!json_object_get_int_value(cmd_json, "type", &type) ||
-      !json_object_get_int_value(cmd_json, "handle", &handle)) {
-    return -1;
-  }
-
-  memset(out, 0, sizeof(rl_music_command_t));
-  out->type = (rl_music_command_type_t)type;
-  out->handle = (rl_handle_t)handle;
-
-  if (json_object_get_bool_value(cmd_json, "loop", &loop)) {
-    out->loop = loop;
-  }
-  if (json_object_get_number_value(cmd_json, "volume", &volume)) {
-    out->volume = (float)volume;
-  }
-
-  return 0;
-}
-
 int rl_protocol_parse_message(const char *raw, int len,
                               rl_protocol_message_type_t *out_type,
                               rl_ws_frame_data_t *out_frame,
                               bool *out_has_frame,
                               rl_protocol_requests_t *out_requests,
-                              rl_protocol_pick_requests_t *out_pick_requests,
-                              rl_protocol_music_commands_t *out_music_commands)
+                              rl_protocol_pick_requests_t *out_pick_requests)
 {
   json_value_t *root = NULL;
   const json_value_t *type_obj = NULL;
@@ -489,10 +529,6 @@ int rl_protocol_parse_message(const char *raw, int len,
   if (out_pick_requests != NULL) {
     out_pick_requests->count = 0;
   }
-  if (out_music_commands != NULL) {
-    out_music_commands->count = 0;
-  }
-
   root = json_parse_with_length(raw, (size_t)len);
   if (root == NULL) {
     return -1;
@@ -504,17 +540,31 @@ int rl_protocol_parse_message(const char *raw, int len,
     return -1;
   }
 
-  if (strcmp(json_get_string(type_obj), "frame") == 0) {
-    const json_value_t *frame_obj = json_object_get(root, "frame");
-    if (frame_obj == NULL || out_frame == NULL || parse_frame_object(frame_obj, out_frame) != 0) {
+  if (strcmp(json_get_string(type_obj), "frameBegin") == 0) {
+    if (out_frame == NULL || parse_frame_begin_object(root, out_frame) != 0) {
       json_delete(root);
       return -1;
     }
     if (out_type != NULL) {
-      *out_type = RL_PROTOCOL_MESSAGE_FRAME;
+      *out_type = RL_PROTOCOL_MESSAGE_FRAME_BEGIN;
     }
     if (out_has_frame != NULL) {
       *out_has_frame = true;
+    }
+  } else if (strcmp(json_get_string(type_obj), "frameChunk") == 0) {
+    if (out_frame == NULL || parse_frame_chunk_object(root, out_frame) != 0) {
+      json_delete(root);
+      return -1;
+    }
+    if (out_type != NULL) {
+      *out_type = RL_PROTOCOL_MESSAGE_FRAME_CHUNK;
+    }
+    if (out_has_frame != NULL) {
+      *out_has_frame = true;
+    }
+  } else if (strcmp(json_get_string(type_obj), "frameEnd") == 0) {
+    if (out_type != NULL) {
+      *out_type = RL_PROTOCOL_MESSAGE_FRAME_END;
     }
   } else if (strcmp(json_get_string(type_obj), "resourceRequests") == 0) {
     const json_value_t *resource_requests = json_object_get(root, "resourceRequests");
@@ -563,30 +613,6 @@ int rl_protocol_parse_message(const char *raw, int len,
     out_pick_requests->count = count;
     if (out_type != NULL) {
       *out_type = RL_PROTOCOL_MESSAGE_PICK_REQUESTS;
-    }
-  } else if (strcmp(json_get_string(type_obj), "musicCommands") == 0) {
-    const json_value_t *music_commands = json_object_get(root, "musicCommands");
-    int count = 0;
-    int index = 0;
-
-    if (!json_is_array(music_commands) || out_music_commands == NULL) {
-      json_delete(root);
-      return -1;
-    }
-
-    for (index = 0; index < json_array_size(music_commands); ++index) {
-      const json_value_t *cmd_json = json_array_get(music_commands, index);
-      if (count >= RL_PROTOCOL_MAX_MUSIC_COMMANDS) {
-        break;
-      }
-      if (parse_music_command(cmd_json, &out_music_commands->items[count]) == 0) {
-        count++;
-      }
-    }
-
-    out_music_commands->count = count;
-    if (out_type != NULL) {
-      *out_type = RL_PROTOCOL_MESSAGE_MUSIC_COMMANDS;
     }
   } else if (strcmp(json_get_string(type_obj), "reset") == 0) {
     if (out_type != NULL) {

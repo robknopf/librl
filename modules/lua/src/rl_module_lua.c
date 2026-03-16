@@ -1807,7 +1807,7 @@ static int lua_module_log_binding(lua_State *L)
 static int lua_module_clear_binding(lua_State *L)
 {
     rl_module_lua_state_t *state = NULL;
-    rl_module_frame_command_t command;
+    rl_render_command_t command;
 
     state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     if (state == NULL) {
@@ -1815,7 +1815,7 @@ static int lua_module_clear_binding(lua_State *L)
     }
 
     memset(&command, 0, sizeof(command));
-    command.type = RL_MODULE_FRAME_CMD_CLEAR;
+    command.type = RL_RENDER_CMD_CLEAR;
     command.data.clear.color = (rl_handle_t)luaL_checkinteger(L, 1);
     rl_module_frame_command(&state->host, &command);
     return 0;
@@ -1948,7 +1948,7 @@ static int lua_module_pick_sprite3d_binding(lua_State *L)
 static int lua_module_draw_text_binding(lua_State *L)
 {
     rl_module_lua_state_t *state = NULL;
-    rl_module_frame_command_t command;
+    rl_render_command_t command;
     const char *text = NULL;
 
     state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
@@ -1958,7 +1958,7 @@ static int lua_module_draw_text_binding(lua_State *L)
 
     text = luaL_checkstring(L, 2);
     memset(&command, 0, sizeof(command));
-    command.type = RL_MODULE_FRAME_CMD_DRAW_TEXT;
+    command.type = RL_RENDER_CMD_DRAW_TEXT;
     command.data.draw_text.font = (rl_handle_t)luaL_checkinteger(L, 1);
     command.data.draw_text.color = (rl_handle_t)luaL_checkinteger(L, 7);
     command.data.draw_text.x = (float)luaL_checknumber(L, 3);
@@ -1973,7 +1973,7 @@ static int lua_module_draw_text_binding(lua_State *L)
 static int lua_module_draw_cube_binding(lua_State *L)
 {
     rl_module_lua_state_t *state = NULL;
-    rl_module_frame_command_t command;
+    rl_render_command_t command;
 
     state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     if (state == NULL) {
@@ -1981,7 +1981,7 @@ static int lua_module_draw_cube_binding(lua_State *L)
     }
 
     memset(&command, 0, sizeof(command));
-    command.type = RL_MODULE_FRAME_CMD_DRAW_CUBE;
+    command.type = RL_RENDER_CMD_DRAW_CUBE;
     command.data.draw_cube.x = (float)luaL_checknumber(L, 1);
     command.data.draw_cube.y = (float)luaL_checknumber(L, 2);
     command.data.draw_cube.z = (float)luaL_checknumber(L, 3);
@@ -1996,7 +1996,7 @@ static int lua_module_draw_cube_binding(lua_State *L)
 static int lua_module_draw_ground_texture_binding(lua_State *L)
 {
     rl_module_lua_state_t *state = NULL;
-    rl_module_frame_command_t command;
+    rl_render_command_t command;
 
     state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     if (state == NULL) {
@@ -2004,7 +2004,7 @@ static int lua_module_draw_ground_texture_binding(lua_State *L)
     }
 
     memset(&command, 0, sizeof(command));
-    command.type = RL_MODULE_FRAME_CMD_DRAW_GROUND_TEXTURE;
+    command.type = RL_RENDER_CMD_DRAW_GROUND_TEXTURE;
     command.data.draw_ground_texture.texture = (rl_handle_t)luaL_checkinteger(L, 1);
     command.data.draw_ground_texture.x = (float)luaL_checknumber(L, 2);
     command.data.draw_ground_texture.y = (float)luaL_checknumber(L, 3);
@@ -2019,7 +2019,7 @@ static int lua_module_draw_ground_texture_binding(lua_State *L)
 static int lua_module_draw_sprite3d_binding(lua_State *L)
 {
     rl_module_lua_state_t *state = NULL;
-    rl_module_frame_command_t command;
+    rl_render_command_t command;
 
     state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     if (state == NULL) {
@@ -2027,7 +2027,7 @@ static int lua_module_draw_sprite3d_binding(lua_State *L)
     }
 
     memset(&command, 0, sizeof(command));
-    command.type = RL_MODULE_FRAME_CMD_DRAW_SPRITE3D;
+    command.type = RL_RENDER_CMD_DRAW_SPRITE3D;
     command.data.draw_sprite3d.sprite = (rl_handle_t)luaL_checkinteger(L, 1);
     command.data.draw_sprite3d.x = (float)luaL_checknumber(L, 2);
     command.data.draw_sprite3d.y = (float)luaL_checknumber(L, 3);
@@ -2041,7 +2041,7 @@ static int lua_module_draw_sprite3d_binding(lua_State *L)
 static int lua_module_draw_texture_binding(lua_State *L)
 {
     rl_module_lua_state_t *state = NULL;
-    rl_module_frame_command_t command;
+    rl_render_command_t command;
 
     state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     if (state == NULL) {
@@ -2049,7 +2049,7 @@ static int lua_module_draw_texture_binding(lua_State *L)
     }
 
     memset(&command, 0, sizeof(command));
-    command.type = RL_MODULE_FRAME_CMD_DRAW_TEXTURE;
+    command.type = RL_RENDER_CMD_DRAW_TEXTURE;
     command.data.draw_texture.texture = (rl_handle_t)luaL_checkinteger(L, 1);
     command.data.draw_texture.x = (float)luaL_checknumber(L, 2);
     command.data.draw_texture.y = (float)luaL_checknumber(L, 3);
@@ -2063,7 +2063,7 @@ static int lua_module_draw_texture_binding(lua_State *L)
 static int lua_module_draw_model_binding(lua_State *L)
 {
     rl_module_lua_state_t *state = NULL;
-    rl_module_frame_command_t command;
+    rl_render_command_t command;
     int arg_count = 0;
 
     state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
@@ -2073,7 +2073,7 @@ static int lua_module_draw_model_binding(lua_State *L)
 
     arg_count = lua_gettop(L);
     memset(&command, 0, sizeof(command));
-    command.type = RL_MODULE_FRAME_CMD_DRAW_MODEL;
+    command.type = RL_RENDER_CMD_DRAW_MODEL;
     command.data.draw_model.model = (rl_handle_t)luaL_checkinteger(L, 1);
     command.data.draw_model.x = (float)luaL_checknumber(L, 2);
     command.data.draw_model.y = (float)luaL_checknumber(L, 3);
@@ -2311,7 +2311,7 @@ static int lua_module_is_music_playing_binding(lua_State *L)
 static int lua_module_play_sound_binding(lua_State *L)
 {
     rl_module_lua_state_t *state = NULL;
-    rl_module_frame_command_t command;
+    rl_render_command_t command;
 
     state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
     if (state == NULL) {
@@ -2319,7 +2319,7 @@ static int lua_module_play_sound_binding(lua_State *L)
     }
 
     memset(&command, 0, sizeof(command));
-    command.type = RL_MODULE_FRAME_CMD_PLAY_SOUND;
+    command.type = RL_RENDER_CMD_PLAY_SOUND;
     command.data.play_sound.sound = (rl_handle_t)luaL_checkinteger(L, 1);
     rl_module_frame_command(&state->host, &command);
     return 0;

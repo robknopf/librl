@@ -1,8 +1,7 @@
 #include "rl.h"
 #include "rl_color.h"
 #include "rl_font.h"
-#include "rl_frame_commands.h"
-#include "rl_frame_runner.h"
+#include "rl_frame_command.h"
 #include "rl_loader.h"
 #include "rl_input.h"
 #include "rl_protocol.h"
@@ -76,7 +75,7 @@ static void on_init(void *user_data) {
 
   rl_window_open(1024, 1280, "librl Remote Client",
                  RL_WINDOW_FLAG_MSAA_4X_HINT);
-  rl_frame_runner_set_target_fps(60);
+  rl_set_target_fps(60);
 
   // In init:
   loader_rc = rl_loader_add_task(rl_loader_import_asset_async(debug_font_path),
@@ -92,7 +91,7 @@ static void on_init(void *user_data) {
   context->ws_client = rl_ws_client_create(ws_url);
   if (context->ws_client == NULL) {
     log_error("[Remote] Failed to create websocket client");
-    rl_frame_runner_request_stop();
+    rl_request_stop();
     return;
   }
 
@@ -225,22 +224,22 @@ static void on_tick(void *user_data) {
     }
   }
 
-  rl_frame_begin();
+  rl_render_begin();
 
   if (!is_connected) {
-    rl_frame_clear_background(RL_COLOR_LIGHTGRAY);
+    rl_render_clear_background(RL_COLOR_LIGHTGRAY);
     draw_status_overlay(context, "Waiting for remote server...");
   } else if (!context->has_frame || context->current_frame.commands.count == 0) {
-    rl_frame_clear_background(RL_COLOR_LIGHTGRAY);
+    rl_render_clear_background(RL_COLOR_LIGHTGRAY);
     draw_status_overlay(context, "Connected. Waiting for first frame...");
   } else {
     rl_frame_commands_execute_clear(&context->current_frame.commands);
     rl_frame_commands_execute_audio(&context->current_frame.commands);
     rl_frame_commands_execute_state(&context->current_frame.commands);
 
-    rl_begin_mode_3d();
+    rl_render_begin_mode_3d();
     rl_frame_commands_execute_3d(&context->current_frame.commands);
-    rl_end_mode_3d();
+    rl_render_end_mode_3d();
 
     rl_frame_commands_execute_2d(&context->current_frame.commands);
 
@@ -261,12 +260,12 @@ static void on_tick(void *user_data) {
     }
   }
 
-  rl_frame_end();
+  rl_render_end();
   context->frames_rendered++;
 }
 
 int main(void) {
   rl_init();
-  rl_frame_runner_run(on_init, on_tick, on_shutdown, &g_remote_context);
+  rl_run(on_init, on_tick, on_shutdown, &g_remote_context);
   return 0;
 }

@@ -7,9 +7,8 @@
 #include "rl_color.h"
 #include "rl_debug.h"
 #include "rl_event.h"
-#include "rl_frame.h"
-#include "rl_frame_runner.h"
-#include "rl_frame_commands.h"
+#include "rl_render.h"
+#include "rl_frame_command.h"
 #include "rl_font.h"
 #include "rl_input.h"
 #include "rl_loader.h"
@@ -30,12 +29,14 @@
 extern "C" {
 #endif
 
+typedef void (*rl_init_fn)(void *user_data);
+typedef void (*rl_tick_fn)(void *user_data);
+typedef void (*rl_shutdown_fn)(void *user_data);
+
 void rl_init();
 void rl_deinit();
 int rl_set_asset_host(const char *asset_host);
 const char *rl_get_asset_host(void);
-void rl_begin_mode_3d();
-void rl_end_mode_3d();
 void rl_enable_lighting();
 void rl_disable_lighting();
 int rl_is_lighting_enabled();
@@ -43,6 +44,12 @@ void rl_set_light_direction(float x, float y, float z);
 void rl_set_light_ambient(float ambient);
 void rl_update_to_scratch(void);
 void rl_update(void);
+void rl_run(rl_init_fn init_fn,
+            rl_tick_fn tick_fn,
+            rl_shutdown_fn shutdown_fn,
+            void *user_data);
+void rl_request_stop(void);
+void rl_set_target_fps(int fps);
 #ifdef __cplusplus
 }
 #endif

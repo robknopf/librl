@@ -66,6 +66,7 @@ typedef struct rl_resource_request_destroy_t {
 
 typedef struct rl_resource_request_t {
   uint32_t rid;
+  rl_handle_t handle;
   rl_resource_request_type_t type;
   union {
     rl_resource_request_create_color_t create_color;

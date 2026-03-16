@@ -2,6 +2,8 @@
 #define RL_RESOURCE_HANDLER_H
 
 #include "rl_resource_protocol.h"
+#include "rl_protocol.h"
+#include "rl_frame_command.h"
 #include "rl_loader.h"
 
 #ifdef __cplusplus
@@ -14,6 +16,7 @@ extern "C" {
 typedef struct rl_pending_resource_load_t {
   bool in_use;
   uint32_t rid;
+  rl_handle_t world_handle;
   rl_resource_request_type_t type;
   char filename[RL_RESOURCE_REQUEST_MAX_FILENAME];
   float size;
@@ -25,7 +28,8 @@ typedef struct rl_resource_handler_t {
   struct {
     bool in_use;
     rl_resource_request_type_t type;
-    rl_handle_t handle;
+    rl_handle_t world_handle;
+    rl_handle_t local_handle;
   } tracked[RL_RESOURCE_HANDLER_MAX_TRACKED];
 } rl_resource_handler_t;
 
@@ -52,6 +56,17 @@ void rl_resource_handler_reset(rl_resource_handler_t *handler);
 
 // Clean up all pending loads
 void rl_resource_handler_cleanup(rl_resource_handler_t *handler);
+
+rl_handle_t rl_resource_handler_get_local_handle(const rl_resource_handler_t *handler,
+                                                 rl_handle_t world_handle);
+
+void rl_resource_handler_resolve_frame_commands(
+    const rl_resource_handler_t *handler,
+    rl_frame_command_buffer_t *frame_commands);
+
+void rl_resource_handler_resolve_pick_requests(
+    const rl_resource_handler_t *handler,
+    rl_protocol_pick_requests_t *pick_requests);
 
 #ifdef __cplusplus
 }

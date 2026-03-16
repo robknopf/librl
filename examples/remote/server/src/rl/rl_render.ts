@@ -27,11 +27,11 @@ export function end_frame_snapshot(): void {
   rl_frame_state.frame_snapshot = null;
 }
 
-export function rl_frame_begin(): void {}
+export function rl_render_begin(): void {}
 
-export function rl_frame_end(): void {}
+export function rl_render_end(): void {}
 
-export function rl_frame_clear_background(color: number): void {
+export function rl_render_clear_background(color: number): void {
   const frame_snapshot = rl_frame_state.frame_snapshot;
   if (frame_snapshot == null) {
     return;
@@ -49,14 +49,14 @@ export function rl_frame_clear_background(color: number): void {
   );
 }
 
-export function rl_frame_get_delta_time(): number {
+export function rl_render_get_delta_time(): number {
   return rl_frame_state.frame_snapshot?.deltaTime ?? 0.0;
 }
 
-export function rl_frame_begin_mode_2d(_camera: number): void {}
+export function rl_render_begin_mode_2d(_camera: number): void {}
 
-export function rl_frame_end_mode_2d(): void {}
+export function rl_render_end_mode_2d(): void {}
 
-export function rl_frame_get_time(): number {
+export function rl_render_get_time(): number {
   return rl_frame_state.time_seconds;
 }

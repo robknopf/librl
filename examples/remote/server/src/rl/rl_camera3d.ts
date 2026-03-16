@@ -1,5 +1,6 @@
 import { ResourceRequestType } from "../resource_protocol";
-import { SharedResourceManager } from "../resource_manager";
+import type { ResourceManager } from "../resource_manager";
+import { WorldResources } from "../world_resource_manager";
 import { CommandType } from "../types";
 import { get_frame_command_buffer } from "../frame_command_buffer";
 import { rl_frame_commands_append } from "./rl_frame_commands";
@@ -20,8 +21,13 @@ interface rl_camera3d_state_t {
 
 const rl_camera3d_states = new Map<number, rl_camera3d_state_t>();
 let rl_camera3d_active = 0;
+let rl_camera3d_resource_manager: ResourceManager = WorldResources;
 
 export const RL_CAMERA3D_DEFAULT = 0;
+
+export function set_resource_manager(resourceManager: ResourceManager): void {
+  rl_camera3d_resource_manager = resourceManager;
+}
 
 export async function rl_camera3d_create(
   position_x: number,
@@ -36,7 +42,7 @@ export async function rl_camera3d_create(
   fovy: number,
   projection: number,
 ): Promise<number> {
-  const handle = await SharedResourceManager.createResource({
+  const handle = await rl_camera3d_resource_manager.createResource({
     type: ResourceRequestType.CREATE_CAMERA3D,
     posX: position_x,
     posY: position_y,
@@ -144,5 +150,5 @@ export async function rl_camera3d_destroy(handle: number): Promise<void> {
   if (rl_camera3d_active === handle) {
     rl_camera3d_active = RL_CAMERA3D_DEFAULT;
   }
-  await SharedResourceManager.destroyResource(handle);
+  await rl_camera3d_resource_manager.destroyResource(handle);
 }

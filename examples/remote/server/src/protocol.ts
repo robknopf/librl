@@ -1,9 +1,19 @@
-import type { FrameSnapshot } from "./types";
+import type { Command } from "./types";
 import type { AnyResourceRequest, ResourceResponse } from "./resource_protocol";
 
-export interface ServerFrameMessage {
-  type: "frame";
-  frame: FrameSnapshot;
+export interface ServerFrameBeginMessage {
+  type: "frameBegin";
+  frameNumber: number;
+  deltaTime: number;
+}
+
+export interface ServerFrameChunkMessage {
+  type: "frameChunk";
+  commands: Command[];
+}
+
+export interface ServerFrameEndMessage {
+  type: "frameEnd";
 }
 
 export interface ServerResourceRequestsMessage {
@@ -52,36 +62,17 @@ export interface ServerPickRequestsMessage {
   pickRequests: PickRequest[];
 }
 
-export enum MusicCommandType {
-  PLAY = 0,
-  PAUSE = 1,
-  STOP = 2,
-  SET_LOOP = 3,
-  SET_VOLUME = 4,
-}
-
-export interface MusicCommand {
-  type: MusicCommandType;
-  handle: number;
-  loop?: boolean;
-  volume?: number;
-}
-
-export interface ServerMusicCommandsMessage {
-  type: "musicCommands";
-  musicCommands: MusicCommand[];
-}
-
 export interface ServerResetMessage {
   type: "reset";
   reason?: string;
 }
 
 export type ServerMessage =
-  | ServerFrameMessage
+  | ServerFrameBeginMessage
+  | ServerFrameChunkMessage
+  | ServerFrameEndMessage
   | ServerResourceRequestsMessage
   | ServerPickRequestsMessage
-  | ServerMusicCommandsMessage
   | ServerResetMessage;
 
 export interface ClientResourceResponsesMessage {

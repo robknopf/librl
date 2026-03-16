@@ -18,7 +18,8 @@ static void tracked_slot_reset(rl_resource_handler_t *handler, int index) {
 
   handler->tracked[index].in_use = false;
   handler->tracked[index].type = 0;
-  handler->tracked[index].handle = 0;
+  handler->tracked[index].world_handle = 0;
+  handler->tracked[index].local_handle = 0;
 }
 
 static int find_free_tracked_slot(rl_resource_handler_t *handler) {
@@ -39,23 +40,53 @@ static int find_free_tracked_slot(rl_resource_handler_t *handler) {
 
 static void track_created_handle(rl_resource_handler_t *handler,
                                  rl_resource_request_type_t type,
-                                 rl_handle_t handle) {
+                                 rl_handle_t world_handle,
+                                 rl_handle_t local_handle) {
   int index = 0;
 
-  if (handler == NULL || handle == 0) {
+  if (handler == NULL || world_handle == 0 || local_handle == 0) {
     return;
   }
 
   index = find_free_tracked_slot(handler);
   if (index < 0) {
     log_warn("[ResourceHandler] No free tracked slots for handle %u",
-             (unsigned int)handle);
+             (unsigned int)world_handle);
     return;
   }
 
   handler->tracked[index].in_use = true;
   handler->tracked[index].type = type;
-  handler->tracked[index].handle = handle;
+  handler->tracked[index].world_handle = world_handle;
+  handler->tracked[index].local_handle = local_handle;
+}
+
+static int find_tracked_slot_by_world_handle(const rl_resource_handler_t *handler,
+                                             rl_handle_t world_handle) {
+  int i = 0;
+
+  if (handler == NULL || world_handle == 0) {
+    return -1;
+  }
+
+  for (i = 0; i < RL_RESOURCE_HANDLER_MAX_TRACKED; i++) {
+    if (handler->tracked[i].in_use &&
+        handler->tracked[i].world_handle == world_handle) {
+      return i;
+    }
+  }
+
+  return -1;
+}
+
+static rl_handle_t get_local_handle(const rl_resource_handler_t *handler,
+                                    rl_handle_t world_handle) {
+  int index = find_tracked_slot_by_world_handle(handler, world_handle);
+  if (index < 0) {
+    return 0;
+  }
+
+  return handler->tracked[index].local_handle;
 }
 
 static void destroy_handle_for_type(rl_resource_request_type_t type, rl_handle_t handle) {
@@ -119,6 +150,7 @@ static rl_pending_resource_load_t *find_free_pending(rl_resource_handler_t *hand
 }
 
 static bool start_async_load(rl_resource_handler_t *handler, uint32_t rid,
+                              rl_handle_t world_handle,
                               rl_resource_request_type_t type,
                               const char *filename, float size) {
   rl_pending_resource_load_t *pending = find_free_pending(handler);
@@ -135,6 +167,7 @@ static bool start_async_load(rl_resource_handler_t *handler, uint32_t rid,
   
   pending->in_use = true;
   pending->rid = rid;
+  pending->world_handle = world_handle;
   pending->type = type;
   snprintf(pending->filename, sizeof(pending->filename), "%s", filename);
   pending->size = size;
@@ -194,7 +227,7 @@ int rl_resource_handler_process_requests(rl_resource_handler_t *handler,
         responses[count].handle = handle;
         responses[count].success = (handle != 0);
         if (handle != 0) {
-          track_created_handle(handler, req->type, handle);
+          track_created_handle(handler, req->type, req->handle, handle);
         }
         count++;
         break;
@@ -204,12 +237,13 @@ int rl_resource_handler_process_requests(rl_resource_handler_t *handler,
         responses[count].handle = handle;
         responses[count].success = (handle != 0);
         if (handle != 0) {
-          track_created_handle(handler, req->type, handle);
+          track_created_handle(handler, req->type, req->handle, handle);
         }
         count++;
         break;
       case RL_RESOURCE_REQUEST_CREATE_FONT:
-        if (!start_async_load(handler, req->rid, req->type,
+        if (!start_async_load(handler, req->rid, req->handle,
+                              req->type,
                               req->data.create_font.filename,
                               req->data.create_font.fontSize)) {
           responses[count].rid = req->rid;
@@ -233,7 +267,7 @@ int rl_resource_handler_process_requests(rl_resource_handler_t *handler,
           default: break;
         }
         if (filename != NULL) {
-          if (!start_async_load(handler, req->rid, req->type, filename, 0.0f)) {
+          if (!start_async_load(handler, req->rid, req->handle, req->type, filename, 0.0f)) {
             responses[count].rid = req->rid;
             responses[count].handle = 0;
             responses[count].success = false;
@@ -243,8 +277,17 @@ int rl_resource_handler_process_requests(rl_resource_handler_t *handler,
         break;
       }
       case RL_RESOURCE_REQUEST_DESTROY:
-        log_warn("[ResourceHandler] Warning: destroy not implemented yet (handle: %u)",
-                 (unsigned int)req->data.destroy.handle);
+        handle = get_local_handle(handler, req->data.destroy.handle);
+        if (handle != 0) {
+          int tracked_index = find_tracked_slot_by_world_handle(handler, req->data.destroy.handle);
+          destroy_handle_for_type(req->type == RL_RESOURCE_REQUEST_DESTROY && tracked_index >= 0
+                                      ? handler->tracked[tracked_index].type
+                                      : 0,
+                                  handle);
+          if (tracked_index >= 0) {
+            tracked_slot_reset(handler, tracked_index);
+          }
+        }
         responses[count].rid = req->rid;
         responses[count].handle = 0;
         responses[count].success = true;
@@ -307,7 +350,7 @@ int rl_resource_handler_poll(rl_resource_handler_t *handler,
     responses[count].handle = handle;
     responses[count].success = (handle != 0);
     if (handle != 0) {
-      track_created_handle(handler, pending->type, handle);
+      track_created_handle(handler, pending->type, pending->world_handle, handle);
     }
     count++;
     
@@ -333,15 +376,117 @@ void rl_resource_handler_reset(rl_resource_handler_t *handler) {
   }
 
   for (i = RL_RESOURCE_HANDLER_MAX_TRACKED - 1; i >= 0; i--) {
-    if (!handler->tracked[i].in_use || handler->tracked[i].handle == 0) {
+    if (!handler->tracked[i].in_use || handler->tracked[i].local_handle == 0) {
       continue;
     }
 
-    destroy_handle_for_type(handler->tracked[i].type, handler->tracked[i].handle);
+    destroy_handle_for_type(handler->tracked[i].type, handler->tracked[i].local_handle);
     tracked_slot_reset(handler, i);
   }
 }
 
 void rl_resource_handler_cleanup(rl_resource_handler_t *handler) {
   rl_resource_handler_reset(handler);
+}
+
+rl_handle_t rl_resource_handler_get_local_handle(const rl_resource_handler_t *handler,
+                                                 rl_handle_t world_handle) {
+  return get_local_handle(handler, world_handle);
+}
+
+void rl_resource_handler_resolve_frame_commands(
+    const rl_resource_handler_t *handler,
+    rl_frame_command_buffer_t *frame_commands) {
+  int i = 0;
+
+  if (handler == NULL || frame_commands == NULL) {
+    return;
+  }
+
+  for (i = 0; i < frame_commands->count; i++) {
+    rl_render_command_t *command = &frame_commands->commands[i];
+    switch (command->type) {
+      case RL_RENDER_CMD_CLEAR:
+        command->data.clear.color = get_local_handle(handler, command->data.clear.color);
+        break;
+      case RL_RENDER_CMD_DRAW_TEXT:
+        command->data.draw_text.font = get_local_handle(handler, command->data.draw_text.font);
+        command->data.draw_text.color = get_local_handle(handler, command->data.draw_text.color);
+        break;
+      case RL_RENDER_CMD_DRAW_SPRITE3D:
+        command->data.draw_sprite3d.sprite = get_local_handle(handler, command->data.draw_sprite3d.sprite);
+        command->data.draw_sprite3d.tint = get_local_handle(handler, command->data.draw_sprite3d.tint);
+        break;
+      case RL_RENDER_CMD_PLAY_SOUND:
+        command->data.play_sound.sound = get_local_handle(handler, command->data.play_sound.sound);
+        break;
+      case RL_RENDER_CMD_PLAY_MUSIC:
+        command->data.play_music.music = get_local_handle(handler, command->data.play_music.music);
+        break;
+      case RL_RENDER_CMD_PAUSE_MUSIC:
+        command->data.pause_music.music = get_local_handle(handler, command->data.pause_music.music);
+        break;
+      case RL_RENDER_CMD_STOP_MUSIC:
+        command->data.stop_music.music = get_local_handle(handler, command->data.stop_music.music);
+        break;
+      case RL_RENDER_CMD_SET_MUSIC_LOOP:
+        command->data.set_music_loop.music = get_local_handle(handler, command->data.set_music_loop.music);
+        break;
+      case RL_RENDER_CMD_SET_MUSIC_VOLUME:
+        command->data.set_music_volume.music = get_local_handle(handler, command->data.set_music_volume.music);
+        break;
+      case RL_RENDER_CMD_DRAW_MODEL:
+        command->data.draw_model.model = get_local_handle(handler, command->data.draw_model.model);
+        command->data.draw_model.tint = get_local_handle(handler, command->data.draw_model.tint);
+        break;
+      case RL_RENDER_CMD_DRAW_TEXTURE:
+        command->data.draw_texture.texture = get_local_handle(handler, command->data.draw_texture.texture);
+        command->data.draw_texture.tint = get_local_handle(handler, command->data.draw_texture.tint);
+        break;
+      case RL_RENDER_CMD_DRAW_CUBE:
+        command->data.draw_cube.color = get_local_handle(handler, command->data.draw_cube.color);
+        break;
+      case RL_RENDER_CMD_DRAW_GROUND_TEXTURE:
+        command->data.draw_ground_texture.texture = get_local_handle(handler, command->data.draw_ground_texture.texture);
+        command->data.draw_ground_texture.tint = get_local_handle(handler, command->data.draw_ground_texture.tint);
+        break;
+      case RL_RENDER_CMD_SET_CAMERA3D:
+        command->data.set_camera3d.camera = get_local_handle(handler, command->data.set_camera3d.camera);
+        break;
+      case RL_RENDER_CMD_SET_MODEL_TRANSFORM:
+        command->data.set_model_transform.model = get_local_handle(handler, command->data.set_model_transform.model);
+        break;
+      case RL_RENDER_CMD_SET_SPRITE3D_TRANSFORM:
+        command->data.set_sprite3d_transform.sprite = get_local_handle(handler, command->data.set_sprite3d_transform.sprite);
+        break;
+      default:
+        break;
+    }
+  }
+}
+
+void rl_resource_handler_resolve_pick_requests(
+    const rl_resource_handler_t *handler,
+    rl_protocol_pick_requests_t *pick_requests) {
+  int i = 0;
+
+  if (handler == NULL || pick_requests == NULL) {
+    return;
+  }
+
+  for (i = 0; i < pick_requests->count; i++) {
+    rl_pick_request_t *request = &pick_requests->items[i];
+    switch (request->type) {
+      case RL_PICK_REQUEST_MODEL:
+        request->data.model.camera = get_local_handle(handler, request->data.model.camera);
+        request->data.model.handle = get_local_handle(handler, request->data.model.handle);
+        break;
+      case RL_PICK_REQUEST_SPRITE3D:
+        request->data.sprite3d.camera = get_local_handle(handler, request->data.sprite3d.camera);
+        request->data.sprite3d.handle = get_local_handle(handler, request->data.sprite3d.handle);
+        break;
+      default:
+        break;
+    }
+  }
 }

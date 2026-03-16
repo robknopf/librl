@@ -1,11 +1,13 @@
 import type { PickRequest } from "./protocol";
 import { PickRequestType } from "./protocol";
+import type { ResourceManager } from "./resource_manager";
 import {
   rl_model_animation_update,
   rl_model_create,
   rl_model_destroy,
   rl_model_draw,
   rl_model_is_valid,
+  set_resource_manager as set_model_resource_manager,
   rl_model_set_transform,
 } from "./rl/rl_model";
 import {
@@ -27,7 +29,10 @@ export class Model {
   private _animationFrame = 0;
   private transformDirty = true;
 
-  constructor(public readonly path: string) {}
+  constructor(
+    public readonly path: string,
+    private readonly resourceManager: ResourceManager,
+  ) {}
 
   load(on_ready?: ((model: Model) => void) | null, on_failure?: ((path: string) => void) | null): void {
     const task = rl_loader_import_asset_async(this.path);
@@ -35,6 +40,7 @@ export class Model {
       task,
       this.path,
       () => {
+        set_model_resource_manager(this.resourceManager);
         void rl_model_create(this.path)
           .then((handle) => {
             this.handle = handle;
@@ -77,6 +83,18 @@ export class Model {
     rotationZ: number,
     scale: number,
   ): void {
+    if (
+      this._x === x &&
+      this._y === y &&
+      this._z === z &&
+      this._rotationX === rotationX &&
+      this._rotationY === rotationY &&
+      this._rotationZ === rotationZ &&
+      this._scale === scale
+    ) {
+      return;
+    }
+
     this._x = x;
     this._y = y;
     this._z = z;
@@ -139,30 +157,73 @@ export class Model {
       return;
     }
 
+    set_model_resource_manager(this.resourceManager);
     await rl_model_destroy(this.handle);
     this.handle = 0;
   }
 
   get x(): number { return this._x; }
-  set x(value: number) { this._x = value; this.transformDirty = true; }
+  set x(value: number) {
+    if (this._x === value) {
+      return;
+    }
+    this._x = value;
+    this.transformDirty = true;
+  }
 
   get y(): number { return this._y; }
-  set y(value: number) { this._y = value; this.transformDirty = true; }
+  set y(value: number) {
+    if (this._y === value) {
+      return;
+    }
+    this._y = value;
+    this.transformDirty = true;
+  }
 
   get z(): number { return this._z; }
-  set z(value: number) { this._z = value; this.transformDirty = true; }
+  set z(value: number) {
+    if (this._z === value) {
+      return;
+    }
+    this._z = value;
+    this.transformDirty = true;
+  }
 
   get scale(): number { return this._scale; }
-  set scale(value: number) { this._scale = value; this.transformDirty = true; }
+  set scale(value: number) {
+    if (this._scale === value) {
+      return;
+    }
+    this._scale = value;
+    this.transformDirty = true;
+  }
 
   get rotationX(): number { return this._rotationX; }
-  set rotationX(value: number) { this._rotationX = value; this.transformDirty = true; }
+  set rotationX(value: number) {
+    if (this._rotationX === value) {
+      return;
+    }
+    this._rotationX = value;
+    this.transformDirty = true;
+  }
 
   get rotationY(): number { return this._rotationY; }
-  set rotationY(value: number) { this._rotationY = value; this.transformDirty = true; }
+  set rotationY(value: number) {
+    if (this._rotationY === value) {
+      return;
+    }
+    this._rotationY = value;
+    this.transformDirty = true;
+  }
 
   get rotationZ(): number { return this._rotationZ; }
-  set rotationZ(value: number) { this._rotationZ = value; this.transformDirty = true; }
+  set rotationZ(value: number) {
+    if (this._rotationZ === value) {
+      return;
+    }
+    this._rotationZ = value;
+    this.transformDirty = true;
+  }
 
   get animationIndex(): number { return this._animationIndex; }
   set animationIndex(value: number) { this._animationIndex = value; }

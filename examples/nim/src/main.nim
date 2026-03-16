@@ -28,7 +28,7 @@ proc main() =
 
   rl_window_set_monitor(1)
 
-  rl_frame_runner_set_target_fps(60.cint)
+  rl_set_target_fps(60.cint)
   let greyAlphaColor = rl_color_create(0, 0, 0, 128)
 
   rl_enable_lighting();
@@ -57,10 +57,10 @@ proc main() =
   discard rl_model_set_animation_speed(gumshoe, 1.0)
   discard rl_model_set_animation_loop(gumshoe, true)
 
-  lastTime = rl_frame_get_time().float
+  lastTime = rl_render_get_time().float
 
   while true:
-    currentTime = rl_frame_get_time().float
+    currentTime = rl_render_get_time().float
     deltaTime = currentTime - lastTime
     totalTime += deltaTime
     lastTime = currentTime
@@ -68,15 +68,15 @@ proc main() =
     if countdownTimer <= 0:
       break
 
-    rl_frame_begin()
-    rl_frame_clear_background(RL_RAYWHITE)
-    rl_begin_mode_3d()
+    rl_render_begin()
+    rl_render_clear_background(RL_RAYWHITE)
+    rl_render_begin_mode_3d()
     discard rl_model_animate(gumshoe, deltaTime.cfloat)
     discard rl_model_set_transform(gumshoe, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0)
     rl_model_draw(gumshoe, RL_RAYWHITE)
     discard rl_sprite3d_set_transform(sprite, 0.0, 0.0, 0.0, 1.0)
     rl_sprite3d_draw(sprite, RL_RAYWHITE)
-    rl_end_mode_3d()
+    rl_render_end_mode_3d()
 
     let screen = rl_window_get_screen_size()
     let w = cint(screen.x)
@@ -93,7 +93,7 @@ proc main() =
     rl_text_draw_ex(komikaSmall, elapsed.cstring, 10.cint, 56.cint, smallFontSize.cfloat, 1.0, RL_BLACK)
     rl_text_draw_ex(komikaSmall, mouseText.cstring, 10.cint, 76.cint, smallFontSize.cfloat, 1.0, RL_BLACK)
     rl_text_draw_fps_ex(komikaSmall, 10.cint, 10.cint, smallFontSize.cint, greyAlphaColor)
-    rl_frame_end()
+    rl_render_end()
 
   rl_disable_lighting()
   rl_sprite3d_destroy(sprite)

@@ -3,7 +3,7 @@
 #include "rl_resource_handler.h"
 #include "websocket/websocket.h"
 #include "rl_logger.h"
-#include "rl_frame.h"
+#include "rl_render.h"
 #include "rl_music.h"
 #include "rl_pick.h"
 #include <stdio.h>
@@ -15,8 +15,10 @@
 struct rl_ws_client_t {
   websocket_t *ws;
   char url[256];
+  bool is_building_frame;
   bool has_pending_frame;
-  rl_ws_frame_data_t pending_frame;
+  rl_ws_frame_data_t building_frame;
+  rl_ws_frame_data_t ready_frame;
   char message_buffer[MAX_MESSAGE_SIZE];
   rl_resource_response_t pending_responses[RL_WS_MAX_PENDING_RESPONSES];
   int pending_response_count;
@@ -46,9 +48,9 @@ static void process_ws_close(rl_ws_client_t *client, int code, const char *reaso
 }
 
 static void process_ws_message(rl_ws_client_t *client, const char *data, int len, bool is_text) {
+  rl_ws_frame_data_t parsed_frame = {0};
   static rl_protocol_requests_t requests;
   static rl_protocol_pick_requests_t pick_requests;
-  static rl_protocol_music_commands_t music_commands;
   rl_protocol_message_type_t message_type = RL_PROTOCOL_MESSAGE_UNKNOWN;
   bool has_frame = false;
   int i = 0;
@@ -64,16 +66,56 @@ static void process_ws_message(rl_ws_client_t *client, const char *data, int len
 
   if (rl_protocol_parse_message(client->message_buffer, len,
                                 &message_type,
-                                &client->pending_frame, &has_frame,
+                                &parsed_frame, &has_frame,
                                 &requests,
-                                &pick_requests,
-                                &music_commands) != 0) {
+                                &pick_requests) != 0) {
     log_error("[WS] Failed to parse message");
     return;
   }
 
-  if (message_type == RL_PROTOCOL_MESSAGE_FRAME && has_frame) {
+  if (message_type == RL_PROTOCOL_MESSAGE_FRAME_BEGIN && has_frame) {
+    memset(&client->building_frame, 0, sizeof(client->building_frame));
+    client->building_frame.frame_number = parsed_frame.frame_number;
+    client->building_frame.delta_time = parsed_frame.delta_time;
+    client->is_building_frame = true;
+  }
+
+  if (message_type == RL_PROTOCOL_MESSAGE_FRAME_CHUNK && has_frame) {
+    int remaining_capacity = 0;
+    int copy_count = 0;
+
+    if (!client->is_building_frame) {
+      log_warn("[WS] Received frame chunk without frame begin");
+      return;
+    }
+
+    rl_resource_handler_resolve_frame_commands(&client->resource_handler,
+                                               &parsed_frame.commands);
+
+    remaining_capacity =
+        RL_FRAME_COMMAND_CAPACITY - client->building_frame.commands.count;
+    copy_count = parsed_frame.commands.count;
+    if (copy_count > remaining_capacity) {
+      copy_count = remaining_capacity;
+      log_warn("[WS] Truncated frame chunk to fit command capacity");
+    }
+
+    if (copy_count > 0) {
+      memcpy(&client->building_frame.commands.commands[client->building_frame.commands.count],
+             parsed_frame.commands.commands,
+             (size_t)copy_count * sizeof(rl_render_command_t));
+      client->building_frame.commands.count += copy_count;
+    }
+  }
+
+  if (message_type == RL_PROTOCOL_MESSAGE_FRAME_END) {
+    if (!client->is_building_frame) {
+      log_warn("[WS] Received frame end without frame begin");
+      return;
+    }
+    memcpy(&client->ready_frame, &client->building_frame, sizeof(client->ready_frame));
     client->has_pending_frame = true;
+    client->is_building_frame = false;
   }
 
   if (message_type == RL_PROTOCOL_MESSAGE_RESOURCE_REQUESTS && requests.count > 0) {
@@ -95,6 +137,7 @@ static void process_ws_message(rl_ws_client_t *client, const char *data, int len
   }
 
   if (message_type == RL_PROTOCOL_MESSAGE_PICK_REQUESTS && pick_requests.count > 0) {
+    rl_resource_handler_resolve_pick_requests(&client->resource_handler, &pick_requests);
     int base_count = client->pending_pick_response_count;
 
     for (i = 0; i < pick_requests.count &&
@@ -155,36 +198,12 @@ static void process_ws_message(rl_ws_client_t *client, const char *data, int len
     }
   }
 
-  if (message_type == RL_PROTOCOL_MESSAGE_MUSIC_COMMANDS && music_commands.count > 0) {
-    for (i = 0; i < music_commands.count; i++) {
-      const rl_music_command_t *command = &music_commands.items[i];
-
-      switch (command->type) {
-        case RL_MUSIC_COMMAND_PLAY:
-          (void)rl_music_play(command->handle);
-          break;
-        case RL_MUSIC_COMMAND_PAUSE:
-          (void)rl_music_pause(command->handle);
-          break;
-        case RL_MUSIC_COMMAND_STOP:
-          (void)rl_music_stop(command->handle);
-          break;
-        case RL_MUSIC_COMMAND_SET_LOOP:
-          (void)rl_music_set_loop(command->handle, command->loop);
-          break;
-        case RL_MUSIC_COMMAND_SET_VOLUME:
-          (void)rl_music_set_volume(command->handle, command->volume);
-          break;
-        default:
-          break;
-      }
-    }
-  }
-
   if (message_type == RL_PROTOCOL_MESSAGE_RESET) {
     log_info("[WS] Resetting remote client state");
+    client->is_building_frame = false;
     client->has_pending_frame = false;
-    memset(&client->pending_frame, 0, sizeof(client->pending_frame));
+    memset(&client->building_frame, 0, sizeof(client->building_frame));
+    memset(&client->ready_frame, 0, sizeof(client->ready_frame));
     client->pending_response_count = 0;
     client->pending_pick_response_count = 0;
     rl_resource_handler_reset(&client->resource_handler);
@@ -236,6 +255,7 @@ rl_ws_client_t *rl_ws_client_create(const char *url) {
   }
   
   snprintf(client->url, sizeof(client->url), "%s", url);
+  client->is_building_frame = false;
   client->has_pending_frame = false;
   client->pending_response_count = 0;
   client->pending_pick_response_count = 0;
@@ -290,7 +310,7 @@ bool rl_ws_client_get_frame(rl_ws_client_t *client, rl_ws_frame_data_t *out_fram
     return false;
   }
   
-  memcpy(out_frame, &client->pending_frame, sizeof(rl_ws_frame_data_t));
+  memcpy(out_frame, &client->ready_frame, sizeof(rl_ws_frame_data_t));
   client->has_pending_frame = false;
   return true;
 }
@@ -445,7 +465,7 @@ void rl_ws_client_tick(rl_ws_client_t *client) {
     return;
   }
   
-  now = rl_frame_get_time();
+  now = rl_render_get_time();
   
   if (client->stats_timer == 0.0) {
     client->stats_timer = now;

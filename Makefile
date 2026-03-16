@@ -72,7 +72,7 @@ LDFLAGS_WASM = \
 	"_rl_init", \
 	"_rl_deinit", \
 	"_rl_update_to_scratch", \
-	"_rl_frame_get_time", \
+	"_rl_render_get_time", \
 	"_rl_window_open", \
 	"_rl_window_set_title", \
 	"_rl_window_set_size", \
@@ -87,14 +87,14 @@ LDFLAGS_WASM = \
 	"_rl_window_get_position_to_scratch", \
 	"_rl_input_get_mouse_position_to_scratch", \
 	"_rl_window_get_screen_size_to_scratch", \
-	"_rl_frame_runner_set_target_fps", \
-	"_rl_frame_begin", \
-	"_rl_frame_end", \
-	"_rl_frame_clear_background", \
-	"_rl_frame_begin_mode_2d", \
-	"_rl_frame_end_mode_2d", \
-	"_rl_begin_mode_3d", \
-	"_rl_end_mode_3d", \
+	"_rl_set_target_fps", \
+	"_rl_render_begin", \
+	"_rl_render_end", \
+	"_rl_render_clear_background", \
+	"_rl_render_begin_mode_2d", \
+	"_rl_render_end_mode_2d", \
+	"_rl_render_begin_mode_3d", \
+	"_rl_render_end_mode_3d", \
 	"_rl_camera3d_create", \
 	"_rl_camera3d_get_default", \
 	"_rl_camera3d_set", \

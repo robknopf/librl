@@ -1,7 +1,7 @@
 #ifndef RL_WS_CLIENT_H
 #define RL_WS_CLIENT_H
 
-#include "rl_frame_commands.h"
+#include "rl_frame_command.h"
 #include "rl_resource_protocol.h"
 #include "rl_types.h"
 #include <stdbool.h>

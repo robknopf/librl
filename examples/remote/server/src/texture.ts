@@ -1,12 +1,23 @@
-import { rl_texture_create, rl_texture_destroy, rl_texture_draw_ex, rl_texture_draw_ground } from "./rl/rl_texture";
+import type { ResourceManager } from "./resource_manager";
+import {
+  rl_texture_create,
+  rl_texture_destroy,
+  rl_texture_draw_ex,
+  rl_texture_draw_ground,
+  set_resource_manager as set_texture_resource_manager,
+} from "./rl/rl_texture";
 
 export class Texture {
   handle: number | null = null;
 
-  constructor(public readonly path: string) {}
+  constructor(
+    public readonly path: string,
+    private readonly resourceManager: ResourceManager,
+  ) {}
 
-  static async load(path: string): Promise<Texture> {
-    const texture = new Texture(path);
+  static async load(resourceManager: ResourceManager, path: string): Promise<Texture> {
+    const texture = new Texture(path, resourceManager);
+    set_texture_resource_manager(resourceManager);
     texture.handle = await rl_texture_create(path);
     return texture;
   }
@@ -31,6 +42,7 @@ export class Texture {
     if (this.handle == null) {
       return;
     }
+    set_texture_resource_manager(this.resourceManager);
     await rl_texture_destroy(this.handle);
     this.handle = 0;
   }

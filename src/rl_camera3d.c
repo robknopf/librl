@@ -292,26 +292,18 @@ void rl_camera3d_destroy(rl_handle_t handle)
     rl_handle_pool_free(&rl_camera3d_pool, handle);
 }
 
-RL_KEEP
-void rl_begin_mode_3d(void)
+bool rl_camera3d_ensure_active_camera(void)
 {
     if (!rl_has_active_camera)
     {
         rl_camera3d_entry_t *default_entry = rl_camera3d_get_entry(RL_CAMERA3D_DEFAULT);
         if (default_entry == NULL) {
             log_error("Missing default camera entry");
-            return;
+            return false;
         }
         rl_set_active_camera_internal(default_entry->camera, RL_CAMERA3D_DEFAULT);
     }
-
-    BeginMode3D(rl_active_camera);
-}
-
-RL_KEEP
-void rl_end_mode_3d(void)
-{
-    EndMode3D();
+    return true;
 }
 
 RL_KEEP

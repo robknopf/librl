@@ -17,9 +17,78 @@
 #include "raylib.h"
 #include "rl_loader.h"
 #include "logger/logger.h"
+#include <string.h>
+
+#if defined(PLATFORM_WEB)
+#include <emscripten/emscripten.h>
+#endif
 
 
 bool initialized = false;
+
+typedef struct rl_loop_state_t {
+    rl_init_fn init_fn;
+    rl_tick_fn tick_fn;
+    rl_shutdown_fn shutdown_fn;
+    void *user_data;
+    int running;
+    int init_complete;
+} rl_loop_state_t;
+
+static rl_loop_state_t rl_loop_state = {0};
+
+static void rl_finish_run(void) {
+    rl_shutdown_fn shutdown_fn = rl_loop_state.shutdown_fn;
+    void *user_data = rl_loop_state.user_data;
+
+    rl_loop_state.running = 0;
+    rl_loop_state.init_fn = NULL;
+    rl_loop_state.tick_fn = NULL;
+    rl_loop_state.shutdown_fn = NULL;
+    rl_loop_state.user_data = NULL;
+
+    if (shutdown_fn != NULL) {
+        shutdown_fn(user_data);
+    }
+}
+
+#if defined(PLATFORM_WEB)
+static void rl_web_step(void) {
+    if (!rl_loop_state.running) {
+        emscripten_cancel_main_loop();
+        rl_finish_run();
+        return;
+    }
+
+    rl_loader_tick();
+
+    if (!rl_loop_state.init_complete) {
+        if (!rl_loader_is_ready()) {
+            return;
+        }
+
+        if (rl_loop_state.init_fn != NULL) {
+            rl_loop_state.init_fn(rl_loop_state.user_data);
+        }
+        rl_loop_state.init_complete = 1;
+
+        if (!rl_loop_state.running) {
+            emscripten_cancel_main_loop();
+            rl_finish_run();
+            return;
+        }
+    }
+
+    if (rl_loop_state.tick_fn != NULL) {
+        rl_loop_state.tick_fn(rl_loop_state.user_data);
+    }
+
+    if (!rl_loop_state.running) {
+        emscripten_cancel_main_loop();
+        rl_finish_run();
+    }
+}
+#endif
 
 RL_KEEP
 void rl_init() {
@@ -83,4 +152,61 @@ void rl_update_to_scratch() {
 
 void rl_update(void) {
     // Intentionally a no-op for API parity on non-wasm hosts.
+}
+
+RL_KEEP
+void rl_run(rl_init_fn init_fn,
+            rl_tick_fn tick_fn,
+            rl_shutdown_fn shutdown_fn,
+            void *user_data) {
+    if (tick_fn == NULL) {
+        return;
+    }
+
+    rl_loop_state.init_fn = init_fn;
+    rl_loop_state.tick_fn = tick_fn;
+    rl_loop_state.shutdown_fn = shutdown_fn;
+    rl_loop_state.user_data = user_data;
+    rl_loop_state.running = 1;
+    rl_loop_state.init_complete = 0;
+
+#if defined(PLATFORM_WEB)
+    emscripten_set_main_loop(rl_web_step, 0, 1);
+#else
+    while (rl_loop_state.running) {
+        rl_loader_tick();
+
+        if (!rl_loop_state.init_complete) {
+            if (!rl_loader_is_ready()) {
+                continue;
+            }
+
+            if (rl_loop_state.init_fn != NULL) {
+                rl_loop_state.init_fn(rl_loop_state.user_data);
+            }
+            rl_loop_state.init_complete = 1;
+
+            if (!rl_loop_state.running) {
+                break;
+            }
+        }
+
+        if (WindowShouldClose()) {
+            break;
+        }
+
+        rl_loop_state.tick_fn(rl_loop_state.user_data);
+    }
+    rl_finish_run();
+#endif
+}
+
+RL_KEEP
+void rl_request_stop(void) {
+    rl_loop_state.running = 0;
+}
+
+RL_KEEP
+void rl_set_target_fps(int fps) {
+    SetTargetFPS(fps);
 }

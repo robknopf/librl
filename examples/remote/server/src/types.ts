@@ -11,6 +11,11 @@ export enum CommandType {
   SET_CAMERA3D = 8,
   SET_MODEL_TRANSFORM = 9,
   SET_SPRITE3D_TRANSFORM = 10,
+  PLAY_MUSIC = 11,
+  PAUSE_MUSIC = 12,
+  STOP_MUSIC = 13,
+  SET_MUSIC_LOOP = 14,
+  SET_MUSIC_VOLUME = 15,
 }
 
 export type Handle = number;
@@ -40,6 +45,36 @@ export interface DrawSprite3DCommand {
 export interface PlaySoundCommand {
   type: CommandType.PLAY_SOUND;
   sound: Handle;
+  volume: number;
+  pitch: number;
+  pan: number;
+}
+
+export interface PlayMusicCommand {
+  type: CommandType.PLAY_MUSIC;
+  music: Handle;
+}
+
+export interface PauseMusicCommand {
+  type: CommandType.PAUSE_MUSIC;
+  music: Handle;
+}
+
+export interface StopMusicCommand {
+  type: CommandType.STOP_MUSIC;
+  music: Handle;
+}
+
+export interface SetMusicLoopCommand {
+  type: CommandType.SET_MUSIC_LOOP;
+  music: Handle;
+  loop: boolean;
+}
+
+export interface SetMusicVolumeCommand {
+  type: CommandType.SET_MUSIC_VOLUME;
+  music: Handle;
+  volume: number;
 }
 
 export interface DrawModelCommand {
@@ -126,6 +161,11 @@ export type Command =
   | DrawTextCommand
   | DrawSprite3DCommand
   | PlaySoundCommand
+  | PlayMusicCommand
+  | PauseMusicCommand
+  | StopMusicCommand
+  | SetMusicLoopCommand
+  | SetMusicVolumeCommand
   | DrawModelCommand
   | DrawTextureCommand
   | DrawCubeCommand

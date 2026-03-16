@@ -12,8 +12,6 @@ extern "C" {
 #define RL_PROTOCOL_MAX_REQUESTS 32
 #define RL_PROTOCOL_MAX_PICK_REQUESTS 16
 #define RL_PROTOCOL_MAX_PICK_RESPONSES 16
-#define RL_PROTOCOL_MAX_MUSIC_COMMANDS 16
-
 typedef struct rl_protocol_requests_t {
   rl_resource_request_t items[RL_PROTOCOL_MAX_REQUESTS];
   int count;
@@ -71,32 +69,13 @@ typedef struct rl_pick_response_t {
   vec3_t normal;
 } rl_pick_response_t;
 
-typedef enum rl_music_command_type_t {
-  RL_MUSIC_COMMAND_PLAY = 0,
-  RL_MUSIC_COMMAND_PAUSE = 1,
-  RL_MUSIC_COMMAND_STOP = 2,
-  RL_MUSIC_COMMAND_SET_LOOP = 3,
-  RL_MUSIC_COMMAND_SET_VOLUME = 4,
-} rl_music_command_type_t;
-
-typedef struct rl_music_command_t {
-  rl_music_command_type_t type;
-  rl_handle_t handle;
-  bool loop;
-  float volume;
-} rl_music_command_t;
-
-typedef struct rl_protocol_music_commands_t {
-  rl_music_command_t items[RL_PROTOCOL_MAX_MUSIC_COMMANDS];
-  int count;
-} rl_protocol_music_commands_t;
-
 typedef enum rl_protocol_message_type_t {
   RL_PROTOCOL_MESSAGE_UNKNOWN = 0,
-  RL_PROTOCOL_MESSAGE_FRAME,
+  RL_PROTOCOL_MESSAGE_FRAME_BEGIN,
+  RL_PROTOCOL_MESSAGE_FRAME_CHUNK,
+  RL_PROTOCOL_MESSAGE_FRAME_END,
   RL_PROTOCOL_MESSAGE_RESOURCE_REQUESTS,
   RL_PROTOCOL_MESSAGE_PICK_REQUESTS,
-  RL_PROTOCOL_MESSAGE_MUSIC_COMMANDS,
   RL_PROTOCOL_MESSAGE_RESET,
 } rl_protocol_message_type_t;
 
@@ -109,8 +88,7 @@ int rl_protocol_parse_message(const char *raw, int len,
                                rl_ws_frame_data_t *out_frame,
                                bool *out_has_frame,
                                rl_protocol_requests_t *out_requests,
-                               rl_protocol_pick_requests_t *out_pick_requests,
-                               rl_protocol_music_commands_t *out_music_commands);
+                               rl_protocol_pick_requests_t *out_pick_requests);
 
 // Serialize resource response packets into a string buffer for sending
 // Returns length written (excluding null terminator), or -1 on error

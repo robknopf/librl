@@ -380,12 +380,12 @@ static void set_boot_error(example_context_t *context, const char *format, ...) 
 }
 
 static void draw_boot_status(const char *title, const char *detail) {
-  rl_frame_begin();
-  rl_frame_clear_background(RL_COLOR_RAYWHITE);
+  rl_render_begin();
+  rl_render_clear_background(RL_COLOR_RAYWHITE);
   rl_text_draw(title != NULL ? title : "Booting...", 32, 32, 32,
                RL_COLOR_DARKGRAY);
   rl_text_draw(detail != NULL ? detail : "", 32, 80, 20, RL_COLOR_GRAY);
-  rl_frame_end();
+  rl_render_end();
 }
 
 static void handle_boot_restore(example_context_t *context) {
@@ -472,7 +472,7 @@ static void handle_boot_init_module(example_context_t *context) {
   }
 
   rl_window_set_title(script_config->title);
-  rl_frame_runner_set_target_fps(script_config->target_fps > 0
+  rl_set_target_fps(script_config->target_fps > 0
                                      ? script_config->target_fps
                                      : 60);
   w = script_config->width;
@@ -602,7 +602,7 @@ static void on_init(void *user_data) {
 
   rl_window_open(context->script_config.width, context->script_config.height,
                  context->script_config.title, context->script_config.flags);
-  rl_frame_runner_set_target_fps(context->script_config.target_fps > 0
+  rl_set_target_fps(context->script_config.target_fps > 0
                                      ? context->script_config.target_fps
                                      : 60);
 
@@ -622,7 +622,7 @@ static void on_init(void *user_data) {
 static void on_tick(void *user_data) {
   example_context_t *context = (example_context_t *)user_data;
   rl_module_instance_t *script_module = NULL;
-  const float dt = rl_frame_get_delta_time();
+  const float dt = rl_render_get_delta_time();
 
   if (context == NULL) {
     return;
@@ -652,14 +652,14 @@ static void on_tick(void *user_data) {
     (void)script_module->api->update(script_module->state, dt);
   }
   rl_frame_commands_execute_audio(&g_frame_command_buffer);
-  rl_frame_begin();
-  rl_frame_clear_background(RL_COLOR_RAYWHITE);
+  rl_render_begin();
+  rl_render_clear_background(RL_COLOR_RAYWHITE);
   rl_frame_commands_execute_clear(&g_frame_command_buffer);
-  rl_begin_mode_3d();
+  rl_render_begin_mode_3d();
   rl_frame_commands_execute_3d(&g_frame_command_buffer);
-  rl_end_mode_3d();
+  rl_render_end_mode_3d();
   rl_frame_commands_execute_2d(&g_frame_command_buffer);
-  rl_frame_end();
+  rl_render_end();
 }
 
 int main(void) {
@@ -672,7 +672,7 @@ int main(void) {
   g_example_context.boot_state = EXAMPLE_BOOT_RESTORE;
 
   rl_init();
-  rl_frame_runner_run(on_init, on_tick, on_shutdown,
+  rl_run(on_init, on_tick, on_shutdown,
                       &g_example_context);
 
   return 0;

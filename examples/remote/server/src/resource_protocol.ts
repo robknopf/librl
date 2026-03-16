@@ -16,6 +16,7 @@ export enum ResourceRequestType {
 // Base request interface
 export interface ResourceRequest {
   rid: number; // Request ID for matching response
+  handle: number; // Stable server/world handle for this resource
   type: ResourceRequestType;
 }
 
@@ -91,14 +92,14 @@ export type AnyResourceRequest =
   | DestroyResourceRequest;
 
 export type AnyResourceRequestInput =
-  | Omit<CreateColorRequest, "rid">
-  | Omit<CreateFontRequest, "rid">
-  | Omit<CreateTextureRequest, "rid">
-  | Omit<CreateModelRequest, "rid">
-  | Omit<CreateSoundRequest, "rid">
-  | Omit<CreateMusicRequest, "rid">
-  | Omit<CreateCamera3DRequest, "rid">
-  | Omit<CreateSprite3DRequest, "rid">
+  | Omit<CreateColorRequest, "rid" | "handle">
+  | Omit<CreateFontRequest, "rid" | "handle">
+  | Omit<CreateTextureRequest, "rid" | "handle">
+  | Omit<CreateModelRequest, "rid" | "handle">
+  | Omit<CreateSoundRequest, "rid" | "handle">
+  | Omit<CreateMusicRequest, "rid" | "handle">
+  | Omit<CreateCamera3DRequest, "rid" | "handle">
+  | Omit<CreateSprite3DRequest, "rid" | "handle">
   | Omit<DestroyResourceRequest, "rid">;
 
 // Response from client

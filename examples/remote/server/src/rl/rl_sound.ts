@@ -1,6 +1,7 @@
 import { CommandType } from "../types";
 import { ResourceRequestType } from "../resource_protocol";
-import { SharedResourceManager } from "../resource_manager";
+import type { ResourceManager } from "../resource_manager";
+import { WorldResources } from "../world_resource_manager";
 import { get_frame_command_buffer } from "../frame_command_buffer";
 import { rl_frame_commands_append } from "./rl_frame_commands";
 
@@ -12,9 +13,14 @@ interface rl_sound_state_t {
 }
 
 const rl_sound_states = new Map<number, rl_sound_state_t>();
+let rl_sound_resource_manager: ResourceManager = WorldResources;
+
+export function set_resource_manager(resourceManager: ResourceManager): void {
+  rl_sound_resource_manager = resourceManager;
+}
 
 export async function rl_sound_create(filename: string): Promise<number> {
-  const handle = await SharedResourceManager.createResource({
+  const handle = await rl_sound_resource_manager.createResource({
     type: ResourceRequestType.CREATE_SOUND,
     filename,
   });
@@ -33,7 +39,7 @@ export async function rl_sound_destroy(handle: number): Promise<void> {
   }
 
   rl_sound_states.delete(handle);
-  await SharedResourceManager.destroyResource(handle);
+  await rl_sound_resource_manager.destroyResource(handle);
 }
 
 export function rl_sound_play(handle: number): boolean {
@@ -47,6 +53,9 @@ export function rl_sound_play(handle: number): boolean {
   rl_frame_commands_append(frame_command_buffer, {
     type: CommandType.PLAY_SOUND,
     sound: handle,
+    volume: state.volume,
+    pitch: state.pitch,
+    pan: state.pan,
   });
   return true;
 }

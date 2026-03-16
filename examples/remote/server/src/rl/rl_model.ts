@@ -1,6 +1,7 @@
 import { CommandType } from "../types";
 import { ResourceRequestType } from "../resource_protocol";
-import { SharedResourceManager } from "../resource_manager";
+import type { ResourceManager } from "../resource_manager";
+import { WorldResources } from "../world_resource_manager";
 import { get_frame_command_buffer } from "../frame_command_buffer";
 import { rl_frame_commands_append } from "./rl_frame_commands";
 
@@ -21,13 +22,18 @@ interface rl_model_state_t {
 }
 
 const rl_model_states = new Map<number, rl_model_state_t>();
+let rl_model_resource_manager: ResourceManager = WorldResources;
+
+export function set_resource_manager(resourceManager: ResourceManager): void {
+  rl_model_resource_manager = resourceManager;
+}
 
 function get_model_state(handle: number): rl_model_state_t | null {
   return rl_model_states.get(handle) ?? null;
 }
 
 export async function rl_model_create(filename: string): Promise<number> {
-  const handle = await SharedResourceManager.createResource({
+  const handle = await rl_model_resource_manager.createResource({
     type: ResourceRequestType.CREATE_MODEL,
     filename,
   });
@@ -207,5 +213,5 @@ export async function rl_model_destroy(handle: number): Promise<void> {
   }
 
   rl_model_states.delete(handle);
-  await SharedResourceManager.destroyResource(handle);
+  await rl_model_resource_manager.destroyResource(handle);
 }

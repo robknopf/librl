@@ -114,7 +114,7 @@ const RL = {
         moduleInstance.ccall('rl_update_to_scratch', null, [], []);
     },
     getTime: () => {
-        return moduleInstance.ccall('rl_frame_get_time', 'number', [], []);
+        return moduleInstance.ccall('rl_render_get_time', 'number', [], []);
     },
     deinit: () => {
         RL._eventListenersById.clear();
@@ -326,16 +326,16 @@ const RL = {
         return moduleInstance.ccall('rl_window_set_position', null, ['number', 'number'], [x, y]);
     },
     beginDrawing: () => {
-        return moduleInstance.ccall('rl_frame_begin', null, [], []);
+        return moduleInstance.ccall('rl_render_begin', null, [], []);
     },
     endDrawing: () => {
-        return moduleInstance.ccall('rl_frame_end', null, [], []);
+        return moduleInstance.ccall('rl_render_end', null, [], []);
     },
     beginMode3D: () => {
-        return moduleInstance.ccall('rl_begin_mode_3d', null, [], []);
+        return moduleInstance.ccall('rl_render_begin_mode_3d', null, [], []);
     },
     endMode3D: () => {
-        return moduleInstance.ccall('rl_end_mode_3d', null, [], []);
+        return moduleInstance.ccall('rl_render_end_mode_3d', null, [], []);
     },
     createCamera3D: (
         positionX, positionY, positionZ,
@@ -392,7 +392,7 @@ const RL = {
         return moduleInstance.ccall('rl_set_light_ambient', null, ['number'], [ambient]);
     },
     clearBackground: (color) => {
-        return moduleInstance.ccall('rl_frame_clear_background', null, ['number'], [color]);
+        return moduleInstance.ccall('rl_render_clear_background', null, ['number'], [color]);
     },
     drawCube: (positionX, positionY, positionZ, width, height, length, color) => {
         return moduleInstance.ccall(
@@ -524,7 +524,7 @@ const RL = {
         "rl_font_get_default", "number", [], []
     ),
     setTargetFPS: (fps) => moduleInstance.ccall(
-        "rl_frame_runner_set_target_fps", null, ["number"], [fps]
+        "rl_set_target_fps", null, ["number"], [fps]
     ),
     createModel: (path) => moduleInstance.ccall(
         "rl_model_create", "number", ["string"], [path], { async: true } // async: true, it uses fetch

@@ -1,13 +1,19 @@
 import { CommandType } from "../types";
 import { ResourceRequestType } from "../resource_protocol";
-import { SharedResourceManager } from "../resource_manager";
+import type { ResourceManager } from "../resource_manager";
+import { WorldResources } from "../world_resource_manager";
 import { get_frame_command_buffer } from "../frame_command_buffer";
 import { rl_frame_commands_append } from "./rl_frame_commands";
 
 const rl_texture_handles = new Set<number>();
+let rl_texture_resource_manager: ResourceManager = WorldResources;
+
+export function set_resource_manager(resourceManager: ResourceManager): void {
+  rl_texture_resource_manager = resourceManager;
+}
 
 export async function rl_texture_create(filename: string): Promise<number> {
-  const handle = await SharedResourceManager.createResource({
+  const handle = await rl_texture_resource_manager.createResource({
     type: ResourceRequestType.CREATE_TEXTURE,
     filename,
   });
@@ -21,7 +27,7 @@ export async function rl_texture_destroy(handle: number): Promise<void> {
   }
 
   rl_texture_handles.delete(handle);
-  await SharedResourceManager.destroyResource(handle);
+  await rl_texture_resource_manager.destroyResource(handle);
 }
 
 export function rl_texture_draw_ex(

@@ -22,12 +22,12 @@ This document summarizes the current public C API exposed by `include/*.h`.  As 
 Main responsibilities:
 
 - Runtime lifecycle (`rl_init`, `rl_deinit`)
-- Frame lifecycle (`rl_frame_runner_run`, `rl_frame_runner_request_stop`, `rl_frame_runner_set_target_fps`, `rl_frame_begin`, `rl_frame_end`)
+- Render lifecycle (`rl_frame_runner_run`, `rl_frame_runner_request_stop`, `rl_frame_runner_set_target_fps`, `rl_render_begin`, `rl_render_end`)
 - Basic drawing (text, fps helpers)
 - 2D/3D mode switching
 - Mouse/keyboard input helpers (`rl_input_get_mouse*`, `rl_input_get_keyboard_state`)
 - Basic lighting toggles and parameters
-- Timing helpers (`rl_frame_get_time`)
+- Timing helpers (`rl_render_get_time`)
 - Text measurement helpers
 
 Header note:
@@ -69,8 +69,8 @@ Main responsibilities:
 
 Notes:
 
-- `rl_begin_mode_3d()` uses the current active camera.
-- If no active camera is set, `rl_begin_mode_3d()` falls back to the default camera.
+- `rl_render_begin_mode_3d()` uses the current active camera.
+- If no active camera is set, `rl_render_begin_mode_3d()` falls back to the default camera.
 
 ## Colors (`include/rl_color.h`)
 
@@ -198,7 +198,7 @@ Notes:
 
 - `rl_debug_enable_fps(x, y, font_size, font_path)` enables an FPS overlay and optionally loads a custom font for it.
 - `rl_debug_disable()` turns the overlay off and releases any font owned by the debug subsystem.
-- The current implementation draws the debug overlay automatically during `rl_frame_end()`.
+- The current implementation draws the debug overlay automatically during `rl_render_end()`.
 
 ## Frame Runner (`include/rl_frame_runner.h`)
 

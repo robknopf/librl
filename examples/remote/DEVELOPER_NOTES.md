@@ -68,14 +68,14 @@ on_tick():
   send_responses()              — send completed async ones
 
   if has_frame:
-    rl_frame_begin()
+    rl_render_begin()
     execute_clear()             — type 0 commands
-    rl_begin_mode_3d()
+    rl_render_begin_mode_3d()
     execute_3d()                — types 2,4,6,7
-    rl_end_mode_3d()
+    rl_render_end_mode_3d()
     execute_2d()                — types 1,5
     draw bandwidth overlay      — local font, not server command
-    rl_frame_end()
+    rl_render_end()
 ```
 
 ## Server Structure
@@ -159,7 +159,7 @@ on_tick():
 2. Add command interface in `types.ts`
 3. Add to `Command` union type in `types.ts`
 4. Add JSON parsing in `rl_json_parser.c`
-5. Add execution in `rl_frame_commands.c` (in the appropriate 2D/3D/clear handler)
+5. Add execution in `rl_frame_command.c` (in the appropriate 2D/3D/clear handler)
 
 ## Bandwidth Stats
 

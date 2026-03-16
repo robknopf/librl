@@ -139,7 +139,7 @@ void rl_sprite3d_draw(rl_handle_t handle, rl_handle_t tint)
     }
     if (!rl_camera3d_get_active_camera(&camera))
     {
-        log_error("rl_sprite3d_draw() requires an active 3D camera (call rl_begin_mode_3d first)");
+        log_error("rl_sprite3d_draw() requires an active 3D camera (call rl_render_begin_mode_3d first)");
         return;
     }
 

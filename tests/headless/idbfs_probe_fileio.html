@@ -105,15 +105,22 @@ async function run() {
     }
     final.initOk = true;
 
+    final.step = 'restore';
+    const restoreRc = mod.ccall('probe_fileio_restore_begin', 'number', [], []);
+    if (restoreRc !== 0) {
+      throw new Error('probe_fileio_restore_begin failed: ' + restoreRc);
+    }
+
     final.step = 'wait-ready';
     const start = performance.now();
-    while (!mod.fileio_idbfs_ready && (performance.now() - start) < 5000) {
+    while (mod.ccall('probe_fileio_restore_poll', 'number', [], []) === 0 && (performance.now() - start) < 5000) {
       await sleep(20);
     }
-    if (!mod.fileio_idbfs_ready) {
-      throw new Error('fileio_idbfs_ready timeout');
+    const finishRc = mod.ccall('probe_fileio_restore_finish', 'number', [], []);
+    if (finishRc !== 0) {
+      throw new Error('probe_fileio_restore_finish failed: ' + finishRc);
     }
-    final.readyAfterInit = true;
+    final.readyAfterInit = !!mod.fileio_idbfs_ready;
 
     final.step = 'write';
     const writeRc = mod.ccall('probe_fileio_write_text', 'number', ['string', 'string'], [probeRelPath, probeText]);
@@ -138,12 +145,17 @@ async function run() {
     }
     final.secondInitOk = true;
 
+    const restoreRc2 = mod2.ccall('probe_fileio_restore_begin', 'number', [], []);
+    if (restoreRc2 !== 0) {
+      throw new Error('second probe_fileio_restore_begin failed: ' + restoreRc2);
+    }
     const start2 = performance.now();
-    while (!mod2.fileio_idbfs_ready && (performance.now() - start2) < 5000) {
+    while (mod2.ccall('probe_fileio_restore_poll', 'number', [], []) === 0 && (performance.now() - start2) < 5000) {
       await sleep(20);
     }
-    if (!mod2.fileio_idbfs_ready) {
-      throw new Error('second fileio_idbfs_ready timeout');
+    const finishRc2 = mod2.ccall('probe_fileio_restore_finish', 'number', [], []);
+    if (finishRc2 !== 0) {
+      throw new Error('second probe_fileio_restore_finish failed: ' + finishRc2);
     }
 
     final.step = 'second-exists';

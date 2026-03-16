@@ -476,6 +476,8 @@ function drawDebugOverlay(
     return;
   }
 
+  const overlay_font_size = 24;
+
   const layout = getLayoutMetrics(lastInput);
   const mouse = lastInput.mouse;
   const keyboard = lastInput.keyboard;
@@ -497,7 +499,7 @@ function drawDebugOverlay(
     `mouse=(${mouse.x}, ${mouse.y}) buttons=(L:${buttonLabel(mouse.left)} R:${buttonLabel(mouse.right)} M:${buttonLabel(mouse.middle)}) wheel=${mouse.wheel}`,
     24 * layout.sx,
     260 * layout.sy,
-    20 * layout.su,
+    24 * layout.su,
     layout.su,
   );
 
@@ -507,7 +509,7 @@ function drawDebugOverlay(
     `kbd space=${spaceDown ? "down" : "up"} arrows=(${leftDown ? "L" : "-"} ${rightDown ? "R" : "-"} ${upDown ? "U" : "-"} ${downDown ? "D" : "-"})`,
     24 * layout.sx,
     290 * layout.sy,
-    20 * layout.su,
+    overlay_font_size * layout.su,
     layout.su,
   );
 
@@ -517,7 +519,7 @@ function drawDebugOverlay(
     `pressed counts=(${keyboard.pressedKeys.length}/${keyboard.pressedChars.length}) chars="${String.fromCharCode(...keyboard.pressedChars.filter((ch) => ch >= 32 && ch <= 255)).slice(0, 24)}"`,
     24 * layout.sx,
     320 * layout.sy,
-    20 * layout.su,
+    overlay_font_size * layout.su,
     layout.su,
   );
 
@@ -531,7 +533,7 @@ function drawDebugOverlay(
       `edges=(L:${mouseLeftPressed ? "press" : mouseLeftReleased ? "release" : "-"} R:${mouseRightPressed ? "press" : mouseRightReleased ? "release" : "-"} M:${mouseMiddlePressed ? "press" : mouseMiddleReleased ? "release" : "-"})`,
       24 * layout.sx,
       350 * layout.sy,
-      20 * layout.su,
+      overlay_font_size * layout.su,
       layout.su,
     );
   }
@@ -545,7 +547,7 @@ function drawDebugOverlay(
         : "pick: miss",
       24 * layout.sx,
       380 * layout.sy,
-      20 * layout.su,
+      overlay_font_size * layout.su,
       layout.su,
     );
   }
@@ -556,7 +558,7 @@ function drawDebugOverlay(
     `music(M): ${world.musicPlaying ? "playing" : "paused"} clients=${clientCount} t=${timeS.toFixed(2)}`,
     24 * layout.sx,
     410 * layout.sy,
-    20 * layout.su,
+    overlay_font_size * layout.su,
     layout.su,
   );
 }
@@ -842,15 +844,17 @@ function beginLoadResources(world: WorldState, session: GameSession): void {
   state.resourceBootstrapStarted = true;
   realizeSharedWorldResources(world, session);
 
-  queueAssetCreateTask(session, "assets/fonts/Komika/KOMIKAH_.ttf", () => {
+  let font_path = "assets/fonts/JetBrainsMono/JetBrainsMono-Regular.ttf";
+  let font_size = 24;
+  queueAssetCreateTask(session, font_path, () => {
     set_font_resource_manager(session.resourceManager);
-    void rl_font_create("assets/fonts/Komika/KOMIKAH_.ttf", 24)
+    void rl_font_create(font_path, font_size)
       .then((handle) => {
         state.assets.overlayFont = handle;
         console.log(`[Game] Font ready: ${state.assets.overlayFont}`);
         refreshResourceReadiness(world, session);
       })
-      .catch(() => markResourceLoadFailed(session, "assets/fonts/Komika/KOMIKAH_.ttf"));
+      .catch(() => markResourceLoadFailed(session, font_path));
   });
 
   queueAssetCreateTask(session, "assets/sounds/click_004.ogg", () => {

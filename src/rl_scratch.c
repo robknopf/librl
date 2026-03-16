@@ -195,7 +195,7 @@ void rl_scratch_update()
     rl_scratch.touchpoints.count = 0;
     memset(&rl_scratch.touchpoints.touchpoint, 0, sizeof(rl_scratch.touchpoints.touchpoint));
     return;
-#endif
+#else
 
     // TODO: num mouse buttons (currently assumed to be 3)
 
@@ -348,6 +348,7 @@ void rl_scratch_update()
     {
         rl_scratch_set_touchpoint(0, 0, 0, 0);
     }
+#endif /* !HEADLESS */
 }
 
 vec2_t rl_scratch_get_vector2()

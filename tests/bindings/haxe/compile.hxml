@@ -1,0 +1,5 @@
+-lib utest
+-cp ../../..
+-cp ../../../bindings/haxe
+-main tests.bindings.haxe.Main
+-cpp out

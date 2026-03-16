@@ -1,4 +1,5 @@
 #include "rl_loader.h"
+#include "rl_logger.h"
 
 #include <raylib.h>
 #include <stdlib.h>
@@ -236,7 +237,7 @@ static bool rl_loader_restore_barrier_poll(void)
             rl_loader_restore_barrier = NULL;
             rl_loader_restore_ready = true;
             rl_loader_restore_failed = true;
-            TraceLog(LOG_WARNING, "rl_loader: cache restore timed out after %d ms; falling back to network fetch",
+            log_warn("rl_loader: cache restore timed out after %d ms; falling back to network fetch",
                      RL_LOADER_RESTORE_TIMEOUT_MS);
             return true;
         }
@@ -252,7 +253,7 @@ static bool rl_loader_restore_barrier_poll(void)
     rl_loader_restore_ready = true;
     rl_loader_restore_failed = (restore_rc != 0);
     if (rl_loader_restore_failed) {
-        TraceLog(LOG_WARNING, "rl_loader: cache restore failed; falling back to network fetch");
+        log_warn("rl_loader: cache restore failed; falling back to network fetch");
     }
 
     return true;

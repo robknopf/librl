@@ -1,6 +1,16 @@
 #include "raylib.h"
 
 static LoadFileDataCallback g_load_file_data_callback = 0;
+
+void SetTraceLogCallback(TraceLogCallback callback)
+{
+    (void)callback;
+}
+
+void SetTraceLogLevel(int level)
+{
+    (void)level;
+}
 static int g_set_callback_call_count = 0;
 
 void SetLoadFileDataCallback(LoadFileDataCallback callback)

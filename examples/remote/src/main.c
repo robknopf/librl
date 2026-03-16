@@ -25,7 +25,8 @@ typedef struct remote_context_t {
 static remote_context_t g_remote_context = {0};
 
 //char *debug_font_path = "assets/fonts/Komika/KOMIKAH_.ttf";
-char *debug_font_path = "assets/fonts/Voltaire/Voltaire-Regular.ttf";
+char *debug_font_path = "assets/fonts/JetBrainsMono/JetBrainsMono-Regular.ttf";
+char *overlay_font_path = "assets/fonts/JetBrainsMono/JetBrainsMono-Bold.ttf";
 
 #define REMOTE_DEFAULT_HOST "localhost"
 #define REMOTE_DEFAULT_PORT "9001"
@@ -101,8 +102,8 @@ static void on_init(void *user_data) {
 
   context->overlay_font = 0;
   context->overlay_font_size = 24;
-  loader_rc = rl_loader_add_task(rl_loader_import_asset_async(debug_font_path),
-                                 debug_font_path, on_overlay_font_ready, NULL, context);
+  loader_rc = rl_loader_add_task(rl_loader_import_asset_async(overlay_font_path),
+                                 overlay_font_path, on_overlay_font_ready, NULL, context);
   if (loader_rc != RL_LOADER_ADD_TASK_OK) {
     log_error("[Remote] Failed to queue overlay font load (%d)", loader_rc);
   }

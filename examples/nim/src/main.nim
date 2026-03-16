@@ -57,10 +57,10 @@ proc main() =
   discard rl_model_set_animation_speed(gumshoe, 1.0)
   discard rl_model_set_animation_loop(gumshoe, true)
 
-  lastTime = rl_render_get_time().float
+  lastTime = rl_get_time().float
 
   while true:
-    currentTime = rl_render_get_time().float
+    currentTime = rl_get_time().float
     deltaTime = currentTime - lastTime
     totalTime += deltaTime
     lastTime = currentTime
@@ -69,13 +69,13 @@ proc main() =
       break
 
     rl_render_begin()
-    rl_render_clear_background(RL_RAYWHITE)
+    rl_render_clear_background(RL_COLOR_RAYWHITE)
     rl_render_begin_mode_3d()
     discard rl_model_animate(gumshoe, deltaTime.cfloat)
     discard rl_model_set_transform(gumshoe, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0)
-    rl_model_draw(gumshoe, RL_RAYWHITE)
+    rl_model_draw(gumshoe, RL_COLOR_RAYWHITE)
     discard rl_sprite3d_set_transform(sprite, 0.0, 0.0, 0.0, 1.0)
-    rl_sprite3d_draw(sprite, RL_RAYWHITE)
+    rl_sprite3d_draw(sprite, RL_COLOR_RAYWHITE)
     rl_render_end_mode_3d()
 
     let screen = rl_window_get_screen_size()
@@ -84,14 +84,14 @@ proc main() =
     let textSize = rl_text_measure_ex(komika, message.cstring, fontSize.cfloat, 0)
     let textX = cint((w.float32 - textSize.x) / 2)
     let textY = cint((h.float32 - textSize.y) / 2)
-    rl_text_draw_ex(komika, message.cstring, textX, textY, fontSize.cfloat, 1.0, RL_BLUE)
+    rl_text_draw_ex(komika, message.cstring, textX, textY, fontSize.cfloat, 1.0, RL_COLOR_BLUE)
     let remaining = fmt"Remaining: {countdownTimer:.2f}"
     let elapsed = fmt"Elapsed: {totalTime:.2f}"
     let mouse = rl_input_get_mouse_state()
     let mouseText = fmt"Mouse: ({mouse.x}, {mouse.y}) w:{mouse.wheel} b:[{mouse.left}, {mouse.right}, {mouse.middle}]"
-    rl_text_draw_ex(komikaSmall, remaining.cstring, 10.cint, 36.cint, smallFontSize.cfloat, 1.0, RL_BLACK)
-    rl_text_draw_ex(komikaSmall, elapsed.cstring, 10.cint, 56.cint, smallFontSize.cfloat, 1.0, RL_BLACK)
-    rl_text_draw_ex(komikaSmall, mouseText.cstring, 10.cint, 76.cint, smallFontSize.cfloat, 1.0, RL_BLACK)
+    rl_text_draw_ex(komikaSmall, remaining.cstring, 10.cint, 36.cint, smallFontSize.cfloat, 1.0, RL_COLOR_BLACK)
+    rl_text_draw_ex(komikaSmall, elapsed.cstring, 10.cint, 56.cint, smallFontSize.cfloat, 1.0, RL_COLOR_BLACK)
+    rl_text_draw_ex(komikaSmall, mouseText.cstring, 10.cint, 76.cint, smallFontSize.cfloat, 1.0, RL_COLOR_BLACK)
     rl_text_draw_fps_ex(komikaSmall, 10.cint, 10.cint, smallFontSize.cint, greyAlphaColor)
     rl_render_end()
 

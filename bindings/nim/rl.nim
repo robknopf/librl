@@ -70,11 +70,36 @@ type
     get_api_fn*: RLModuleEntryGetApiFn
   RLLoaderTask* {.importc: "rl_loader_task_t", header: "rl_loader.h", bycopy.} = object
 
+var
+  RL_COLOR_DEFAULT* {.importc, header: "rl_color.h".}: RLHandle
+  RL_COLOR_LIGHTGRAY* {.importc, header: "rl_color.h".}: RLHandle
+  RL_COLOR_GRAY* {.importc, header: "rl_color.h".}: RLHandle
+  RL_COLOR_DARKGRAY* {.importc, header: "rl_color.h".}: RLHandle
+  RL_COLOR_YELLOW* {.importc, header: "rl_color.h".}: RLHandle
+  RL_COLOR_GOLD* {.importc, header: "rl_color.h".}: RLHandle
+  RL_COLOR_ORANGE* {.importc, header: "rl_color.h".}: RLHandle
+  RL_COLOR_PINK* {.importc, header: "rl_color.h".}: RLHandle
+  RL_COLOR_RED* {.importc, header: "rl_color.h".}: RLHandle
+  RL_COLOR_MAROON* {.importc, header: "rl_color.h".}: RLHandle
+  RL_COLOR_GREEN* {.importc, header: "rl_color.h".}: RLHandle
+  RL_COLOR_LIME* {.importc, header: "rl_color.h".}: RLHandle
+  RL_COLOR_DARKGREEN* {.importc, header: "rl_color.h".}: RLHandle
+  RL_COLOR_SKYBLUE* {.importc, header: "rl_color.h".}: RLHandle
+  RL_COLOR_BLUE* {.importc, header: "rl_color.h".}: RLHandle
+  RL_COLOR_DARKBLUE* {.importc, header: "rl_color.h".}: RLHandle
+  RL_COLOR_PURPLE* {.importc, header: "rl_color.h".}: RLHandle
+  RL_COLOR_VIOLET* {.importc, header: "rl_color.h".}: RLHandle
+  RL_COLOR_DARKPURPLE* {.importc, header: "rl_color.h".}: RLHandle
+  RL_COLOR_BEIGE* {.importc, header: "rl_color.h".}: RLHandle
+  RL_COLOR_BROWN* {.importc, header: "rl_color.h".}: RLHandle
+  RL_COLOR_DARKBROWN* {.importc, header: "rl_color.h".}: RLHandle
+  RL_COLOR_WHITE* {.importc, header: "rl_color.h".}: RLHandle
+  RL_COLOR_BLACK* {.importc, header: "rl_color.h".}: RLHandle
+  RL_COLOR_BLANK* {.importc, header: "rl_color.h".}: RLHandle
+  RL_COLOR_MAGENTA* {.importc, header: "rl_color.h".}: RLHandle
+  RL_COLOR_RAYWHITE* {.importc, header: "rl_color.h".}: RLHandle
+
 const
-  RL_GRAY* = RLHandle(2)
-  RL_BLUE* = RLHandle(14)
-  RL_BLACK* = RLHandle(23)
-  RL_RAYWHITE* = RLHandle(26)
   RL_CAMERA_PERSPECTIVE* = 0.cint
   RL_CAMERA_ORTHOGRAPHIC* = 1.cint
   RL_FLAG_WINDOW_RESIZABLE* = 4.cint
@@ -129,7 +154,8 @@ proc rl_event_listener_count*(eventName: cstring): cint {.importc, cdecl, header
 proc rl_update*() {.importc, cdecl, header: "rl.h".}
 proc rl_run*(initFn: RLInitFn, tickFn: RLTickFn, shutdownFn: RLShutdownFn, userData: pointer) {.importc, cdecl, header: "rl.h".}
 proc rl_request_stop*() {.importc, cdecl, header: "rl.h".}
-proc rl_render_get_time*(): cdouble {.importc, cdecl, header: "rl.h".}
+proc rl_get_time*(): cdouble {.importc, cdecl, header: "rl.h".}
+proc rl_get_delta_time*(): cfloat {.importc, cdecl, header: "rl.h".}
 proc rl_window_open*(width: cint, height: cint, title: cstring, flags: cint) {.importc, cdecl, header: "rl.h".}
 proc rl_window_get_monitor_count*(): cint {.importc, cdecl, header: "rl.h".}
 proc rl_window_get_current_monitor*(): cint {.importc, cdecl, header: "rl.h".}

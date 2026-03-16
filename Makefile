@@ -365,7 +365,7 @@ desktop: libraylib_desktop wgutils_desktop ensure_out_dir ensure_obj_dir $(DESKT
 	$(Q)cd $(OBJ_DESKTOP_DIR)/.wgutils_unpack && ar x $(abspath $(WGUTILS_DESKTOP_ARCHIVE))
 	$(Q)ar rcs $(OUT_DESKTOP) $(DESKTOP_OBJS) $(OBJ_DESKTOP_DIR)/.raylib_unpack/*.o $(OBJ_DESKTOP_DIR)/.wgutils_unpack/*.o
 
-uri_test test_desktop test_wasm test unit_test_desktop unit_test_wasm probe_idbfs_build probe_idbfs check_node check_chrome check_probe_python:
+uri_test test_desktop test_wasm test test_haxe_bindings test_nim_bindings unit_test_desktop unit_test_wasm probe_idbfs_build probe_idbfs check_node check_chrome check_probe_python:
 	@$(MAKE) -C tests $@ \
 		ROOT_DIR="$(abspath .)" \
 		CC_WASM="$(CC_WASM)" \
@@ -403,7 +403,7 @@ clean:
 #	@$(MAKE) -C $(LIBRAYLIB_ROOT) clean
 
 
-.PHONY: all deps ensure_deps clean ensure_out_dir ensure_obj_dir libraylib_wasm libraylib_desktop wgutils_desktop wgutils_wasm wasm wasm_archive desktop test test_desktop test_wasm unit_test_desktop unit_test_wasm check_node check_chrome check_probe_python probe_idbfs_build probe_idbfs uri_test
+.PHONY: all deps ensure_deps clean ensure_out_dir ensure_obj_dir libraylib_wasm libraylib_desktop wgutils_desktop wgutils_wasm wasm wasm_archive desktop test test_desktop test_wasm test_haxe_bindings test_nim_bindings unit_test_desktop unit_test_wasm check_node check_chrome check_probe_python probe_idbfs_build probe_idbfs uri_test
 # 	"_RL_COLOR_BLACK", \
 # 	"_RL_COLOR_BLANK", \
 # 	"_RL_COLOR_MAGENTA", \

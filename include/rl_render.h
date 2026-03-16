@@ -10,12 +10,10 @@ extern "C" {
 void rl_render_begin(void);
 void rl_render_end(void);
 void rl_render_clear_background(rl_handle_t color);
-float rl_render_get_delta_time(void);
 void rl_render_begin_mode_2d(rl_handle_t camera);
 void rl_render_end_mode_2d(void);
 void rl_render_begin_mode_3d(void);
 void rl_render_end_mode_3d(void);
-double rl_render_get_time(void);
 
 #ifdef __cplusplus
 }

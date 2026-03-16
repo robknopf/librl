@@ -72,7 +72,10 @@ LDFLAGS_WASM = \
 	"_rl_init", \
 	"_rl_deinit", \
 	"_rl_update_to_scratch", \
-	"_rl_render_get_time", \
+	"_rl_run", \
+	"_rl_request_stop", \
+	"_rl_get_time", \
+	"_rl_get_delta_time", \
 	"_rl_window_open", \
 	"_rl_window_set_title", \
 	"_rl_window_set_size", \

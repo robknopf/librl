@@ -49,7 +49,7 @@ export function rl_render_clear_background(color: number): void {
   );
 }
 
-export function rl_render_get_delta_time(): number {
+export function rl_get_delta_time(): number {
   return rl_frame_state.frame_snapshot?.deltaTime ?? 0.0;
 }
 
@@ -57,6 +57,6 @@ export function rl_render_begin_mode_2d(_camera: number): void {}
 
 export function rl_render_end_mode_2d(): void {}
 
-export function rl_render_get_time(): number {
+export function rl_get_time(): number {
   return rl_frame_state.time_seconds;
 }

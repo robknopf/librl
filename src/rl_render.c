@@ -22,11 +22,6 @@ void rl_render_clear_background(rl_handle_t color) {
 }
 
 RL_KEEP
-float rl_render_get_delta_time() {
-    return GetFrameTime();
-}
-
-RL_KEEP
 void rl_render_begin_mode_2d(rl_handle_t camera) {
     (void)camera;
 }
@@ -53,9 +48,4 @@ void rl_render_begin_mode_3d() {
 RL_KEEP
 void rl_render_end_mode_3d() {
     EndMode3D();
-}
-
-RL_KEEP
-double rl_render_get_time() {
-    return GetTime();
 }

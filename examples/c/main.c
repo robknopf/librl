@@ -622,7 +622,7 @@ static void on_init(void *user_data) {
 static void on_tick(void *user_data) {
   example_context_t *context = (example_context_t *)user_data;
   rl_module_instance_t *script_module = NULL;
-  const float dt = rl_render_get_delta_time();
+  const float dt = rl_get_delta_time();
 
   if (context == NULL) {
     return;

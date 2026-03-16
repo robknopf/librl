@@ -16,7 +16,6 @@
 #include "internal/rl_texture.h"
 #include "raylib.h"
 #include "rl_loader.h"
-#include "logger/logger.h"
 #include <string.h>
 
 #if defined(PLATFORM_WEB)
@@ -209,4 +208,14 @@ void rl_request_stop(void) {
 RL_KEEP
 void rl_set_target_fps(int fps) {
     SetTargetFPS(fps);
+}
+
+RL_KEEP
+float rl_get_delta_time() {
+    return GetFrameTime();
+}
+
+RL_KEEP
+double rl_get_time() {
+    return GetTime();
 }

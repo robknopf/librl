@@ -50,6 +50,9 @@ void rl_run(rl_init_fn init_fn,
             void *user_data);
 void rl_request_stop(void);
 void rl_set_target_fps(int fps);
+float rl_get_delta_time(void);
+double rl_get_time(void);
+
 #ifdef __cplusplus
 }
 #endif

@@ -1,10 +1,9 @@
 #include "rl_ws_client.h"
+#include "rl.h"
 #include "rl_protocol.h"
 #include "rl_resource_handler.h"
 #include "websocket/websocket.h"
 #include "rl_logger.h"
-#include "rl_render.h"
-#include "rl_music.h"
 #include "rl_pick.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -465,7 +464,7 @@ void rl_ws_client_tick(rl_ws_client_t *client) {
     return;
   }
   
-  now = rl_render_get_time();
+  now = rl_get_time();
   
   if (client->stats_timer == 0.0) {
     client->stats_timer = now;

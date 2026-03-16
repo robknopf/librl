@@ -7,6 +7,9 @@ const RL = {
     _nextEventListenerId: 1,
     _eventListenersById: new Map(),
     _eventListenerIdsByCallback: new WeakMap(),
+    _runInitPtr: 0,
+    _runTickPtr: 0,
+    _runShutdownPtr: 0,
     _dispatchEventFromWasm: (payload, userData) => {
         const listener = RL._eventListenersById.get(userData >>> 0);
         if (!listener || typeof listener.callback !== "function") {
@@ -40,6 +43,23 @@ const RL = {
             }
         });
         idsToDelete.forEach((id) => RL._forgetListenerById(id));
+    },
+    _clearRunCallbacks: () => {
+        if (!moduleInstance) {
+            return;
+        }
+        if (RL._runInitPtr !== 0) {
+            moduleInstance.removeFunction(RL._runInitPtr);
+            RL._runInitPtr = 0;
+        }
+        if (RL._runTickPtr !== 0) {
+            moduleInstance.removeFunction(RL._runTickPtr);
+            RL._runTickPtr = 0;
+        }
+        if (RL._runShutdownPtr !== 0) {
+            moduleInstance.removeFunction(RL._runShutdownPtr);
+            RL._runShutdownPtr = 0;
+        }
     },
     _waitForIdbfsReady: async (timeoutMs = 2000) => {
         const start = performance.now();
@@ -119,6 +139,7 @@ const RL = {
     deinit: () => {
         RL._eventListenersById.clear();
         RL._eventListenerIdsByCallback = new WeakMap();
+        RL._clearRunCallbacks();
         if (moduleInstance && RL._eventDispatchPtr !== 0) {
             moduleInstance.removeFunction(RL._eventDispatchPtr);
             RL._eventDispatchPtr = 0;
@@ -336,6 +357,37 @@ const RL = {
     },
     endMode3D: () => {
         return moduleInstance.ccall('rl_render_end_mode_3d', null, [], []);
+    },
+    run: (init, tick, shutdown) => {
+        if (typeof tick !== "function") {
+            throw new Error("RL.run requires a tick callback.");
+        }
+
+        RL._clearRunCallbacks();
+
+        RL._runInitPtr = typeof init === "function"
+            ? moduleInstance.addFunction(() => init(), "vi")
+            : 0;
+        RL._runTickPtr = moduleInstance.addFunction(() => tick(), "vi");
+        RL._runShutdownPtr = typeof shutdown === "function"
+            ? moduleInstance.addFunction(() => {
+                try {
+                    shutdown();
+                } finally {
+                    RL._clearRunCallbacks();
+                }
+            }, "vi")
+            : 0;
+
+        return moduleInstance.ccall(
+            'rl_run',
+            null,
+            ['number', 'number', 'number', 'number'],
+            [RL._runInitPtr, RL._runTickPtr, RL._runShutdownPtr, 0]
+        );
+    },
+    requestStop: () => {
+        return moduleInstance.ccall('rl_request_stop', null, [], []);
     },
     createCamera3D: (
         positionX, positionY, positionZ,

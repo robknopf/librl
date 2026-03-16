@@ -40,6 +40,9 @@ type
   RLModuleEventOffFn* = proc(hostUserData: pointer, eventName: cstring,
                              listener: RLModuleEventListenerFn, listenerUserData: pointer): cint {.cdecl.}
   RLModuleEventEmitFn* = proc(hostUserData: pointer, eventName: cstring, payload: pointer): cint {.cdecl.}
+  RLInitFn* = proc(userData: pointer) {.cdecl.}
+  RLTickFn* = proc(userData: pointer) {.cdecl.}
+  RLShutdownFn* = proc(userData: pointer) {.cdecl.}
   RLModuleInitFn* = proc(host: ptr RLModuleHostApi, moduleState: ptr pointer): cint {.cdecl.}
   RLModuleDeinitFn* = proc(moduleState: pointer) {.cdecl.}
   RLModuleUpdateFn* = proc(moduleState: pointer, dtSeconds: cfloat): cint {.cdecl.}
@@ -124,6 +127,8 @@ proc rl_event_off_all*(eventName: cstring): cint {.importc, cdecl, header: "rl_e
 proc rl_event_emit*(eventName: cstring, payload: pointer): cint {.importc, cdecl, header: "rl_event.h".}
 proc rl_event_listener_count*(eventName: cstring): cint {.importc, cdecl, header: "rl_event.h".}
 proc rl_update*() {.importc, cdecl, header: "rl.h".}
+proc rl_run*(initFn: RLInitFn, tickFn: RLTickFn, shutdownFn: RLShutdownFn, userData: pointer) {.importc, cdecl, header: "rl.h".}
+proc rl_request_stop*() {.importc, cdecl, header: "rl.h".}
 proc rl_render_get_time*(): cdouble {.importc, cdecl, header: "rl.h".}
 proc rl_window_open*(width: cint, height: cint, title: cstring, flags: cint) {.importc, cdecl, header: "rl.h".}
 proc rl_window_get_monitor_count*(): cint {.importc, cdecl, header: "rl.h".}
@@ -166,7 +171,7 @@ proc rl_disable_lighting*() {.importc, cdecl, header: "rl.h".}
 proc rl_is_lighting_enabled*(): cint {.importc, cdecl, header: "rl.h".}
 proc rl_set_light_direction*(x: cfloat, y: cfloat, z: cfloat) {.importc, cdecl, header: "rl.h".}
 proc rl_set_light_ambient*(ambient: cfloat) {.importc, cdecl, header: "rl.h".}
-proc rl_draw_cube*(
+proc rl_shape_draw_cube*(
   positionX: cfloat, positionY: cfloat, positionZ: cfloat,
   width: cfloat, height: cfloat, length: cfloat,
   color: RLHandle

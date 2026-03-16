@@ -1,9 +1,10 @@
 # Bindings
 
-This project currently maintains two primary bindings in a 'add as I need' cycle:
+This project currently maintains three primary bindings in a 'add as I need' cycle:
 
 - JavaScript (wasm runtime wrapper)
 - Nim (C FFI imports)
+- Haxe (hxcpp / C++ FFI)
 
 ## JavaScript Binding
 
@@ -104,6 +105,56 @@ Notes:
   - `rl_loader_uncache_file(filename)`
   - `rl_loader_clear_cache()`
 
+Async loader sugar:
+
+- For examples that want higher-level async asset loading, prefer:
+  - `rl_loader_import_asset_async(path)` to get a task pointer.
+  - `rl_loader_add_task(task, path, onSuccess, onFailure, userData)` to register callbacks.
+- The Nim example (`examples/nim/src/main.nim`) shows the canonical pattern:
+  - `rl_run(onInit, onTick, onShutdown, addr ctx)` drives the main loop on both desktop and wasm.
+  - Asset imports are queued via `rl_loader_add_task`, and user code only touches handles once callbacks fire.
+
+## Haxe Binding
+
+Files:
+
+- `bindings/haxe/rl/RL.hx`
+- `examples/haxe/src/InjectLibRL.hx`
+- `examples/haxe/src/Main.hx`
+
+Role:
+
+- Exposes `librl` APIs to Haxe via hxcpp externs (C++ FFI).
+- Uses `@:cppInclude`, `@:buildXml`, and `@:functionCode` to:
+  - Include `rl.h` / `rl_loader.h`.
+  - Inject link flags (`librl.a` / `librl.wasm.a`).
+  - Bridge static Haxe methods to C callbacks for `rl_run` and `rl_loader_add_task`.
+
+Used by:
+
+- `examples/haxe/src/Main.hx`
+
+Notes:
+
+- The Haxe binding mirrors the C naming:
+  - `RL.modelCreate`, `RL.sprite3dCreate`, `RL.camera3dCreate`, etc.
+  - Constants like `RL.FLAG_MSAA_4X_HINT`, `RL.CAMERA_PERSPECTIVE`.
+- WASM builds use hxcpp's emscripten toolchain with `MODULARIZE=1` and `EXPORT_ES6=1`:
+  - `examples/haxe/compile_wasm.hxml`
+  - `InjectLibRL.hx` adds the emcc linker flags and links against `librl.wasm.a`.
+
+Async loader sugar:
+
+- The binding exposes:
+  - `RL.loaderImportAssetAsync(path: String): RLLoaderTaskPtr`
+  - `RL.loaderAddTask(task, path, onSuccess, onFailure, userData)`
+- Because hxcpp needs raw C function pointers for callbacks, Haxe examples use `@:functionCode` to downcast:
+  - `rl_run((rl_init_fn)Main_obj::onInit, (rl_tick_fn)Main_obj::onTick, ...)`
+  - `rl_loader_add_task(..., (rl_loader_callback_fn)Main_obj::onAssetReady, ...)`
+- The example (`examples/haxe/src/Main.hx`) is the canonical reference for:
+  - Using `rl_run` with `init/tick/shutdown`.
+  - Queuing async asset loads via `rl_loader_add_task` on both desktop and wasm.
+
 ## Status and Scope
 
 - Active: JavaScript, Nim
@@ -113,7 +164,10 @@ Notes:
 When public C headers change:
 
 1. Update `include/*.h`.
-2. Update binding layers (`bindings/js/*`, `bindings/nim/rl.nim`) that expose affected functions.
+2. Update binding layers (`bindings/js/*`, `bindings/nim/rl.nim`, `bindings/haxe/rl/RL.hx`) that expose affected functions.
 3. Smoke test:
-   - web: `examples/js/simple_example.js`
+   - web (JS binding): `examples/www/?example=simple`
    - desktop Nim: `examples/nim/src/main.nim`
+   - desktop Haxe: `examples/haxe/src/Main.hx`
+   - wasm Nim: `npm run build:nim:wasm` + `?example=nim`
+   - wasm Haxe: `npm run build:haxe:wasm` + `?example=haxe`

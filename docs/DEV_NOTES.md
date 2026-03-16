@@ -62,6 +62,9 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
 - Prefer the cleaner API/architecture change unless compatibility is explicitly requested.
 - Do not add compatibility aliases, fallback names, or dual old/new code paths "just in case".
 - If a rename or contract change is the right fix, make the breaking change and update callers/docs/bindings in the same pass.
+- When adding new systems or changing public API, add/update tests in the same pass:
+  - C: unit/integration tests under `tests/`, or example updates that exercise the new surface.
+  - Bindings: update `tests/bindings/*` and the corresponding language example(s).
 
 ## Naming Conventions
 
@@ -91,6 +94,22 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
   - file/header: `rl_module_lua.c`, `rl_module_lua.h`
   - getter: `rl_module_lua_get_api()`
 - Module identity strings like `"lua"` are runtime identifiers, not a reason to use older `rl_lua_*` symbol naming.
+- Scratch helpers should be explicitly suffixed:
+  - `*_to_scratch` when C writes into the shared scratch area for JS/host to read.
+  - `*_from_scratch` when C reads data provided by the host through scratch.
+  - JS (and other bindings) should expose normalized APIs and hide the `*_to_scratch`/`*_from_scratch` details.
+
+## Platform/WASM Conventions
+
+- WASM builds must **not** rely on Asyncify. The runtime is single-threaded and cannot block:
+  - Do not add new `_sync` convenience wrappers that spin on async tasks.
+  - Prefer async starter + poll/finish/free lifecycle (`*_async`, `*_poll_task`, `*_finish_task`, `*_free_task`).
+- Platform-specific C implementations should use split files instead of pervasive `#ifdef`:
+  - Prefer `<system>.c` + `<system>_wasm.c` when Emscripten behavior diverges.
+  - Keep headers and call sites platform-agnostic; select the right object files at build time.
+- Avoid embedding platform conditionals in user/host code:
+  - No `#ifdef __EMSCRIPTEN__` (or similar) in examples, bindings, or public headers.
+  - Caller code should be agnostic of desktop vs wasm; `librl` and `wgutils` hide those details.
 
 ## Audio API State
 

@@ -1,0 +1,10 @@
+-cp .
+-cp /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/cppia/src
+-cppia Test.cppia
+
+--dce full
+-D analyzer-optimize
+--debug
+
+--main Test
+

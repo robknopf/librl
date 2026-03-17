@@ -116,6 +116,9 @@ extern class RL {
     onSuccess: cpp.Pointer<cpp.Void>, onFailure: cpp.Pointer<cpp.Void>,
     userData: cpp.Pointer<cpp.Void>): Int;
 
+  @:native("rl_loader_clear_cache")
+  static function loaderClearCache(): Int;
+
   // --- Lighting ---
   @:native("rl_enable_lighting")
   static function enableLighting(): Void;

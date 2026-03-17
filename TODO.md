@@ -53,6 +53,9 @@
     - module update phase
     - caller-owned explicit drain point
   - if Lua gets a general event API later, decide whether script listeners bind to immediate events, queued events, or both
+- Loader / FS bootstrap:
+  - evaluate adding a higher-level init helper that triggers a default filesystem restore and lets `rl_run` gate `init` on `rl_loader_is_ready`
+  - keep low-level restore/import APIs available for advanced callers
 
 ## In Progress Conceptually
 

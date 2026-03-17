@@ -12,6 +12,13 @@ const
   outDir = getCurrentDir() / "out"
   mainEntry = "src/main.nim"
   outFile = "main"
+  nimCacheDir = ".nimcache"
+
+when defined(emscripten):
+  switch("nimcache", nimCacheDir / "wasm")
+else:
+  switch("nimcache", nimCacheDir / "desktop")
+
 
 when defined(emscripten):
   switch("os", "linux")
@@ -50,7 +57,6 @@ when defined(emscripten):
   switch("passL", "-O2")
   switch("define", "release")
 
-  switch("nimcache", "build/wasm/nimcache")
   switch("out", outDir / "wasm" / "main.js")
 
 task build, "Build desktop Nim binary":
@@ -76,10 +82,9 @@ task build_wasm, "Build WASM Nim binary via Emscripten":
 
 task clean, "Clean Nim build outputs":
   let cacheDir = getCurrentDir() / "cache"
-  let buildDir = getCurrentDir() / "build"
   if dirExists(outDir):
     rmDir(outDir)
   if dirExists(cacheDir):
     rmDir(cacheDir)
-  if dirExists(buildDir):
-    rmDir(buildDir)
+  if dirExists(nimCacheDir):
+    rmDir(nimCacheDir)

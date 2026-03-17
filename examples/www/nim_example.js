@@ -109,7 +109,7 @@ function applyLetterboxCanvasStyle(canvas, idealWidth, idealHeight) {
     const mod = await waitForModuleWithTimeout(factory, env);
 
     console.log("Nim WASM module initialized:", mod);
-    applyLetterboxCanvasStyle(canvas, 800, 600);
+    applyLetterboxCanvasStyle(canvas, 1024, 1280);
   } catch (e) {
     console.error(e);
     const output = ensureOutputElement();

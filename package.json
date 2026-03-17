@@ -1,9 +1,9 @@
 {
   "name": "librl",
   "private": true,
-  
+  "type": "module",
   "scripts": {
-    "dev": "npm-run-all --parallel serve watch:c:wasm watch:remote:wasm",
+    "dev": "npm-run-all --parallel serve watch:c:wasm watch:remote:wasm watch:nim:wasm",
     "serve": "vite",
     "build:remote:release": "npm run build:remote:wasm && vite build && mkdir -p examples/www/dist/examples/remote/out && cp examples/remote/out/main.js examples/remote/out/main.wasm examples/www/dist/examples/remote/out/",
     "build:remote:wasm": "make -C examples/remote wasm",
@@ -11,6 +11,7 @@
     "build:c:wasm": "make -C examples/c wasm",
     "watch:c:wasm": "onchange \"src/**/*.c\" \"src/**/*.h\" \"include/**/*.h\" \"examples/c/**/*.c\" \"examples/c/**/*.h\" --exclude \"examples/c/out/**\" -- npm run build:c:wasm",
     "build:nim:wasm": "cd examples/nim && nim build_wasm",
+    "watch:nim:wasm": "onchange \"examples/nim/**/*.nim\" --exclude \"examples/nim/out/**\" --exclude \"examples/nim/.nimcache/**\" -- npm run build:nim:wasm",
     "build:haxe:wasm": "cd examples/haxe && haxe compile_wasm.hxml",
     "build:all:release": "npm run build:remote:release && npm run build:c:wasm && npm run build:nim:wasm && npm run build:haxe:wasm && mkdir -p examples/www/dist/examples/c/out && cp examples/c/out/main.js examples/c/out/main.wasm examples/www/dist/examples/c/out/ && mkdir -p examples/www/dist/examples/nim/out/wasm && cp examples/nim/out/wasm/main.js examples/nim/out/wasm/main.wasm examples/www/dist/examples/nim/out/wasm/ && mkdir -p examples/www/dist/examples/haxe/out/wasm && cp examples/haxe/out/wasm/Main.js examples/haxe/out/wasm/Main.wasm examples/www/dist/examples/haxe/out/wasm/ && mkdir -p examples/www/dist/bundles && cp examples/www/remote_example.js examples/www/simple_example.js examples/www/pick_example.js examples/www/lua_module_example.js examples/www/nim_example.js examples/www/haxe_example.js examples/www/ansi_output.js examples/www/dist/bundles/",
     "deploy": "npm run build:all:release && rsync -avz --mkpath examples/www/dist/ dev.whirlinggizmo.com:testbed/$npm_package_name/",
@@ -22,6 +23,7 @@
     "dotenv": "^17.3.1",
     "npm-run-all": "^4.1.5",
     "onchange": "^7.1.0",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "vite-plugin-restart": "^2.0.0"
   }
 }

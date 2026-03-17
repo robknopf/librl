@@ -79,6 +79,7 @@ task build_wasm, "Build WASM Nim binary via Emscripten":
   mkDir(outDir / "wasm")
   let entry = getCurrentDir() / mainEntry
   exec "nim c -d:emscripten -d:release " & entry
+  echo "Built WASM Nim binary: " & (outDir / "wasm" / "main.js")
 
 task clean, "Clean Nim build outputs":
   let cacheDir = getCurrentDir() / "cache"

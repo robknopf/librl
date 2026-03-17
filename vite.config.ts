@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
 import os from "os";
+import ViteRestart from "vite-plugin-restart";
 
 dotenv.config({
   quiet: true,
@@ -56,6 +57,14 @@ export default defineConfig({
     },
   },
   plugins: [
+    ViteRestart({
+      reload: [
+        '../nim/out/wasm/**/*.wasm',
+        '../nim/out/wasm/**/*.js',
+      ],
+      "contentCheck": true,
+      "delay": 2000
+    }),
     {
       name: "examples-mount",
       configureServer(server) {
@@ -75,11 +84,18 @@ export default defineConfig({
             return;
           }
 
-          const relativePath = decodeURIComponent(cleanUrl.slice(mountPrefix.length));
+          const relativePath = decodeURIComponent(
+            cleanUrl.slice(mountPrefix.length),
+          );
           const fullPath = path.resolve(examplesRoot, relativePath);
 
           // Prevent path traversal outside the examples directory.
-          if (!(fullPath === examplesRoot || fullPath.startsWith(examplesRoot + path.sep))) {
+          if (
+            !(
+              fullPath === examplesRoot ||
+              fullPath.startsWith(examplesRoot + path.sep)
+            )
+          ) {
             return;
           }
 
@@ -93,9 +109,9 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 4444,
     strictPort: true,
-    cors:true,
-    headers:{
-      "access-control-allow-origin":"*"
+    cors: true,
+    headers: {
+      "access-control-allow-origin": "*",
     },
     open: false,
     https: sslKeysPaths

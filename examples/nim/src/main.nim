@@ -7,7 +7,7 @@ const
   smallFontSize = 16
   modelPath = "assets/models/gumshoe/gumshoe.glb"
   spritePath = "assets/sprites/logo/wg-logo-bw-alpha.png"
-  fontPath = "assets/fonts/Komika/KOMIKAH_.ttf"
+  fontPath = "assets/fonts/JetBrainsMono/JetBrainsMono-Regular.ttf"
   message = "Hello World!"
 
 type
@@ -39,7 +39,7 @@ proc queueAsset(path: cstring, ctx: ptr AppContext) =
 proc onInit(userData: pointer) {.cdecl.} =
   var ctx = cast[ptr AppContext](userData)
 
-  rl_window_open(800.cint, 600.cint, "Hello, World! (Nim)", RL_FLAG_MSAA_4X_HINT)
+  rl_window_open(1024, 1280, "Hello, World! (Nim)", RL_FLAG_MSAA_4X_HINT)
   let monitorOverride = getEnv("RL_MONITOR", "")
   if monitorOverride.len > 0:
     try:

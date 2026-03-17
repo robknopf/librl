@@ -20,7 +20,7 @@ import { rl } from "/lib/librl.js";
 
 // Testing C->Wasm example
 // This assumes vite/Live Server has mounted /examples and
-// For c->wasm build: cd examples/c && make wasm (or wasm-debug)
+// For c->wasm build: cd examples/c-lua && make wasm (or wasm-debug)
 import { createOutputLogger, ensureOutputElement } from "./ansi_output.js";
 
 const WASM_STARTUP_TIMEOUT_MS = 15000;
@@ -30,7 +30,7 @@ async function loadExampleModuleFactory(maxAttempts = 120, delayMs = 500) {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       // Cache-bust retries so a prior missing-module fetch does not stick.
-      const moduleUrl = new URL("examples/c/out/main.js", pageBase).href;
+      const moduleUrl = new URL("examples/c-lua/out/main.js", pageBase).href;
       const mod = await import(/* @vite-ignore */`${moduleUrl}?t=${Date.now()}`);
       return mod.default;
     } catch (err) {
@@ -41,7 +41,7 @@ async function loadExampleModuleFactory(maxAttempts = 120, delayMs = 500) {
     }
   }
 
-  throw new Error("Unable to load /examples/c/out/main.js");
+  throw new Error("Unable to load /examples/c-lua/out/main.js");
 }
 
 function getEnv() {

@@ -189,7 +189,34 @@ LDFLAGS_WASM = \
 		"_rl_event_off", \
 		"_rl_event_emit", \
 		"_rl_event_off_all", \
-		"_rl_event_listener_count" \
+		"_rl_event_listener_count", \
+		"_RL_COLOR_DEFAULT", \
+		"_RL_COLOR_LIGHTGRAY", \
+		"_RL_COLOR_GRAY", \
+		"_RL_COLOR_DARKGRAY", \
+		"_RL_COLOR_YELLOW", \
+		"_RL_COLOR_GOLD", \
+		"_RL_COLOR_ORANGE", \
+		"_RL_COLOR_PINK", \
+		"_RL_COLOR_RED", \
+		"_RL_COLOR_MAROON", \
+		"_RL_COLOR_GREEN", \
+		"_RL_COLOR_LIME", \
+		"_RL_COLOR_DARKGREEN", \
+		"_RL_COLOR_SKYBLUE", \
+		"_RL_COLOR_BLUE", \
+		"_RL_COLOR_DARKBLUE", \
+		"_RL_COLOR_PURPLE", \
+		"_RL_COLOR_VIOLET", \
+		"_RL_COLOR_DARKPURPLE", \
+		"_RL_COLOR_BEIGE", \
+		"_RL_COLOR_BROWN", \
+		"_RL_COLOR_DARKBROWN", \
+		"_RL_COLOR_WHITE", \
+		"_RL_COLOR_BLACK", \
+		"_RL_COLOR_BLANK", \
+		"_RL_COLOR_MAGENTA", \
+		"_RL_COLOR_RAYWHITE" \
 		]'
 
 CFLAGS_DESKTOP = -DPLATFORM_DESKTOP

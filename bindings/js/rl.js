@@ -109,6 +109,8 @@ const RL = {
         // create an instance of the module
         moduleInstance = await Module(moduleOptions.env);
 
+        RL._patchColorConstants();
+
         moduleInstance.initScratchArea();
 
         if (typeof opts.assetHost === "string" && opts.assetHost.trim().length > 0) {
@@ -134,7 +136,7 @@ const RL = {
         moduleInstance.ccall('rl_update_to_scratch', null, [], []);
     },
     getTime: () => {
-        return moduleInstance.ccall('rl_render_get_time', 'number', [], []);
+        return moduleInstance.ccall('rl_get_time', 'number', [], []);
     },
     deinit: () => {
         RL._eventListenersById.clear();
@@ -521,35 +523,30 @@ const RL = {
     },
     // End Scratch-backed wrappers
 
-    //color: {
-        // Predefined Colors
-        DEFAULT: 0,
-        LIGHTGRAY: 1,
-        GRAY: 2,
-        DARKGRAY: 3,
-        YELLOW: 4,
-        GOLD: 5,
-        ORANGE: 6,
-        PINK: 7,
-        RED: 8,
-        MAROON: 9,
-        GREEN: 10,
-        LIME: 11,
-        DARKGREEN: 12,
-        SKYBLUE: 13,
-        BLUE: 14,
-        DARKBLUE: 15,
-        PURPLE: 16,
-        VIOLET: 17,
-        DARKPURPLE: 18,
-        BEIGE: 19,
-        BROWN: 20,
-        DARKBROWN: 21,
-        WHITE: 22,
-        BLACK: 23,
-        BLANK: 24,
-        MAGENTA: 25,
-        RAYWHITE: 26,
+    // Predefined color handles: export the C globals and read their values once at init.
+    // Uses EXPORTED_GLOBALS for _RL_COLOR_* so JS never redefines the numbers itself.
+    _colorHandle: (index, generation) => ((generation << 16) | index) >>> 0,
+    _RL_COLOR_NAMES: [
+        "DEFAULT", "LIGHTGRAY", "GRAY", "DARKGRAY",
+        "YELLOW", "GOLD", "ORANGE", "PINK",
+        "RED", "MAROON", "GREEN", "LIME",
+        "DARKGREEN", "SKYBLUE", "BLUE", "DARKBLUE",
+        "PURPLE", "VIOLET", "DARKPURPLE",
+        "BEIGE", "BROWN", "DARKBROWN",
+        "WHITE", "BLACK", "BLANK", "MAGENTA", "RAYWHITE"
+    ],
+    _patchColorConstants: () => {
+        if (!moduleInstance || !(moduleInstance.HEAPU32 || moduleInstance.HEAP32)) {
+            return;
+        }
+        const heap = moduleInstance.HEAPU32 || moduleInstance.HEAP32;
+        for (const name of RL._RL_COLOR_NAMES) {
+            const ptr = moduleInstance["_RL_COLOR_" + name];
+            if (ptr == null) continue;
+            const value = heap[ptr >>> 2] >>> 0;
+            RL["COLOR_" + name] = value;
+        }
+    },
         CAMERA_PERSPECTIVE: 0,
         CAMERA_ORTHOGRAPHIC: 1,
         FLAG_MSAA_4X_HINT: 32,
@@ -566,9 +563,11 @@ const RL = {
     destroyColor: (color) => moduleInstance.ccall(
         "rl_color_destroy", null, ["number"], [color]
     ),
-    createFont: (path, fontSize) => moduleInstance.ccall(
-        "rl_font_create", "number", ["string", "number"], [path, fontSize], { async: true } // async: true, it uses fetch
-    ),
+    createFont: async (path, fontSize) => {
+        const rc = await RL.importAssetAsync(path);
+        if (rc !== 0) throw new Error(`Failed to load font: ${path} (rc=${rc})`);
+        return moduleInstance.ccall("rl_font_create", "number", ["string", "number"], [path, fontSize]);
+    },
     destroyFont: (font) => moduleInstance.ccall(
         "rl_font_destroy", null, ["number"], [font]
     ),
@@ -578,9 +577,11 @@ const RL = {
     setTargetFPS: (fps) => moduleInstance.ccall(
         "rl_set_target_fps", null, ["number"], [fps]
     ),
-    createModel: (path) => moduleInstance.ccall(
-        "rl_model_create", "number", ["string"], [path], { async: true } // async: true, it uses fetch
-    ),
+    createModel: async (path) => {
+        const rc = await RL.importAssetAsync(path);
+        if (rc !== 0) throw new Error(`Failed to load model: ${path} (rc=${rc})`);
+        return moduleInstance.ccall("rl_model_create", "number", ["string"], [path]);
+    },
     modelSetTransform: (
         model,
         positionX, positionY, positionZ,
@@ -676,9 +677,11 @@ const RL = {
             narrowphaseHits: moduleInstance.ccall("rl_pick_get_narrowphase_hits", "number", [], [])
         };
     },
-    createMusic: (path) => moduleInstance.ccall(
-        "rl_music_create", "number", ["string"], [path], { async: true }
-    ),
+    createMusic: async (path) => {
+        const rc = await RL.importAssetAsync(path);
+        if (rc !== 0) throw new Error(`Failed to load music: ${path} (rc=${rc})`);
+        return moduleInstance.ccall("rl_music_create", "number", ["string"], [path]);
+    },
     destroyMusic: (music) => moduleInstance.ccall(
         "rl_music_destroy", null, ["number"], [music]
     ),
@@ -706,9 +709,11 @@ const RL = {
     updateAllMusic: () => moduleInstance.ccall(
         "rl_music_update_all", null, [], []
     ),
-    createSound: (path) => moduleInstance.ccall(
-        "rl_sound_create", "number", ["string"], [path], { async: true }
-    ),
+    createSound: async (path) => {
+        const rc = await RL.importAssetAsync(path);
+        if (rc !== 0) throw new Error(`Failed to load sound: ${path} (rc=${rc})`);
+        return moduleInstance.ccall("rl_sound_create", "number", ["string"], [path]);
+    },
     destroySound: (sound) => moduleInstance.ccall(
         "rl_sound_destroy", null, ["number"], [sound]
     ),
@@ -736,15 +741,19 @@ const RL = {
     isSoundPlaying: (sound) => moduleInstance.ccall(
         "rl_sound_is_playing", "number", ["number"], [sound]
     ) !== 0,
-    createTexture: (path) => moduleInstance.ccall(
-        "rl_texture_create", "number", ["string"], [path], { async: true }
-    ),
+    createTexture: async (path) => {
+        const rc = await RL.importAssetAsync(path);
+        if (rc !== 0) throw new Error(`Failed to load texture: ${path} (rc=${rc})`);
+        return moduleInstance.ccall("rl_texture_create", "number", ["string"], [path]);
+    },
     destroyTexture: (texture) => moduleInstance.ccall(
         "rl_texture_destroy", null, ["number"], [texture]
     ),
-    createSprite3D: (path) => moduleInstance.ccall(
-        "rl_sprite3d_create", "number", ["string"], [path], { async: true }
-    ),
+    createSprite3D: async (path) => {
+        const rc = await RL.importAssetAsync(path);
+        if (rc !== 0) throw new Error(`Failed to load sprite3d: ${path} (rc=${rc})`);
+        return moduleInstance.ccall("rl_sprite3d_create", "number", ["string"], [path]);
+    },
     createSprite3DFromTexture: (texture) => moduleInstance.ccall(
         "rl_sprite3d_create_from_texture", "number", ["number"], [texture]
     ),

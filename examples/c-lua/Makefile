@@ -3,7 +3,7 @@ CC_WASM ?= emcc
 CC ?= gcc
 EM_CACHE_DIR ?= $(abspath $(ROOT)/.emcache)
 EM_ENV := EM_CACHE=$(EM_CACHE_DIR)
-CFLAGS ?= -Wall -Wextra -O2
+CFLAGS ?= -Wall -Wextra -O3
 WASM_PLATFORM_CFLAGS ?= -DPLATFORM_WEB
 WASM_COMMON_LDFLAGS ?= \
 	-s WASM=1 \

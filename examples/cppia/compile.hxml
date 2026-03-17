@@ -5,9 +5,12 @@
 -cpp out
 -D scriptable
 
---debug
--lib hxcpp-debug-server
---dce no
+#--debug
+#-lib hxcpp-debug-server
+#--dce no
+
+--dce full
+
 
 
 # Set the LIBRL_ROOT environment variable to the path to the librl root directory.

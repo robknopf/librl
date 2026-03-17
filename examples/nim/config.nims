@@ -59,11 +59,11 @@ when defined(emscripten):
 
   switch("out", outDir / "wasm" / "main.js")
 
-task build, "Build desktop Nim binary":
+task build, "Build desktop Nim binary (release)":
   mkDir(outDir)
   let entry = getCurrentDir() / mainEntry
   let outBin = outDir / outFile
-  exec "nim c" &
+  exec "nim c -d:release" &
     " --out:" & outBin &
     " --passC:-I" & includeDir &
     " --passL:-L" & libDir &

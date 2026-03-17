@@ -313,6 +313,7 @@ static void host_log(void *user_data, int level, const char *message)
     fprintf(stderr, "[module] %s\n", message ? message : "(null)");
 }
 
+/* The real Lua-driven host example lives in examples/c-lua/main.c. */
 void run_lua_module_example(void)
 {
     rl_module_host_api_t host = {0};
@@ -381,7 +382,7 @@ Current status notes:
 
 - The frame-command path is already active, not just planned:
   - Lua emits typed transient commands through the host `frame_command` callback
-  - the current reference host in `examples/c/main.c` buffers and drains them each tick
+  - the current reference host in `examples/c-lua/main.c` buffers and drains them each tick
 - The Lua module also keeps its own small resource/color caches so repeated script requests can reuse the same script-visible handles across HCR/reload within the same module lifetime.
 - For HCR-friendly scripts, `load()` should generally reacquire cached handles while `unload()` removes side effects and script-local references rather than aggressively destroying shared cached resources.
 - Lua scripts can subscribe and emit through the host event bus with `event_on`, `event_off`, and `event_emit`.

@@ -9,7 +9,7 @@ This example intentionally mixes:
 ## Build
 
 ```bash
-make -C examples/c desktop
+make -C examples/c-lua desktop
 ```
 
 The C example builds/links the in-tree Lua module (`modules/lua`) and its Lua dependency on demand.
@@ -17,17 +17,17 @@ The C example builds/links the in-tree Lua module (`modules/lua`) and its Lua de
 ## Build (Wasm)
 
 ```bash
-make -C examples/c wasm
-make -C examples/c wasm-debug
+make -C examples/c-lua wasm
+make -C examples/c-lua wasm-debug
 ```
 
-- `wasm` outputs `examples/c/out/main.js`
-- `wasm-debug` outputs `examples/c/out/main.debug.js` (debug checks + source maps)
+- `wasm` outputs `examples/c-lua/out/main.js`
+- `wasm-debug` outputs `examples/c-lua/out/main.debug.js` (debug checks + source maps)
 
 ## Run
 
 ```bash
-make -C examples/c run
+make -C examples/c-lua run
 ```
 
 By default, assets are fetched from:
@@ -37,5 +37,5 @@ By default, assets are fetched from:
 Override with:
 
 ```bash
-RL_ASSET_HOST=http://localhost:4444/assets make -C examples/c run
+RL_ASSET_HOST=http://localhost:4444/assets make -C examples/c-lua run
 ```

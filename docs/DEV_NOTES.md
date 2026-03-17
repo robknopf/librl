@@ -10,7 +10,7 @@ From repo root:
 make deps
 make desktop
 make wasm
-make -C examples/c desktop
+make -C examples/c-lua desktop
 make test
 ```
 
@@ -47,7 +47,7 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
 
 ## Logging and Output Notes
 
-- raylib logs are rerouted via `SetTraceLogCallback(...)` in `examples/c/main.c`.
+- raylib logs are rerouted via `SetTraceLogCallback(...)` in `examples/c-lua/main.c`.
 - We map raylib levels into wgutils logger levels and currently emit via:
   - `log_message(level, "raylib", 0, "%s", msg);`
 - `log_message` supports optional source metadata:
@@ -144,6 +144,21 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
   - if a file-backed resource mysteriously ignores the loader callback path, check whether raylib is using a subsystem-local loader instead of the callback-aware `rcore` path
   - sound loading is the known case today
 
+## Binary size (reference)
+
+Approximate sizes for the example builds (release/optimized, no debug symbols). Use for relative comparison only; exact numbers depend on toolchain and options.
+
+| Build | Desktop | WASM |
+|-------|---------|------|
+| C (no Lua VM) | ~2.8 MB | ~0.58 MB |
+| Nim example | ~2.1 MB | ~0.59 MB |
+| Haxe example | ~3.6 MB | ~1.8 MB |
+| Haxe cppia host | ~13 MB | not built |
+
+- C without Lua: desktop `make -C examples/c-lua desktop USES_MODULE_LUA=0`, WASM `make -C examples/c-lua wasm USES_MODULE_LUA=0`.
+- C and Nim WASM are comparable (~0.58–0.59 MB); Haxe WASM is ~3× larger for similar example scope.
+- Haxe cppia adds ~3.5× over the plain Haxe host on desktop; a hypothetical cppia WASM would be proportionally larger and not suited to tight size budgets.
+
 ## Web/Vite Workflow Notes
 
 - Web examples import from `/lib/librl.js`; if `make clean` removes generated outputs while Vite is running, browser requests can fail until rebuild completes.
@@ -195,7 +210,7 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
 - Frame commands should be cleared every frame. Do not make render state persistent by default.
 - Current status:
   - `include/rl_module.h` now contains the typed frame-command ABI
-  - `examples/c/main.c` is the current reference thin host
+  - `examples/c-lua/main.c` is the current reference thin host
   - the host resets and drains a per-tick command buffer in clear / audio / 3D / 2D passes
   - Lua now owns almost all demo-specific scene/resource behavior
   - the Lua module keeps its own small caches so reloads can reuse stable script-visible handles for already-requested resources/colors

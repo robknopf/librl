@@ -1,4 +1,4 @@
-import { rl } from "/lib/librl.js";
+import { rl } from "../../lib/librl.js";
 
 (async function () {
   try {
@@ -83,39 +83,39 @@ import { rl } from "/lib/librl.js";
       }
 
       rl.beginDrawing();
-      rl.clearBackground(rl.RAYWHITE);
+      rl.clearBackground(rl.COLOR_RAYWHITE);
 
       rl.beginMode3D();
       rl.modelAnimate(gumshoe, dt);
-      rl.drawModel(gumshoe, 0.0, 0.0, 0.0, 1.0, rl.RAYWHITE);
-      rl.drawSprite3D(sprite, spritePos.x, spritePos.y, spritePos.z, spriteSize, rl.RAYWHITE);
+      rl.drawModel(gumshoe, 0.0, 0.0, 0.0, 1.0, rl.COLOR_RAYWHITE);
+      rl.drawSprite3D(sprite, spritePos.x, spritePos.y, spritePos.z, spriteSize, rl.COLOR_RAYWHITE);
       rl.endMode3D();
 
       const title = "Click model to test pick";
       const size = rl.measureTextEx(komika, title, fontSize, 1);
-      rl.drawTextEx(komika, title, (rl.getScreenWidth() - size.x) * 0.5, 14, fontSize, 1, rl.BLUE);
+      rl.drawTextEx(komika, title, (rl.getScreenWidth() - size.x) * 0.5, 14, fontSize, 1, rl.COLOR_BLUE);
 
       rl.drawTextEx(
         komikaSmall,
         `Mouse: (${mouse.x}, ${mouse.y})`,
-        10, 46, smallFontSize, 1, rl.BLACK
+        10, 46, smallFontSize, 1, rl.COLOR_BLACK
       );
       const pickStats = rl.getPickStats();
       const skippedNarrowphase = pickStats.broadphaseRejects;
       rl.drawTextEx(
         komikaSmall,
         `Pick broad: ${pickStats.broadphaseTests} tests, ${pickStats.broadphaseRejects} rejects`,
-        10, 86, smallFontSize, 1, rl.DARKGRAY
+        10, 86, smallFontSize, 1, rl.COLOR_DARKGRAY
       );
       rl.drawTextEx(
         komikaSmall,
         `Pick narrow: ${pickStats.narrowphaseTests} tests, ${pickStats.narrowphaseHits} hits`,
-        10, 106, smallFontSize, 1, rl.DARKGRAY
+        10, 106, smallFontSize, 1, rl.COLOR_DARKGRAY
       );
       rl.drawTextEx(
         komikaSmall,
         `Narrow-phase skipped: ${skippedNarrowphase}`,
-        10, 126, smallFontSize, 1, rl.DARKGREEN
+        10, 126, smallFontSize, 1, rl.COLOR_DARKGREEN
       );
 
       if (lastPick) {
@@ -123,16 +123,16 @@ import { rl } from "/lib/librl.js";
           rl.drawTextEx(
             komikaSmall,
             `Pick ${lastPick.target} hit d=${lastPick.distance.toFixed(2)} @ (${lastPick.point.x.toFixed(2)}, ${lastPick.point.y.toFixed(2)}, ${lastPick.point.z.toFixed(2)})`,
-            10, 66, smallFontSize, 1, rl.DARKGREEN
+            10, 66, smallFontSize, 1, rl.COLOR_DARKGREEN
           );
         } else {
-          rl.drawTextEx(komikaSmall, "Pick miss", 10, 66, smallFontSize, 1, rl.MAROON);
+          rl.drawTextEx(komikaSmall, "Pick miss", 10, 66, smallFontSize, 1, rl.COLOR_MAROON);
         }
       } else {
-        rl.drawTextEx(komikaSmall, "No pick yet", 10, 66, smallFontSize, 1, rl.GRAY);
+        rl.drawTextEx(komikaSmall, "No pick yet", 10, 66, smallFontSize, 1, rl.COLOR_GRAY);
       }
 
-      rl.drawFPSEx(komikaSmall, 10, 148, smallFontSize, rl.BLACK);
+      rl.drawFPSEx(komikaSmall, 10, 148, smallFontSize, rl.COLOR_BLACK);
       rl.endDrawing();
       animationFrameId = window.requestAnimationFrame(mainLoop);
     };

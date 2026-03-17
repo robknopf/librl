@@ -836,6 +836,7 @@ void rl_model_init(void)
 void rl_model_deinit(void)
 {
     int assets_freed = 0;
+    int instances_destroyed = 0;
 
     for (uint16_t i = 1; i < MAX_MODELS; i++) {
         if (!rl_model_instances[i].in_use) {
@@ -845,6 +846,7 @@ void rl_model_deinit(void)
             rl_handle_t handle = rl_handle_pool_handle_from_index(&rl_model_instance_pool, i);
             if (handle != 0) {
                 rl_model_destroy(handle);
+                instances_destroyed++;
             }
         }
     }
@@ -860,5 +862,6 @@ void rl_model_deinit(void)
     rl_handle_pool_reset(&rl_model_asset_pool);
     rl_handle_pool_reset(&rl_model_instance_pool);
 
-    log_info("rl_model_deinit: Freed %d model assets", assets_freed);
+    log_info("rl_model_deinit: Destroyed %d model instances", instances_destroyed);
+    log_info("rl_model_deinit: Freed %d unused model assets", assets_freed);
 }

@@ -35,7 +35,7 @@ Scratch design goals:
 
 Used by:
 
-- `examples/js/simple_example.js`
+- `examples/www/js_example.js`
 
 Notes:
 

@@ -22,27 +22,71 @@
       <!-- <div id="ui"></div> -->
       <canvas class="emscripten" id="renderCanvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
      <script type="module">
+       const pageRelative = (relativePath) => new URL(relativePath, window.location.href).href;
+
        const examples = {
-         remote:     "./remote_example.js",
-         simple:     "./simple_example.js",
-         pick:       "./pick_example.js",
-         lua:        "./lua_module_example.js",
-         nim:        "./nim_example.js",
-         haxe:       "./haxe_example.js",
+         remote:     pageRelative("./examples/remote_example.js"),
+         js:         pageRelative("./examples/js/js_example.js"),
+         pick:       pageRelative("./examples/js/pick_example.js"),
+         "c-lua":    pageRelative("./examples/c-lua_example.js"),
+         "c-simple": pageRelative("./examples/c-simple_example.js"),
+         nim:        pageRelative("./examples/nim_example.js"),
+         haxe:       pageRelative("./examples/haxe_example.js"),
        };
+
        const params = new URLSearchParams(window.location.search);
-       const name = params.get("example") || "remote";
-       const src = examples[name];
+       const name = params.get("example");
+       const src = name ? examples[name] : null;
+
        if (src) {
+         // When an example is explicitly requested (?example=...), load it.
          import(/* @vite-ignore */ src);
        } else {
-         const valid = Object.keys(examples).join(", ");
-         console.error(`Unknown example "${name}". Valid: ${valid}`);
-         document.getElementById("renderCanvas").style.display = "none";
-         const msg = document.createElement("p");
-         msg.style.cssText = "color:#c62828;font-family:monospace;padding:1em";
-         msg.textContent = `Unknown example "${name}". Valid options: ${valid}`;
-         document.getElementById("gameContainer").appendChild(msg);
+         // No example selected: show a list of example links instead of loading one by default.
+         const canvas = document.getElementById("renderCanvas");
+         if (canvas) {
+           canvas.style.display = "none";
+         }
+
+         const container = document.getElementById("gameContainer");
+         const listWrapper = document.createElement("div");
+         listWrapper.style.cssText = "padding:1em;font-family:monospace;color:#111";
+
+         const heading = document.createElement("h2");
+         heading.textContent = "Examples";
+         heading.style.cssText = "margin-bottom:0.5em;";
+         listWrapper.appendChild(heading);
+
+         const ul = document.createElement("ul");
+         ul.style.cssText = "list-style:none;padding-left:0;";
+
+         const base = new URL(window.location.href);
+         base.search = "";
+
+         for (const key of Object.keys(examples)) {
+           const li = document.createElement("li");
+           li.style.cssText = "margin:0.25em 0; pointer-events:auto;";
+
+           const link = document.createElement("a");
+           const url = new URL(base);
+           url.search = `?example=${encodeURIComponent(key)}`;
+           link.href = url.toString();
+           link.textContent = key;
+           link.style.cssText = "color:#1565c0;text-decoration:underline;cursor:pointer;display:inline-block;pointer-events:auto;";
+
+           link.addEventListener("mouseover", () => {
+             link.style.textDecoration = "underline";
+           });
+           link.addEventListener("mouseout", () => {
+             link.style.textDecoration = "none";
+           });
+
+           li.appendChild(link);
+           ul.appendChild(li);
+         }
+
+         listWrapper.appendChild(ul);
+         container.appendChild(listWrapper);
        }
      </script>
     </div>

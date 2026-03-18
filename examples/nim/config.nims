@@ -68,7 +68,6 @@ task build, "Build desktop Nim binary (release)":
     " --passC:-I" & includeDir &
     " --passL:-L" & libDir &
     " --passL:-lrl" &
-    " --passL:-lcurl" &
     " --passL:-lm" &
     " --passL:-lpthread" &
     " --passL:-ldl" &

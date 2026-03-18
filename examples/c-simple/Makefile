@@ -33,7 +33,7 @@ WASM_DEBUG_JS := $(OUT_DIR)/main.debug.js
 SRC := main.c
 
 INCLUDES := -I$(ROOT)/include
-LIBS := -L$(ROOT)/lib -lrl -lcurl -lm -lpthread -ldl -lX11
+LIBS := -L$(ROOT)/lib -lrl -lssl -lcrypto -lz -lm -lpthread -ldl -lX11
 WASM_LIBS := $(ROOT)/lib/librl.wasm.a -lm
 
 .PHONY: all desktop run wasm wasm-debug clean

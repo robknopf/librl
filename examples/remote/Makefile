@@ -32,8 +32,7 @@ OBJS := $(patsubst $(SRC_DIR)/%.c,$(OUT_DIR)/%.o,$(SRC))
 WASM_OBJS := $(patsubst $(SRC_DIR)/%.c,$(OUT_DIR)/%.wasm.o,$(SRC))
 
 INCLUDES := -Iinclude -I$(ROOT)/include -I$(ROOT)/deps/wgutils/include -I$(ROOT)/deps/libraylib/include 
-WGUTILS_DESKTOP_LINK_FILE := $(ROOT)/deps/wgutils/lib/libwgutils.desktop.link
-LIBS := -L$(ROOT)/lib -lrl -lm -lpthread -ldl -lX11
+LIBS := -L$(ROOT)/lib -lrl -lssl -lcrypto -lz -lm -lpthread -ldl -lX11
 WASM_LIBS := $(ROOT)/lib/librl.wasm.a -lm
 
 .PHONY: all desktop wasm clean
@@ -54,7 +53,7 @@ $(OUT_DIR)/%.wasm.o: $(SRC_DIR)/%.c | $(OUT_DIR)
 	$(EM_ENV) $(CC_WASM) $(CFLAGS_WASM) $(INCLUDES) -c $< -o $@
 
 $(BIN): $(OBJS)
-	$(CC) $(OBJS) $(LIBS) $$(cat $(WGUTILS_DESKTOP_LINK_FILE)) -o $@
+	$(CC) $(OBJS) $(LIBS) -o $@
 	@echo "Built desktop remote client: $@"
 
 $(WASM_JS): $(WASM_OBJS)

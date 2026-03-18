@@ -25,13 +25,13 @@
        const pageRelative = (relativePath) => new URL(relativePath, window.location.href).href;
 
        const examples = {
-         remote:     pageRelative("./examples/remote_example.js"),
-         js:         pageRelative("./examples/js/js_example.js"),
-         pick:       pageRelative("./examples/js/pick_example.js"),
-         "c-lua":    pageRelative("./examples/c-lua_example.js"),
-         "c-simple": pageRelative("./examples/c-simple_example.js"),
-         nim:        pageRelative("./examples/nim_example.js"),
-         haxe:       pageRelative("./examples/haxe_example.js"),
+         "remote":   pageRelative("./js/remote_example.js"),
+         "js":       pageRelative("./examples/js/js_example.js"),
+        // "pick":     pageRelative("./examples/js/pick_example.js"),
+         "c-lua":    pageRelative("./js/c-lua_example.js"),
+         "c-simple": pageRelative("./js/c-simple_example.js"),
+         "nim":      pageRelative("./js/nim_example.js"),
+         "haxe":     pageRelative("./js/haxe_example.js"),
        };
 
        const params = new URLSearchParams(window.location.search);

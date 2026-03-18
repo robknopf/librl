@@ -15,7 +15,6 @@ package;
     <lib name="-lpthread" />
     <lib name="-ldl" />
     <lib name="-lX11" />
-    <lib name="-lcurl" />
   </target>
 ')
 @:keep

@@ -3,8 +3,6 @@
 #include <raylib.h>
 #include <raymath.h>
 #include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <math.h>
 
 #include "internal/exports.h"
@@ -12,7 +10,6 @@
 #include "internal/rl_color.h"
 #include "internal/rl_handle_pool.h"
 #include "internal/rl_sprite3d.h"
-#include "logger/logger.h"
 #include "rl_texture.h"
 #include "internal/rl_texture.h"
 
@@ -26,15 +23,15 @@ typedef struct
     float position_y;
     float position_z;
     float size;
-} rl_sprite3d_t;
+} rl_sprite3d_instance_t;
 
-static rl_sprite3d_t rl_sprite3d[MAX_SPRITE3D];
+static rl_sprite3d_instance_t rl_sprite3d[MAX_SPRITE3D];
 static rl_handle_pool_t rl_sprite3d_pool;
 static uint16_t rl_sprite3d_free_indices[MAX_SPRITE3D];
 static uint16_t rl_sprite3d_generations[MAX_SPRITE3D];
 static unsigned char rl_sprite3d_occupied[MAX_SPRITE3D];
 
-static rl_sprite3d_t *rl_sprite3d_get(rl_handle_t handle)
+static rl_sprite3d_instance_t *rl_sprite3d_get(rl_handle_t handle)
 {
     uint16_t index = 0;
     if (!rl_handle_pool_resolve(&rl_sprite3d_pool, handle, &index)) {
@@ -109,7 +106,7 @@ bool rl_sprite3d_set_transform(rl_handle_t handle,
                                float position_x, float position_y,
                                float position_z, float size)
 {
-    rl_sprite3d_t *sprite = rl_sprite3d_get(handle);
+    rl_sprite3d_instance_t *sprite = rl_sprite3d_get(handle);
 
     if (sprite == NULL) {
         return false;
@@ -125,7 +122,7 @@ bool rl_sprite3d_set_transform(rl_handle_t handle,
 RL_KEEP
 void rl_sprite3d_draw(rl_handle_t handle, rl_handle_t tint)
 {
-    rl_sprite3d_t *sprite = rl_sprite3d_get(handle);
+    rl_sprite3d_instance_t *sprite = rl_sprite3d_get(handle);
     Texture2D *texture = NULL;
     Camera3D camera = {0};
     if (sprite == NULL)
@@ -153,7 +150,7 @@ void rl_sprite3d_draw(rl_handle_t handle, rl_handle_t tint)
 RL_KEEP
 void rl_sprite3d_destroy(rl_handle_t handle)
 {
-    rl_sprite3d_t *sprite = rl_sprite3d_get(handle);
+    rl_sprite3d_instance_t *sprite = rl_sprite3d_get(handle);
     if (sprite == NULL)
     {
         return;
@@ -176,7 +173,7 @@ bool rl_sprite3d_get_ray_collision_ex(rl_handle_t handle,
                                       bool *broadphase_rejected,
                                       bool *narrowphase_ran)
 {
-    rl_sprite3d_t *sprite = rl_sprite3d_get(handle);
+    rl_sprite3d_instance_t *sprite = rl_sprite3d_get(handle);
     Texture2D *texture = NULL;
     Vector2 billboard_size = {0};
     Vector3 up = {0.0f, 1.0f, 0.0f};

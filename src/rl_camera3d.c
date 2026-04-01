@@ -30,9 +30,9 @@ typedef struct
 {
     bool in_use;
     Camera3D camera;
-} rl_camera3d_entry_t;
+} rl_camera3d_instance_t;
 
-static rl_camera3d_entry_t rl_cameras[MAX_CAMERAS];
+static rl_camera3d_instance_t rl_cameras[MAX_CAMERAS];
 static rl_handle_pool_t rl_camera3d_pool;
 static uint16_t rl_camera3d_free_indices[MAX_CAMERAS];
 static uint16_t rl_camera3d_generations[MAX_CAMERAS];
@@ -54,7 +54,7 @@ static Camera3D rl_camera3d_build(float position_x, float position_y, float posi
     return camera;
 }
 
-static rl_camera3d_entry_t *rl_camera3d_get_entry(rl_handle_t handle)
+static rl_camera3d_instance_t *rl_camera3d_get_entry(rl_handle_t handle)
 {
     uint16_t index = 0;
     if (!rl_handle_pool_resolve(&rl_camera3d_pool, handle, &index)) {
@@ -180,7 +180,7 @@ bool rl_camera3d_get_active_camera(Camera3D *camera)
 
 bool rl_camera3d_get_camera(rl_handle_t handle, Camera3D *camera)
 {
-    rl_camera3d_entry_t *entry = NULL;
+    rl_camera3d_instance_t *entry = NULL;
     if (camera == NULL) {
         return false;
     }
@@ -236,7 +236,7 @@ bool rl_camera3d_set(rl_handle_t handle,
                      float up_x, float up_y, float up_z,
                      float fovy, int projection)
 {
-    rl_camera3d_entry_t *entry = rl_camera3d_get_entry(handle);
+    rl_camera3d_instance_t *entry = rl_camera3d_get_entry(handle);
     if (entry == NULL) {
         return false;
     }
@@ -256,7 +256,7 @@ bool rl_camera3d_set(rl_handle_t handle,
 RL_KEEP
 bool rl_camera3d_set_active(rl_handle_t handle)
 {
-    rl_camera3d_entry_t *entry = rl_camera3d_get_entry(handle);
+    rl_camera3d_instance_t *entry = rl_camera3d_get_entry(handle);
     if (entry == NULL) {
         return false;
     }
@@ -274,7 +274,7 @@ rl_handle_t rl_camera3d_get_active(void)
 RL_KEEP
 void rl_camera3d_destroy(rl_handle_t handle)
 {
-    rl_camera3d_entry_t *entry = rl_camera3d_get_entry(handle);
+    rl_camera3d_instance_t *entry = rl_camera3d_get_entry(handle);
     if (entry == NULL) {
         return;
     }
@@ -296,7 +296,7 @@ bool rl_camera3d_ensure_active_camera(void)
 {
     if (!rl_has_active_camera)
     {
-        rl_camera3d_entry_t *default_entry = rl_camera3d_get_entry(RL_CAMERA3D_DEFAULT);
+        rl_camera3d_instance_t *default_entry = rl_camera3d_get_entry(RL_CAMERA3D_DEFAULT);
         if (default_entry == NULL) {
             log_error("Missing default camera entry");
             return false;

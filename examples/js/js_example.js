@@ -2,7 +2,9 @@ import { rl } from "../../lib/librl.js";
 
 (async function () {
   try {
+    const assetHost = new URL(".", window.location.href).href.replace(/\/$/, "");
     await rl.init({ idealWidth: 1024, idealHeight: 1280 });
+    rl.setAssetHost(assetHost);
     rl.openWindow(800, 600, "Hello, World! (Web)", rl.FLAG_MSAA_4X_HINT);
     rl.setTargetFPS(60);
 

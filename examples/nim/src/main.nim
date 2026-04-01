@@ -1,8 +1,16 @@
 import std/[strformat, os, strutils]
 import rl
 
+when defined(emscripten):
+  # wasm/browser can use relative path to the host
+  const assetHost = "./"
+else:
+  # desktop needs an actual url for fetch
+  const assetHost = "https://localhost:4444"
+
+  
+
 const
-  assetHost = "https://localhost:4444"
   fontSize = 24
   smallFontSize = 16
   modelPath = "assets/models/gumshoe/gumshoe.glb"

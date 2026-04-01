@@ -3,12 +3,21 @@ package ;
 import InjectLibRL;
 
 import rl.RL;
-import rl.RLLoader;
 
 @:cppInclude("rl.h")
 @:cppInclude("rl_loader.h")
 @:cppInclude("stdlib.h")
+typedef AppContext = {
+  var ?someContextValue:Int;
+}
+
 class Main {
+  #if PLATFORM_WEB
+    static final ASSET_HOST:String = "./";
+  #else
+    static final ASSET_HOST:String = "https://localhost:4444";
+  #end
+
   static inline var fontSize: Int = 24;
   static inline var smallFontSize: Int = 16;
   static inline var modelPath = "assets/models/gumshoe/gumshoe.glb";
@@ -27,32 +36,29 @@ class Main {
   static var lastTime: Float = 0.0;
   static var assetsReady: Int = 0;
 
-  @:keep static function onAssetReady(path: cpp.ConstCharStar, userData: cpp.RawPointer<cpp.Void>): Void {
+  static function onAssetReady(path: String, ctx: AppContext): Void {
     assetsReady++;
   }
 
-  @:keep static function onAssetFailed(path: cpp.ConstCharStar, userData: cpp.RawPointer<cpp.Void>): Void {
-    trace("Failed to load asset: " + (path : String));
+  static function onAssetFailed(path: String, ctx: AppContext): Void {
+    trace("Failed to load asset: " + path);
   }
 
-  @:functionCode("
-    rl_loader_task_t *task = rl_loader_import_asset_async(path.utf8_str());
-    rl_loader_add_task(task, path.utf8_str(),
-      (rl_loader_callback_fn)Main_obj::onAssetReady,
-      (rl_loader_callback_fn)Main_obj::onAssetFailed, NULL);
-  ")
-  static function queueAsset(path: String): Void {}
+  static function queueAsset(path: String, ctx: AppContext): Void {
+    var task = RL.loaderImportAssetAsync(path);
+    RL.loaderAddTask(task, path, onAssetReady, onAssetFailed, ctx);
+  }
 
-  @:keep static function onInit(userData: cpp.RawPointer<cpp.Void>): Void {
-    RL.windowOpen(800, 600, "Hello, World! (Haxe)", RL.FLAG_MSAA_4X_HINT);
+  static function onInit(ctx: AppContext): Void {
+    RL.windowOpen(1024, 1280, "Hello, World! (Haxe)", RL.FLAG_MSAA_4X_HINT);
     RL.setTargetFps(60);
 
-    queueAsset(fontPath);
-    queueAsset(modelPath);
-    queueAsset(spritePath);
+    queueAsset(fontPath, ctx);
+    queueAsset(modelPath, ctx);
+    queueAsset(spritePath, ctx);
   }
 
-  @:keep static function onTick(userData: cpp.RawPointer<cpp.Void>): Void {
+  static function onTick(ctx: AppContext): Void {
     if (assetsReady < 3) return;
 
     if (komika == 0) {
@@ -129,7 +135,7 @@ class Main {
     RL.colorDestroy(black);
   }
 
-  @:keep static function onShutdown(userData: cpp.RawPointer<cpp.Void>): Void {
+  static function onShutdown(ctx: AppContext): Void {
     RL.disableLighting();
     if (sprite != 0) RL.sprite3dDestroy(sprite);
     if (gumshoe != 0) RL.modelDestroy(gumshoe);
@@ -141,14 +147,10 @@ class Main {
     RL.windowClose();
   }
 
-  @:functionCode("
-    rl_init();
-    rl_set_asset_host(\"https://localhost:4444\");
-    rl_run(
-      (rl_init_fn)Main_obj::onInit,
-      (rl_tick_fn)Main_obj::onTick,
-      (rl_shutdown_fn)Main_obj::onShutdown,
-      NULL);
-  ")
-  static function main(): Void {}
+  static function main(): Void {
+    var ctx: AppContext = {};
+    RL.init();
+    RL.setAssetHost(ASSET_HOST);
+    RL.run(onInit, onTick, onShutdown, ctx);
+  }
 }

@@ -7,10 +7,12 @@
  */
 package rl;
 
+import haxe.ds.StringMap;
+
 #if cpp
 @:include("rl.h")
 #end
-extern class RL {
+private extern class RLNative {
   // --- Types (rl_handle_t = unsigned int) ---
   // RLHandle is passed as Int in Haxe; use Int for handle values
 
@@ -41,15 +43,13 @@ extern class RL {
   @:native("rl_update_to_scratch")
   static function updateToScratch(): Void;
 
-  // --- Run loop (init_fn, tick_fn, shutdown_fn, user_data).
-  //     Pass cpp.Pointer<cpp.Void>.fromRaw(0) for null callbacks/userData.
-  //     Use cpp.Function.fromStaticFunction() to create callbacks from Haxe. ---
+  // --- Run loop (init_fn, tick_fn, shutdown_fn, user_data). ---
   @:native("rl_run")
-  static function run(
-    initFn: cpp.Pointer<cpp.Void>,
-    tickFn: cpp.Pointer<cpp.Void>,
-    shutdownFn: cpp.Pointer<cpp.Void>,
-    userData: cpp.Pointer<cpp.Void>
+  static function runNative(
+    initFn: cpp.Callable<cpp.RawPointer<cpp.Void>->Void>,
+    tickFn: cpp.Callable<cpp.RawPointer<cpp.Void>->Void>,
+    shutdownFn: cpp.Callable<cpp.RawPointer<cpp.Void>->Void>,
+    userData: cpp.RawPointer<cpp.Void>
   ): Void;
 
   @:native("rl_request_stop")
@@ -112,9 +112,10 @@ extern class RL {
   static function loaderIsLocal(filename: String): Bool;
 
   @:native("rl_loader_add_task")
-  static function loaderAddTask(task: RLLoaderTaskPtr, path: String,
-    onSuccess: cpp.Pointer<cpp.Void>, onFailure: cpp.Pointer<cpp.Void>,
-    userData: cpp.Pointer<cpp.Void>): Int;
+  static function loaderAddTaskNative(task: RLLoaderTaskPtr, path: String,
+    onSuccess: cpp.Callable<cpp.ConstCharStar->cpp.RawPointer<cpp.Void>->Void>,
+    onFailure: cpp.Callable<cpp.ConstCharStar->cpp.RawPointer<cpp.Void>->Void>,
+    userData: cpp.RawPointer<cpp.Void>): Int;
 
   @:native("rl_loader_clear_cache")
   static function loaderClearCache(): Int;
@@ -297,6 +298,91 @@ extern class RLMouseState {
 @:include("rl_loader.h")
 @:native("rl_loader_task_t")
 extern class RLLoaderTask {}
+
+@:forwardStatics
+abstract RL(RLNative) from RLNative to RLNative {
+  public static inline function run<T>(initFn: T->Void, tickFn: T->Void, shutdownFn: T->Void, ctx: T): Void {
+    var initSpringboard: cpp.Callable<cpp.RawPointer<cpp.Void>->Void> =
+      cpp.Function.fromStaticFunction(RLBridge.onInitSpringboard);
+    var tickSpringboard: cpp.Callable<cpp.RawPointer<cpp.Void>->Void> =
+      cpp.Function.fromStaticFunction(RLBridge.onTickSpringboard);
+    var shutdownSpringboard: cpp.Callable<cpp.RawPointer<cpp.Void>->Void> =
+      cpp.Function.fromStaticFunction(RLBridge.onShutdownSpringboard);
+    RLBridge.initCallback = cast initFn;
+    RLBridge.tickCallback = cast tickFn;
+    RLBridge.shutdownCallback = cast shutdownFn;
+    RLBridge.runContext = ctx;
+    RLNative.runNative(
+      initSpringboard,
+      tickSpringboard,
+      shutdownSpringboard,
+      null
+    );
+  }
+
+  public static inline function loaderAddTask<T>(task: RLLoaderTaskPtr, path: String,
+    onSuccess: String->T->Void, onFailure: String->T->Void, ctx: T): Int {
+    var successSpringboard: cpp.Callable<cpp.ConstCharStar->cpp.RawPointer<cpp.Void>->Void> =
+      cpp.Function.fromStaticFunction(RLBridge.onLoaderSuccessSpringboard);
+    var failureSpringboard: cpp.Callable<cpp.ConstCharStar->cpp.RawPointer<cpp.Void>->Void> =
+      cpp.Function.fromStaticFunction(RLBridge.onLoaderFailureSpringboard);
+    RLBridge.loaderCallbacks.set(path, {
+      onSuccess: cast onSuccess,
+      onFailure: cast onFailure,
+      ctx: ctx
+    });
+    return RLNative.loaderAddTaskNative(
+      task,
+      path,
+      successSpringboard,
+      failureSpringboard,
+      null
+    );
+  }
+}
+
+private typedef RLLoaderCallbacks = {
+  var onSuccess: Null<String->Dynamic->Void>;
+  var onFailure: Null<String->Dynamic->Void>;
+  var ctx: Dynamic;
+}
+
+@:keep
+private class RLBridge {
+  public static var initCallback: Null<Dynamic->Void> = null;
+  public static var tickCallback: Null<Dynamic->Void> = null;
+  public static var shutdownCallback: Null<Dynamic->Void> = null;
+  public static var runContext: Dynamic = null;
+  public static var loaderCallbacks: StringMap<RLLoaderCallbacks> = new StringMap();
+
+  @:keep public static function onInitSpringboard(userData: cpp.RawPointer<cpp.Void>): Void {
+    if (initCallback != null) initCallback(runContext);
+  }
+
+  @:keep public static function onTickSpringboard(userData: cpp.RawPointer<cpp.Void>): Void {
+    if (tickCallback != null) tickCallback(runContext);
+  }
+
+  @:keep public static function onShutdownSpringboard(userData: cpp.RawPointer<cpp.Void>): Void {
+    if (shutdownCallback != null) shutdownCallback(runContext);
+  }
+
+  @:keep public static function onLoaderSuccessSpringboard(path: cpp.ConstCharStar, userData: cpp.RawPointer<cpp.Void>): Void {
+    dispatchLoaderCallback(cast path, true);
+  }
+
+  @:keep public static function onLoaderFailureSpringboard(path: cpp.ConstCharStar, userData: cpp.RawPointer<cpp.Void>): Void {
+    dispatchLoaderCallback(cast path, false);
+  }
+
+  static function dispatchLoaderCallback(path: String, success: Bool): Void {
+    var callbacks = loaderCallbacks.get(path);
+    if (callbacks == null) return;
+    loaderCallbacks.remove(path);
+    var fn = success ? callbacks.onSuccess : callbacks.onFailure;
+    if (fn != null) fn(path, callbacks.ctx);
+  }
+}
 
 typedef RLLoaderTaskPtr = cpp.RawPointer<RLLoaderTask>;
 #else

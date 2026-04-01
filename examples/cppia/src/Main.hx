@@ -10,6 +10,17 @@ import haxe.io.Path;
 
 @:cppInclude("rl.h")
 @:cppInclude("rl_loader.h")
+
+  #if PLATFORM_WEB
+    static final ASSET_HOST:String = "./";
+  #else
+    static final ASSET_HOST:String = "https://localhost:4444";
+  #end
+
+typedef AppContext = {
+  var ?someValue: String;
+}
+
 class Main {
   static var lastTime: Float = 0.0;
   static inline var cppiaPath = "assets/scripts/haxe/Test.cppia";
@@ -28,34 +39,30 @@ class Main {
     }
   }
 
-  @:keep static function onCppiaReady(path: Dynamic, userData: Dynamic): Void {
+  static function onCppiaReady(path: String, ctx: AppContext): Void {
     trace("cppia asset ready");
     cppiaReady = true;
   }
 
-  @:keep static function onCppiaFailed(path: Dynamic, userData: Dynamic): Void {
+  static function onCppiaFailed(path: String, ctx: AppContext): Void {
     trace("cppia asset failed");
     cppiaFailed = true;
   }
 
-  @:functionCode("
-    const char *path = \"assets/scripts/haxe/Test.cppia\";
-    rl_loader_task_t *task = rl_loader_import_asset_async(path);
-    rl_loader_add_task(task, path,
-      (rl_loader_callback_fn)Main_obj::onCppiaReady,
-      (rl_loader_callback_fn)Main_obj::onCppiaFailed,
-      NULL);
-  ")
-  static function queueCppia(): Void {}
+  static function queueCppia(ctx: AppContext): Void {
+    var path = cppiaPath;
+    var task = RL.loaderImportAssetAsync(path);
+    RL.loaderAddTask(task, path, onCppiaReady, onCppiaFailed, ctx);
+  }
 
-  @:keep static function onInit(userData: cpp.RawPointer<cpp.Void>): Void {
+  static function onInit(ctx: AppContext): Void {
     RL.loaderClearCache();
     
     RL.windowOpen(800, 600, "librl cppia host (Haxe)", RL.FLAG_MSAA_4X_HINT);
     RL.setTargetFps(60);
     lastTime = RL.getTime();
 
-    queueCppia();
+    queueCppia(ctx);
 
     if (CppiaBridge.onInit != null) {
       CppiaBridge.onInit();
@@ -64,7 +71,7 @@ class Main {
     }
   }
 
-  @:keep static function onTick(userData: cpp.RawPointer<cpp.Void>): Void {
+  static function onTick(ctx: AppContext): Void {
     var currentTime = RL.getTime();
     var dt = currentTime - lastTime;
     lastTime = currentTime;
@@ -87,7 +94,7 @@ class Main {
     RL.colorDestroy(bg);
   }
 
-  @:keep static function onShutdown(userData: cpp.RawPointer<cpp.Void>): Void {
+  static function onShutdown(ctx: AppContext): Void {
     if (CppiaBridge.onShutdown != null) {
       CppiaBridge.onShutdown();
     } else {
@@ -97,15 +104,10 @@ class Main {
     RL.windowClose();
   }
 
-  @:functionCode("
-    rl_init();
-    rl_set_asset_host(\"https://localhost:4444\");
-    rl_run(
-      (rl_init_fn)Main_obj::onInit,
-      (rl_tick_fn)Main_obj::onTick,
-      (rl_shutdown_fn)Main_obj::onShutdown,
-      NULL);
-  ")
-  static function main(): Void {}
+  static function main(): Void {
+    var ctx: AppContext = {};
+    RL.init();
+    RL.setAssetHost(ASSET_HOST);
+    RL.run(onInit, onTick, onShutdown, ctx);
+  }
 }
-

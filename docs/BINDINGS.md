@@ -147,10 +147,11 @@ Async loader sugar:
 
 - The binding exposes:
   - `RL.loaderImportAssetAsync(path: String): RLLoaderTaskPtr`
-  - `RL.loaderAddTask(task, path, onSuccess, onFailure, userData)`
-- Because hxcpp needs raw C function pointers for callbacks, Haxe examples use `@:functionCode` to downcast:
-  - `rl_run((rl_init_fn)Main_obj::onInit, (rl_tick_fn)Main_obj::onTick, ...)`
-  - `rl_loader_add_task(..., (rl_loader_callback_fn)Main_obj::onAssetReady, ...)`
+  - `RL.loaderAddTask(task, path, onSuccess, onFailure, ctx)`
+- `rl_run` is wrapped so Haxe passes plain lifecycle functions with a Haxe context object:
+  - `RL.run(onInit, onTick, onShutdown, ctx)`
+- `rl_loader_add_task` is wrapped so Haxe loader callbacks use plain `(path, ctx)` handlers:
+  - `RL.loaderAddTask(task, path, onAssetReady, onAssetFailed, ctx)`
 - The example (`examples/haxe/src/Main.hx`) is the canonical reference for:
   - Using `rl_run` with `init/tick/shutdown`.
   - Queuing async asset loads via `rl_loader_add_task` on both desktop and wasm.

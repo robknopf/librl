@@ -2,15 +2,21 @@
 #include "rl_color.h"
 #include "rl_font.h"
 #include "rl_frame_command.h"
-#include "rl_loader.h"
 #include "rl_input.h"
+#include "rl_loader.h"
+#include "rl_logger.h"
 #include "rl_protocol.h"
 #include "rl_text.h"
 #include "rl_window.h"
 #include "rl_ws_client.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "rl_logger.h"
+
+#ifdef PLATFORM_WEB
+static const char *ASSET_HOST = "./";
+#else
+static const char *ASSET_HOST = "https://localhost:4444";
+#endif
 
 typedef struct remote_context_t {
   rl_ws_client_t *ws_client;
@@ -24,7 +30,7 @@ typedef struct remote_context_t {
 
 static remote_context_t g_remote_context = {0};
 
-//char *debug_font_path = "assets/fonts/Komika/KOMIKAH_.ttf";
+// char *debug_font_path = "assets/fonts/Komika/KOMIKAH_.ttf";
 char *debug_font_path = "assets/fonts/JetBrainsMono/JetBrainsMono-Regular.ttf";
 char *overlay_font_path = "assets/fonts/JetBrainsMono/JetBrainsMono-Bold.ttf";
 
@@ -79,8 +85,9 @@ static void on_init(void *user_data) {
   rl_set_target_fps(60);
 
   // In init:
-  loader_rc = rl_loader_add_task(rl_loader_import_asset_async(debug_font_path),
-                                 debug_font_path, on_debug_font_ready, NULL, NULL);
+  loader_rc =
+      rl_loader_add_task(rl_loader_import_asset_async(debug_font_path),
+                         debug_font_path, on_debug_font_ready, NULL, NULL);
   if (loader_rc != RL_LOADER_ADD_TASK_OK) {
     log_error("[Remote] Failed to queue debug font load (%d)", loader_rc);
   }
@@ -102,8 +109,9 @@ static void on_init(void *user_data) {
 
   context->overlay_font = 0;
   context->overlay_font_size = 24;
-  loader_rc = rl_loader_add_task(rl_loader_import_asset_async(overlay_font_path),
-                                 overlay_font_path, on_overlay_font_ready, NULL, context);
+  loader_rc = rl_loader_add_task(
+      rl_loader_import_asset_async(overlay_font_path), overlay_font_path,
+      on_overlay_font_ready, NULL, context);
   if (loader_rc != RL_LOADER_ADD_TASK_OK) {
     log_error("[Remote] Failed to queue overlay font load (%d)", loader_rc);
   }
@@ -118,8 +126,7 @@ static void on_shutdown(void *user_data) {
 
   log_info("[Remote] Shutting down...");
   log_debug("[Remote] Frames received: %d, rendered: %d",
-            context->frames_received,
-            context->frames_rendered);
+            context->frames_received, context->frames_rendered);
 
   if (context->ws_client != NULL) {
     rl_ws_client_destroy(context->ws_client);
@@ -129,7 +136,8 @@ static void on_shutdown(void *user_data) {
   rl_window_close();
 }
 
-static void draw_status_overlay(remote_context_t *context, const char *message) {
+static void draw_status_overlay(remote_context_t *context,
+                                const char *message) {
   vec2_t screen = rl_window_get_screen_size();
   int title_font_size = 36;
   int body_font_size = 24;
@@ -138,16 +146,10 @@ static void draw_status_overlay(remote_context_t *context, const char *message) 
   int center_x = (int)(screen.x * 0.5f);
   int center_y = (int)(screen.y * 0.5f);
 
-  rl_text_draw("Remote Client",
-               center_x - (title_width / 2),
-               center_y - 48,
-               title_font_size,
-               RL_COLOR_DARKGRAY);
-  rl_text_draw(message,
-               center_x - (body_width / 2),
-               center_y + 8,
-               body_font_size,
-               RL_COLOR_GRAY);
+  rl_text_draw("Remote Client", center_x - (title_width / 2), center_y - 48,
+               title_font_size, RL_COLOR_DARKGRAY);
+  rl_text_draw(message, center_x - (body_width / 2), center_y + 8,
+               body_font_size, RL_COLOR_GRAY);
 
   if (context->overlay_font != 0 && context->ws_client != NULL) {
     char stats_buf[128];
@@ -191,10 +193,8 @@ static void on_tick(void *user_data) {
   mouse_state = rl_input_get_mouse_state();
   keyboard_state = rl_input_get_keyboard_state();
   screen_size = rl_window_get_screen_size();
-  rl_ws_client_send_input_state(context->ws_client,
-                                &mouse_state,
-                                &keyboard_state,
-                                (int)screen_size.x,
+  rl_ws_client_send_input_state(context->ws_client, &mouse_state,
+                                &keyboard_state, (int)screen_size.x,
                                 (int)screen_size.y);
 
   response_count = rl_ws_client_get_pending_responses(
@@ -206,7 +206,8 @@ static void on_tick(void *user_data) {
   pick_response_count = rl_ws_client_get_pending_pick_responses(
       context->ws_client, pick_responses, RL_PROTOCOL_MAX_PICK_RESPONSES);
   if (pick_response_count > 0) {
-    rl_ws_client_send_pick_responses(context->ws_client, pick_responses, pick_response_count);
+    rl_ws_client_send_pick_responses(context->ws_client, pick_responses,
+                                     pick_response_count);
   }
 
   // Poll async resource loads (fonts, textures, models, etc.)
@@ -230,7 +231,8 @@ static void on_tick(void *user_data) {
   if (!is_connected) {
     rl_render_clear_background(RL_COLOR_LIGHTGRAY);
     draw_status_overlay(context, "Waiting for remote server...");
-  } else if (!context->has_frame || context->current_frame.commands.count == 0) {
+  } else if (!context->has_frame ||
+             context->current_frame.commands.count == 0) {
     rl_render_clear_background(RL_COLOR_LIGHTGRAY);
     draw_status_overlay(context, "Connected. Waiting for first frame...");
   } else {
@@ -267,6 +269,7 @@ static void on_tick(void *user_data) {
 
 int main(void) {
   rl_init();
+  rl_set_asset_host(ASSET_HOST);
   rl_run(on_init, on_tick, on_shutdown, &g_remote_context);
   return 0;
 }

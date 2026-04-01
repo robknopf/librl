@@ -32,6 +32,7 @@ interface sys.db.ResultSet
 class sys.db._Mysql.D
 interface sys.db.Connection
 class sys.FileSystem
+class rl._RL.RLBridge
 class haxe.zip.Uncompress
 enum haxe.zip.FlushMode
 class haxe.zip.Compress
@@ -234,3 +235,4 @@ file /home/rknopf/toolchains/haxe/current/std/haxe/xml/Printer.hx /home/rknopf/t
 file /home/rknopf/toolchains/haxe/current/std/sys/thread/EventLoop.hx /home/rknopf/toolchains/haxe/current/std/sys/thread/EventLoop.hx
 file /home/rknopf/toolchains/haxe/current/std/sys/thread/NoEventLoopException.hx /home/rknopf/toolchains/haxe/current/std/sys/thread/NoEventLoopException.hx
 file Main.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/cppia/src/Main.hx
+file rl/RL.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/RL.hx

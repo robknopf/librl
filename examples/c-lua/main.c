@@ -7,6 +7,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef PLATFORM_WEB
+static const char *ASSET_HOST = "./";
+#else
+static const char *ASSET_HOST = "https://localhost:4444";
+#endif
+
 #define LUA_SCRIPT_ROOT "assets/scripts/lua"
 #define LUA_BOOT_SCRIPT "boot.lua"
 #define LUA_APP_MODULE "lua_demo"
@@ -227,7 +233,8 @@ static const char *get_asset_host(void) {
   if (value && value[0] != '\0') {
     return value;
   }
-  return "https://192.168.1.100:4444";
+  //return "https://192.168.1.100:4444";
+  return "./";
 }
 
 static void module_log(void *user_data, int level, const char *message) {
@@ -672,6 +679,7 @@ int main(void) {
   g_example_context.boot_state = EXAMPLE_BOOT_RESTORE;
 
   rl_init();
+  rl_set_asset_host(ASSET_HOST);
   rl_run(on_init, on_tick, on_shutdown,
                       &g_example_context);
 

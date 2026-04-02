@@ -1,0 +1,8 @@
+common.hxml
+
+-cpp out/wasm
+
+# emscriptem flags
+-D emscripten
+-D HXCPP_M64
+-D HXCPP_LINK_EMSCRIPTEN_EXT=.js

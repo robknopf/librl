@@ -1,10 +1,5 @@
--cp src
--cp ../../..
--cp ../../bindings/haxe
--main Main
--cpp out
+common.hxml
 
-# Set the LIBRL_ROOT environment variable to the path to the librl root directory
-# Note that this is a relative path to the output directory.
--D LIBRL_ROOT=../../..
+-cpp out/desktop
+
 

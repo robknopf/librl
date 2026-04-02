@@ -1,5 +1,5 @@
-import std/[strformat, os, strutils]
 import rl
+import std/[times,monotimes, os, strutils, strformat]
 
 when defined(emscripten):
   # wasm/browser can use relative path to the host
@@ -8,14 +8,13 @@ else:
   # desktop needs an actual url for fetch
   const assetHost = "https://localhost:4444"
 
-  
-
 const
   fontSize = 24
   smallFontSize = 16
   modelPath = "assets/models/gumshoe/gumshoe.glb"
   spritePath = "assets/sprites/logo/wg-logo-bw-alpha.png"
   fontPath = "assets/fonts/JetBrainsMono/JetBrainsMono-Regular.ttf"
+  bgmPath = "assets/music/ethernight_club.mp3"
   message = "Hello World!"
 
 type
@@ -25,6 +24,7 @@ type
     gumshoe: RLHandle
     sprite: RLHandle
     camera: RLHandle
+    bgm: RLHandle
     greyAlphaColor: RLHandle
     countdownTimer: float
     totalTime: float
@@ -37,6 +37,55 @@ proc onAssetReady(path: cstring, userData: pointer) {.cdecl.} =
 
 proc onAssetFailed(path: cstring, userData: pointer) {.cdecl.} =
   echo "Failed to load asset: ", path
+
+proc onMusicReady(path: cstring, userData: pointer) {.cdecl.} =
+  let ctx = cast[ptr AppContext](userData)
+  ctx.assetsReady.inc
+  ctx.bgm = rl_music_create(path)
+  discard rl_music_set_loop(ctx.bgm, true)
+  discard rl_music_play(ctx.bgm)
+
+type EnsureAssetSyncCallback = proc(path: string) {.closure.}
+
+proc ensureAssetSync(
+  assetPath: string,
+  successCallback: EnsureAssetSyncCallback = nil,
+  failCallback: EnsureAssetSyncCallback = nil
+) =
+  const assetTimeout = initDuration(seconds = 5)
+  let task = rl_loader_import_asset_async(assetPath)
+  if task.isNil:
+    if failCallback != nil:
+      failCallback(assetPath)
+    return
+  let timeout = getMonoTime() + assetTimeout
+  var ready = rl_loader_poll_task(task)
+  while not ready and getMonoTime() < timeout:
+    sleep(1)
+    ready = rl_loader_poll_task(task)
+
+  let rc = if ready: rl_loader_finish_task(task) else: 1
+  rl_loader_free_task(task)
+
+  if rc == 0:
+    if successCallback != nil:
+      successCallback(assetPath)
+  else:
+    if failCallback != nil:
+      failCallback(assetPath)
+
+
+
+proc ensureAsset(
+  path: cstring,
+  onSuccess: RLLoaderCallbackFn,
+  onFail: RLLoaderCallbackFn,
+  userData: pointer
+) =
+  let task = rl_loader_import_asset_async(path)
+  let rc = rl_loader_add_task(task, path, onSuccess, onFail, userData)
+  if rc != RL_LOADER_ADD_TASK_OK:
+    echo "Failed to queue asset: ", path
 
 proc queueAsset(path: cstring, ctx: ptr AppContext) =
   let task = rl_loader_import_asset_async(path)
@@ -60,6 +109,18 @@ proc onInit(userData: pointer) {.cdecl.} =
   queueAsset(fontPath, ctx)
   queueAsset(modelPath, ctx)
   queueAsset(spritePath, ctx)
+
+  ensureAssetSync(bgmPath,
+    proc(path: string) =
+    echo "loaded " & path
+    ctx.bgm = rl_music_create(path.cstring)
+    discard rl_music_set_loop(ctx.bgm, true)
+    discard rl_music_play(ctx.bgm),
+
+    proc(path: string) =
+    echo "Failed to load asset: ", path
+  )
+
 
 proc onTick(userData: pointer) {.cdecl.} =
   var ctx = cast[ptr AppContext](userData)
@@ -99,11 +160,14 @@ proc onTick(userData: pointer) {.cdecl.} =
     rl_request_stop()
     return
 
+  rl_music_update_all()
+
   rl_render_begin()
   rl_render_clear_background(RL_COLOR_RAYWHITE)
   rl_render_begin_mode_3d()
   discard rl_model_animate(ctx.gumshoe, deltaTime.cfloat)
-  discard rl_model_set_transform(ctx.gumshoe, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0)
+  discard rl_model_set_transform(ctx.gumshoe, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+      1.0, 1.0)
   rl_model_draw(ctx.gumshoe, RL_COLOR_RAYWHITE)
   discard rl_sprite3d_set_transform(ctx.sprite, 0.0, 0.0, 0.0, 1.0)
   rl_sprite3d_draw(ctx.sprite, RL_COLOR_RAYWHITE)
@@ -112,18 +176,24 @@ proc onTick(userData: pointer) {.cdecl.} =
   let screen = rl_window_get_screen_size()
   let w = cint(screen.x)
   let h = cint(screen.y)
-  let textSize = rl_text_measure_ex(ctx.komika, message.cstring, fontSize.cfloat, 0)
+  let textSize = rl_text_measure_ex(ctx.komika, message.cstring,
+      fontSize.cfloat, 0)
   let textX = cint((w.float32 - textSize.x) / 2)
   let textY = cint((h.float32 - textSize.y) / 2)
-  rl_text_draw_ex(ctx.komika, message.cstring, textX, textY, fontSize.cfloat, 1.0, RL_COLOR_BLUE)
+  rl_text_draw_ex(ctx.komika, message.cstring, textX, textY, fontSize.cfloat,
+      1.0, RL_COLOR_BLUE)
   let remaining = fmt"Remaining: {ctx.countdownTimer:.2f}"
   let elapsed = fmt"Elapsed: {ctx.totalTime:.2f}"
   let mouse = rl_input_get_mouse_state()
   let mouseText = fmt"Mouse: ({mouse.x}, {mouse.y}) w:{mouse.wheel} b:[{mouse.left}, {mouse.right}, {mouse.middle}]"
-  rl_text_draw_ex(ctx.komikaSmall, remaining.cstring, 10.cint, 36.cint, smallFontSize.cfloat, 1.0, RL_COLOR_BLACK)
-  rl_text_draw_ex(ctx.komikaSmall, elapsed.cstring, 10.cint, 56.cint, smallFontSize.cfloat, 1.0, RL_COLOR_BLACK)
-  rl_text_draw_ex(ctx.komikaSmall, mouseText.cstring, 10.cint, 76.cint, smallFontSize.cfloat, 1.0, RL_COLOR_BLACK)
-  rl_text_draw_fps_ex(ctx.komikaSmall, 10.cint, 10.cint, smallFontSize.cint, ctx.greyAlphaColor)
+  rl_text_draw_ex(ctx.komikaSmall, remaining.cstring, 10.cint, 36.cint,
+      smallFontSize.cfloat, 1.0, RL_COLOR_BLACK)
+  rl_text_draw_ex(ctx.komikaSmall, elapsed.cstring, 10.cint, 56.cint,
+      smallFontSize.cfloat, 1.0, RL_COLOR_BLACK)
+  rl_text_draw_ex(ctx.komikaSmall, mouseText.cstring, 10.cint, 76.cint,
+      smallFontSize.cfloat, 1.0, RL_COLOR_BLACK)
+  rl_text_draw_fps_ex(ctx.komikaSmall, 10.cint, 10.cint, smallFontSize.cint,
+      ctx.greyAlphaColor)
   rl_render_end()
 
 proc onShutdown(userData: pointer) {.cdecl.} =

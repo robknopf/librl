@@ -30,6 +30,14 @@ private extern class RLNative {
   static inline var LOADER_ADD_TASK_ERR_INVALID: Int = -1;
   static inline var LOADER_ADD_TASK_ERR_QUEUE_FULL: Int = -2;
 
+  // --- Logger levels (rl_logger.h) ---
+  static inline var LOGGER_LEVEL_TRACE: Int = 0;
+  static inline var LOGGER_LEVEL_DEBUG: Int = 1;
+  static inline var LOGGER_LEVEL_INFO: Int = 2;
+  static inline var LOGGER_LEVEL_WARN: Int = 3;
+  static inline var LOGGER_LEVEL_ERROR: Int = 4;
+  static inline var LOGGER_LEVEL_FATAL: Int = 5;
+
   // --- Core lifecycle ---
   @:native("rl_init")
   static function init(): Void;
@@ -119,6 +127,37 @@ private extern class RLNative {
 
   @:native("rl_loader_clear_cache")
   static function loaderClearCache(): Int;
+
+  // --- Music (rl_music.h) ---
+  @:native("rl_music_create")
+  static function musicCreate(filename: String): Int;
+
+  @:native("rl_music_destroy")
+  static function musicDestroy(music: Int): Void;
+
+  @:native("rl_music_play")
+  static function musicPlay(music: Int): Bool;
+
+  @:native("rl_music_pause")
+  static function musicPause(music: Int): Bool;
+
+  @:native("rl_music_stop")
+  static function musicStop(music: Int): Bool;
+
+  @:native("rl_music_set_loop")
+  static function musicSetLoop(music: Int, shouldLoop: Bool): Bool;
+
+  @:native("rl_music_set_volume")
+  static function musicSetVolume(music: Int, volume: Float): Bool;
+
+  @:native("rl_music_is_playing")
+  static function musicIsPlaying(music: Int): Bool;
+
+  @:native("rl_music_update")
+  static function musicUpdate(music: Int): Bool;
+
+  @:native("rl_music_update_all")
+  static function musicUpdateAll(): Void;
 
   // --- Lighting ---
   @:native("rl_enable_lighting")
@@ -339,12 +378,77 @@ abstract RL(RLNative) from RLNative to RLNative {
       null
     );
   }
+
+  public static inline function loggerMessage(level: Int, message: String): Void {
+    RLLoggerBridge.message(level, message == null ? "" : message);
+  }
+
+  public static inline function loggerMessageSource(level: Int, sourceFile: String, sourceLine: Int, message: String): Void {
+    RLLoggerBridge.messageSource(
+      level,
+      sourceFile == null ? "" : sourceFile,
+      sourceLine,
+      message == null ? "" : message
+    );
+  }
+
+  public static inline function loggerSetLevel(level: Int): Void {
+    RLLoggerBridge.setLevel(level);
+  }
+
+  public static inline function logTrace(message: String): Void {
+    loggerMessage(RLNative.LOGGER_LEVEL_TRACE, message);
+  }
+
+  public static inline function logDebug(message: String): Void {
+    loggerMessage(RLNative.LOGGER_LEVEL_DEBUG, message);
+  }
+
+  public static inline function logInfo(message: String): Void {
+    loggerMessage(RLNative.LOGGER_LEVEL_INFO, message);
+  }
+
+  public static inline function logWarn(message: String): Void {
+    loggerMessage(RLNative.LOGGER_LEVEL_WARN, message);
+  }
+
+  public static inline function logError(message: String): Void {
+    loggerMessage(RLNative.LOGGER_LEVEL_ERROR, message);
+  }
+
+  public static inline function logFatal(message: String): Void {
+    loggerMessage(RLNative.LOGGER_LEVEL_FATAL, message);
+  }
 }
 
 private typedef RLLoaderCallbacks = {
   var onSuccess: Null<String->Dynamic->Void>;
   var onFailure: Null<String->Dynamic->Void>;
   var ctx: Dynamic;
+}
+
+@:headerInclude("rl_logger.h")
+private class RLLoggerBridge {
+  @:functionCode('
+    rl_logger_set_level((rl_log_level_t)level);
+  ')
+  public static function setLevel(level: Int): Void {}
+
+  @:functionCode('
+    rl_logger_message((rl_log_level_t)level, "%s", message.utf8_str());
+  ')
+  public static function message(level: Int, message: String): Void {}
+
+  @:functionCode('
+    rl_logger_message_source(
+      (rl_log_level_t)level,
+      sourceFile.utf8_str(),
+      sourceLine,
+      "%s",
+      message.utf8_str()
+    );
+  ')
+  public static function messageSource(level: Int, sourceFile: String, sourceLine: Int, message: String): Void {}
 }
 
 @:keep

@@ -21,6 +21,10 @@
     <lib name="-ldl" />
     <lib name="-lX11" />
     <lib name="-lcurl" />
+    <lib name="-lz" />
+    <lib name="-lssl" />
+    <lib name="-lcrypto" />
+    
   </target>
 
   <!-- WASM linking -->

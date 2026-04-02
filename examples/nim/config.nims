@@ -72,6 +72,9 @@ task build, "Build desktop Nim binary (release)":
     " --passL:-lpthread" &
     " --passL:-ldl" &
     " --passL:-lX11" &
+    " --passL:-lcrypto" &
+    " --passL:-lz" &
+    " --passL:-lssl" &
     " " & entry
 
 task build_wasm, "Build WASM Nim binary via Emscripten":

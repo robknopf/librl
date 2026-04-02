@@ -1,5 +1,7 @@
 // C version of the Nim example: simple handle-based demo with async asset load.
 #include "rl.h"
+#include "rl_loader.h"
+#include "rl_music.h"
 #include "rl_window.h"
 
 #include <stdbool.h>
@@ -14,6 +16,7 @@ static const char *MODEL_PATH = "assets/models/gumshoe/gumshoe.glb";
 static const char *SPRITE_PATH = "assets/sprites/logo/wg-logo-bw-alpha.png";
 static const char *FONT_PATH =
     "assets/fonts/JetBrainsMono/JetBrainsMono-Regular.ttf";
+static const char *BGM_PATH = "assets/music/ethernight_club.mp3";
 static const char *MESSAGE = "Hello World!";
 
 typedef struct app_context_t {
@@ -23,6 +26,7 @@ typedef struct app_context_t {
   rl_handle_t sprite;
   rl_handle_t camera;
   rl_handle_t grey_alpha_color;
+  rl_handle_t bgm;
   float countdown_timer;
   float total_time;
   double last_time;
@@ -55,6 +59,15 @@ static void queue_asset(const char *path, app_context_t *ctx) {
   }
 }
 
+static void on_bgm_ready(const char *path, void *user_data) {
+  app_context_t *ctx = (app_context_t *)user_data;
+  (void)path;
+  ctx->bgm = rl_music_create(BGM_PATH);
+  rl_music_set_loop(ctx->bgm, true);
+  rl_music_set_volume(ctx->bgm, 0.1);
+  rl_music_play(ctx->bgm);
+}
+
 static void on_init(void *user_data) {
   app_context_t *ctx = (app_context_t *)user_data;
 
@@ -65,6 +78,8 @@ static void on_init(void *user_data) {
   queue_asset(FONT_PATH, ctx);
   queue_asset(MODEL_PATH, ctx);
   queue_asset(SPRITE_PATH, ctx);
+  rl_loader_add_task(rl_loader_import_asset_async(BGM_PATH), BGM_PATH,
+                     on_bgm_ready, on_asset_failed, ctx);
 }
 
 static void on_tick(void *user_data) {
@@ -104,6 +119,8 @@ static void on_tick(void *user_data) {
     rl_request_stop();
     return;
   }
+
+  rl_music_update_all();
 
   rl_render_begin();
   rl_render_clear_background(RL_COLOR_RAYWHITE);
@@ -151,6 +168,8 @@ static void on_tick(void *user_data) {
 static void on_shutdown(void *user_data) {
   app_context_t *ctx = (app_context_t *)user_data;
 
+  if (ctx->bgm != 0) 
+    rl_music_destroy(ctx->bgm);
   rl_disable_lighting();
   if (ctx->sprite != 0)
     rl_sprite3d_destroy(ctx->sprite);

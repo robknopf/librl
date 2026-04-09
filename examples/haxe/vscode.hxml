@@ -7,8 +7,12 @@
 # Note that this is a relative path to the output directory.
 -D LIBRL_ROOT=../../../..
 
-#-D analyzer-optimize
-#-D no-traces
-#--dce full
+-D analyzer-optimize
+-D no-traces
+--dce full
 
 --main Main
+
+-cpp out/dummy
+--no-output
+

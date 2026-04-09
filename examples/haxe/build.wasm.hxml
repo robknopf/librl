@@ -6,3 +6,7 @@ common.hxml
 -D emscripten
 -D HXCPP_M64
 -D HXCPP_LINK_EMSCRIPTEN_EXT=.js
+
+-D analyzer-optimize
+-D no-traces
+--dce full

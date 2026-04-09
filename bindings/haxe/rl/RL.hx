@@ -9,12 +9,13 @@ package rl;
 
 import haxe.ds.StringMap;
 
+abstract RLHandle(Int) from Int to Int {}
+
 #if cpp
 @:include("rl.h")
 #end
 private extern class RLNative {
   // --- Types (rl_handle_t = unsigned int) ---
-  // RLHandle is passed as Int in Haxe; use Int for handle values
 
   // --- Window flags (rl_window.h) ---
   static inline var FLAG_WINDOW_RESIZABLE: Int = 0x00000004;
@@ -74,27 +75,117 @@ private extern class RLNative {
   static function setTargetFps(fps: Int): Void;
 
   // --- Colors (rl_color.h) ---
+  @:native("RL_COLOR_DEFAULT")
+  static var COLOR_DEFAULT: RLHandle;
+
+  @:native("RL_COLOR_LIGHTGRAY")
+  static var COLOR_LIGHTGRAY: RLHandle;
+
+  @:native("RL_COLOR_GRAY")
+  static var COLOR_GRAY: RLHandle;
+
+  @:native("RL_COLOR_DARKGRAY")
+  static var COLOR_DARKGRAY: RLHandle;
+
+  @:native("RL_COLOR_YELLOW")
+  static var COLOR_YELLOW: RLHandle;
+
+  @:native("RL_COLOR_GOLD")
+  static var COLOR_GOLD: RLHandle;
+
+  @:native("RL_COLOR_ORANGE")
+  static var COLOR_ORANGE: RLHandle;
+
+  @:native("RL_COLOR_PINK")
+  static var COLOR_PINK: RLHandle;
+
+  @:native("RL_COLOR_RED")
+  static var COLOR_RED: RLHandle;
+
+  @:native("RL_COLOR_MAROON")
+  static var COLOR_MAROON: RLHandle;
+
+  @:native("RL_COLOR_GREEN")
+  static var COLOR_GREEN: RLHandle;
+
+  @:native("RL_COLOR_LIME")
+  static var COLOR_LIME: RLHandle;
+
+  @:native("RL_COLOR_DARKGREEN")
+  static var COLOR_DARKGREEN: RLHandle;
+
+  @:native("RL_COLOR_SKYBLUE")
+  static var COLOR_SKYBLUE: RLHandle;
+
+  @:native("RL_COLOR_BLUE")
+  static var COLOR_BLUE: RLHandle;
+
+  @:native("RL_COLOR_DARKBLUE")
+  static var COLOR_DARKBLUE: RLHandle;
+
+  @:native("RL_COLOR_PURPLE")
+  static var COLOR_PURPLE: RLHandle;
+
+  @:native("RL_COLOR_VIOLET")
+  static var COLOR_VIOLET: RLHandle;
+
+  @:native("RL_COLOR_DARKPURPLE")
+  static var COLOR_DARKPURPLE: RLHandle;
+
+  @:native("RL_COLOR_BEIGE")
+  static var COLOR_BEIGE: RLHandle;
+
+  @:native("RL_COLOR_BROWN")
+  static var COLOR_BROWN: RLHandle;
+
+  @:native("RL_COLOR_DARKBROWN")
+  static var COLOR_DARKBROWN: RLHandle;
+
+  @:native("RL_COLOR_WHITE")
+  static var COLOR_WHITE: RLHandle;
+
+  @:native("RL_COLOR_BLACK")
+  static var COLOR_BLACK: RLHandle;
+
+  @:native("RL_COLOR_BLANK")
+  static var COLOR_BLANK: RLHandle;
+
+  @:native("RL_COLOR_MAGENTA")
+  static var COLOR_MAGENTA: RLHandle;
+
+  @:native("RL_COLOR_RAYWHITE")
+  static var COLOR_RAYWHITE: RLHandle;
+
   @:native("rl_color_create")
-  static function colorCreate(r: Int, g: Int, b: Int, a: Int): Int;
+  static function colorCreate(r: Int, g: Int, b: Int, a: Int): RLHandle;
 
   @:native("rl_color_destroy")
-  static function colorDestroy(color: Int): Void;
+  static function colorDestroy(color: RLHandle): Void;
 
   // --- Fonts (rl_font.h, rl_text.h) ---
   @:native("rl_font_create")
-  static function fontCreate(filename: String, fontSize: Float): Int;
+  static function fontCreate(filename: String, fontSize: Float): RLHandle;
 
   @:native("rl_font_destroy")
-  static function fontDestroy(font: Int): Void;
+  static function fontDestroy(font: RLHandle): Void;
+
+  @:native("rl_text_draw")
+  static function textDraw(text: String, x: Int, y: Int, fontSize: Int, color: RLHandle): Void;
+
+  @:native("rl_text_measure")
+  static function textMeasure(text: String, fontSize: Int): Int;
+
+  @:native("rl_text_draw_fps")
+  static function textDrawFps(x: Int, y: Int): Void;
 
   @:native("rl_text_draw_ex")
-  static function textDrawEx(font: Int, text: String, x: Int, y: Int, fontSize: Float, spacing: Float, color: Int): Void;
+  static function textDrawEx(font: RLHandle, text: String, x: Int, y: Int, fontSize: Float, spacing: Float, color: RLHandle): Void;
 
   @:native("rl_text_measure_ex")
-  static function textMeasureEx(font: Int, text: String, fontSize: Float, spacing: Float): RLVec2;
+  static function textMeasureEx(font: RLHandle, text: String, fontSize: Float, spacing: Float): RLVec2;
 
   @:native("rl_text_draw_fps_ex")
-  static function textDrawFpsEx(font: Int, x: Int, y: Int, fontSize: Int, color: Int): Void;
+  static function textDrawFpsEx(font: RLHandle, x: Int, y: Int, fontSize: Int, color: RLHandle): Void;
 
   // --- Asset host ---
   @:native("rl_set_asset_host")
@@ -104,6 +195,9 @@ private extern class RLNative {
   static function getAssetHost(): String;
 
   // --- Loader (rl_loader.h) ---
+  @:native("rl_loader_restore_fs_async")
+  static function loaderRestoreFsAsync(): RLLoaderTaskPtr;
+
   @:native("rl_loader_import_asset_async")
   static function loaderImportAssetAsync(filename: String): RLLoaderTaskPtr;
 
@@ -125,39 +219,76 @@ private extern class RLNative {
     onFailure: cpp.Callable<cpp.ConstCharStar->cpp.RawPointer<cpp.Void>->Void>,
     userData: cpp.RawPointer<cpp.Void>): Int;
 
+  @:native("rl_loader_tick")
+  static function loaderTick(): Void;
+
   @:native("rl_loader_clear_cache")
   static function loaderClearCache(): Int;
 
+  @:native("rl_loader_uncache_file")
+  static function loaderUncacheFile(filename: String): Int;
+
   // --- Music (rl_music.h) ---
   @:native("rl_music_create")
-  static function musicCreate(filename: String): Int;
+  static function musicCreate(filename: String): RLHandle;
 
   @:native("rl_music_destroy")
-  static function musicDestroy(music: Int): Void;
+  static function musicDestroy(music: RLHandle): Void;
 
   @:native("rl_music_play")
-  static function musicPlay(music: Int): Bool;
+  static function musicPlay(music: RLHandle): Bool;
 
   @:native("rl_music_pause")
-  static function musicPause(music: Int): Bool;
+  static function musicPause(music: RLHandle): Bool;
 
   @:native("rl_music_stop")
-  static function musicStop(music: Int): Bool;
+  static function musicStop(music: RLHandle): Bool;
 
   @:native("rl_music_set_loop")
-  static function musicSetLoop(music: Int, shouldLoop: Bool): Bool;
+  static function musicSetLoop(music: RLHandle, shouldLoop: Bool): Bool;
 
   @:native("rl_music_set_volume")
-  static function musicSetVolume(music: Int, volume: Float): Bool;
+  static function musicSetVolume(music: RLHandle, volume: Float): Bool;
 
   @:native("rl_music_is_playing")
-  static function musicIsPlaying(music: Int): Bool;
+  static function musicIsPlaying(music: RLHandle): Bool;
 
   @:native("rl_music_update")
-  static function musicUpdate(music: Int): Bool;
+  static function musicUpdate(music: RLHandle): Bool;
 
   @:native("rl_music_update_all")
   static function musicUpdateAll(): Void;
+
+  // --- Sound (rl_sound.h) ---
+  @:native("rl_sound_create")
+  static function soundCreate(filename: String): RLHandle;
+
+  @:native("rl_sound_destroy")
+  static function soundDestroy(sound: RLHandle): Void;
+
+  @:native("rl_sound_play")
+  static function soundPlay(sound: RLHandle): Bool;
+
+  @:native("rl_sound_pause")
+  static function soundPause(sound: RLHandle): Bool;
+
+  @:native("rl_sound_resume")
+  static function soundResume(sound: RLHandle): Bool;
+
+  @:native("rl_sound_stop")
+  static function soundStop(sound: RLHandle): Bool;
+
+  @:native("rl_sound_set_volume")
+  static function soundSetVolume(sound: RLHandle, volume: Float): Bool;
+
+  @:native("rl_sound_set_pitch")
+  static function soundSetPitch(sound: RLHandle, pitch: Float): Bool;
+
+  @:native("rl_sound_set_pan")
+  static function soundSetPan(sound: RLHandle, pan: Float): Bool;
+
+  @:native("rl_sound_is_playing")
+  static function soundIsPlaying(sound: RLHandle): Bool;
 
   // --- Lighting ---
   @:native("rl_enable_lighting")
@@ -183,10 +314,10 @@ private extern class RLNative {
   static function renderEnd(): Void;
 
   @:native("rl_render_clear_background")
-  static function renderClearBackground(color: Int): Void;
+  static function renderClearBackground(color: RLHandle): Void;
 
   @:native("rl_render_begin_mode_2d")
-  static function renderBeginMode2D(camera: Int): Void;
+  static function renderBeginMode2D(camera: RLHandle): Void;
 
   @:native("rl_render_end_mode_2d")
   static function renderEndMode2D(): Void;
@@ -244,11 +375,11 @@ private extern class RLNative {
     targetX: Float, targetY: Float, targetZ: Float,
     upX: Float, upY: Float, upZ: Float,
     fovy: Float, projection: Int
-  ): Int;
+  ): RLHandle;
 
   @:native("rl_camera3d_set")
   static function camera3dSet(
-    camera: Int,
+    camera: RLHandle,
     positionX: Float, positionY: Float, positionZ: Float,
     targetX: Float, targetY: Float, targetZ: Float,
     upX: Float, upY: Float, upZ: Float,
@@ -256,61 +387,88 @@ private extern class RLNative {
   ): Bool;
 
   @:native("rl_camera3d_set_active")
-  static function camera3dSetActive(camera: Int): Bool;
+  static function camera3dSetActive(camera: RLHandle): Bool;
 
   @:native("rl_camera3d_destroy")
-  static function camera3dDestroy(camera: Int): Void;
+  static function camera3dDestroy(camera: RLHandle): Void;
 
   // --- Models (rl_model.h) ---
   @:native("rl_model_create")
-  static function modelCreate(filename: String): Int;
+  static function modelCreate(filename: String): RLHandle;
 
   @:native("rl_model_set_transform")
   static function modelSetTransform(
-    model: Int,
+    model: RLHandle,
     positionX: Float, positionY: Float, positionZ: Float,
     rotationX: Float, rotationY: Float, rotationZ: Float,
     scaleX: Float, scaleY: Float, scaleZ: Float
   ): Bool;
 
   @:native("rl_model_draw")
-  static function modelDraw(model: Int, tint: Int): Void;
+  static function modelDraw(model: RLHandle, tint: RLHandle): Void;
 
   @:native("rl_model_set_animation")
-  static function modelSetAnimation(model: Int, animationIndex: Int): Bool;
+  static function modelSetAnimation(model: RLHandle, animationIndex: Int): Bool;
 
   @:native("rl_model_set_animation_speed")
-  static function modelSetAnimationSpeed(model: Int, speed: Float): Bool;
+  static function modelSetAnimationSpeed(model: RLHandle, speed: Float): Bool;
 
   @:native("rl_model_set_animation_loop")
-  static function modelSetAnimationLoop(model: Int, shouldLoop: Bool): Bool;
+  static function modelSetAnimationLoop(model: RLHandle, shouldLoop: Bool): Bool;
 
   @:native("rl_model_animate")
-  static function modelAnimate(model: Int, deltaSeconds: Float): Bool;
+  static function modelAnimate(model: RLHandle, deltaSeconds: Float): Bool;
 
   @:native("rl_model_destroy")
-  static function modelDestroy(model: Int): Void;
+  static function modelDestroy(model: RLHandle): Void;
 
   // --- Sprite3D (rl_sprite3d.h) ---
   @:native("rl_sprite3d_create")
-  static function sprite3dCreate(filename: String): Int;
+  static function sprite3dCreate(filename: String): RLHandle;
 
   @:native("rl_sprite3d_set_transform")
   static function sprite3dSetTransform(
-    sprite: Int,
+    sprite: RLHandle,
     positionX: Float, positionY: Float, positionZ: Float,
     size: Float
   ): Bool;
 
   @:native("rl_sprite3d_draw")
-  static function sprite3dDraw(sprite: Int, tint: Int): Void;
+  static function sprite3dDraw(sprite: RLHandle, tint: RLHandle): Void;
 
   @:native("rl_sprite3d_destroy")
-  static function sprite3dDestroy(sprite: Int): Void;
+  static function sprite3dDestroy(sprite: RLHandle): Void;
+
+  // --- Texture (rl_texture.h) ---
+  @:native("rl_texture_create")
+  static function textureCreate(filename: String): RLHandle;
+
+  @:native("rl_texture_destroy")
+  static function textureDestroy(texture: RLHandle): Void;
+
+  @:native("rl_texture_draw_ex")
+  static function textureDrawEx(texture: RLHandle, x: Float, y: Float, scale: Float, rotation: Float, tint: RLHandle): Void;
+
+  @:native("rl_texture_draw_ground")
+  static function textureDrawGround(texture: RLHandle,
+    positionX: Float, positionY: Float, positionZ: Float,
+    width: Float, length: Float, tint: RLHandle): Void;
 
   // --- Input (rl_input.h) ---
+  @:native("rl_input_get_mouse_position")
+  static function inputGetMousePosition(): RLVec2;
+
+  @:native("rl_input_get_mouse_wheel")
+  static function inputGetMouseWheel(): Int;
+
+  @:native("rl_input_get_mouse_button")
+  static function inputGetMouseButton(button: Int): Int;
+
   @:native("rl_input_get_mouse_state")
   static function inputGetMouseState(): RLMouseState;
+
+  @:native("rl_input_get_keyboard_state")
+  static function inputGetKeyboardStateNative(): RLKeyboardState;
 }
 
 #if cpp
@@ -334,12 +492,70 @@ extern class RLMouseState {
   public var middle: Int;
 }
 
+class RLKeyboardState {
+  public var max_num_keys: Int = 0;
+  public var keys: Array<Int> = [];
+  public var pressed_key: Int = 0;
+  public var pressed_char: Int = 0;
+  public var num_pressed_keys: Int = 0;
+  public var pressed_keys: Array<Int> = [];
+  public var num_pressed_chars: Int = 0;
+  public var pressed_chars: Array<Int> = [];
+
+  public function new() {}
+}
+
 @:include("rl_loader.h")
 @:native("rl_loader_task_t")
 extern class RLLoaderTask {}
 
 @:forwardStatics
 abstract RL(RLNative) from RLNative to RLNative {
+  public static inline function inputGetKeyboardState(): RLKeyboardState {
+    return RLKeyboardBridge.getState();
+  }
+
+  public static inline function keyboardGetKeyState(state: RLKeyboardState, key: Int): Int {
+    if (state.keys == null || key < 0 || key >= state.max_num_keys || key >= state.keys.length) {
+      return 0;
+    }
+    return state.keys[key];
+  }
+
+  public static inline function keyboardIsKeyDown(state: RLKeyboardState, key: Int): Bool {
+    return keyboardGetKeyState(state, key) != 0;
+  }
+
+  public static inline function keyboardGetPressedKey(state: RLKeyboardState, index: Int): Int {
+    if (state.pressed_keys == null || index < 0 || index >= state.num_pressed_keys || index >= state.pressed_keys.length) {
+      return 0;
+    }
+    return state.pressed_keys[index];
+  }
+
+  public static inline function keyboardGetPressedChar(state: RLKeyboardState, index: Int): Int {
+    if (state.pressed_chars == null || index < 0 || index >= state.num_pressed_chars || index >= state.pressed_chars.length) {
+      return 0;
+    }
+    return state.pressed_chars[index];
+  }
+
+  public static inline function keyboardGetPressedKeys(state: RLKeyboardState): Array<Int> {
+    var result = new Array<Int>();
+    for (i in 0...state.num_pressed_keys) {
+      result.push(keyboardGetPressedKey(state, i));
+    }
+    return result;
+  }
+
+  public static inline function keyboardGetPressedChars(state: RLKeyboardState): Array<Int> {
+    var result = new Array<Int>();
+    for (i in 0...state.num_pressed_chars) {
+      result.push(keyboardGetPressedChar(state, i));
+    }
+    return result;
+  }
+
   public static inline function run<T>(initFn: T->Void, tickFn: T->Void, shutdownFn: T->Void, ctx: T): Void {
     var initSpringboard: cpp.Callable<cpp.RawPointer<cpp.Void>->Void> =
       cpp.Function.fromStaticFunction(RLBridge.onInitSpringboard);
@@ -365,18 +581,42 @@ abstract RL(RLNative) from RLNative to RLNative {
       cpp.Function.fromStaticFunction(RLBridge.onLoaderSuccessSpringboard);
     var failureSpringboard: cpp.Callable<cpp.ConstCharStar->cpp.RawPointer<cpp.Void>->Void> =
       cpp.Function.fromStaticFunction(RLBridge.onLoaderFailureSpringboard);
-    RLBridge.loaderCallbacks.set(path, {
-      onSuccess: cast onSuccess,
-      onFailure: cast onFailure,
+    var callbackKey = RLBridge.makeLoaderCallbackKey(path);
+    var callbackInvoked = false;
+    var callbackUserData = RLLoaderCallbackBridge.alloc(callbackKey);
+    if (callbackUserData == null) {
+      if (onFailure != null) {
+        onFailure(path, ctx);
+      }
+      return RLNative.LOADER_ADD_TASK_ERR_INVALID;
+    }
+    RLBridge.loaderCallbacks.set(callbackKey, {
+      onSuccess: cast function(callbackPath:String, callbackCtx:T):Void {
+        callbackInvoked = true;
+        if (onSuccess != null) {
+          onSuccess(callbackPath, callbackCtx);
+        }
+      },
+      onFailure: cast function(callbackPath:String, callbackCtx:T):Void {
+        callbackInvoked = true;
+        if (onFailure != null) {
+          onFailure(callbackPath, callbackCtx);
+        }
+      },
       ctx: ctx
     });
-    return RLNative.loaderAddTaskNative(
+    var rc = RLNative.loaderAddTaskNative(
       task,
       path,
       successSpringboard,
       failureSpringboard,
-      null
+      callbackUserData
     );
+    if (rc != RLNative.LOADER_ADD_TASK_OK && !callbackInvoked) {
+      RLBridge.loaderCallbacks.remove(callbackKey);
+      RLLoaderCallbackBridge.free(callbackUserData);
+    }
+    return rc;
   }
 
   public static inline function loggerMessage(level: Int, message: String): Void {
@@ -451,13 +691,83 @@ private class RLLoggerBridge {
   public static function messageSource(level: Int, sourceFile: String, sourceLine: Int, message: String): Void {}
 }
 
+@:headerCode('
+  #include <stdlib.h>
+  #include <string.h>
+')
+private class RLLoaderCallbackBridge {
+  @:functionCode('
+    if (key == null()) {
+      return nullptr;
+    }
+    const char *src = key.utf8_str();
+    size_t len = strlen(src) + 1;
+    char *copy = (char *)::malloc(len);
+    if (copy == nullptr) {
+      return nullptr;
+    }
+    ::memcpy(copy, src, len);
+    return copy;
+  ')
+  public static function alloc(key: String): cpp.RawPointer<cpp.Void> {
+    return null;
+  }
+
+  @:functionCode('
+    if (userData == nullptr) {
+      return ::String();
+    }
+    const char *src = (const char *)userData;
+    ::String key = ::String(src);
+    ::free(userData);
+    return key;
+  ')
+  public static function consume(userData: cpp.RawPointer<cpp.Void>): String {
+    return null;
+  }
+
+  @:functionCode('
+    if (userData != nullptr) {
+      ::free(userData);
+    }
+  ')
+  public static function free(userData: cpp.RawPointer<cpp.Void>): Void {}
+}
+
+@:headerInclude("rl_input.h")
+private class RLKeyboardBridge {
+  @:functionCode('
+    rl_keyboard_state_t nativeState = rl_input_get_keyboard_state();
+    ::rl::RLKeyboardState result = ::rl::RLKeyboardState_obj::__new();
+    result->max_num_keys = nativeState.max_num_keys;
+    result->keys = Array_obj<int>::fromData(nativeState.keys, nativeState.max_num_keys);
+    result->pressed_key = nativeState.pressed_key;
+    result->pressed_char = nativeState.pressed_char;
+    result->num_pressed_keys = nativeState.num_pressed_keys;
+    result->pressed_keys = Array_obj<int>::fromData(nativeState.pressed_keys, nativeState.num_pressed_keys);
+    result->num_pressed_chars = nativeState.num_pressed_chars;
+    result->pressed_chars = Array_obj<int>::fromData(nativeState.pressed_chars, nativeState.num_pressed_chars);
+    return result;
+  ')
+  public static function getState(): RLKeyboardState {
+    return null;
+  }
+}
+
 @:keep
 private class RLBridge {
   public static var initCallback: Null<Dynamic->Void> = null;
   public static var tickCallback: Null<Dynamic->Void> = null;
   public static var shutdownCallback: Null<Dynamic->Void> = null;
   public static var runContext: Dynamic = null;
+  public static var nextLoaderCallbackId: Int = 0;
   public static var loaderCallbacks: StringMap<RLLoaderCallbacks> = new StringMap();
+
+  public static inline function makeLoaderCallbackKey(path: String): String {
+    var key = (path == null ? "" : path) + "#" + nextLoaderCallbackId;
+    nextLoaderCallbackId++;
+    return key;
+  }
 
   @:keep public static function onInitSpringboard(userData: cpp.RawPointer<cpp.Void>): Void {
     if (initCallback != null) initCallback(runContext);
@@ -472,17 +782,17 @@ private class RLBridge {
   }
 
   @:keep public static function onLoaderSuccessSpringboard(path: cpp.ConstCharStar, userData: cpp.RawPointer<cpp.Void>): Void {
-    dispatchLoaderCallback(cast path, true);
+    dispatchLoaderCallback(RLLoaderCallbackBridge.consume(userData), cast path, true);
   }
 
   @:keep public static function onLoaderFailureSpringboard(path: cpp.ConstCharStar, userData: cpp.RawPointer<cpp.Void>): Void {
-    dispatchLoaderCallback(cast path, false);
+    dispatchLoaderCallback(RLLoaderCallbackBridge.consume(userData), cast path, false);
   }
 
-  static function dispatchLoaderCallback(path: String, success: Bool): Void {
-    var callbacks = loaderCallbacks.get(path);
+  static function dispatchLoaderCallback(callbackKey: String, path: String, success: Bool): Void {
+    var callbacks = loaderCallbacks.get(callbackKey);
     if (callbacks == null) return;
-    loaderCallbacks.remove(path);
+    loaderCallbacks.remove(callbackKey);
     var fn = success ? callbacks.onSuccess : callbacks.onFailure;
     if (fn != null) fn(path, callbacks.ctx);
   }

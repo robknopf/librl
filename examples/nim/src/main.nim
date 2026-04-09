@@ -1,4 +1,5 @@
 import rl
+import rl_log as log
 import std/[times,monotimes, os, strutils, strformat]
 
 when defined(emscripten):
@@ -36,7 +37,7 @@ proc onAssetReady(path: cstring, userData: pointer) {.cdecl.} =
   ctx.assetsReady.inc
 
 proc onAssetFailed(path: cstring, userData: pointer) {.cdecl.} =
-  echo "Failed to load asset: ", path
+  log.error("Failed to load asset: " & $path)
 
 proc onMusicReady(path: cstring, userData: pointer) {.cdecl.} =
   let ctx = cast[ptr AppContext](userData)
@@ -85,13 +86,13 @@ proc ensureAsset(
   let task = rl_loader_import_asset_async(path)
   let rc = rl_loader_add_task(task, path, onSuccess, onFail, userData)
   if rc != RL_LOADER_ADD_TASK_OK:
-    echo "Failed to queue asset: ", path
+    log.error("Failed to queue asset: " & $path)
 
 proc queueAsset(path: cstring, ctx: ptr AppContext) =
   let task = rl_loader_import_asset_async(path)
   let rc = rl_loader_add_task(task, path, onAssetReady, onAssetFailed, ctx)
   if rc != RL_LOADER_ADD_TASK_OK:
-    echo "Failed to queue asset: ", path
+    log.error("Failed to queue asset: " & $path)
 
 proc onInit(userData: pointer) {.cdecl.} =
   var ctx = cast[ptr AppContext](userData)
@@ -102,7 +103,7 @@ proc onInit(userData: pointer) {.cdecl.} =
     try:
       rl_window_set_monitor(parseInt(monitorOverride).cint)
     except ValueError:
-      discard
+      log.warn("Ignoring invalid RL_MONITOR value: " & monitorOverride)
   rl_window_set_monitor(1)
   rl_set_target_fps(60.cint)
 
@@ -112,13 +113,13 @@ proc onInit(userData: pointer) {.cdecl.} =
 
   ensureAssetSync(bgmPath,
     proc(path: string) =
-    echo "loaded " & path
+    log.info("Loaded " & path)
     ctx.bgm = rl_music_create(path.cstring)
     discard rl_music_set_loop(ctx.bgm, true)
     discard rl_music_play(ctx.bgm),
 
     proc(path: string) =
-    echo "Failed to load asset: ", path
+    log.error("Failed to load asset: " & path)
   )
 
 

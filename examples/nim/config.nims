@@ -57,12 +57,13 @@ when defined(emscripten):
   switch("passL", "-O2")
   switch("define", "release")
 
-  switch("out", outDir / "wasm" / "main.js")
 
-task build, "Build desktop Nim binary (release)":
-  mkDir(outDir)
+
+proc buildDesktop() =
+  let outBin = outDir / "desktop" / outFile
+  echo "Building Desktop Nim binary: '" & outBin & "'..."
+  mkDir(outDir / "desktop")
   let entry = getCurrentDir() / mainEntry
-  let outBin = outDir / outFile
   exec "nim c -d:release" &
     " --out:" & outBin &
     " --passC:-I" & includeDir &
@@ -77,11 +78,36 @@ task build, "Build desktop Nim binary (release)":
     " --passL:-lssl" &
     " " & entry
 
-task build_wasm, "Build WASM Nim binary via Emscripten":
+proc buildWasm() =
+  let outBin = outDir / "wasm" / "main.js"
+  echo "Building WASM Nim binary: '" & outBin & "'..."
   mkDir(outDir / "wasm")
   let entry = getCurrentDir() / mainEntry
-  exec "nim c -d:emscripten -d:release " & entry
-  echo "Built WASM Nim binary: " & (outDir / "wasm" / "main.js")
+  exec "nim c -d:emscripten -d:release " & 
+        " --out:" & outBin &
+        " " & entry
+
+proc selectedBuildTarget(): string =
+  if paramCount() >= 2:
+    result = paramStr(2)
+  else:
+    result = "all"
+
+task build, "Build Nim targets: desktop, wasm, or all (default)":
+  case selectedBuildTarget()
+  of "desktop":
+    buildDesktop()
+  of "wasm":
+    buildWasm()
+  of "all":
+    buildDesktop()
+    buildWasm()
+  else:
+    quit "Invalid build target '" & selectedBuildTarget() &
+      "'. Expected: desktop, wasm, or all.", 1
+  
+  echo "Build complete."
+
 
 task clean, "Clean Nim build outputs":
   let cacheDir = getCurrentDir() / "cache"

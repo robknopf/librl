@@ -140,7 +140,8 @@ Notes:
   - `RL.modelCreate`, `RL.sprite3dCreate`, `RL.camera3dCreate`, etc.
   - Constants like `RL.FLAG_MSAA_4X_HINT`, `RL.CAMERA_PERSPECTIVE`.
 - WASM builds use hxcpp's emscripten toolchain with `MODULARIZE=1` and `EXPORT_ES6=1`:
-  - `examples/haxe/compile_wasm.hxml`
+  - `examples/haxe/build.wasm.hxml`
+  - `examples/haxe/build.hxml` dispatches between the desktop and wasm build configs.
   - `InjectLibRL.hx` adds the emcc linker flags and links against `librl.wasm.a`.
 
 Async loader sugar:

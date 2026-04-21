@@ -24,6 +24,19 @@
 - Audit bindings to ensure they haven't gotten stale (JS + Nim)
 - Frame command path hardening:
   - current typed command path exists through `rl_render_command_t` and the C example host buffer
+  - **v2 encoding proposal**: Lua table batch submission for reduced crossing overhead
+    - Format: `[VERSION, FLAGS, count_sprite2d_xform, (data...), count_sprite2d_draw, (data...), ...]`
+    - Fixed section order by convention (compile-time schema)
+    - Zero-length sections skip data entirely (1 count value cost)
+    - Single Lua→C crossing per frame regardless of element count
+    - Debug mode (FLAGS bit): each section prefixed with `[type_tag, count, ...]` for verification
+    - Inner loops are tight and cache-friendly (no per-element dispatch)
+    - **Lua buffer pattern**:
+      - Pre-allocate: `local buf = {}`
+      - Per-frame reset: `local idx = 1`
+      - Pack: `buf[idx] = handle; idx = idx + 1; buf[idx] = x; idx = idx + 1; ...`
+      - Submit: `rl.submit_frame(buf)` — C reads sequentially, no re-entry
+      - Reuse: Table grows once, Lua GC never touched per frame
   - next step is to expand and harden it rather than redesign it from scratch
   - decide whether to keep the current host-owned fixed-capacity buffer shape or promote a more general transient command queue/ring buffer
   - grow the command set carefully as needed:
@@ -106,6 +119,14 @@
 
 ## Parked For Now
 
+- Lua binding architecture:
+  - Keep Lua bindings as .c files for maximum build flexibility (static, shared, WASM)
+  - Location: `bindings/lua/liblua_rl.c` (following `lib<target>.c` convention)
+  - Enables future `librl.so` (desktop shared) or `librl.wasm` with embedded Lua support
+  - Desktop LuaJIT path: FFI bindings loading `librl.so` directly (bypass C bindings entirely)
+  - PUC Lua path: Standard `luaopen_rl` C binding as now
+  - Batch frame submission: Lua table → single C crossing → direct `rl_*` calls (v2 encoding)
+  - Wrapper: `rl.lua` detects LuaJIT → FFI bindings, else → C bindings
 - Lua module frame command wiring:
   - ~~all `draw_*` bindings now emit frame commands~~ ✓
   - `draw_model`, `draw_sprite3d`, `draw_sprite2d` use split transform/draw pattern

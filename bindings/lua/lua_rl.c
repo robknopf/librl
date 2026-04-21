@@ -7,9 +7,13 @@
 
 #include <lua.h>
 #include <lauxlib.h>
-#include <string.h>
 
 #include "rl.h"
+
+/* Lua 5.1 compatibility: luaL_newlib was added in 5.2 */
+#if LUA_VERSION_NUM < 502
+#define luaL_newlib(L, l) (lua_newtable(L), luaL_register(L, NULL, l))
+#endif
 
 /* Version and flags */
 #define RL_SUBMIT_VERSION 1
@@ -30,7 +34,7 @@
 #define STRIDE_SPRITE3D_XFORM 6  /* handle, tint, x, y, z, size */
 #define STRIDE_SPRITE3D_DRAW  2  /* handle, tint */
 #define STRIDE_MODEL_XFORM    10 /* handle, x, y, z, rot_x, rot_y, rot_z, scale_x, scale_y, scale_z */
-#define STRIDE_MODEL_DRAW     4  /* handle, tint, anim_index, anim_frame */
+#define STRIDE_MODEL_DRAW     2  /* handle, tint */
 
 static int rl_submit_frame_buffer(lua_State *L)
 {
@@ -42,13 +46,11 @@ static int rl_submit_frame_buffer(lua_State *L)
     rl_handle_t handle, tint;
     float x, y, z, scale, rotation, size;
     float rot_x, rot_y, rot_z, scale_x, scale_y, scale_z;
-    int anim_index, anim_frame;
 
     /* Check argument is a table */
     luaL_checktype(L, 1, LUA_TTABLE);
 
     /* Read VERSION */
-    version = (int)luaL_checkinteger(L, -1);
     lua_rawgeti(L, table_idx, idx++);
     version = (int)luaL_checkinteger(L, -1);
     lua_pop(L, 1);
@@ -203,13 +205,7 @@ static int rl_submit_frame_buffer(lua_State *L)
             lua_rawgeti(L, table_idx, idx++);
             tint = (rl_handle_t)luaL_checkinteger(L, -1);
             lua_pop(L, 1);
-            lua_rawgeti(L, table_idx, idx++);
-            anim_index = (int)luaL_optinteger(L, -1, -1);
-            lua_pop(L, 1);
-            lua_rawgeti(L, table_idx, idx++);
-            anim_frame = (int)luaL_optinteger(L, -1, 0);
-            lua_pop(L, 1);
-            rl_model_draw(handle, tint, anim_index, anim_frame);
+            rl_model_draw(handle, tint);
         }
     }
 
@@ -224,22 +220,18 @@ static int rl_submit_frame_buffer(lua_State *L)
  * ============================================================================ */
 
 /* Window */
-static int rl_window_should_close_binding(lua_State *L)
+static int rl_window_close_binding(lua_State *L)
 {
-    lua_pushboolean(L, rl_window_should_close());
-    return 1;
+    rl_window_close();
+    return 0;
 }
 
-static int rl_get_screen_width_binding(lua_State *L)
+static int rl_window_get_screen_size_binding(lua_State *L)
 {
-    lua_pushinteger(L, rl_get_screen_width());
-    return 1;
-}
-
-static int rl_get_screen_height_binding(lua_State *L)
-{
-    lua_pushinteger(L, rl_get_screen_height());
-    return 1;
+    vec2_t size = rl_window_get_screen_size();
+    lua_pushnumber(L, size.x);
+    lua_pushnumber(L, size.y);
+    return 2;
 }
 
 /* Sprite2D */
@@ -356,10 +348,8 @@ static int rl_model_set_transform_binding(lua_State *L)
 static int rl_model_draw_binding(lua_State *L)
 {
     rl_handle_t model = (rl_handle_t)luaL_checkinteger(L, 1);
-    rl_handle_t tint = (rl_handle_t)luaL_checkinteger(L, 2);
-    int anim_index = (int)luaL_optinteger(L, 3, -1);
-    int anim_frame = (int)luaL_optinteger(L, 4, 0);
-    rl_model_draw(model, tint, anim_index, anim_frame);
+    rl_handle_t tint = (rl_handle_t)luaL_optinteger(L, 2, 0);  /* default: RL_COLOR_WHITE */
+    rl_model_draw(model, tint);
     return 0;
 }
 
@@ -468,9 +458,8 @@ static const luaL_Reg rl_functions[] = {
     {"submit_frame_buffer", rl_submit_frame_buffer},
 
     /* Window */
-    {"window_should_close", rl_window_should_close_binding},
-    {"get_screen_width", rl_get_screen_width_binding},
-    {"get_screen_height", rl_get_screen_height_binding},
+    {"window_close", rl_window_close_binding},
+    {"window_get_screen_size", rl_window_get_screen_size_binding},
 
     /* Sprite2D */
     {"sprite2d_create", rl_sprite2d_create_binding},

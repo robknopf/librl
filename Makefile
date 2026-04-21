@@ -397,6 +397,44 @@ desktop: libraylib_desktop wgutils_desktop ensure_out_dir ensure_obj_dir $(DESKT
 	$(Q)cd $(OBJ_DESKTOP_DIR)/.wgutils_unpack && ar x $(abspath $(WGUTILS_DESKTOP_ARCHIVE))
 	$(Q)ar rcs $(OUT_DESKTOP) $(DESKTOP_OBJS) $(OBJ_DESKTOP_DIR)/.raylib_unpack/*.o $(OBJ_DESKTOP_DIR)/.wgutils_unpack/*.o
 
+# Desktop shared library with Lua bindings
+# Usage: make shared_lua LIBLUA_INC=/path/to/lua/headers
+LIBRL_SHARED_SO := $(OUT_LIB_DIR)/librl.so
+LUA_BINDINGS_SRC := $(LIBRL_ROOT)/bindings/lua/lua_rl.c
+
+shared_lua: libraylib_desktop wgutils_desktop ensure_out_dir ensure_obj_dir $(DESKTOP_OBJS)
+	$(info [shared_lua] Building shared library with Lua bindings: $(LIBRL_SHARED_SO))
+	$(call DETAILS,[shared_lua] Sources: $(DESKTOP_SRCS) $(LUA_BINDINGS_SRC))
+	$(Q)test -n "$(LIBLUA_INC)" || (echo "Error: LIBLUA_INC not set. Pass LIBLUA_INC=/path/to/lua/headers" && exit 1)
+	$(Q)test -f "$(LIBRAYLIB_DESKTOP_ARCHIVE)" || (echo "Missing raylib archive: $(LIBRAYLIB_DESKTOP_ARCHIVE)" && exit 1)
+	$(Q)test -f "$(WGUTILS_DESKTOP_ARCHIVE)" || (echo "Missing wgutils archive: $(WGUTILS_DESKTOP_ARCHIVE)" && exit 1)
+	$(Q)$(CC_DESKTOP) -shared -fPIC -o $(LIBRL_SHARED_SO) \
+		$(DESKTOP_SRCS) $(LUA_BINDINGS_SRC) \
+		$(INCLUDES) -I$(LIBLUA_INC) \
+		$(LIBRAYLIB_DESKTOP_ARCHIVE) $(WGUTILS_DESKTOP_ARCHIVE) \
+		-lcurl -lssl -lcrypto -lz -lm -lpthread -ldl -lX11
+	@echo "Built: $(LIBRL_SHARED_SO)"
+
+# Test Lua bindings (static link with liblua)
+LUA_BINDINGS_TEST_SRC := $(LIBRL_ROOT)/bindings/lua/tests/test_lua_bindings.c
+LUA_BINDINGS_TEST_BIN := /tmp/rl_lua_bindings_test
+
+# Get liblua paths from modules/lua
+LIBLUA_ROOT ?= $(LIBRL_ROOT)/modules/lua/deps/liblua
+LIBLUA_INC ?= $(LIBLUA_ROOT)/include
+LIBLUA_ARCHIVE ?= $(LIBLUA_ROOT)/lib/liblua.a
+
+test_lua_bindings: desktop
+	$(info [test_lua_bindings] Building test executable...)
+	$(Q)test -f "$(LIBLUA_ARCHIVE)" || (echo "Error: liblua not found at $(LIBLUA_ARCHIVE). Run 'make -C modules/lua deps' first." && exit 1)
+	$(Q)$(CC_DESKTOP) $(CFLAGS) -o $(LUA_BINDINGS_TEST_BIN) \
+		$(LUA_BINDINGS_TEST_SRC) $(LUA_BINDINGS_SRC) \
+		$(INCLUDES) -I$(LIBLUA_INC) \
+		$(OUT_DESKTOP) $(LIBLUA_ARCHIVE) \
+		-lm -ldl -lpthread -lX11 -lcurl -lssl -lcrypto -lz
+	@echo "Running test..."
+	$(Q)$(LUA_BINDINGS_TEST_BIN)
+
 uri_test test_desktop test_wasm test test_haxe_bindings test_nim_bindings unit_test_desktop unit_test_wasm probe_idbfs_build probe_idbfs check_node check_chrome check_probe_python:
 	@$(MAKE) -C tests $@ \
 		ROOT_DIR="$(abspath .)" \
@@ -435,7 +473,7 @@ clean:
 #	@$(MAKE) -C $(LIBRAYLIB_ROOT) clean
 
 
-.PHONY: all deps ensure_deps clean ensure_out_dir ensure_obj_dir libraylib_wasm libraylib_desktop wgutils_desktop wgutils_wasm wasm wasm_archive desktop test test_desktop test_wasm test_haxe_bindings test_nim_bindings unit_test_desktop unit_test_wasm check_node check_chrome check_probe_python probe_idbfs_build probe_idbfs uri_test
+.PHONY: all deps ensure_deps clean ensure_out_dir ensure_obj_dir libraylib_wasm libraylib_desktop wgutils_desktop wgutils_wasm wasm wasm_archive desktop shared_lua test_lua_bindings test test_desktop test_wasm test_haxe_bindings test_nim_bindings unit_test_desktop unit_test_wasm check_node check_chrome check_probe_python probe_idbfs_build probe_idbfs uri_test
 # 	"_RL_COLOR_BLACK", \
 # 	"_RL_COLOR_BLANK", \
 # 	"_RL_COLOR_MAGENTA", \

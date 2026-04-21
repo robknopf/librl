@@ -2,7 +2,7 @@ LUA_MODULE_DIR := $(abspath .)
 ROOT_DIR := $(abspath ../..)
 
 LIBLUA_REPO ?= git@github.com:robknopf/liblua-builder.git
-LIBLUA_ROOT ?= $(LUA_MODULE_DIR)/deps/liblua
+LIBLUA_ROOT ?= $(ROOT_DIR)/deps/liblua
 LIBLUA_INC ?= $(LIBLUA_ROOT)/include
 LIBLUA_WASM_ARCHIVE ?= $(LIBLUA_ROOT)/lib/liblua.wasm.a
 LIBLUA_DESKTOP_ARCHIVE ?= $(LIBLUA_ROOT)/lib/liblua.a

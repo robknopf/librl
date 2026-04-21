@@ -285,7 +285,12 @@ OUT_WASM_ARCHIVE ?= $(OUT_LIB_DIR)/$(LIBRL_BASENAME)$(DEV_SUFFIX).wasm.a
 OUT_DESKTOP ?= $(OUT_LIB_DIR)/$(LIBRL_BASENAME)$(DEV_SUFFIX).a
 
 # Default target
-all: ensure_deps wasm wasm_archive desktop
+all: ensure_deps wasm wasm_archive desktop shared
+
+LUA_VM_MODULE_DIR := $(LIBRL_ROOT)/modules/lua
+LIBLUA_REPO ?= git@github.com:robknopf/liblua-builder.git
+LIBLUA_ROOT ?= $(LIBRL_ROOT)/deps/liblua
+LIBLUA_INC ?= $(LIBLUA_ROOT)/include
 
 deps:
 	@if [ ! -d "$(LIBRAYLIB_ROOT)" ]; then \
@@ -314,6 +319,11 @@ deps:
 		echo "Error: $(WGUTILS_ROOT) does not look like wgutils source."; \
 		exit 1; \
 	fi
+	@$(MAKE) -C $(WGUTILS_ROOT) desktop
+	@$(MAKE) -C $(LUA_VM_MODULE_DIR) deps \
+		ROOT_DIR="$(abspath .)" \
+		LIBLUA_ROOT="$(abspath $(LIBLUA_ROOT))" \
+		LIBLUA_REPO="$(LIBLUA_REPO)"
 
 ensure_deps:
 	@if [ ! -f "$(LIBRAYLIB_ROOT)/Makefile" ]; then \
@@ -341,6 +351,9 @@ wgutils_wasm: ensure_deps
 		$(MAKE) -C $(WGUTILS_ROOT) wasm; \
 	fi
 
+wgutils: wgutils_desktop wgutils_wasm
+	@echo "[wgutils] Built wgutils archives (desktop + wasm)."
+
 libraylib_wasm: ensure_deps
 	@if [ -f "$(LIBRAYLIB_WASM_ARCHIVE)" ]; then \
 		echo "[libraylib_wasm] Using existing raylib wasm archive: $(LIBRAYLIB_WASM_ARCHIVE)"; \
@@ -356,6 +369,9 @@ libraylib_desktop: ensure_deps
 		echo "[libraylib_desktop] Missing raylib desktop archive: $(LIBRAYLIB_DESKTOP_ARCHIVE)"; \
 		$(MAKE) -C $(LIBRAYLIB_ROOT) DEV=$(DEV) CUSTOM_CFLAGS="$(LIBRAYLIB_CUSTOM_CFLAGS)" desktop; \
 	fi
+
+libraylib: libraylib_desktop libraylib_wasm
+	@echo "[libraylib] Built raylib archives (desktop + wasm)."
 
 # WebAssembly static build
 wasm: libraylib_wasm wgutils_wasm ensure_out_dir
@@ -397,23 +413,57 @@ desktop: libraylib_desktop wgutils_desktop ensure_out_dir ensure_obj_dir $(DESKT
 	$(Q)cd $(OBJ_DESKTOP_DIR)/.wgutils_unpack && ar x $(abspath $(WGUTILS_DESKTOP_ARCHIVE))
 	$(Q)ar rcs $(OUT_DESKTOP) $(DESKTOP_OBJS) $(OBJ_DESKTOP_DIR)/.raylib_unpack/*.o $(OBJ_DESKTOP_DIR)/.wgutils_unpack/*.o
 
-# Desktop shared library with Lua bindings
-# Usage: make shared_lua LIBLUA_INC=/path/to/lua/headers
+# Desktop shared core library (C API only, no Lua module entrypoint)
 LIBRL_SHARED_SO := $(OUT_LIB_DIR)/librl.so
-LUA_BINDINGS_SRC := $(LIBRL_ROOT)/bindings/lua/lua_rl.c
+RL_LUA_MODULE_SO := $(OUT_LIB_DIR)/rl.so
+LUA_BINDINGS_SRC := $(wildcard $(LIBRL_ROOT)/bindings/lua/*.c)
 
-shared_lua: libraylib_desktop wgutils_desktop ensure_out_dir ensure_obj_dir $(DESKTOP_OBJS)
-	$(info [shared_lua] Building shared library with Lua bindings: $(LIBRL_SHARED_SO))
-	$(call DETAILS,[shared_lua] Sources: $(DESKTOP_SRCS) $(LUA_BINDINGS_SRC))
-	$(Q)test -n "$(LIBLUA_INC)" || (echo "Error: LIBLUA_INC not set. Pass LIBLUA_INC=/path/to/lua/headers" && exit 1)
+shared: libraylib_desktop wgutils_desktop ensure_out_dir ensure_obj_dir $(DESKTOP_OBJS)
+	$(info [shared] Building shared core library: $(LIBRL_SHARED_SO))
+	$(call DETAILS,[shared] Sources: $(DESKTOP_SRCS))
 	$(Q)test -f "$(LIBRAYLIB_DESKTOP_ARCHIVE)" || (echo "Missing raylib archive: $(LIBRAYLIB_DESKTOP_ARCHIVE)" && exit 1)
 	$(Q)test -f "$(WGUTILS_DESKTOP_ARCHIVE)" || (echo "Missing wgutils archive: $(WGUTILS_DESKTOP_ARCHIVE)" && exit 1)
 	$(Q)$(CC_DESKTOP) -shared -fPIC -o $(LIBRL_SHARED_SO) \
-		$(DESKTOP_SRCS) $(LUA_BINDINGS_SRC) \
-		$(INCLUDES) -I$(LIBLUA_INC) \
+		$(DESKTOP_SRCS) \
+		$(INCLUDES) \
 		$(LIBRAYLIB_DESKTOP_ARCHIVE) $(WGUTILS_DESKTOP_ARCHIVE) \
 		-lcurl -lssl -lcrypto -lz -lm -lpthread -ldl -lX11
 	@echo "Built: $(LIBRL_SHARED_SO)"
+
+# Desktop Lua module for require("rl"), linked against librl.so
+# Defaults LIBLUA_INC to $(LIBRL_ROOT)/deps/liblua/include.
+# Override LIBLUA_INC for custom lua headers.
+rl_lua: shared ensure_out_dir
+	$(info [rl_lua] Building Lua module: $(RL_LUA_MODULE_SO))
+	$(call DETAILS,[rl_lua] Sources: $(LUA_BINDINGS_SRC))
+	$(Q)test -f "$(LIBLUA_INC)/lua.h" || (echo "Error: lua.h not found at $(LIBLUA_INC). Build deps first or set LIBLUA_INC=/path/to/lua/include" && exit 1)
+	$(Q)test -f "$(LIBRL_SHARED_SO)" || (echo "Missing shared core library: $(LIBRL_SHARED_SO)" && exit 1)
+	$(Q)$(CC_DESKTOP) -shared -fPIC -o $(RL_LUA_MODULE_SO) \
+		$(LUA_BINDINGS_SRC) \
+		$(INCLUDES) -I$(LIBLUA_INC) \
+		-L$(OUT_LIB_DIR) -lrl \
+		-Wl,-rpath,'$$ORIGIN' \
+		-lm -lpthread -ldl
+	@echo "Built: $(RL_LUA_MODULE_SO)"
+
+# Embedded librl+lua VM module artifacts (modules/lua)
+# These are separate from bindings/lua/rl.so:
+# - desktop: modules/lua/lib/librl_lua.a
+# - wasm:    modules/lua/lib/librl_lua.wasm.a
+librl_lua_desktop: ensure_deps
+	$(info [librl_lua_desktop] Building embedded librl+lua desktop module archive)
+	$(Q)$(MAKE) -C $(LUA_VM_MODULE_DIR) desktop \
+		ROOT_DIR="$(abspath .)" \
+		CC="$(CC_DESKTOP)"
+
+librl_lua_wasm: ensure_deps
+	$(info [librl_lua_wasm] Building embedded librl+lua wasm module archive)
+	$(Q)$(MAKE) -C $(LUA_VM_MODULE_DIR) wasm \
+		ROOT_DIR="$(abspath .)" \
+		CC_WASM="$(CC_WASM)"
+
+librl_lua: librl_lua_desktop librl_lua_wasm
+	@echo "Built embedded librl+lua module archives (desktop + wasm)."
 
 uri_test test_desktop test_wasm test test_haxe_bindings test_nim_bindings test_lua_bindings unit_test_desktop unit_test_wasm probe_idbfs_build probe_idbfs check_node check_chrome check_probe_python:
 	@$(MAKE) -C tests $@ \
@@ -453,7 +503,7 @@ clean:
 #	@$(MAKE) -C $(LIBRAYLIB_ROOT) clean
 
 
-.PHONY: all deps ensure_deps clean ensure_out_dir ensure_obj_dir libraylib_wasm libraylib_desktop wgutils_desktop wgutils_wasm wasm wasm_archive desktop shared_lua test test_desktop test_wasm test_haxe_bindings test_nim_bindings test_lua_bindings unit_test_desktop unit_test_wasm check_node check_chrome check_probe_python probe_idbfs_build probe_idbfs uri_test
+.PHONY: all deps ensure_deps clean ensure_out_dir ensure_obj_dir libraylib libraylib_wasm libraylib_desktop wgutils wgutils_desktop wgutils_wasm wasm wasm_archive desktop shared rl_lua librl_lua librl_lua_desktop librl_lua_wasm test test_desktop test_wasm test_haxe_bindings test_nim_bindings test_lua_bindings unit_test_desktop unit_test_wasm check_node check_chrome check_probe_python probe_idbfs_build probe_idbfs uri_test
 # 	"_RL_COLOR_BLACK", \
 # 	"_RL_COLOR_BLANK", \
 # 	"_RL_COLOR_MAGENTA", \

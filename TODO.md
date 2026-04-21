@@ -121,9 +121,11 @@
 
 - Lua binding architecture:
   - Keep Lua bindings as .c files for maximum build flexibility (static, shared, WASM)
-  - Location: `bindings/lua/liblua_rl.c` (following `lib<target>.c` convention)
-  - Enables future `librl.so` (desktop shared) or `librl.wasm` with embedded Lua support
-  - Desktop LuaJIT path: FFI bindings loading `librl.so` directly (bypass C bindings entirely)
+  - Location: `bindings/lua/lua_rl.c` (Lua convention: no `lib` prefix)
+  - Shared library: `rl.so` (not `librl.so`) — Lua `require` looks for `?.so` in `package.cpath`
+  - Entry point: `luaopen_rl()` following Lua module convention
+  - Enables future `rl.so` (desktop shared) or embedded in `librl.wasm`
+  - Desktop LuaJIT path: FFI bindings loading `librl.so` (core library) directly, bypassing C bindings entirely
   - PUC Lua path: Standard `luaopen_rl` C binding as now
   - Batch frame submission: Lua table → single C crossing → direct `rl_*` calls (v2 encoding)
   - Wrapper: `rl.lua` detects LuaJIT → FFI bindings, else → C bindings

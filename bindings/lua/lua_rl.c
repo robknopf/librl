@@ -17,7 +17,27 @@
 
 /* Version and flags */
 #define RL_SUBMIT_VERSION 1
-#define RL_SUBMIT_FLAG_DEBUG_TAGS 0x01
+#define RL_SUBMIT_FLAG_DEBUG_TAGS         0x01  /* Reserved for debug mode */
+#define RL_SUBMIT_FLAG_INCLUDES_TYPE_TAG  0x02  /* Each section prefixed with [type_tag, count] */
+
+/* Compile-time format configuration */
+/* Define RL_FRAME_BUFFER_INCLUDE_TYPE_TAG to enable type tag checking */
+/* Default: enabled for debug builds, disabled for release */
+#ifndef RL_FRAME_BUFFER_INCLUDE_TYPE_TAG
+#ifdef NDEBUG
+#define RL_FRAME_BUFFER_INCLUDE_TYPE_TAG 0
+#else
+#define RL_FRAME_BUFFER_INCLUDE_TYPE_TAG 1
+#endif
+#endif
+
+/* Section type tags (for type_tag mode) */
+#define TYPE_SPRITE2D_XFORM 10
+#define TYPE_SPRITE2D_DRAW  11
+#define TYPE_SPRITE3D_XFORM 12
+#define TYPE_SPRITE3D_DRAW  13
+#define TYPE_MODEL_XFORM    14
+#define TYPE_MODEL_DRAW     15
 
 /* Section indices (fixed order) */
 #define SECTION_SPRITE2D_XFORM 0
@@ -64,11 +84,45 @@ static int rl_submit_frame_buffer(lua_State *L)
     flags = (int)luaL_checkinteger(L, -1);
     lua_pop(L, 1);
 
+    /* Validate FLAGS matches compile-time configuration */
+    {
+        int expected_flags = 0;
+#if RL_FRAME_BUFFER_INCLUDE_TYPE_TAG
+        expected_flags |= RL_SUBMIT_FLAG_INCLUDES_TYPE_TAG;
+#endif
+        if ((flags & RL_SUBMIT_FLAG_INCLUDES_TYPE_TAG) != (expected_flags & RL_SUBMIT_FLAG_INCLUDES_TYPE_TAG)) {
+            return luaL_error(L, "rl_submit_frame_buffer: FLAGS mismatch (compile-time type_tag=%d, runtime=%d)",
+                              RL_FRAME_BUFFER_INCLUDE_TYPE_TAG, (flags & RL_SUBMIT_FLAG_INCLUDES_TYPE_TAG) ? 1 : 0);
+        }
+    }
+
+    /* Helper macro to read section header - compile-time optimized */
+    #if RL_FRAME_BUFFER_INCLUDE_TYPE_TAG
+    #define READ_SECTION_HEADER(expected_type) \
+        do { \
+            int type_tag; \
+            lua_rawgeti(L, table_idx, idx++); \
+            type_tag = (int)luaL_checkinteger(L, -1); \
+            lua_pop(L, 1); \
+            if (type_tag != (expected_type)) { \
+                return luaL_error(L, "rl_submit_frame_buffer: type mismatch, expected %d got %d", (expected_type), type_tag); \
+            } \
+            lua_rawgeti(L, table_idx, idx++); \
+            count = (int)luaL_checkinteger(L, -1); \
+            lua_pop(L, 1); \
+        } while (0)
+    #else
+    #define READ_SECTION_HEADER(expected_type) \
+        do { \
+            lua_rawgeti(L, table_idx, idx++); \
+            count = (int)luaL_checkinteger(L, -1); \
+            lua_pop(L, 1); \
+        } while (0)
+    #endif
+
     /* Process sections in fixed order */
     /* SECTION_SPRITE2D_XFORM */
-    lua_rawgeti(L, table_idx, idx++);
-    count = (int)luaL_checkinteger(L, -1);
-    lua_pop(L, 1);
+    READ_SECTION_HEADER(TYPE_SPRITE2D_XFORM);
     if (count > 0) {
         for (i = 0; i < count; i++) {
             lua_rawgeti(L, table_idx, idx++);
@@ -94,9 +148,7 @@ static int rl_submit_frame_buffer(lua_State *L)
     }
 
     /* SECTION_SPRITE2D_DRAW */
-    lua_rawgeti(L, table_idx, idx++);
-    count = (int)luaL_checkinteger(L, -1);
-    lua_pop(L, 1);
+    READ_SECTION_HEADER(TYPE_SPRITE2D_DRAW);
     if (count > 0) {
         for (i = 0; i < count; i++) {
             lua_rawgeti(L, table_idx, idx++);
@@ -110,9 +162,7 @@ static int rl_submit_frame_buffer(lua_State *L)
     }
 
     /* SECTION_SPRITE3D_XFORM */
-    lua_rawgeti(L, table_idx, idx++);
-    count = (int)luaL_checkinteger(L, -1);
-    lua_pop(L, 1);
+    READ_SECTION_HEADER(TYPE_SPRITE3D_XFORM);
     if (count > 0) {
         for (i = 0; i < count; i++) {
             lua_rawgeti(L, table_idx, idx++);
@@ -138,9 +188,7 @@ static int rl_submit_frame_buffer(lua_State *L)
     }
 
     /* SECTION_SPRITE3D_DRAW */
-    lua_rawgeti(L, table_idx, idx++);
-    count = (int)luaL_checkinteger(L, -1);
-    lua_pop(L, 1);
+    READ_SECTION_HEADER(TYPE_SPRITE3D_DRAW);
     if (count > 0) {
         for (i = 0; i < count; i++) {
             lua_rawgeti(L, table_idx, idx++);
@@ -154,9 +202,7 @@ static int rl_submit_frame_buffer(lua_State *L)
     }
 
     /* SECTION_MODEL_XFORM */
-    lua_rawgeti(L, table_idx, idx++);
-    count = (int)luaL_checkinteger(L, -1);
-    lua_pop(L, 1);
+    READ_SECTION_HEADER(TYPE_MODEL_XFORM);
     if (count > 0) {
         for (i = 0; i < count; i++) {
             lua_rawgeti(L, table_idx, idx++);
@@ -194,9 +240,7 @@ static int rl_submit_frame_buffer(lua_State *L)
     }
 
     /* SECTION_MODEL_DRAW */
-    lua_rawgeti(L, table_idx, idx++);
-    count = (int)luaL_checkinteger(L, -1);
-    lua_pop(L, 1);
+    READ_SECTION_HEADER(TYPE_MODEL_DRAW);
     if (count > 0) {
         for (i = 0; i < count; i++) {
             lua_rawgeti(L, table_idx, idx++);
@@ -208,6 +252,8 @@ static int rl_submit_frame_buffer(lua_State *L)
             rl_model_draw(handle, tint);
         }
     }
+
+    #undef READ_SECTION_HEADER
 
     /* Add additional sections here: texture, text, audio, etc. */
 
@@ -222,6 +268,7 @@ static int rl_submit_frame_buffer(lua_State *L)
 /* Window */
 static int rl_window_close_binding(lua_State *L)
 {
+    (void)L;  /* Unused */
     rl_window_close();
     return 0;
 }
@@ -388,6 +435,13 @@ static int rl_color_create_binding(lua_State *L)
     return 1;
 }
 
+static int rl_color_destroy_binding(lua_State *L)
+{
+    rl_handle_t color = (rl_handle_t)luaL_checkinteger(L, 1);
+    rl_color_destroy(color);
+    return 0;
+}
+
 /* Camera3D */
 static int rl_camera3d_create_binding(lua_State *L)
 {
@@ -418,30 +472,35 @@ static int rl_camera3d_destroy_binding(lua_State *L)
 /* Core lifecycle */
 static int rl_init_binding(lua_State *L)
 {
+    (void)L;  /* Unused */
     rl_init();
     return 0;
 }
 
 static int rl_deinit_binding(lua_State *L)
 {
+    (void)L;  /* Unused */
     rl_deinit();
     return 0;
 }
 
 static int rl_update_binding(lua_State *L)
 {
+    (void)L;  /* Unused */
     rl_update();
     return 0;
 }
 
 static int rl_begin_drawing_binding(lua_State *L)
 {
+    (void)L;  /* Unused */
     rl_render_begin();
     return 0;
 }
 
 static int rl_end_drawing_binding(lua_State *L)
 {
+    (void)L;  /* Unused */
     rl_render_end();
     return 0;
 }
@@ -453,9 +512,22 @@ static int rl_clear_background_binding(lua_State *L)
     return 0;
 }
 
+/* Frame buffer format query - Lua calls this to know how to pack */
+static int rl_get_frame_buffer_format_binding(lua_State *L)
+{
+    int flags = 0;
+#if RL_FRAME_BUFFER_INCLUDE_TYPE_TAG
+    flags |= RL_SUBMIT_FLAG_INCLUDES_TYPE_TAG;
+#endif
+    lua_pushinteger(L, RL_SUBMIT_VERSION);  /* version */
+    lua_pushinteger(L, flags);               /* flags */
+    return 2;
+}
+
 static const luaL_Reg rl_functions[] = {
     /* Batch submission (v2 encoding) */
     {"submit_frame_buffer", rl_submit_frame_buffer},
+    {"get_frame_buffer_format", rl_get_frame_buffer_format_binding},
 
     /* Window */
     {"window_close", rl_window_close_binding},
@@ -487,6 +559,7 @@ static const luaL_Reg rl_functions[] = {
 
     /* Color */
     {"color_create", rl_color_create_binding},
+    {"color_destroy", rl_color_destroy_binding},
 
     /* Camera3D */
     {"camera3d_create", rl_camera3d_create_binding},

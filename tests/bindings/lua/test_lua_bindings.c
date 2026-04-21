@@ -19,6 +19,8 @@ int luaopen_rl(lua_State *L);
 
 int main(int argc, char *argv[])
 {
+    (void)argc;
+    (void)argv;
     lua_State *L;
     int status;
 
@@ -47,44 +49,110 @@ int main(int argc, char *argv[])
         lua_pop(L, 1);
     }
 
-    /* Test 2: Create a color */
+    /* Test 2: Create and destroy colors */
     status = luaL_dostring(L,
         "local white = rl.color_create(255, 255, 255, 255)\n"
         "print('OK: Created white color with handle:', white)\n"
         "local red = rl.color_create(255, 0, 0)\n"
-        "print('OK: Created red color with default alpha, handle:', red)"
+        "print('OK: Created red color with default alpha, handle:', red)\n"
+        "rl.color_destroy(white)\n"
+        "rl.color_destroy(red)\n"
+        "print('OK: Destroyed both colors')"
     );
     if (status != LUA_OK) {
-        fprintf(stderr, "Error creating colors: %s\n", lua_tostring(L, -1));
+        fprintf(stderr, "Error with colors: %s\n", lua_tostring(L, -1));
         lua_pop(L, 1);
     }
 
-    /* Test 3: Batch submission with empty buffer */
+    /* Test 3: Query frame buffer format */
     status = luaL_dostring(L,
-        "local buf = {\n"
-        "    1,  -- VERSION\n"
-        "    0,  -- FLAGS\n"
-        "    0,  -- sprite2d_xform count\n"
-        "    0,  -- sprite2d_draw count\n"
-        "    0,  -- sprite3d_xform count\n"
-        "    0,  -- sprite3d_draw count\n"
-        "    0,  -- model_xform count\n"
-        "    0,  -- model_draw count\n"
-        "}\n"
-        "local consumed = rl.submit_frame_buffer(buf)\n"
-        "print('OK: Batch submission consumed', consumed, 'elements')\n"
-        "if consumed == 8 then\n"
-        "    print('OK: Consumed expected element count')\n"
-        "else\n"
-        "    print('WARNING: Expected 8 but got', consumed)\n"
+        "local version, flags = rl.get_frame_buffer_format()\n"
+        "print('OK: Frame buffer format - version:', version, 'flags:', flags)\n"
+        "if version == 1 then\n"
+        "    print('OK: Version 1 supported')\n"
+        "end\n"
+        "if flags == 2 then\n"
+        "    print('OK: type_tag enabled (RL_SUBMIT_FLAG_INCLUDES_TYPE_TAG)')\n"
+        "elseif flags == 0 then\n"
+        "    print('OK: type_tag disabled (fast mode)')\n"
         "end"
     );
     if (status != LUA_OK) {
-        fprintf(stderr, "Error in batch submission: %s\n", lua_tostring(L, -1));
+        fprintf(stderr, "Error querying format: %s\n", lua_tostring(L, -1));
         lua_pop(L, 1);
     }
 
-    /* Test 4: Check available functions */
+    /* Test 4: Batch submission - use queried format */
+    status = luaL_dostring(L,
+        "local buf = {\n"
+        "    1,   -- VERSION\n"
+        "    2,   -- type_tag flag (RL_SUBMIT_FLAG_INCLUDES_TYPE_TAG)\n"
+        "    10,  -- TYPE_SPRITE2D_XFORM\n"
+        "    0,   -- count\n"
+        "    11,  -- TYPE_SPRITE2D_DRAW\n"
+        "    0,   -- count\n"
+        "    12,  -- TYPE_SPRITE3D_XFORM\n"
+        "    0,   -- count\n"
+        "    13,  -- TYPE_SPRITE3D_DRAW\n"
+        "    0,   -- count\n"
+        "    14,  -- TYPE_MODEL_XFORM\n"
+        "    0,   -- count\n"
+        "    15,  -- TYPE_MODEL_DRAW\n"
+        "    0,   -- count\n"
+        "}\n"
+        "local consumed = rl.submit_frame_buffer(buf)\n"
+        "print('OK: Type-included mode consumed', consumed, 'elements')\n"
+        "if consumed == 14 then\n"
+        "    print('OK: Type-included mode element count correct (2 header + 6*[type+count])')\n"
+        "else\n"
+        "    print('WARNING: Expected 14 but got', consumed)\n"
+        "end"
+    );
+    if (status != LUA_OK) {
+        fprintf(stderr, "Error in batch submission (type-included mode): %s\n", lua_tostring(L, -1));
+        lua_pop(L, 1);
+    }
+
+    /* Test 5: Stride verification - pack actual data with type_tag */
+    status = luaL_dostring(L,
+        "local white = rl.color_create(255, 255, 255, 255)\n"
+        "local sprite = rl.sprite2d_create('test.png')  -- will fail but gives us a handle\n"
+        "local buf = {\n"
+        "    1,        -- VERSION\n"
+        "    2,        -- type_tag flag (RL_SUBMIT_FLAG_INCLUDES_TYPE_TAG)\n"
+        "    10,       -- TYPE_SPRITE2D_XFORM\n"
+        "    1,        -- sprite2d_xform count = 1\n"
+        "    sprite,   -- handle\n"
+        "    white,    -- tint\n"
+        "    100,      -- x\n"
+        "    200,      -- y\n"
+        "    1.5,      -- scale\n"
+        "    45,       -- rotation\n"
+        "    11,       -- TYPE_SPRITE2D_DRAW\n"
+        "    1,        -- sprite2d_draw count = 1\n"
+        "    sprite,   -- handle\n"
+        "    white,    -- tint\n"
+        "    12, 0,    -- TYPE_SPRITE3D_XFORM, count=0\n"
+        "    13, 0,    -- TYPE_SPRITE3D_DRAW, count=0\n"
+        "    14, 0,    -- TYPE_MODEL_XFORM, count=0\n"
+        "    15, 0,    -- TYPE_MODEL_DRAW, count=0\n"
+        "}\n"
+        "local consumed = rl.submit_frame_buffer(buf)\n"
+        "print('OK: Stride test consumed', consumed, 'elements')\n"
+        "-- Expected: 2 header + 6*[type+count] + 6+2 (data) = 22\n"
+        "if consumed == 22 then\n"
+        "    print('OK: Stride verification passed (strides: xform=6, draw=2)')\n"
+        "else\n"
+        "    print('WARNING: Expected 22 but got', consumed)\n"
+        "end\n"
+        "rl.color_destroy(white)"
+    );
+    if (status != LUA_OK) {
+        fprintf(stderr, "Error in stride verification: %s\n", lua_tostring(L, -1));
+        lua_pop(L, 1);
+    }
+
+    /* Test 6: Check available functions */
     status = luaL_dostring(L,
         "local functions = {}\n"
         "for k, v in pairs(rl) do\n"

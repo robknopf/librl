@@ -5,7 +5,7 @@ LIBLUA_ROOT ?= $(ROOT_DIR)/modules/lua/deps/liblua
 LIBLUA_INC ?= $(LIBLUA_ROOT)/include
 LIBLUA_ARCHIVE ?= $(LIBLUA_ROOT)/lib/liblua.a
 
-CFLAGS ?= -Wall -Wextra -O2
+CFLAGS ?= -Wall -Wextra -O2 -DRL_FRAME_BUFFER_INCLUDE_TYPE_TAG=1
 TEST_BIN := test_rl_lua
 TEST_SRC := test_lua_bindings.c
 LUA_BINDINGS_SRC := $(ROOT_DIR)/bindings/lua/lua_rl.c

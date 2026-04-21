@@ -1,0 +1,521 @@
+/*
+ * lua_rl.c - Lua bindings for librl (direct API, no frame commands)
+ *
+ * Format: [VERSION, FLAGS, count_section, (data...), count_section, ...]
+ * Fixed section order: sprite2d_xform, sprite2d_draw, sprite3d_xform, sprite3d_draw, model_xform, model_draw
+ */
+
+#include <lua.h>
+#include <lauxlib.h>
+#include <string.h>
+
+#include "rl.h"
+
+/* Version and flags */
+#define RL_SUBMIT_VERSION 1
+#define RL_SUBMIT_FLAG_DEBUG_TAGS 0x01
+
+/* Section indices (fixed order) */
+#define SECTION_SPRITE2D_XFORM 0
+#define SECTION_SPRITE2D_DRAW  1
+#define SECTION_SPRITE3D_XFORM 2
+#define SECTION_SPRITE3D_DRAW  3
+#define SECTION_MODEL_XFORM    4
+#define SECTION_MODEL_DRAW     5
+#define SECTION_COUNT          6
+
+/* Strides (values per entry) */
+#define STRIDE_SPRITE2D_XFORM 6  /* handle, tint, x, y, scale, rotation */
+#define STRIDE_SPRITE2D_DRAW  2  /* handle, tint */
+#define STRIDE_SPRITE3D_XFORM 6  /* handle, tint, x, y, z, size */
+#define STRIDE_SPRITE3D_DRAW  2  /* handle, tint */
+#define STRIDE_MODEL_XFORM    10 /* handle, x, y, z, rot_x, rot_y, rot_z, scale_x, scale_y, scale_z */
+#define STRIDE_MODEL_DRAW     4  /* handle, tint, anim_index, anim_frame */
+
+static int rl_submit_frame_buffer(lua_State *L)
+{
+    int version;
+    int flags;
+    int idx = 1;  /* Lua tables are 1-indexed */
+    int table_idx = 1;
+    int i, count;
+    rl_handle_t handle, tint;
+    float x, y, z, scale, rotation, size;
+    float rot_x, rot_y, rot_z, scale_x, scale_y, scale_z;
+    int anim_index, anim_frame;
+
+    /* Check argument is a table */
+    luaL_checktype(L, 1, LUA_TTABLE);
+
+    /* Read VERSION */
+    version = (int)luaL_checkinteger(L, -1);
+    lua_rawgeti(L, table_idx, idx++);
+    version = (int)luaL_checkinteger(L, -1);
+    lua_pop(L, 1);
+
+    if (version != RL_SUBMIT_VERSION) {
+        return luaL_error(L, "rl_submit_frame_buffer: unsupported version %d", version);
+    }
+
+    /* Read FLAGS */
+    lua_rawgeti(L, table_idx, idx++);
+    flags = (int)luaL_checkinteger(L, -1);
+    lua_pop(L, 1);
+
+    /* Process sections in fixed order */
+    /* SECTION_SPRITE2D_XFORM */
+    lua_rawgeti(L, table_idx, idx++);
+    count = (int)luaL_checkinteger(L, -1);
+    lua_pop(L, 1);
+    if (count > 0) {
+        for (i = 0; i < count; i++) {
+            lua_rawgeti(L, table_idx, idx++);
+            handle = (rl_handle_t)luaL_checkinteger(L, -1);
+            lua_pop(L, 1);
+            lua_rawgeti(L, table_idx, idx++);
+            tint = (rl_handle_t)luaL_checkinteger(L, -1);
+            lua_pop(L, 1);
+            lua_rawgeti(L, table_idx, idx++);
+            x = (float)luaL_checknumber(L, -1);
+            lua_pop(L, 1);
+            lua_rawgeti(L, table_idx, idx++);
+            y = (float)luaL_checknumber(L, -1);
+            lua_pop(L, 1);
+            lua_rawgeti(L, table_idx, idx++);
+            scale = (float)luaL_checknumber(L, -1);
+            lua_pop(L, 1);
+            lua_rawgeti(L, table_idx, idx++);
+            rotation = (float)luaL_checknumber(L, -1);
+            lua_pop(L, 1);
+            rl_sprite2d_set_transform(handle, x, y, scale, rotation);
+        }
+    }
+
+    /* SECTION_SPRITE2D_DRAW */
+    lua_rawgeti(L, table_idx, idx++);
+    count = (int)luaL_checkinteger(L, -1);
+    lua_pop(L, 1);
+    if (count > 0) {
+        for (i = 0; i < count; i++) {
+            lua_rawgeti(L, table_idx, idx++);
+            handle = (rl_handle_t)luaL_checkinteger(L, -1);
+            lua_pop(L, 1);
+            lua_rawgeti(L, table_idx, idx++);
+            tint = (rl_handle_t)luaL_checkinteger(L, -1);
+            lua_pop(L, 1);
+            rl_sprite2d_draw(handle, tint);
+        }
+    }
+
+    /* SECTION_SPRITE3D_XFORM */
+    lua_rawgeti(L, table_idx, idx++);
+    count = (int)luaL_checkinteger(L, -1);
+    lua_pop(L, 1);
+    if (count > 0) {
+        for (i = 0; i < count; i++) {
+            lua_rawgeti(L, table_idx, idx++);
+            handle = (rl_handle_t)luaL_checkinteger(L, -1);
+            lua_pop(L, 1);
+            lua_rawgeti(L, table_idx, idx++);
+            tint = (rl_handle_t)luaL_checkinteger(L, -1);
+            lua_pop(L, 1);
+            lua_rawgeti(L, table_idx, idx++);
+            x = (float)luaL_checknumber(L, -1);
+            lua_pop(L, 1);
+            lua_rawgeti(L, table_idx, idx++);
+            y = (float)luaL_checknumber(L, -1);
+            lua_pop(L, 1);
+            lua_rawgeti(L, table_idx, idx++);
+            z = (float)luaL_checknumber(L, -1);
+            lua_pop(L, 1);
+            lua_rawgeti(L, table_idx, idx++);
+            size = (float)luaL_checknumber(L, -1);
+            lua_pop(L, 1);
+            rl_sprite3d_set_transform(handle, x, y, z, size);
+        }
+    }
+
+    /* SECTION_SPRITE3D_DRAW */
+    lua_rawgeti(L, table_idx, idx++);
+    count = (int)luaL_checkinteger(L, -1);
+    lua_pop(L, 1);
+    if (count > 0) {
+        for (i = 0; i < count; i++) {
+            lua_rawgeti(L, table_idx, idx++);
+            handle = (rl_handle_t)luaL_checkinteger(L, -1);
+            lua_pop(L, 1);
+            lua_rawgeti(L, table_idx, idx++);
+            tint = (rl_handle_t)luaL_checkinteger(L, -1);
+            lua_pop(L, 1);
+            rl_sprite3d_draw(handle, tint);
+        }
+    }
+
+    /* SECTION_MODEL_XFORM */
+    lua_rawgeti(L, table_idx, idx++);
+    count = (int)luaL_checkinteger(L, -1);
+    lua_pop(L, 1);
+    if (count > 0) {
+        for (i = 0; i < count; i++) {
+            lua_rawgeti(L, table_idx, idx++);
+            handle = (rl_handle_t)luaL_checkinteger(L, -1);
+            lua_pop(L, 1);
+            lua_rawgeti(L, table_idx, idx++);
+            x = (float)luaL_checknumber(L, -1);
+            lua_pop(L, 1);
+            lua_rawgeti(L, table_idx, idx++);
+            y = (float)luaL_checknumber(L, -1);
+            lua_pop(L, 1);
+            lua_rawgeti(L, table_idx, idx++);
+            z = (float)luaL_checknumber(L, -1);
+            lua_pop(L, 1);
+            lua_rawgeti(L, table_idx, idx++);
+            rot_x = (float)luaL_checknumber(L, -1);
+            lua_pop(L, 1);
+            lua_rawgeti(L, table_idx, idx++);
+            rot_y = (float)luaL_checknumber(L, -1);
+            lua_pop(L, 1);
+            lua_rawgeti(L, table_idx, idx++);
+            rot_z = (float)luaL_checknumber(L, -1);
+            lua_pop(L, 1);
+            lua_rawgeti(L, table_idx, idx++);
+            scale_x = (float)luaL_checknumber(L, -1);
+            lua_pop(L, 1);
+            lua_rawgeti(L, table_idx, idx++);
+            scale_y = (float)luaL_checknumber(L, -1);
+            lua_pop(L, 1);
+            lua_rawgeti(L, table_idx, idx++);
+            scale_z = (float)luaL_checknumber(L, -1);
+            lua_pop(L, 1);
+            rl_model_set_transform(handle, x, y, z, rot_x, rot_y, rot_z, scale_x, scale_y, scale_z);
+        }
+    }
+
+    /* SECTION_MODEL_DRAW */
+    lua_rawgeti(L, table_idx, idx++);
+    count = (int)luaL_checkinteger(L, -1);
+    lua_pop(L, 1);
+    if (count > 0) {
+        for (i = 0; i < count; i++) {
+            lua_rawgeti(L, table_idx, idx++);
+            handle = (rl_handle_t)luaL_checkinteger(L, -1);
+            lua_pop(L, 1);
+            lua_rawgeti(L, table_idx, idx++);
+            tint = (rl_handle_t)luaL_checkinteger(L, -1);
+            lua_pop(L, 1);
+            lua_rawgeti(L, table_idx, idx++);
+            anim_index = (int)luaL_optinteger(L, -1, -1);
+            lua_pop(L, 1);
+            lua_rawgeti(L, table_idx, idx++);
+            anim_frame = (int)luaL_optinteger(L, -1, 0);
+            lua_pop(L, 1);
+            rl_model_draw(handle, tint, anim_index, anim_frame);
+        }
+    }
+
+    /* Add additional sections here: texture, text, audio, etc. */
+
+    lua_pushinteger(L, idx - 1);  /* Return number of elements consumed */
+    return 1;
+}
+
+/* ============================================================================
+ * Individual function bindings for vanilla Lua
+ * ============================================================================ */
+
+/* Window */
+static int rl_window_should_close_binding(lua_State *L)
+{
+    lua_pushboolean(L, rl_window_should_close());
+    return 1;
+}
+
+static int rl_get_screen_width_binding(lua_State *L)
+{
+    lua_pushinteger(L, rl_get_screen_width());
+    return 1;
+}
+
+static int rl_get_screen_height_binding(lua_State *L)
+{
+    lua_pushinteger(L, rl_get_screen_height());
+    return 1;
+}
+
+/* Sprite2D */
+static int rl_sprite2d_create_binding(lua_State *L)
+{
+    const char *filename = luaL_checkstring(L, 1);
+    rl_handle_t handle = rl_sprite2d_create(filename);
+    lua_pushinteger(L, handle);
+    return 1;
+}
+
+static int rl_sprite2d_create_from_texture_binding(lua_State *L)
+{
+    rl_handle_t texture = (rl_handle_t)luaL_checkinteger(L, 1);
+    rl_handle_t handle = rl_sprite2d_create_from_texture(texture);
+    lua_pushinteger(L, handle);
+    return 1;
+}
+
+static int rl_sprite2d_set_transform_binding(lua_State *L)
+{
+    rl_handle_t sprite = (rl_handle_t)luaL_checkinteger(L, 1);
+    float x = (float)luaL_checknumber(L, 2);
+    float y = (float)luaL_checknumber(L, 3);
+    float scale = (float)luaL_checknumber(L, 4);
+    float rotation = (float)luaL_checknumber(L, 5);
+    rl_sprite2d_set_transform(sprite, x, y, scale, rotation);
+    return 0;
+}
+
+static int rl_sprite2d_draw_binding(lua_State *L)
+{
+    rl_handle_t sprite = (rl_handle_t)luaL_checkinteger(L, 1);
+    rl_handle_t tint = (rl_handle_t)luaL_checkinteger(L, 2);
+    rl_sprite2d_draw(sprite, tint);
+    return 0;
+}
+
+static int rl_sprite2d_destroy_binding(lua_State *L)
+{
+    rl_handle_t sprite = (rl_handle_t)luaL_checkinteger(L, 1);
+    rl_sprite2d_destroy(sprite);
+    return 0;
+}
+
+/* Sprite3D */
+static int rl_sprite3d_create_binding(lua_State *L)
+{
+    const char *filename = luaL_checkstring(L, 1);
+    rl_handle_t handle = rl_sprite3d_create(filename);
+    lua_pushinteger(L, handle);
+    return 1;
+}
+
+static int rl_sprite3d_create_from_texture_binding(lua_State *L)
+{
+    rl_handle_t texture = (rl_handle_t)luaL_checkinteger(L, 1);
+    rl_handle_t handle = rl_sprite3d_create_from_texture(texture);
+    lua_pushinteger(L, handle);
+    return 1;
+}
+
+static int rl_sprite3d_set_transform_binding(lua_State *L)
+{
+    rl_handle_t sprite = (rl_handle_t)luaL_checkinteger(L, 1);
+    float x = (float)luaL_checknumber(L, 2);
+    float y = (float)luaL_checknumber(L, 3);
+    float z = (float)luaL_checknumber(L, 4);
+    float size = (float)luaL_checknumber(L, 5);
+    rl_sprite3d_set_transform(sprite, x, y, z, size);
+    return 0;
+}
+
+static int rl_sprite3d_draw_binding(lua_State *L)
+{
+    rl_handle_t sprite = (rl_handle_t)luaL_checkinteger(L, 1);
+    rl_handle_t tint = (rl_handle_t)luaL_checkinteger(L, 2);
+    rl_sprite3d_draw(sprite, tint);
+    return 0;
+}
+
+static int rl_sprite3d_destroy_binding(lua_State *L)
+{
+    rl_handle_t sprite = (rl_handle_t)luaL_checkinteger(L, 1);
+    rl_sprite3d_destroy(sprite);
+    return 0;
+}
+
+/* Model */
+static int rl_model_create_binding(lua_State *L)
+{
+    const char *filename = luaL_checkstring(L, 1);
+    rl_handle_t handle = rl_model_create(filename);
+    lua_pushinteger(L, handle);
+    return 1;
+}
+
+static int rl_model_set_transform_binding(lua_State *L)
+{
+    rl_handle_t model = (rl_handle_t)luaL_checkinteger(L, 1);
+    float x = (float)luaL_checknumber(L, 2);
+    float y = (float)luaL_checknumber(L, 3);
+    float z = (float)luaL_checknumber(L, 4);
+    float rot_x = (float)luaL_checknumber(L, 5);
+    float rot_y = (float)luaL_checknumber(L, 6);
+    float rot_z = (float)luaL_checknumber(L, 7);
+    float scale_x = (float)luaL_checknumber(L, 8);
+    float scale_y = (float)luaL_checknumber(L, 9);
+    float scale_z = (float)luaL_checknumber(L, 10);
+    rl_model_set_transform(model, x, y, z, rot_x, rot_y, rot_z, scale_x, scale_y, scale_z);
+    return 0;
+}
+
+static int rl_model_draw_binding(lua_State *L)
+{
+    rl_handle_t model = (rl_handle_t)luaL_checkinteger(L, 1);
+    rl_handle_t tint = (rl_handle_t)luaL_checkinteger(L, 2);
+    int anim_index = (int)luaL_optinteger(L, 3, -1);
+    int anim_frame = (int)luaL_optinteger(L, 4, 0);
+    rl_model_draw(model, tint, anim_index, anim_frame);
+    return 0;
+}
+
+static int rl_model_destroy_binding(lua_State *L)
+{
+    rl_handle_t model = (rl_handle_t)luaL_checkinteger(L, 1);
+    rl_model_destroy(model);
+    return 0;
+}
+
+/* Texture */
+static int rl_texture_create_binding(lua_State *L)
+{
+    const char *filename = luaL_checkstring(L, 1);
+    rl_handle_t handle = rl_texture_create(filename);
+    lua_pushinteger(L, handle);
+    return 1;
+}
+
+static int rl_texture_destroy_binding(lua_State *L)
+{
+    rl_handle_t texture = (rl_handle_t)luaL_checkinteger(L, 1);
+    rl_texture_destroy(texture);
+    return 0;
+}
+
+/* Color */
+static int rl_color_create_binding(lua_State *L)
+{
+    int r = (int)luaL_checkinteger(L, 1);
+    int g = (int)luaL_checkinteger(L, 2);
+    int b = (int)luaL_checkinteger(L, 3);
+    int a = (int)luaL_optinteger(L, 4, 255);
+    rl_handle_t handle = rl_color_create(r, g, b, a);
+    lua_pushinteger(L, handle);
+    return 1;
+}
+
+/* Camera3D */
+static int rl_camera3d_create_binding(lua_State *L)
+{
+    float pos_x = (float)luaL_checknumber(L, 1);
+    float pos_y = (float)luaL_checknumber(L, 2);
+    float pos_z = (float)luaL_checknumber(L, 3);
+    float target_x = (float)luaL_checknumber(L, 4);
+    float target_y = (float)luaL_checknumber(L, 5);
+    float target_z = (float)luaL_checknumber(L, 6);
+    float up_x = (float)luaL_checknumber(L, 7);
+    float up_y = (float)luaL_checknumber(L, 8);
+    float up_z = (float)luaL_checknumber(L, 9);
+    float fovy = (float)luaL_checknumber(L, 10);
+    int projection = (int)luaL_checkinteger(L, 11);
+    rl_handle_t handle = rl_camera3d_create(pos_x, pos_y, pos_z, target_x, target_y, target_z,
+                                            up_x, up_y, up_z, fovy, projection);
+    lua_pushinteger(L, handle);
+    return 1;
+}
+
+static int rl_camera3d_destroy_binding(lua_State *L)
+{
+    rl_handle_t camera = (rl_handle_t)luaL_checkinteger(L, 1);
+    rl_camera3d_destroy(camera);
+    return 0;
+}
+
+/* Core lifecycle */
+static int rl_init_binding(lua_State *L)
+{
+    rl_init();
+    return 0;
+}
+
+static int rl_deinit_binding(lua_State *L)
+{
+    rl_deinit();
+    return 0;
+}
+
+static int rl_update_binding(lua_State *L)
+{
+    rl_update();
+    return 0;
+}
+
+static int rl_begin_drawing_binding(lua_State *L)
+{
+    rl_render_begin();
+    return 0;
+}
+
+static int rl_end_drawing_binding(lua_State *L)
+{
+    rl_render_end();
+    return 0;
+}
+
+static int rl_clear_background_binding(lua_State *L)
+{
+    rl_handle_t color = (rl_handle_t)luaL_checkinteger(L, 1);
+    rl_render_clear_background(color);
+    return 0;
+}
+
+static const luaL_Reg rl_functions[] = {
+    /* Batch submission (v2 encoding) */
+    {"submit_frame_buffer", rl_submit_frame_buffer},
+
+    /* Window */
+    {"window_should_close", rl_window_should_close_binding},
+    {"get_screen_width", rl_get_screen_width_binding},
+    {"get_screen_height", rl_get_screen_height_binding},
+
+    /* Sprite2D */
+    {"sprite2d_create", rl_sprite2d_create_binding},
+    {"sprite2d_create_from_texture", rl_sprite2d_create_from_texture_binding},
+    {"sprite2d_set_transform", rl_sprite2d_set_transform_binding},
+    {"sprite2d_draw", rl_sprite2d_draw_binding},
+    {"sprite2d_destroy", rl_sprite2d_destroy_binding},
+
+    /* Sprite3D */
+    {"sprite3d_create", rl_sprite3d_create_binding},
+    {"sprite3d_create_from_texture", rl_sprite3d_create_from_texture_binding},
+    {"sprite3d_set_transform", rl_sprite3d_set_transform_binding},
+    {"sprite3d_draw", rl_sprite3d_draw_binding},
+    {"sprite3d_destroy", rl_sprite3d_destroy_binding},
+
+    /* Model */
+    {"model_create", rl_model_create_binding},
+    {"model_set_transform", rl_model_set_transform_binding},
+    {"model_draw", rl_model_draw_binding},
+    {"model_destroy", rl_model_destroy_binding},
+
+    /* Texture */
+    {"texture_create", rl_texture_create_binding},
+    {"texture_destroy", rl_texture_destroy_binding},
+
+    /* Color */
+    {"color_create", rl_color_create_binding},
+
+    /* Camera3D */
+    {"camera3d_create", rl_camera3d_create_binding},
+    {"camera3d_destroy", rl_camera3d_destroy_binding},
+
+    /* Core */
+    {"init", rl_init_binding},
+    {"deinit", rl_deinit_binding},
+    {"update", rl_update_binding},
+    {"begin_drawing", rl_begin_drawing_binding},
+    {"end_drawing", rl_end_drawing_binding},
+    {"clear_background", rl_clear_background_binding},
+
+    {NULL, NULL}
+};
+
+int luaopen_rl(lua_State *L)
+{
+    luaL_newlib(L, rl_functions);
+    return 1;
+}

@@ -74,6 +74,10 @@ test_nim_bindings:
 	@$(MAKE) -C bindings/nim test ROOT_DIR="$(abspath $(ROOT_DIR))"
 	@echo "Nim binding tests passed."
 
+test_lua_bindings:
+	@$(MAKE) -C bindings/lua test ROOT_DIR="$(abspath $(ROOT_DIR))"
+	@echo "Lua binding tests passed."
+
 unit_test_desktop:
 	@$(MAKE) -C $(ROOT_DIR)/deps/wgutils desktop
 	$(CC_DESKTOP) $(CFLAGS) -DHEADLESS -I$(UNIT_TEST_DIR) $(INCLUDES) $(UNIT_TEST_MAIN) $(UNIT_TEST_SRCS) $(UNIT_TEST_LIB_SRCS) $(CORE_DESKTOP_ARCHIVE) -lssl -lcrypto -lz -o $(UNIT_TEST_DESKTOP_BIN)

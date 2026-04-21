@@ -38,6 +38,25 @@ cd examples/nim && nim clean
 make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
 ```
 
+### Top-Level Target Matrix
+
+- Core librl artifacts:
+  - `make desktop` -> `lib/librl.a`
+  - `make shared` -> `lib/librl.so` (core C API shared library; no Lua module entrypoint)
+  - `make wasm_archive` -> `lib/librl.wasm.a`
+  - `make wasm` -> `lib/librl.wasm` + JS loader
+- Stock Lua module (desktop `require("rl")`):
+  - `make rl_lua` -> `lib/rl.so`
+  - default lua headers path: `deps/liblua/include` (override with `LIBLUA_INC=/path/to/lua/include`)
+  - `lib/rl.so` is linked against `lib/librl.so`
+- Embedded Lua VM module (`modules/lua`):
+  - `make librl_lua_desktop` -> `modules/lua/lib/librl_lua.a`
+  - `make librl_lua_wasm` -> `modules/lua/lib/librl_lua.wasm.a`
+  - `make librl_lua` -> builds both
+- WASM note:
+  - Desktop-style Lua dynamic module loading (`rl.so`) does not apply to wasm.
+  - For wasm Lua scripting, use the embedded Lua VM module path (`modules/lua`) and its require/searcher + fetch/fileio flow.
+
 ## Nested Repo Note (`deps/libraylib`)
 
 - `deps/libraylib` is its own git repo.
@@ -98,6 +117,7 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
   - `*_to_scratch` when C writes into the shared scratch area for JS/host to read.
   - `*_from_scratch` when C reads data provided by the host through scratch.
   - JS (and other bindings) should expose normalized APIs and hide the `*_to_scratch`/`*_from_scratch` details.
+
 
 ## Platform/WASM Conventions
 

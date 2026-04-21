@@ -182,6 +182,23 @@ Async loader sugar:
 - Active: JavaScript, Nim
 - Not treated as a primary binding surface: generated/auxiliary artifacts
 
+## Binding Naming
+
+- Bindings should mirror the C API shape and intent, but use naming that is idiomatic for the target language/runtime.
+- The C API naming convention is the template:
+  - subsystem-first, lower snake case: `rl_<section>_<action>`
+  - example: `rl_frame_buffer_submit`
+- Per-binding naming style:
+  - Lua: lower snake case function names.
+    - examples: `frame_buffer_submit`, `window_get_screen_size`
+  - Nim: close to C surface (snake_case / importc-aligned naming).
+  - Haxe: lowerCamelCase method names.
+    - examples: `frameBufferSubmit`, `windowGetScreenSize`
+- Avoid inventing alternate verb ordering in bindings if the C API is clear.
+  - prefer section-first semantics equivalent to `rl_<section>_<action>`.
+- Note on macro-only C symbols:
+  - `rl_module_register` is a C preprocessor macro helper, not a callable function symbol, so it is not exposed as a runtime binding API.
+
 ## Sync Guidance (Mostly for myself)
 When public C headers change:
 

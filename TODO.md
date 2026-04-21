@@ -19,6 +19,19 @@
   - keep examples current as APIs change
   - add a short wasm-only bridge table for scratch helpers (`*_to_scratch` and JS wrapper names)
   - keep `README.md`, `docs/API.md`, `docs/BINDINGS.md`, and `docs/DEV_NOTES.md` aligned when the Lua/module surface changes
+- Binding parity policy:
+  - when public C API in `include/*.h` changes, update bindings in the same pass:
+    - JavaScript (`bindings/js/*`)
+    - Nim (`bindings/nim/*`)
+    - Haxe (`bindings/haxe/*`)
+    - Lua (`bindings/lua/*`)
+  - default policy is clean updates only (no aliases/backward-compat shims) unless explicitly requested
+  - if a binding intentionally does not expose an API, document that decision in `docs/BINDINGS.md`
+- Binding parity follow-up (current backlog):
+  - run a full parity audit for Nim and Haxe against current public C API (same exclusions as Lua: no `rl_frame_command*`, no scratch/SAB APIs)
+  - add missing Nim APIs to `bindings/nim/` with idiomatic wrappers where appropriate
+  - add missing Haxe APIs to `bindings/haxe/` with idiomatic lowerCamelCase surface
+  - align logging ergonomics across Nim/Haxe/Lua (`log.debug/info/warn/error/...` style)
 - Naming convention cleanup:
   - Rename `async/wg_*` to drop the `wg_` prefix (align with `websocket_`, `fetch_url_`)
 - Audit bindings to ensure they haven't gotten stale (JS + Nim)

@@ -58,6 +58,7 @@
 - Loader / FS bootstrap:
   - evaluate adding a higher-level init helper that triggers a default filesystem restore and lets `rl_run` gate `init` on `rl_loader_is_ready`
   - keep low-level restore/import APIs available for advanced callers
+  - WASM `fetch_url_head()`: requires async state machine refactor to support HEAD-then-GET pattern for download progress tracking (Content-Length from HEAD response)
 
 ## In Progress Conceptually
 

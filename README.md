@@ -47,6 +47,7 @@ Key goals:
   - color
   - model
   - texture
+  - sprite2d
   - sprite3d
   - sound
   - music

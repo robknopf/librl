@@ -157,6 +157,7 @@ local function load()
 
   if main_camera ~= nil then
     main_camera:set_active()
+    main_camera:apply()
   end
 
   load_generation = load_generation + 1
@@ -342,8 +343,8 @@ local function update(frame)
     main_camera.up.z = 0.0
     main_camera.fovy = 45.0
     main_camera.projection = CAMERA_PERSPECTIVE
+    main_camera:mark_dirty()
     main_camera:apply()
-    main_camera:set_active()
   end
 
   clear(COLOR_RAYWHITE)

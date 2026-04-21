@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdlib.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,6 +28,17 @@ bool rl_loader_poll_task(rl_loader_task_t *task);
 int rl_loader_finish_task(rl_loader_task_t *task);
 void rl_loader_free_task(rl_loader_task_t *task);
 bool rl_loader_is_local(const char *filename);
+
+typedef struct rl_loader_read_result_t {
+  unsigned char *data;
+  size_t size;
+  int error;
+} rl_loader_read_result_t;
+
+rl_loader_read_result_t rl_loader_read_local(const char *filename);
+void rl_loader_read_result_free(rl_loader_read_result_t *result);
+
+void rl_loader_normalize_path(const char *path, char *buffer, size_t buffer_size);
 int rl_loader_uncache_file(const char *filename);
 int rl_loader_clear_cache(void);
 

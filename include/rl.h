@@ -2,28 +2,29 @@
 #define RL_H
 
 #include <stdbool.h>
-#include "rl_module.h"
-#include "rl_camera3d.h"
-#include "rl_color.h"
-#include "rl_debug.h"
-#include "rl_event.h"
-#include "rl_render.h"
-#include "rl_frame_command.h"
-#include "rl_font.h"
-#include "rl_input.h"
-#include "rl_loader.h"
-#include "rl_logger.h"
-#include "rl_model.h"
-#include "rl_music.h"
-#include "rl_pick.h"
-#include "rl_shape.h"
-#include "rl_scratch.h"
-#include "rl_sound.h"
-#include "rl_sprite3d.h"
-#include "rl_text.h"
-#include "rl_texture.h"
-#include "rl_types.h"
-#include "rl_window.h"
+#include "rl_module.h" // IWYU pragma: keep
+#include "rl_camera3d.h" // IWYU pragma: keep
+#include "rl_color.h" // IWYU pragma: keep
+#include "rl_debug.h" // IWYU pragma: keep
+#include "rl_event.h" // IWYU pragma: keep
+#include "rl_render.h" // IWYU pragma: keep
+#include "rl_frame_command.h" // IWYU pragma: keep
+#include "rl_font.h" // IWYU pragma: keep
+#include "rl_input.h" // IWYU pragma: keep
+#include "rl_loader.h" // IWYU pragma: keep
+#include "rl_logger.h" // IWYU pragma: keep
+#include "rl_model.h" // IWYU pragma: keep
+#include "rl_music.h" // IWYU pragma: keep
+#include "rl_pick.h" // IWYU pragma: keep
+#include "rl_shape.h" // IWYU pragma: keep
+#include "rl_scratch.h" // IWYU pragma: keep
+#include "rl_sound.h" // IWYU pragma: keep
+#include "rl_sprite2d.h" // IWYU pragma: keep
+#include "rl_sprite3d.h" // IWYU pragma: keep
+#include "rl_text.h" // IWYU pragma: keep
+#include "rl_texture.h" // IWYU pragma: keep
+#include "rl_types.h" // IWYU pragma: keep
+#include "rl_window.h" // IWYU pragma: keep
 
 #ifdef __cplusplus
 extern "C" {

@@ -134,6 +134,13 @@ export function rl_camera3d_set_active(handle: number): boolean {
   }
 
   rl_camera3d_active = handle;
+  const frame_command_buffer = get_frame_command_buffer();
+  if (frame_command_buffer != null) {
+    rl_frame_commands_append(frame_command_buffer, {
+      type: CommandType.SET_ACTIVE_CAMERA3D,
+      camera: handle,
+    });
+  }
   return true;
 }
 

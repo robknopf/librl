@@ -23,16 +23,18 @@
   - Rename `async/wg_*` to drop the `wg_` prefix (align with `websocket_`, `fetch_url_`)
 - Audit bindings to ensure they haven't gotten stale (JS + Nim)
 - Frame command path hardening:
-  - current typed command path exists through `rl_module_frame_command_t` and the C example host buffer
+  - current typed command path exists through `rl_render_command_t` and the C example host buffer
   - next step is to expand and harden it rather than redesign it from scratch
   - decide whether to keep the current host-owned fixed-capacity buffer shape or promote a more general transient command queue/ring buffer
   - grow the command set carefully as needed:
-    - clear background
-    - camera control / active camera intent
-    - draw text
-    - draw model
-    - draw sprite/texture
-    - play sound
+    - ~~clear background~~ ✓
+    - ~~camera control / active camera intent~~ ✓
+    - ~~draw text~~ ✓
+    - ~~draw model~~ ✓ (split transform/draw)
+    - ~~draw sprite3d~~ ✓ (split transform/draw)
+    - ~~draw sprite2d~~ ✓ (split transform/draw)
+    - ~~draw texture~~ ✓
+    - ~~play sound~~ ✓
     - music control if it belongs in the transient command path
   - clarify command ownership and overflow behavior
   - document the current host/script contract around command emission and drain order
@@ -103,6 +105,20 @@
 
 ## Parked For Now
 
+- Lua module frame command wiring:
+  - ~~all `draw_*` bindings now emit frame commands~~ ✓
+  - `draw_model`, `draw_sprite3d`, `draw_sprite2d` use split transform/draw pattern
+  - `draw_texture`, `draw_text`, `clear`, `play_sound` emit commands
+  - verify `lua_vm_install_searcher` handles wasm async correctly (blocking fetch before `luaL_loadfile`), same pattern as hellolua/core `lua_register_fetch_loader`
+- Scripting backend module design (beyond Lua):
+  - the module boundary (`rl_module_api_t` — `init/update/shutdown/serialize/unserialize`) is language-agnostic
+  - candidate backends to evaluate against the same boundary:
+    - **hxcpp + cppia**: typed Haxe in dev (cppia fast reload), compiled native in prod — zero interpreter tax at ship time
+    - **TinyCC**: C scripts compiled at runtime, near-native speed, no GC, wasm feasibility unclear
+    - **daslang**: statically typed scripting, designed for games, compiles to native or interpreted
+  - each backend emits frame commands into the same `rl_frame_command_buffer_t`
+  - key evaluation axes: hot reload latency, wasm feasibility, typed authoring, prod story (interpreter-free or not)
+  - hxcpp/cppia is the strongest candidate if Haxe is the primary game logic language
 - Lua bootstrap/import cleanup after Asyncify removal:
   - current startup path works, but it is still an adapter layer made of:
     - host-driven script preload
@@ -197,6 +213,11 @@
 
 ## Done
 
+- Sprite2D module:
+  - C implementation with handle pool, split transform/draw pattern
+  - Lua bindings and wrapper (`sprite2d.lua`)
+  - Remote server support (TypeScript bindings, protocol parsing)
+  - Nim/Haxe bindings (direct API only, no frame commands)
 - IDBFS lifecycle hardening:
   - single sync path
   - overlap guard

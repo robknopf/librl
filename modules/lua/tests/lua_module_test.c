@@ -1,8 +1,11 @@
 #include "rl_module_lua.h"
+#include "rl_frame_command.h"
 #include "fileio/fileio.h"
 
 #include <stdio.h>
 #include <string.h>
+
+static rl_frame_command_buffer_t g_test_frame_buffer = {0};
 
 typedef struct test_event_binding_t {
     char event_name[64];
@@ -14,15 +17,14 @@ static test_event_binding_t g_event_bindings[32];
 static int g_event_binding_count = 0;
 static int g_test_event_count = 0;
 static char g_last_test_payload[128];
+static int g_module_log_count = 0;
 
 static void test_log(void *user_data, int level, const char *message)
 {
-    int *log_count = (int *)user_data;
+    (void)user_data;
     (void)level;
     (void)message;
-    if (log_count != NULL) {
-        (*log_count)++;
-    }
+    g_module_log_count++;
 }
 
 static void test_event_counter(void *payload, void *user_data)
@@ -122,7 +124,6 @@ int main(void)
     const rl_module_api_t *api = NULL;
     rl_module_host_api_t host = {0};
     void *module_state = NULL;
-    int module_log_count = 0;
     int lua_ok_count = 0;
     int lua_error_count = 0;
     int rc = 0;
@@ -158,11 +159,15 @@ int main(void)
         return 1;
     }
 
-    host.user_data = &module_log_count;
+    memset(&g_test_frame_buffer, 0, sizeof(g_test_frame_buffer));
+
+    host.user_data = &g_test_frame_buffer;
     host.log = test_log;
+    host.log_source = NULL;
     host.event_on = host_event_on;
     host.event_off = host_event_off;
     host.event_emit = host_event_emit;
+    host.frame_command = rl_frame_commands_append;
 
     rc = host_event_on(NULL, "lua.ok", test_event_counter, &lua_ok_count);
     if (rc != 0) {
@@ -285,6 +290,124 @@ int main(void)
         return 1;
     }
 
+    /* --- frame command emission tests --- */
+    {
+        const char *cmd_clear_script =
+            "clear(1)\n";
+        const char *cmd_draw_cube_script =
+            "draw_cube(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 1)\n";
+        const char *cmd_draw_text_script =
+            "draw_text(1, 'hello', 10.0, 20.0, 16.0, 1.0, 1)\n";
+        const char *cmd_play_sound_script =
+            "play_sound(1)\n";
+        const char *cmd_play_music_script =
+            "play_music(1)\n";
+        const char *cmd_pause_music_script =
+            "pause_music(1)\n";
+        const char *cmd_stop_music_script =
+            "stop_music(1)\n";
+        const char *cmd_set_music_loop_script =
+            "set_music_loop(1, true)\n";
+        const char *cmd_set_music_volume_script =
+            "set_music_volume(1, 0.5)\n";
+
+        rl_frame_commands_reset(&g_test_frame_buffer);
+        rc = host_event_emit(NULL, "lua.do_string", (void *)cmd_clear_script);
+        if (rc != 0 || g_test_frame_buffer.count != 1 ||
+            g_test_frame_buffer.commands[0].type != RL_RENDER_CMD_CLEAR) {
+            fprintf(stderr, "expected CLEAR command (count=%d)\n", g_test_frame_buffer.count);
+            rl_module_deinit_instance(api, module_state);
+            fileio_deinit();
+            return 1;
+        }
+
+        rl_frame_commands_reset(&g_test_frame_buffer);
+        rc = host_event_emit(NULL, "lua.do_string", (void *)cmd_draw_cube_script);
+        if (rc != 0 || g_test_frame_buffer.count != 1 ||
+            g_test_frame_buffer.commands[0].type != RL_RENDER_CMD_DRAW_CUBE ||
+            g_test_frame_buffer.commands[0].data.draw_cube.x != 1.0f ||
+            g_test_frame_buffer.commands[0].data.draw_cube.y != 2.0f ||
+            g_test_frame_buffer.commands[0].data.draw_cube.z != 3.0f) {
+            fprintf(stderr, "expected DRAW_CUBE command (count=%d)\n", g_test_frame_buffer.count);
+            rl_module_deinit_instance(api, module_state);
+            fileio_deinit();
+            return 1;
+        }
+
+        rl_frame_commands_reset(&g_test_frame_buffer);
+        rc = host_event_emit(NULL, "lua.do_string", (void *)cmd_draw_text_script);
+        if (rc != 0 || g_test_frame_buffer.count != 1 ||
+            g_test_frame_buffer.commands[0].type != RL_RENDER_CMD_DRAW_TEXT) {
+            fprintf(stderr, "expected DRAW_TEXT command (count=%d)\n", g_test_frame_buffer.count);
+            rl_module_deinit_instance(api, module_state);
+            fileio_deinit();
+            return 1;
+        }
+
+        rl_frame_commands_reset(&g_test_frame_buffer);
+        rc = host_event_emit(NULL, "lua.do_string", (void *)cmd_play_sound_script);
+        if (rc != 0 || g_test_frame_buffer.count != 1 ||
+            g_test_frame_buffer.commands[0].type != RL_RENDER_CMD_PLAY_SOUND) {
+            fprintf(stderr, "expected PLAY_SOUND command (count=%d)\n", g_test_frame_buffer.count);
+            rl_module_deinit_instance(api, module_state);
+            fileio_deinit();
+            return 1;
+        }
+
+        rl_frame_commands_reset(&g_test_frame_buffer);
+        rc = host_event_emit(NULL, "lua.do_string", (void *)cmd_play_music_script);
+        if (rc != 0 || g_test_frame_buffer.count != 1 ||
+            g_test_frame_buffer.commands[0].type != RL_RENDER_CMD_PLAY_MUSIC ||
+            g_test_frame_buffer.commands[0].data.play_music.music != 1) {
+            fprintf(stderr, "expected PLAY_MUSIC command (count=%d)\n", g_test_frame_buffer.count);
+            rl_module_deinit_instance(api, module_state);
+            fileio_deinit();
+            return 1;
+        }
+
+        rl_frame_commands_reset(&g_test_frame_buffer);
+        rc = host_event_emit(NULL, "lua.do_string", (void *)cmd_pause_music_script);
+        if (rc != 0 || g_test_frame_buffer.count != 1 ||
+            g_test_frame_buffer.commands[0].type != RL_RENDER_CMD_PAUSE_MUSIC) {
+            fprintf(stderr, "expected PAUSE_MUSIC command (count=%d)\n", g_test_frame_buffer.count);
+            rl_module_deinit_instance(api, module_state);
+            fileio_deinit();
+            return 1;
+        }
+
+        rl_frame_commands_reset(&g_test_frame_buffer);
+        rc = host_event_emit(NULL, "lua.do_string", (void *)cmd_stop_music_script);
+        if (rc != 0 || g_test_frame_buffer.count != 1 ||
+            g_test_frame_buffer.commands[0].type != RL_RENDER_CMD_STOP_MUSIC) {
+            fprintf(stderr, "expected STOP_MUSIC command (count=%d)\n", g_test_frame_buffer.count);
+            rl_module_deinit_instance(api, module_state);
+            fileio_deinit();
+            return 1;
+        }
+
+        rl_frame_commands_reset(&g_test_frame_buffer);
+        rc = host_event_emit(NULL, "lua.do_string", (void *)cmd_set_music_loop_script);
+        if (rc != 0 || g_test_frame_buffer.count != 1 ||
+            g_test_frame_buffer.commands[0].type != RL_RENDER_CMD_SET_MUSIC_LOOP ||
+            !g_test_frame_buffer.commands[0].data.set_music_loop.loop) {
+            fprintf(stderr, "expected SET_MUSIC_LOOP command (count=%d)\n", g_test_frame_buffer.count);
+            rl_module_deinit_instance(api, module_state);
+            fileio_deinit();
+            return 1;
+        }
+
+        rl_frame_commands_reset(&g_test_frame_buffer);
+        rc = host_event_emit(NULL, "lua.do_string", (void *)cmd_set_music_volume_script);
+        if (rc != 0 || g_test_frame_buffer.count != 1 ||
+            g_test_frame_buffer.commands[0].type != RL_RENDER_CMD_SET_MUSIC_VOLUME ||
+            g_test_frame_buffer.commands[0].data.set_music_volume.volume != 0.5f) {
+            fprintf(stderr, "expected SET_MUSIC_VOLUME command (count=%d)\n", g_test_frame_buffer.count);
+            rl_module_deinit_instance(api, module_state);
+            fileio_deinit();
+            return 1;
+        }
+    }
+
     rl_module_deinit_instance(api, module_state);
     (void)fileio_rmfile(script_path);
     (void)fileio_rmdir("scripts");
@@ -301,7 +424,7 @@ int main(void)
         fprintf(stderr, "expected lua.error event at least twice\n");
         return 1;
     }
-    if (module_log_count < 2) {
+    if (g_module_log_count < 2) {
         fprintf(stderr, "expected module logger to be called at least twice\n");
         return 1;
     }

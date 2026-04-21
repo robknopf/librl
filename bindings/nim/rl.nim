@@ -70,117 +70,6 @@ type
     name*: cstring
     get_api_fn*: RLModuleEntryGetApiFn
   RLLoaderTask* {.importc: "rl_loader_task_t", header: "rl_loader.h", bycopy.} = object
-  RLFrameClear* {.importc: "rl_frame_clear_t", header: "rl_frame_command.h", bycopy.} = object
-    color*: RLHandle
-  RLFrameDrawText* {.importc: "rl_frame_draw_text_t", header: "rl_frame_command.h", bycopy.} = object
-    font*: RLHandle
-    color*: RLHandle
-    x*: cfloat
-    y*: cfloat
-    font_size*: cfloat
-    spacing*: cfloat
-    text*: array[256, char]
-  RLFrameDrawSprite3d* {.importc: "rl_frame_draw_sprite3d_t", header: "rl_frame_command.h", bycopy.} = object
-    sprite*: RLHandle
-    tint*: RLHandle
-  RLFramePlaySound* {.importc: "rl_frame_play_sound_t", header: "rl_frame_command.h", bycopy.} = object
-    sound*: RLHandle
-    volume*: cfloat
-    pitch*: cfloat
-    pan*: cfloat
-  RLFramePlayMusic* {.importc: "rl_frame_play_music_t", header: "rl_frame_command.h", bycopy.} = object
-    music*: RLHandle
-  RLFramePauseMusic* {.importc: "rl_frame_pause_music_t", header: "rl_frame_command.h", bycopy.} = object
-    music*: RLHandle
-  RLFrameStopMusic* {.importc: "rl_frame_stop_music_t", header: "rl_frame_command.h", bycopy.} = object
-    music*: RLHandle
-  RLFrameSetMusicLoop* {.importc: "rl_frame_set_music_loop_t", header: "rl_frame_command.h", bycopy.} = object
-    music*: RLHandle
-    loop*: bool
-  RLFrameSetMusicVolume* {.importc: "rl_frame_set_music_volume_t", header: "rl_frame_command.h", bycopy.} = object
-    music*: RLHandle
-    volume*: cfloat
-  RLFrameDrawModel* {.importc: "rl_frame_draw_model_t", header: "rl_frame_command.h", bycopy.} = object
-    model*: RLHandle
-    tint*: RLHandle
-    animation_index*: cint
-    animation_frame*: cint
-  RLFrameDrawTexture* {.importc: "rl_frame_draw_texture_t", header: "rl_frame_command.h", bycopy.} = object
-    texture*: RLHandle
-    tint*: RLHandle
-    x*: cfloat
-    y*: cfloat
-    scale*: cfloat
-    rotation*: cfloat
-  RLFrameDrawCube* {.importc: "rl_frame_draw_cube_t", header: "rl_frame_command.h", bycopy.} = object
-    color*: RLHandle
-    x*: cfloat
-    y*: cfloat
-    z*: cfloat
-    width*: cfloat
-    height*: cfloat
-    length*: cfloat
-  RLFrameDrawGroundTexture* {.importc: "rl_frame_draw_ground_texture_t", header: "rl_frame_command.h", bycopy.} = object
-    texture*: RLHandle
-    tint*: RLHandle
-    x*: cfloat
-    y*: cfloat
-    z*: cfloat
-    width*: cfloat
-    length*: cfloat
-  RLFrameSetCamera3d* {.importc: "rl_frame_set_camera3d_t", header: "rl_frame_command.h", bycopy.} = object
-    camera*: RLHandle
-    position_x*: cfloat
-    position_y*: cfloat
-    position_z*: cfloat
-    target_x*: cfloat
-    target_y*: cfloat
-    target_z*: cfloat
-    up_x*: cfloat
-    up_y*: cfloat
-    up_z*: cfloat
-    fovy*: cfloat
-    projection*: cint
-  RLFrameSetModelTransform* {.importc: "rl_frame_set_model_transform_t", header: "rl_frame_command.h", bycopy.} = object
-    model*: RLHandle
-    position_x*: cfloat
-    position_y*: cfloat
-    position_z*: cfloat
-    rotation_x*: cfloat
-    rotation_y*: cfloat
-    rotation_z*: cfloat
-    scale_x*: cfloat
-    scale_y*: cfloat
-    scale_z*: cfloat
-  RLFrameSetSprite3dTransform* {.importc: "rl_frame_set_sprite3d_transform_t", header: "rl_frame_command.h", bycopy.} = object
-    sprite*: RLHandle
-    position_x*: cfloat
-    position_y*: cfloat
-    position_z*: cfloat
-    size*: cfloat
-  RLRenderCommandData* {.importc: "data", header: "rl_frame_command.h", bycopy, union.} = object
-    clear*: RLFrameClear
-    draw_text*: RLFrameDrawText
-    draw_sprite3d*: RLFrameDrawSprite3d
-    play_sound*: RLFramePlaySound
-    play_music*: RLFramePlayMusic
-    pause_music*: RLFramePauseMusic
-    stop_music*: RLFrameStopMusic
-    set_music_loop*: RLFrameSetMusicLoop
-    set_music_volume*: RLFrameSetMusicVolume
-    draw_model*: RLFrameDrawModel
-    draw_texture*: RLFrameDrawTexture
-    draw_cube*: RLFrameDrawCube
-    draw_ground_texture*: RLFrameDrawGroundTexture
-    set_camera3d*: RLFrameSetCamera3d
-    set_model_transform*: RLFrameSetModelTransform
-    set_sprite3d_transform*: RLFrameSetSprite3dTransform
-  RLRenderCommand* {.importc: "rl_render_command_t", header: "rl_frame_command.h", bycopy.} = object
-    `type`*: cint
-    data*: RLRenderCommandData
-  RLFrameCommandBuffer* {.importc: "rl_frame_command_buffer_t", header: "rl_frame_command.h", bycopy.} = object
-    commands*: array[128, RLRenderCommand]
-    count*: cint
 
 var
   RL_COLOR_DEFAULT* {.importc, header: "rl_color.h".}: RLHandle
@@ -235,25 +124,6 @@ const
   RL_LOADER_ADD_TASK_OK* = 0.cint
   RL_LOADER_ADD_TASK_ERR_INVALID* = (-1).cint
   RL_LOADER_ADD_TASK_ERR_QUEUE_FULL* = (-2).cint
-  RL_FRAME_COMMAND_CAPACITY* = 128.cint
-  RL_FRAME_TEXT_MAX* = 256.cint
-  RL_RENDER_CMD_CLEAR* = 0.cint
-  RL_RENDER_CMD_DRAW_TEXT* = 1.cint
-  RL_RENDER_CMD_DRAW_SPRITE3D* = 2.cint
-  RL_RENDER_CMD_PLAY_SOUND* = 3.cint
-  RL_RENDER_CMD_DRAW_MODEL* = 4.cint
-  RL_RENDER_CMD_DRAW_TEXTURE* = 5.cint
-  RL_RENDER_CMD_DRAW_CUBE* = 6.cint
-  RL_RENDER_CMD_DRAW_GROUND_TEXTURE* = 7.cint
-  RL_RENDER_CMD_SET_CAMERA3D* = 8.cint
-  RL_RENDER_CMD_SET_MODEL_TRANSFORM* = 9.cint
-  RL_RENDER_CMD_SET_SPRITE3D_TRANSFORM* = 10.cint
-  RL_RENDER_CMD_PLAY_MUSIC* = 11.cint
-  RL_RENDER_CMD_PAUSE_MUSIC* = 12.cint
-  RL_RENDER_CMD_STOP_MUSIC* = 13.cint
-  RL_RENDER_CMD_SET_MUSIC_LOOP* = 14.cint
-  RL_RENDER_CMD_SET_MUSIC_VOLUME* = 15.cint
-
 proc rl_init*() {.importc, cdecl, header: "rl.h".}
 proc rl_deinit*() {.importc, cdecl, header: "rl.h".}
 proc rl_set_asset_host*(assetHost: cstring): cint {.importc, cdecl, header: "rl.h".}
@@ -307,13 +177,6 @@ proc rl_event_off*(eventName: cstring, listener: RLEventListenerFn, userData: po
 proc rl_event_off_all*(eventName: cstring): cint {.importc, cdecl, header: "rl_event.h".}
 proc rl_event_emit*(eventName: cstring, payload: pointer): cint {.importc, cdecl, header: "rl_event.h".}
 proc rl_event_listener_count*(eventName: cstring): cint {.importc, cdecl, header: "rl_event.h".}
-proc rl_frame_commands_reset*(frameCommands: ptr RLFrameCommandBuffer) {.importc, cdecl, header: "rl_frame_command.h".}
-proc rl_frame_commands_append*(userData: pointer, command: ptr RLRenderCommand) {.importc, cdecl, header: "rl_frame_command.h".}
-proc rl_frame_commands_execute_clear*(frameCommands: ptr RLFrameCommandBuffer) {.importc, cdecl, header: "rl_frame_command.h".}
-proc rl_frame_commands_execute_audio*(frameCommands: ptr RLFrameCommandBuffer) {.importc, cdecl, header: "rl_frame_command.h".}
-proc rl_frame_commands_execute_state*(frameCommands: ptr RLFrameCommandBuffer) {.importc, cdecl, header: "rl_frame_command.h".}
-proc rl_frame_commands_execute_3d*(frameCommands: ptr RLFrameCommandBuffer) {.importc, cdecl, header: "rl_frame_command.h".}
-proc rl_frame_commands_execute_2d*(frameCommands: ptr RLFrameCommandBuffer) {.importc, cdecl, header: "rl_frame_command.h".}
 proc rl_update*() {.importc, cdecl, header: "rl.h".}
 proc rl_run*(initFn: RLInitFn, tickFn: RLTickFn, shutdownFn: RLShutdownFn, userData: pointer) {.importc, cdecl, header: "rl.h".}
 proc rl_request_stop*() {.importc, cdecl, header: "rl.h".}
@@ -466,6 +329,17 @@ proc rl_sprite3d_set_transform*(
 proc rl_sprite3d_draw*(sprite: RLHandle, tint: RLHandle) {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_destroy*(sprite: RLHandle) {.importc, cdecl, header: "rl_sprite3d.h".}
 
+# --- Sprite2D (rl_sprite2d.h) ---
+proc rl_sprite2d_create*(filename: cstring): RLHandle {.importc, cdecl, header: "rl_sprite2d.h".}
+proc rl_sprite2d_create_from_texture*(texture: RLHandle): RLHandle {.importc, cdecl, header: "rl_sprite2d.h".}
+proc rl_sprite2d_set_transform*(
+  sprite: RLHandle,
+  x: cfloat, y: cfloat,
+  scale: cfloat, rotation: cfloat
+): bool {.importc, cdecl, header: "rl_sprite2d.h".}
+proc rl_sprite2d_draw*(sprite: RLHandle, tint: RLHandle) {.importc, cdecl, header: "rl_sprite2d.h".}
+proc rl_sprite2d_destroy*(sprite: RLHandle) {.importc, cdecl, header: "rl_sprite2d.h".}
+
 proc clearText*(text: var array[256, char]) {.inline.} =
   text[0] = '\0'
 
@@ -484,159 +358,3 @@ proc textLen*(text: array[256, char]): cint {.inline.} =
     inc i
   i.cint
 
-proc initRenderCommand*(kind: cint): RLRenderCommand {.inline.} =
-  result.`type` = kind
-
-proc initClearCommand*(color: RLHandle): RLRenderCommand {.inline.} =
-  result.`type` = RL_RENDER_CMD_CLEAR
-  result.data.clear.color = color
-
-proc initDrawTextCommand*(font: RLHandle, color: RLHandle, x: cfloat, y: cfloat,
-                          fontSize: cfloat, spacing: cfloat, text: string): RLRenderCommand {.inline.} =
-  result.`type` = RL_RENDER_CMD_DRAW_TEXT
-  result.data.draw_text.font = font
-  result.data.draw_text.color = color
-  result.data.draw_text.x = x
-  result.data.draw_text.y = y
-  result.data.draw_text.font_size = fontSize
-  result.data.draw_text.spacing = spacing
-  discard result.data.draw_text.text.setText(text)
-
-proc initDrawSprite3dCommand*(sprite: RLHandle, tint: RLHandle): RLRenderCommand {.inline.} =
-  result.`type` = RL_RENDER_CMD_DRAW_SPRITE3D
-  result.data.draw_sprite3d.sprite = sprite
-  result.data.draw_sprite3d.tint = tint
-
-proc initPlaySoundCommand*(sound: RLHandle, volume: cfloat = 1.0, pitch: cfloat = 1.0,
-                           pan: cfloat = 0.5): RLRenderCommand {.inline.} =
-  result.`type` = RL_RENDER_CMD_PLAY_SOUND
-  result.data.play_sound.sound = sound
-  result.data.play_sound.volume = volume
-  result.data.play_sound.pitch = pitch
-  result.data.play_sound.pan = pan
-
-proc initDrawModelCommand*(model: RLHandle, tint: RLHandle, animationIndex: cint = -1,
-                           animationFrame: cint = 0): RLRenderCommand {.inline.} =
-  result.`type` = RL_RENDER_CMD_DRAW_MODEL
-  result.data.draw_model.model = model
-  result.data.draw_model.tint = tint
-  result.data.draw_model.animation_index = animationIndex
-  result.data.draw_model.animation_frame = animationFrame
-
-proc initDrawTextureCommand*(texture: RLHandle, tint: RLHandle, x: cfloat, y: cfloat,
-                             scale: cfloat = 1.0, rotation: cfloat = 0.0): RLRenderCommand {.inline.} =
-  result.`type` = RL_RENDER_CMD_DRAW_TEXTURE
-  result.data.draw_texture.texture = texture
-  result.data.draw_texture.tint = tint
-  result.data.draw_texture.x = x
-  result.data.draw_texture.y = y
-  result.data.draw_texture.scale = scale
-  result.data.draw_texture.rotation = rotation
-
-proc initDrawCubeCommand*(color: RLHandle, x: cfloat, y: cfloat, z: cfloat,
-                          width: cfloat, height: cfloat, length: cfloat): RLRenderCommand {.inline.} =
-  result.`type` = RL_RENDER_CMD_DRAW_CUBE
-  result.data.draw_cube.color = color
-  result.data.draw_cube.x = x
-  result.data.draw_cube.y = y
-  result.data.draw_cube.z = z
-  result.data.draw_cube.width = width
-  result.data.draw_cube.height = height
-  result.data.draw_cube.length = length
-
-proc initDrawGroundTextureCommand*(texture: RLHandle, tint: RLHandle, x: cfloat, y: cfloat,
-                                   z: cfloat, width: cfloat, length: cfloat): RLRenderCommand {.inline.} =
-  result.`type` = RL_RENDER_CMD_DRAW_GROUND_TEXTURE
-  result.data.draw_ground_texture.texture = texture
-  result.data.draw_ground_texture.tint = tint
-  result.data.draw_ground_texture.x = x
-  result.data.draw_ground_texture.y = y
-  result.data.draw_ground_texture.z = z
-  result.data.draw_ground_texture.width = width
-  result.data.draw_ground_texture.length = length
-
-proc initSetCamera3dCommand*(camera: RLHandle,
-                             positionX: cfloat, positionY: cfloat, positionZ: cfloat,
-                             targetX: cfloat, targetY: cfloat, targetZ: cfloat,
-                             upX: cfloat, upY: cfloat, upZ: cfloat,
-                             fovy: cfloat, projection: cint): RLRenderCommand {.inline.} =
-  result.`type` = RL_RENDER_CMD_SET_CAMERA3D
-  result.data.set_camera3d.camera = camera
-  result.data.set_camera3d.position_x = positionX
-  result.data.set_camera3d.position_y = positionY
-  result.data.set_camera3d.position_z = positionZ
-  result.data.set_camera3d.target_x = targetX
-  result.data.set_camera3d.target_y = targetY
-  result.data.set_camera3d.target_z = targetZ
-  result.data.set_camera3d.up_x = upX
-  result.data.set_camera3d.up_y = upY
-  result.data.set_camera3d.up_z = upZ
-  result.data.set_camera3d.fovy = fovy
-  result.data.set_camera3d.projection = projection
-
-proc initSetModelTransformCommand*(model: RLHandle,
-                                   positionX: cfloat, positionY: cfloat, positionZ: cfloat,
-                                   rotationX: cfloat, rotationY: cfloat, rotationZ: cfloat,
-                                   scaleX: cfloat, scaleY: cfloat, scaleZ: cfloat): RLRenderCommand {.inline.} =
-  result.`type` = RL_RENDER_CMD_SET_MODEL_TRANSFORM
-  result.data.set_model_transform.model = model
-  result.data.set_model_transform.position_x = positionX
-  result.data.set_model_transform.position_y = positionY
-  result.data.set_model_transform.position_z = positionZ
-  result.data.set_model_transform.rotation_x = rotationX
-  result.data.set_model_transform.rotation_y = rotationY
-  result.data.set_model_transform.rotation_z = rotationZ
-  result.data.set_model_transform.scale_x = scaleX
-  result.data.set_model_transform.scale_y = scaleY
-  result.data.set_model_transform.scale_z = scaleZ
-
-proc initSetSprite3dTransformCommand*(sprite: RLHandle,
-                                      positionX: cfloat, positionY: cfloat, positionZ: cfloat,
-                                      size: cfloat): RLRenderCommand {.inline.} =
-  result.`type` = RL_RENDER_CMD_SET_SPRITE3D_TRANSFORM
-  result.data.set_sprite3d_transform.sprite = sprite
-  result.data.set_sprite3d_transform.position_x = positionX
-  result.data.set_sprite3d_transform.position_y = positionY
-  result.data.set_sprite3d_transform.position_z = positionZ
-  result.data.set_sprite3d_transform.size = size
-
-proc initPlayMusicCommand*(music: RLHandle): RLRenderCommand {.inline.} =
-  result.`type` = RL_RENDER_CMD_PLAY_MUSIC
-  result.data.play_music.music = music
-
-proc initPauseMusicCommand*(music: RLHandle): RLRenderCommand {.inline.} =
-  result.`type` = RL_RENDER_CMD_PAUSE_MUSIC
-  result.data.pause_music.music = music
-
-proc initStopMusicCommand*(music: RLHandle): RLRenderCommand {.inline.} =
-  result.`type` = RL_RENDER_CMD_STOP_MUSIC
-  result.data.stop_music.music = music
-
-proc initSetMusicLoopCommand*(music: RLHandle, shouldLoop: bool): RLRenderCommand {.inline.} =
-  result.`type` = RL_RENDER_CMD_SET_MUSIC_LOOP
-  result.data.set_music_loop.music = music
-  result.data.set_music_loop.loop = shouldLoop
-
-proc initSetMusicVolumeCommand*(music: RLHandle, volume: cfloat): RLRenderCommand {.inline.} =
-  result.`type` = RL_RENDER_CMD_SET_MUSIC_VOLUME
-  result.data.set_music_volume.music = music
-  result.data.set_music_volume.volume = volume
-
-proc reset*(frameCommands: var RLFrameCommandBuffer) {.inline.} =
-  frameCommands.count = 0
-
-proc len*(frameCommands: RLFrameCommandBuffer): cint {.inline.} =
-  frameCommands.count
-
-proc remaining*(frameCommands: RLFrameCommandBuffer): cint {.inline.} =
-  RL_FRAME_COMMAND_CAPACITY - frameCommands.count
-
-proc canAppend*(frameCommands: RLFrameCommandBuffer, n: cint = 1): bool {.inline.} =
-  frameCommands.count + n <= RL_FRAME_COMMAND_CAPACITY
-
-proc append*(frameCommands: var RLFrameCommandBuffer, command: RLRenderCommand): bool {.inline.} =
-  if not frameCommands.canAppend():
-    return false
-  frameCommands.commands[frameCommands.count] = command
-  inc frameCommands.count
-  true

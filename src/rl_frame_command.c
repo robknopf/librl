@@ -5,6 +5,7 @@
 #include "rl_render.h"
 #include "rl_shape.h"
 #include "rl_sound.h"
+#include "rl_sprite2d.h"
 #include "rl_sprite3d.h"
 #include "rl_text.h"
 #include "rl_texture.h"
@@ -120,7 +121,9 @@ void rl_frame_commands_execute_state(
                                   command->data.set_camera3d.up_z,
                                   command->data.set_camera3d.fovy,
                                   command->data.set_camera3d.projection);
-            (void)rl_camera3d_set_active(command->data.set_camera3d.camera);
+            break;
+        case RL_RENDER_CMD_SET_ACTIVE_CAMERA3D:
+            (void)rl_camera3d_set_active(command->data.set_active_camera3d.camera);
             break;
         case RL_RENDER_CMD_SET_MODEL_TRANSFORM:
             (void)rl_model_set_transform(command->data.set_model_transform.model,
@@ -140,6 +143,13 @@ void rl_frame_commands_execute_state(
                                             command->data.set_sprite3d_transform.position_y,
                                             command->data.set_sprite3d_transform.position_z,
                                             command->data.set_sprite3d_transform.size);
+            break;
+        case RL_RENDER_CMD_SET_SPRITE2D_TRANSFORM:
+            (void)rl_sprite2d_set_transform(command->data.set_sprite2d_transform.sprite,
+                                            command->data.set_sprite2d_transform.x,
+                                            command->data.set_sprite2d_transform.y,
+                                            command->data.set_sprite2d_transform.scale,
+                                            command->data.set_sprite2d_transform.rotation);
             break;
         default:
             break;
@@ -206,6 +216,10 @@ void rl_frame_commands_execute_2d(
     for (i = 0; i < frame_commands->count; i++) {
         const rl_render_command_t *command = &frame_commands->commands[i];
         switch (command->type) {
+        case RL_RENDER_CMD_DRAW_SPRITE2D:
+            rl_sprite2d_draw(command->data.draw_sprite2d.sprite,
+                             command->data.draw_sprite2d.tint);
+            break;
         case RL_RENDER_CMD_DRAW_TEXTURE:
             rl_texture_draw_ex(command->data.draw_texture.texture,
                                command->data.draw_texture.x,

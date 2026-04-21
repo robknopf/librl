@@ -167,6 +167,11 @@ LDFLAGS_WASM = \
 	"_rl_texture_destroy", \
 	"_rl_texture_draw_ex", \
 	"_rl_texture_draw_ground", \
+	"_rl_sprite2d_create", \
+	"_rl_sprite2d_create_from_texture", \
+	"_rl_sprite2d_set_transform", \
+	"_rl_sprite2d_draw", \
+	"_rl_sprite2d_destroy", \
 	"_rl_sprite3d_create", \
 	"_rl_sprite3d_create_from_texture", \
 	"_rl_sprite3d_set_transform", \

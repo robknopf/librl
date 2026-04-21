@@ -10,6 +10,7 @@ export enum ResourceRequestType {
   CREATE_MUSIC = 5,
   CREATE_CAMERA3D = 6,
   CREATE_SPRITE3D = 7,
+  CREATE_SPRITE2D = 8,
   DESTROY_RESOURCE = 99,
 }
 
@@ -75,6 +76,11 @@ export interface CreateSprite3DRequest extends ResourceRequest {
   filename: string;
 }
 
+export interface CreateSprite2DRequest extends ResourceRequest {
+  type: ResourceRequestType.CREATE_SPRITE2D;
+  filename: string;
+}
+
 export interface DestroyResourceRequest extends ResourceRequest {
   type: ResourceRequestType.DESTROY_RESOURCE;
   handle: number;
@@ -89,6 +95,7 @@ export type AnyResourceRequest =
   | CreateMusicRequest
   | CreateCamera3DRequest
   | CreateSprite3DRequest
+  | CreateSprite2DRequest
   | DestroyResourceRequest;
 
 export type AnyResourceRequestInput =
@@ -100,6 +107,7 @@ export type AnyResourceRequestInput =
   | Omit<CreateMusicRequest, "rid" | "handle">
   | Omit<CreateCamera3DRequest, "rid" | "handle">
   | Omit<CreateSprite3DRequest, "rid" | "handle">
+  | Omit<CreateSprite2DRequest, "rid" | "handle">
   | Omit<DestroyResourceRequest, "rid">;
 
 // Response from client

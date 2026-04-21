@@ -566,6 +566,8 @@ static int rl_loader_collect_gltf_dependency_uris(rl_loader_task_t *task,
 
 static int rl_loader_start_fetch(rl_loader_task_t *task, const char *path)
 {
+    char full_url[512];
+
     if (!task || !path || path[0] == '\0') {
         return -1;
     }
@@ -573,6 +575,14 @@ static int rl_loader_start_fetch(rl_loader_task_t *task, const char *path)
     if (task->fetch_op != NULL) {
         fetch_url_op_free(task->fetch_op);
         task->fetch_op = NULL;
+    }
+
+    if (path[0] == '/') {
+        return -1;
+    }
+    snprintf(full_url, sizeof(full_url), "%s/%s", task->fetch_host, path);
+    if (fetch_url_head(full_url, RL_LOADER_FETCH_TIMEOUT_MS) != 0) {
+        return -1;
     }
 
     snprintf(task->pending_fetch_path, sizeof(task->pending_fetch_path), "%s", path);
@@ -1149,6 +1159,65 @@ bool rl_loader_is_local(const char *filename)
     }
 
     return fileio_exists(resolved_path);
+}
+
+rl_loader_read_result_t rl_loader_read_local(const char *filename)
+{
+    rl_loader_read_result_t out = {0};
+    char host[RL_LOADER_MAX_ASSET_HOST_LENGTH] = {0};
+    char resolved_path[FILEIO_MAX_PATH_LENGTH * 2] = {0};
+    fileio_read_result_t result = {0};
+    bool should_cache_in_memory = false;
+    size_t cached_size = 0;
+    unsigned char *cached_data = NULL;
+
+    if (!rl_loader_initialized || filename == NULL || filename[0] == '\0') {
+        out.error = -1;
+        return out;
+    }
+
+    if (rl_loader_resolve_prepare_target(filename,
+                                         host,
+                                         sizeof(host),
+                                         resolved_path,
+                                         sizeof(resolved_path)) != 0) {
+        out.error = -1;
+        return out;
+    }
+
+    should_cache_in_memory = rl_loader_should_memory_cache_path(resolved_path);
+    if (should_cache_in_memory && rl_loader_memory_cache != NULL) {
+        if (lru_cache_get_copy(rl_loader_memory_cache, resolved_path, &cached_data, &cached_size)) {
+            out.data = cached_data;
+            out.size = cached_size;
+            out.error = 0;
+            return out;
+        }
+    }
+
+    result = fileio_read(resolved_path);
+    out.data = (unsigned char *)result.data;
+    out.size = result.size;
+    out.error = result.error;
+    return out;
+}
+
+void rl_loader_read_result_free(rl_loader_read_result_t *result)
+{
+    if (result == NULL) {
+        return;
+    }
+    free(result->data);
+    result->data = NULL;
+    result->size = 0;
+}
+
+void rl_loader_normalize_path(const char *path, char *buffer, size_t buffer_size)
+{
+    if (path == NULL || buffer == NULL || buffer_size == 0) {
+        return;
+    }
+    path_normalize(path, buffer, buffer_size);
 }
 
 int rl_loader_uncache_file(const char *filename)

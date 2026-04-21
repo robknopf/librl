@@ -439,6 +439,26 @@ private extern class RLNative {
   @:native("rl_sprite3d_destroy")
   static function sprite3dDestroy(sprite: RLHandle): Void;
 
+  // --- Sprite2D (rl_sprite2d.h) ---
+  @:native("rl_sprite2d_create")
+  static function sprite2dCreate(filename: String): RLHandle;
+
+  @:native("rl_sprite2d_create_from_texture")
+  static function sprite2dCreateFromTexture(texture: RLHandle): RLHandle;
+
+  @:native("rl_sprite2d_set_transform")
+  static function sprite2dSetTransform(
+    sprite: RLHandle,
+    x: Float, y: Float,
+    scale: Float, rotation: Float
+  ): Bool;
+
+  @:native("rl_sprite2d_draw")
+  static function sprite2dDraw(sprite: RLHandle, tint: RLHandle): Void;
+
+  @:native("rl_sprite2d_destroy")
+  static function sprite2dDestroy(sprite: RLHandle): Void;
+
   // --- Texture (rl_texture.h) ---
   @:native("rl_texture_create")
   static function textureCreate(filename: String): RLHandle;

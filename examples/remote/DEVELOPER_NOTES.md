@@ -145,13 +145,53 @@ on_tick():
 
 ## Adding a New Resource Type
 
-1. Add enum value to `rl_resource_request_type_t` in `rl_resource_protocol.h`
-2. Add data struct to the request union in `rl_resource_protocol.h`
-3. Add handler in `rl_resource_handler.c` (sync or async path)
-4. Add to `ResourceRequestType` enum in `resource_protocol.ts`
-5. Add TypeScript interface in `resource_protocol.ts`
-6. Add to `AnyResourceRequest` union in `resource_protocol.ts`
-7. Add helper method in `resource_manager.ts`
+### Taxonomy: Choose the Right Pattern
+
+| Pattern | Examples | When to Use |
+|---------|----------|-------------|
+| **Value handle (lightweight, pooled)** | `rl_color` | Cheap to create, no GPU resources, equality-by-value semantics |
+| **Shared cached asset (refcounted)** | `rl_texture`, `rl_font` | Expensive GPU upload, path-based deduplication, multiple consumers |
+| **Instanced renderable (handle pool)** | `rl_model`, `rl_sprite3d`, `rl_sprite2d` | Per-instance transform/state, created/destroyed frequently, owns no GPU data directly |
+| **Stream handle (lifecycle managed)** | `rl_music`, `rl_sound` | Runtime decode state, owns its own data, one-shot or streaming |
+
+### Implementation Checklist
+
+**C runtime:**
+1. Add public header `include/rl_<name>.h` with create/destroy/draw API
+2. Add internal header `src/internal/rl_<name>.h` with init/deinit decls
+3. Implement in `src/rl_<name>.c` following chosen pattern above
+4. Wire init/deinit into `rl_init()`/`rl_deinit()` in `src/rl.c`
+5. Add exports to `Makefile` KEEP list
+
+**If handle pool pattern:**
+- Use `rl_handle_pool_t` for sparse handle allocation
+- Store per-instance state (transform, etc.) in instance array indexed by handle
+- Implement `set_transform()` + `draw()` split (transform stored, draw uses stored values)
+
+**If frame commands needed (Lua/remote contexts):**
+1. Add command type to `rl_render_command_type_t` in `include/rl_frame_command.h`
+2. Add command struct to `rl_frame_command_data_t` union
+3. Add executor case in `src/rl_frame_command.c` (in appropriate 2D/3D/clear handler)
+
+**Lua module:**
+1. Add bindings in `modules/lua/src/rl_module_lua.c`
+2. Create Lua wrapper in `examples/www/public/assets/scripts/lua/<name>.lua`
+3. Follow pattern: `load()` caches handle, `set_transform()` tracks dirty state, `draw()` emits command
+
+**Remote server:**
+1. Add enum to `ResourceRequestType` in `resource_protocol.ts`
+2. Add request interface to `AnyResourceRequest` union
+3. Add handler in `rl_resource_handler.c` (sync or async)
+4. Add helper in `resource_manager.ts`
+
+**Bindings:**
+- Nim (`bindings/nim/rl.nim`): Direct API imports only, no frame command structs
+- Haxe (`bindings/haxe/rl/RL.hx`): Direct API imports only
+- JS (`bindings/js/rl.js`): Direct API where applicable
+
+**Documentation:**
+- Add section to `docs/API.md`
+- Update `README.md` Lua module list if adding wrapper
 
 ## Adding a New Command Type
 

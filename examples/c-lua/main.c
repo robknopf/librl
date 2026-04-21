@@ -14,20 +14,17 @@ static const char *ASSET_HOST = "https://localhost:4444";
 #endif
 
 #define LUA_SCRIPT_ROOT "assets/scripts/lua"
-#define LUA_BOOT_SCRIPT "boot.lua"
-#define LUA_APP_MODULE "lua_demo"
+#define LUA_ENTRY_SCRIPT LUA_SCRIPT_ROOT "/main.lua"
 
 typedef enum example_boot_state_t {
   EXAMPLE_BOOT_RESTORE = 0,
-  EXAMPLE_BOOT_PREPARE = 1,
-  EXAMPLE_BOOT_INIT_MODULE = 2,
-  EXAMPLE_BOOT_RUNNING = 3,
-  EXAMPLE_BOOT_ERROR = 4
+  EXAMPLE_BOOT_INIT_MODULE = 1,
+  EXAMPLE_BOOT_RUNNING = 2,
+  EXAMPLE_BOOT_ERROR = 3
 } example_boot_state_t;
 
 typedef enum example_resource_kind_t {
   EXAMPLE_RESOURCE_KIND_NONE = 0,
-  EXAMPLE_RESOURCE_KIND_SCRIPT,
   EXAMPLE_RESOURCE_KIND_TEXTURE,
   EXAMPLE_RESOURCE_KIND_MODEL,
   EXAMPLE_RESOURCE_KIND_SPRITE3D,
@@ -37,23 +34,6 @@ typedef enum example_resource_kind_t {
 } example_resource_kind_t;
 
 #define EXAMPLE_MAX_PENDING_RESOURCE_REQUESTS 64
-
-static const char *const EXAMPLE_ASSET_MANIFEST[] = {
-    LUA_SCRIPT_ROOT "/boot.lua",
-    LUA_SCRIPT_ROOT "/lua_demo.lua",
-    LUA_SCRIPT_ROOT "/input_mapping.lua",
-    LUA_SCRIPT_ROOT "/model.lua",
-    LUA_SCRIPT_ROOT "/music.lua",
-    LUA_SCRIPT_ROOT "/resource_async.lua",
-    LUA_SCRIPT_ROOT "/script_async.lua",
-    LUA_SCRIPT_ROOT "/texture.lua",
-    LUA_SCRIPT_ROOT "/sprite3d.lua",
-    LUA_SCRIPT_ROOT "/sound.lua",
-    LUA_SCRIPT_ROOT "/camera3d.lua",
-    LUA_SCRIPT_ROOT "/font.lua",
-    LUA_SCRIPT_ROOT "/color.lua",
-    LUA_SCRIPT_ROOT "/shadow.lua",
-};
 
 typedef struct example_resource_request_t {
   bool in_use;
@@ -89,18 +69,8 @@ static void emit_resource_error(int rid, const char *message) {
   (void)rl_event_emit("resource.error", payload);
 }
 
-static void emit_script_error(int rid, const char *message) {
-  char payload[512];
-
-  (void)snprintf(payload, sizeof(payload), "%d|%s", rid,
-                 message != NULL ? message : "script import failed");
-  (void)rl_event_emit("script.error", payload);
-}
-
 static example_resource_kind_t parse_resource_kind(const char *kind) {
-  if (kind == NULL) {
-    return EXAMPLE_RESOURCE_KIND_NONE;
-  }
+  if (kind == NULL) return EXAMPLE_RESOURCE_KIND_NONE;
   if (strcmp(kind, "texture") == 0) return EXAMPLE_RESOURCE_KIND_TEXTURE;
   if (strcmp(kind, "model") == 0) return EXAMPLE_RESOURCE_KIND_MODEL;
   if (strcmp(kind, "sprite3d") == 0) return EXAMPLE_RESOURCE_KIND_SPRITE3D;
@@ -108,32 +78,6 @@ static example_resource_kind_t parse_resource_kind(const char *kind) {
   if (strcmp(kind, "sound") == 0) return EXAMPLE_RESOURCE_KIND_SOUND;
   if (strcmp(kind, "music") == 0) return EXAMPLE_RESOURCE_KIND_MUSIC;
   return EXAMPLE_RESOURCE_KIND_NONE;
-}
-
-static int parse_script_request_payload(const char *payload, int *out_rid,
-                                        char *path, size_t path_size) {
-  char buffer[512];
-  char *cursor = NULL;
-  char *rid_text = NULL;
-  char *path_text = NULL;
-
-  if (payload == NULL || out_rid == NULL || path == NULL || path_size == 0) {
-    return -1;
-  }
-
-  (void)snprintf(buffer, sizeof(buffer), "%s", payload);
-  rid_text = buffer;
-  cursor = strchr(rid_text, '|');
-  if (cursor == NULL) return -1;
-  *cursor++ = '\0';
-  path_text = cursor;
-  if (path_text == NULL || path_text[0] == '\0') {
-    return -1;
-  }
-
-  *out_rid = atoi(rid_text);
-  (void)snprintf(path, path_size, "%s", path_text);
-  return 0;
 }
 
 static rl_handle_t create_resource_handle(const example_resource_request_t *request) {
@@ -233,8 +177,7 @@ static const char *get_asset_host(void) {
   if (value && value[0] != '\0') {
     return value;
   }
-  //return "https://192.168.1.100:4444";
-  return "./";
+  return ASSET_HOST;
 }
 
 static void module_log(void *user_data, int level, const char *message) {
@@ -319,8 +262,6 @@ static void on_resource_load(void *payload, void *user_data) {
 
   switch (request->kind) {
   case EXAMPLE_RESOURCE_KIND_MODEL:
-    request->loader_task = rl_loader_import_asset_async(request->path);
-    break;
   case EXAMPLE_RESOURCE_KIND_SPRITE3D:
   case EXAMPLE_RESOURCE_KIND_TEXTURE:
   case EXAMPLE_RESOURCE_KIND_FONT:
@@ -337,38 +278,6 @@ static void on_resource_load(void *payload, void *user_data) {
 
   if (request->loader_task == NULL) {
     emit_resource_error(rid, "failed to start resource prepare");
-    free_resource_request(request);
-  }
-}
-
-static void on_script_import(void *payload, void *user_data) {
-  example_context_t *context = (example_context_t *)user_data;
-  example_resource_request_t *request = NULL;
-  char path[256];
-  int rid = 0;
-
-  if (context == NULL) {
-    return;
-  }
-
-  if (parse_script_request_payload((const char *)payload, &rid, path,
-                                   sizeof(path)) != 0) {
-    emit_script_error(rid, "invalid script import request");
-    return;
-  }
-
-  request = alloc_resource_request(context);
-  if (request == NULL) {
-    emit_script_error(rid, "script request queue is full");
-    return;
-  }
-
-  request->rid = rid;
-  request->kind = EXAMPLE_RESOURCE_KIND_SCRIPT;
-  (void)snprintf(request->path, sizeof(request->path), "%s", path);
-  request->loader_task = rl_loader_import_asset_async(request->path);
-  if (request->loader_task == NULL) {
-    emit_script_error(rid, "failed to start script import");
     free_resource_request(request);
   }
 }
@@ -396,49 +305,18 @@ static void draw_boot_status(const char *title, const char *detail) {
 }
 
 static void handle_boot_restore(example_context_t *context) {
-  if (context->loader_task != NULL && rl_loader_poll_task(context->loader_task)) {
-    int rc = rl_loader_finish_task(context->loader_task);
-    rl_loader_free_task(context->loader_task);
-    context->loader_task = NULL;
-
-    if (rc != 0) {
-      set_boot_error(context, "Loader bootstrap failed (%d)", rc);
-      return;
+  if (context->loader_task == NULL ||
+      rl_loader_poll_task(context->loader_task)) {
+    if (context->loader_task != NULL) {
+      rl_loader_free_task(context->loader_task);
+      context->loader_task = NULL;
     }
-
-    // debugging, clear the cache so we don't use stale assets
     rl_loader_clear_cache();
-    //
-    
-    context->loader_task = rl_loader_import_assets_async(
-        EXAMPLE_ASSET_MANIFEST,
-        sizeof(EXAMPLE_ASSET_MANIFEST) / sizeof(EXAMPLE_ASSET_MANIFEST[0]));
-    if (context->loader_task == NULL) {
-      set_boot_error(context, "Failed to start asset prepare");
-      return;
-    }
-
-    context->boot_state = EXAMPLE_BOOT_PREPARE;
-  }
-
-  draw_boot_status("Loading assets", "Restoring cache...");
-}
-
-static void handle_boot_prepare(example_context_t *context) {
-  if (context->loader_task != NULL && rl_loader_poll_task(context->loader_task)) {
-    int rc = rl_loader_finish_task(context->loader_task);
-    rl_loader_free_task(context->loader_task);
-    context->loader_task = NULL;
-
-    if (rc != 0) {
-      set_boot_error(context, "Loader bootstrap failed (%d)", rc);
-      return;
-    }
-
     context->boot_state = EXAMPLE_BOOT_INIT_MODULE;
+    return;
   }
 
-  draw_boot_status("Loading assets", "Preparing assets...");
+  draw_boot_status("Loading", "Restoring cache...");
 }
 
 static void handle_boot_init_module(example_context_t *context) {
@@ -462,17 +340,11 @@ static void handle_boot_init_module(example_context_t *context) {
                    context->module_error);
     return;
   }
-
   (void)rl_event_on("lua.ready", on_module_ready, NULL);
   (void)rl_event_on("lua.error", on_module_error, NULL);
-  (void)rl_event_emit("lua.add_path", LUA_SCRIPT_ROOT);
-  (void)rl_event_emit("lua.do_file", LUA_BOOT_SCRIPT);
-  {
-    char boot_command[256];
-    (void)snprintf(boot_command, sizeof(boot_command), "boot('%s', '%s')",
-                   LUA_SCRIPT_ROOT, LUA_APP_MODULE);
-    (void)rl_event_emit("lua.do_string", boot_command);
-  }
+  (void)rl_event_emit("lua.set_path", LUA_SCRIPT_ROOT);
+  (void)rl_event_emit("lua.set_cpath", LUA_SCRIPT_ROOT);
+  (void)rl_event_emit("lua.do_file", LUA_ENTRY_SCRIPT);
   if (rl_module_get_config_instance(script_module->api, script_module->state,
                                     script_config) != 0) {
     log_warn("Lua script get_config failed");
@@ -529,18 +401,7 @@ static void poll_resource_requests(example_context_t *context) {
     request->loader_task = NULL;
 
     if (rc != 0) {
-      if (request->kind == EXAMPLE_RESOURCE_KIND_SCRIPT) {
-        emit_script_error(request->rid, "script import failed");
-      } else {
-        emit_resource_error(request->rid, "resource prepare failed");
-      }
-      free_resource_request(request);
-      continue;
-    }
-
-    if (request->kind == EXAMPLE_RESOURCE_KIND_SCRIPT) {
-      (void)snprintf(payload, sizeof(payload), "%d", request->rid);
-      (void)rl_event_emit("script.loaded", payload);
+      emit_resource_error(request->rid, "resource prepare failed");
       free_resource_request(request);
       continue;
     }
@@ -587,7 +448,6 @@ static void on_shutdown(void *user_data) {
   (void)rl_event_off("lua.ready", on_module_ready, NULL);
   (void)rl_event_off("lua.error", on_module_error, NULL);
   (void)rl_event_off("resource.load", on_resource_load, context);
-  (void)rl_event_off("script.import", on_script_import, context);
   rl_window_close();
 }
 
@@ -605,7 +465,6 @@ static void on_init(void *user_data) {
   }
 
   (void)rl_event_on("resource.load", on_resource_load, context);
-  (void)rl_event_on("script.import", on_script_import, context);
 
   rl_window_open(context->script_config.width, context->script_config.height,
                  context->script_config.title, context->script_config.flags);
@@ -621,9 +480,6 @@ static void on_init(void *user_data) {
   context->module_host.event_emit = module_event_emit;
   context->module_host.frame_command = rl_frame_commands_append;
   context->loader_task = rl_loader_restore_fs_async();
-  if (context->loader_task == NULL) {
-    set_boot_error(context, "Failed to start cache restore");
-  }
 }
 
 static void on_tick(void *user_data) {
@@ -639,9 +495,6 @@ static void on_tick(void *user_data) {
   switch (context->boot_state) {
   case EXAMPLE_BOOT_RESTORE:
     handle_boot_restore(context);
-    return;
-  case EXAMPLE_BOOT_PREPARE:
-    handle_boot_prepare(context);
     return;
   case EXAMPLE_BOOT_INIT_MODULE:
     handle_boot_init_module(context);
@@ -679,7 +532,6 @@ int main(void) {
   g_example_context.boot_state = EXAMPLE_BOOT_RESTORE;
 
   rl_init();
-  rl_set_asset_host(ASSET_HOST);
   rl_run(on_init, on_tick, on_shutdown,
                       &g_example_context);
 

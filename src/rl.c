@@ -12,6 +12,7 @@
 #include "internal/rl_sound.h"
 #include "internal/rl_scratch.h"
 #include "internal/rl_state.h"
+#include "internal/rl_sprite2d.h"
 #include "internal/rl_sprite3d.h"
 #include "internal/rl_texture.h"
 #include "raylib.h"
@@ -105,6 +106,7 @@ void rl_init() {
     rl_event_init();
     rl_camera3d_init();
     rl_texture_init();
+    rl_sprite2d_init();
     rl_sprite3d_init();
     rl_debug_init();
     initialized = true;
@@ -118,6 +120,7 @@ void rl_deinit() {
     rl_camera3d_deinit();
     initialized = false;
     rl_debug_deinit();
+    rl_sprite2d_deinit();
     rl_sprite3d_deinit();
     rl_texture_deinit();
     rl_model_deinit();

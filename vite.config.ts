@@ -10,6 +10,10 @@ dotenv.config({
 });
 const homeDir = os.homedir();
 
+const enableSSLDefault = true;
+
+const enableSSL = enableSSLDefault || process.env.ENABLE_SSL === "1" || process.env.ENABLE_SSL === "true";
+
 function getSSLKeysPath(): { certPath: string; privKeyPath: string } | null {
   let certsDir = (process.env.CERTS_DIR || path.join(homeDir, "keys")).trim();
   if (!fs.existsSync(certsDir)) {
@@ -35,7 +39,7 @@ function getSSLKeysPath(): { certPath: string; privKeyPath: string } | null {
   };
 }
 
-const sslKeysPaths = getSSLKeysPath();
+const sslKeysPaths = enableSSL ? getSSLKeysPath() : null;
 console.log(`Will use ${sslKeysPaths ? "SSL" : "non-SSL"} connection`);
 
 export default defineConfig({
@@ -121,6 +125,7 @@ export default defineConfig({
         }
       : undefined,
     fs: {
+      strict: true,
       allow: [
         // default roots plus your workspace package
         path.resolve(__dirname),

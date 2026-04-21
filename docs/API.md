@@ -187,6 +187,32 @@ Notes:
 - Sprite3D instances now own position/size state.
 - `rl_sprite3d_draw(handle, tint)` draws using the stored transform.
 
+## Sprite2D (`include/rl_sprite2d.h`)
+
+Main responsibilities:
+
+- 2D sprite creation from path or texture handle
+- Instance-owned 2D transform (`rl_sprite2d_set_transform(...)`)
+- 2D drawing with position, scale, and rotation
+- Sprite handle destruction
+
+API:
+
+```c
+rl_handle_t rl_sprite2d_create(const char *filename);           // load from file
+rl_handle_t rl_sprite2d_create_from_texture(rl_handle_t texture); // from existing texture
+void rl_sprite2d_set_transform(rl_handle_t sprite, float x, float y, float scale, float rotation);
+void rl_sprite2d_draw(rl_handle_t sprite, rl_handle_t tint);
+void rl_sprite2d_destroy(rl_handle_t sprite);
+```
+
+Notes:
+
+- Sprite2D instances own position/scale/rotation state separate from the underlying texture.
+- Use `rl_sprite2d_set_transform()` to update transform; `rl_sprite2d_draw()` uses the stored values.
+- This matches the split transform/draw pattern used by `rl_model` and `rl_sprite3d`.
+- For Lua/remote contexts, emit `SET_SPRITE2D_TRANSFORM` then `DRAW_SPRITE2D` frame commands.
+
 ## Debug (`include/rl_debug.h`)
 
 Main responsibilities:

@@ -6,6 +6,26 @@ This project currently maintains three primary bindings in a 'add as I need' cyc
 - Nim (C FFI imports)
 - Haxe (hxcpp / C++ FFI)
 
+## Architecture: Direct API vs Frame Commands
+
+Native bindings (Nim, Haxe) call the C API directly. Frame commands are reserved for contexts where direct calls have overhead or serialization needs:
+
+| Context | Pattern | Rationale |
+|---------|---------|-----------|
+| Nim, Haxe | Direct C API calls (`rl_sprite2d_draw()`) | Native code, no boundary overhead |
+| Lua module | Frame commands (`RL_RENDER_CMD_DRAW_SPRITE2D`) | VM boundary, batching, host-managed buffer |
+| Remote server | Frame commands over WebSocket | Network serialization, protocol abstraction |
+
+**Rule of thumb:**
+- Writing C/Nim/Haxe? Use direct API calls.
+- Writing Lua or remote gameplay code? Emit frame commands into the host buffer.
+
+Frame command types (for Lua/remote contexts only):
+- `RL_RENDER_CMD_SET_SPRITE2D_TRANSFORM` (17)
+- `RL_RENDER_CMD_DRAW_SPRITE2D` (18)
+
+Native bindings do not define frame command structs — they are an implementation detail of the Lua/remote transport layer.
+
 ## JavaScript Binding
 
 Files:

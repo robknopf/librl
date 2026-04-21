@@ -16,6 +16,9 @@ export enum CommandType {
   STOP_MUSIC = 13,
   SET_MUSIC_LOOP = 14,
   SET_MUSIC_VOLUME = 15,
+  SET_ACTIVE_CAMERA3D = 16,
+  SET_SPRITE2D_TRANSFORM = 17,
+  DRAW_SPRITE2D = 18,
 }
 
 export type Handle = number;
@@ -156,6 +159,26 @@ export interface SetSprite3DTransformCommand {
   size: number;
 }
 
+export interface SetActiveCamera3DCommand {
+  type: CommandType.SET_ACTIVE_CAMERA3D;
+  camera: Handle;
+}
+
+export interface SetSprite2DTransformCommand {
+  type: CommandType.SET_SPRITE2D_TRANSFORM;
+  sprite: Handle;
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
+}
+
+export interface DrawSprite2DCommand {
+  type: CommandType.DRAW_SPRITE2D;
+  sprite: Handle;
+  tint: Handle;
+}
+
 export type Command =
   | ClearCommand
   | DrawTextCommand
@@ -172,7 +195,10 @@ export type Command =
   | DrawGroundTextureCommand
   | SetCamera3DCommand
   | SetModelTransformCommand
-  | SetSprite3DTransformCommand;
+  | SetSprite3DTransformCommand
+  | SetActiveCamera3DCommand
+  | SetSprite2DTransformCommand
+  | DrawSprite2DCommand;
 
 export interface FrameSnapshot {
   frameNumber: number;

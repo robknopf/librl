@@ -3,5 +3,5 @@
 -Iinclude
 -Ideps/liblua/include
 -I../../include
--I../../deps/wgutils
+-I../../deps/wgutils/include
 -DPLATFORM_DESKTOP

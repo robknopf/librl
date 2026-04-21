@@ -271,6 +271,41 @@ static int parse_command(const json_value_t *cmd_json, rl_render_command_t *out_
       break;
     }
 
+    case RL_RENDER_CMD_SET_ACTIVE_CAMERA3D: {
+      int camera = 0;
+
+      if (json_object_get_int_value(cmd_json, "camera", &camera)) {
+        out_cmd->data.set_active_camera3d.camera = (rl_handle_t)camera;
+      }
+      break;
+    }
+
+    case RL_RENDER_CMD_SET_SPRITE2D_TRANSFORM: {
+      int sprite = 0;
+
+      if (json_object_get_int_value(cmd_json, "sprite", &sprite)) {
+        out_cmd->data.set_sprite2d_transform.sprite = (rl_handle_t)sprite;
+      }
+      (void)json_read_float_field(cmd_json, "x", &out_cmd->data.set_sprite2d_transform.x);
+      (void)json_read_float_field(cmd_json, "y", &out_cmd->data.set_sprite2d_transform.y);
+      (void)json_read_float_field(cmd_json, "scale", &out_cmd->data.set_sprite2d_transform.scale);
+      (void)json_read_float_field(cmd_json, "rotation", &out_cmd->data.set_sprite2d_transform.rotation);
+      break;
+    }
+
+    case RL_RENDER_CMD_DRAW_SPRITE2D: {
+      int sprite = 0;
+      int tint = 0;
+
+      if (json_object_get_int_value(cmd_json, "sprite", &sprite)) {
+        out_cmd->data.draw_sprite2d.sprite = (rl_handle_t)sprite;
+      }
+      if (json_object_get_int_value(cmd_json, "tint", &tint)) {
+        out_cmd->data.draw_sprite2d.tint = (rl_handle_t)tint;
+      }
+      break;
+    }
+
     default:
       return -1;
   }

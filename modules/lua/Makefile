@@ -100,11 +100,11 @@ $(OBJ_WASM_DIR):
 	@mkdir -p $(OBJ_WASM_DIR)
 
 $(MODULE_DESKTOP_OBJ): $(MODULE_IMPL_SRC) | $(OBJ_DESKTOP_DIR)
-	$(CC) $(CFLAGS) -I$(ROOT_DIR)/include -I$(ROOT_DIR)/deps/wgutils -I$(LUA_MODULE_DIR)/include -I$(LIBLUA_INC) -c $< -o $@
+	$(CC) $(CFLAGS) -I$(ROOT_DIR)/include -I$(ROOT_DIR)/deps/wgutils/include -I$(LUA_MODULE_DIR)/include -I$(LIBLUA_INC) -c $< -o $@
 
 $(MODULE_WASM_OBJ): $(MODULE_IMPL_SRC) | $(OBJ_WASM_DIR)
 	@mkdir -p "$(EM_CACHE_DIR)"
-	$(EM_ENV) $(CC_WASM) $(CFLAGS_WASM) -I$(ROOT_DIR)/include -I$(ROOT_DIR)/deps/wgutils -I$(LUA_MODULE_DIR)/include -I$(LIBLUA_INC) -c $< -o $@
+	$(EM_ENV) $(CC_WASM) $(CFLAGS_WASM) -I$(ROOT_DIR)/include -I$(ROOT_DIR)/deps/wgutils/include -I$(LUA_MODULE_DIR)/include -I$(LIBLUA_INC) -c $< -o $@
 
 desktop: ensure_desktop_archive $(MODULE_DESKTOP_OBJ) | $(OUT_DIR)
 	$(AR) rcs $(MODULE_DESKTOP_LIB) $(MODULE_DESKTOP_OBJ)
@@ -117,9 +117,9 @@ wasm: ensure_wasm_archive $(MODULE_WASM_OBJ) | $(OUT_DIR)
 
 lua_module_test_desktop: desktop
 	@$(MAKE) -C $(ROOT_DIR) desktop
-	$(CC) $(CFLAGS) -I$(ROOT_DIR)/include -I$(ROOT_DIR)/deps/wgutils -I$(LUA_MODULE_DIR)/include -I$(LIBLUA_INC) \
+	$(CC) $(CFLAGS) -I$(ROOT_DIR)/include -I$(ROOT_DIR)/deps/wgutils/include -I$(LUA_MODULE_DIR)/include -I$(LIBLUA_INC) \
 		$(MODULE_TEST_SRC) $(MODULE_DESKTOP_LIB) $(CORE_LIBRL_DESKTOP) $(LIBLUA_DESKTOP_ARCHIVE) \
-		-lcurl -lm -lpthread -ldl -lX11 -o $(MODULE_TEST_BIN)
+		-lcurl -lssl -lcrypto -lz -lm -lpthread -ldl -lX11 -o $(MODULE_TEST_BIN)
 	@$(MODULE_TEST_BIN)
 
 clean:

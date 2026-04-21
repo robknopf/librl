@@ -27,7 +27,10 @@ typedef enum rl_render_command_type_t {
   RL_RENDER_CMD_PAUSE_MUSIC = 12,
   RL_RENDER_CMD_STOP_MUSIC = 13,
   RL_RENDER_CMD_SET_MUSIC_LOOP = 14,
-  RL_RENDER_CMD_SET_MUSIC_VOLUME = 15
+  RL_RENDER_CMD_SET_MUSIC_VOLUME = 15,
+  RL_RENDER_CMD_SET_ACTIVE_CAMERA3D = 16,
+  RL_RENDER_CMD_SET_SPRITE2D_TRANSFORM = 17,
+  RL_RENDER_CMD_DRAW_SPRITE2D = 18
 } rl_render_command_type_t;
 
 typedef struct rl_frame_clear_t {
@@ -114,6 +117,23 @@ typedef struct rl_frame_draw_ground_texture_t {
   float length;
 } rl_frame_draw_ground_texture_t;
 
+typedef struct rl_frame_draw_sprite2d_t {
+  rl_handle_t sprite;
+  rl_handle_t tint;
+} rl_frame_draw_sprite2d_t;
+
+typedef struct rl_frame_set_sprite2d_transform_t {
+  rl_handle_t sprite;
+  float x;
+  float y;
+  float scale;
+  float rotation;
+} rl_frame_set_sprite2d_transform_t;
+
+typedef struct rl_frame_set_active_camera3d_t {
+  rl_handle_t camera;
+} rl_frame_set_active_camera3d_t;
+
 typedef struct rl_frame_set_camera3d_t {
   rl_handle_t camera;
   float position_x;
@@ -169,6 +189,9 @@ typedef struct rl_render_command_t {
     rl_frame_set_camera3d_t set_camera3d;
     rl_frame_set_model_transform_t set_model_transform;
     rl_frame_set_sprite3d_transform_t set_sprite3d_transform;
+    rl_frame_set_active_camera3d_t set_active_camera3d;
+    rl_frame_draw_sprite2d_t draw_sprite2d;
+    rl_frame_set_sprite2d_transform_t set_sprite2d_transform;
   } data;
 } rl_render_command_t;
 

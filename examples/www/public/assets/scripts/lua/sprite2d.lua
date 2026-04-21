@@ -1,8 +1,8 @@
-local Sprite3D = {}
-Sprite3D.__index = Sprite3D
+local Sprite2D = {}
+Sprite2D.__index = Sprite2D
 local ResourceAsync = require("resource_async")
 
-local transform_fields = { x=true, y=true, z=true, size=true }
+local transform_fields = { x=true, y=true, scale=true, rotation=true }
 
 local function wrap_handle(handle)
   if handle == nil or handle == 0 then
@@ -13,13 +13,13 @@ local function wrap_handle(handle)
     handle = handle,
     x = 0.0,
     y = 0.0,
-    z = 0.0,
-    size = 1.0,
+    scale = 1.0,
+    rotation = 0.0,
     _transform_dirty = true,
-  }, Sprite3D)
+  }, Sprite2D)
 end
 
-function Sprite3D:__newindex(k, v)
+function Sprite2D:__newindex(k, v)
   rawset(self, k, v)
   if transform_fields[k] then
     rawset(self, "_transform_dirty", true)
@@ -27,41 +27,41 @@ function Sprite3D:__newindex(k, v)
 end
 
 local function load_sync(path)
-  return wrap_handle(load_sprite3d(path))
+  return wrap_handle(load_sprite2d(path))
 end
 
-function Sprite3D.load(path, callback)
+function Sprite2D.load(path, callback)
   if type(callback) == "function" then
-    return ResourceAsync.request("sprite3d", path, nil, wrap_handle, callback)
+    return ResourceAsync.request("sprite2d", path, nil, wrap_handle, callback)
   end
 
   return load_sync(path)
 end
 
-function Sprite3D:sync()
+function Sprite2D:sync()
   if self.handle == nil or self.handle == 0 then
     return
   end
   if not self._transform_dirty then
     return
   end
-  set_sprite3d_transform(self.handle, self.x, self.y, self.z, self.size)
+  set_sprite2d_transform(self.handle, self.x, self.y, self.scale, self.rotation)
   self._transform_dirty = false
 end
 
-function Sprite3D:draw(tint)
+function Sprite2D:draw(tint)
   if self.handle == nil or self.handle == 0 then
     return
   end
   self:sync()
-  draw_sprite3d(self.handle, tint or COLOR_WHITE)
+  draw_sprite2d(self.handle, tint or COLOR_WHITE)
 end
 
-function Sprite3D:destroy()
+function Sprite2D:destroy()
   if self.handle ~= nil and self.handle ~= 0 then
-    destroy_sprite3d(self.handle)
+    destroy_sprite2d(self.handle)
     self.handle = 0
   end
 end
 
-return Sprite3D
+return Sprite2D

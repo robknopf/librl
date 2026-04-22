@@ -1,10 +1,25 @@
 package;
 
-import InjectLibRL;
 import rl.RL;
+import rl.RLHandle;
 import rl.Log;
-import AssetHelper;
-import Context;
+
+// import AssetHelper;
+// import Context;
+
+typedef AppContext = {
+	var ?monoFontSize:Int;
+	var ?monoFont:RLHandle;
+	var ?smallFont:RLHandle;
+	var ?smallFontSize:Int;
+	var ?model:RLHandle;
+	var ?sprite:RLHandle;
+	var ?bgm:RLHandle;
+	var ?camera:RLHandle;
+	var ?bgColor:RLHandle;
+	var ?fpsColor:RLHandle;
+	var ?message:String;
+}
 
 class Main {
 	#if PLATFORM_WEB
@@ -12,17 +27,6 @@ class Main {
 	#else
 	static final ASSET_HOST:String = "https://localhost:4444";
 	#end
-
-	/*
-		static inline var fontSize:Int = 24;
-		static inline var smallFontSize:Int = 16;
-		static inline var modelPath = "assets/models/gumshoe/gumshoe.glb";
-		static inline var spritePath = "assets/sprites/logo/wg-logo-bw-alpha.png";
-		static inline var monoFontPath = "assets/fonts/JetBrainsMono/JetBrainsMono-Regular.ttf";
-		static inline var fontPath = "assets/fonts/Komika/KOMIKAH_.ttf";
-		static inline var bgmPath = "assets/music/ethernight_club.mp3";
-	 */
-	static inline var message = "Hello World!";
 
 	/*
 		static var komika:Int = 0;
@@ -43,58 +47,88 @@ class Main {
 		RL.windowOpen(1024, 1280, "Hello, World! (Haxe)", RL.FLAG_MSAA_4X_HINT);
 		RL.setTargetFps(60);
 
+		var musicTask = RL.loaderImportAssetAsync("assets/music/ethernight_club.mp3");
+		if (musicTask != null) {
+			RL.loaderQueueTask(musicTask, (path, ctx) -> {
+				ctx.bgm = RL.musicCreate(path);
+				RL.musicSetLoop(ctx.bgm, true);
+				RL.musicPlay(ctx.bgm);
+			}, null, ctx);
+		} else {
+			Log.warn("Failed to create music import task");
+		}
 
-		var fontSize:Int = 24;
-		var smallFontSize:Int = 16;
-		ctx.assets.models["gumshoe"] = {path:"assets/models/gumshoe/gumshoe.glb"};
-		ctx.assets.sprites["logo"] = {path:"assets/sprites/logo/wg-logo-bw-alpha.png"};
-		ctx.assets.fonts["mono"] = {path:"assets/fonts/JetBrainsMono/JetBrainsMono-Regular.ttf", size: smallFontSize};
-		ctx.assets.fonts["komika"] = {path:"assets/fonts/Komika/KOMIKAH_.ttf", size: fontSize};
-		ctx.assets.fonts["komikaSmall"] = {path:"assets/fonts/Komika/KOMIKAH_.ttf", size: smallFontSize};
-		ctx.assets.music["bgm"] = {path:"assets/music/ethernight_club.mp3"};
-		ctx.assets.colors["bgColor"] = {r:245, g:245, b:245, a:255};
-		ctx.assets.colors["greyAlpha"] = {r:0, g:0, b:0, a:128};
+		Log.info("here");
+
+		var tasks:Array<Dynamic> = [
+			RL.loaderImportAssetAsync("assets/models/gumshoe/gumshoe.glb"),
+			RL.loaderImportAssetAsync("assets/sprites/logo/wg-logo-bw-alpha.png"),
+			RL.loaderImportAssetAsync("assets/fonts/JetBrainsMono/JetBrainsMono-Regular.ttf"),
+			RL.loaderImportAssetAsync("assets/fonts/Komika/KOMIKAH_.ttf"),
+		];
+		Log.info("here 2");
+		var result = RL.loaderWaitTasks(tasks);
+		Log.info("past loaderWaitTasks");
+		//Log.info(result);
+
+		ctx.model = RL.modelCreate("assets/models/gumshoe/gumshoe.glb");
+		ctx.sprite = RL.textureCreate("assets/sprites/logo/wg-logo-bw-alpha.png");
+		ctx.monoFont = RL.fontCreate("assets/fonts/JetBrainsMono/JetBrainsMono-Regular.ttf", ctx.monoFontSize);
+		ctx.smallFont = RL.fontCreate("assets/fonts/Komika/KOMIKAH_.ttf", ctx.smallFontSize);
+		ctx.fpsColor = RL.colorCreate(0, 121, 241, 255);
+		ctx.message = "Hello, World!";
+
+		/*
+			ctx.assets.models["gumshoe"] = {path:"assets/models/gumshoe/gumshoe.glb"};
+			ctx.assets.sprites["logo"] = {path:"assets/sprites/logo/wg-logo-bw-alpha.png"};
+			ctx.assets.fonts["mono"] = {path:"assets/fonts/JetBrainsMono/JetBrainsMono-Regular.ttf", size: smallFontSize};
+			ctx.assets.fonts["komika"] = {path:"assets/fonts/Komika/KOMIKAH_.ttf", size: fontSize};
+			ctx.assets.fonts["komikaSmall"] = {path:"assets/fonts/Komika/KOMIKAH_.ttf", size: smallFontSize};
+			ctx.assets.music["bgm"] = {path:"assets/music/ethernight_club.mp3"};
+			ctx.assets.colors["bgColor"] = {r:245, g:245, b:245, a:255};
+			ctx.assets.colors["greyAlpha"] = {r:0, g:0, b:0, a:128};
+		 */
 
 		// preload all assets
-		AssetHelper.queueContextAssets(ctx);
-		AssetHelper.awaitQueuedAssets();
+		// AssetHelper.queueContextAssets(ctx);
+		// AssetHelper.awaitQueuedAssets();
 
-		//AssetHelper.queueAsset(fontPath, ctx);
-		//AssetHelper.queueAsset(monoFontPath, ctx);
-		//AssetHelper.queueAsset(modelPath, ctx);
-		//AssetHelper.queueAsset(spritePath, ctx);
-		//AssetHelper.queueAsset(bgmPath, ctx, (assetPath, ctx) -> {
-			//Log.info("loaded " + assetPath);
-			var bgm = ctx.assets.music["bgm"]?.id;
-			if (bgm != null) {
-			//bgm = RL.musicCreate(assetPath);
-				RL.musicSetLoop(bgm, true);
-				RL.musicPlay(bgm);
-			}
-		//}, (assetPath, ctx) -> {
+		// AssetHelper.queueAsset(fontPath, ctx);
+		// AssetHelper.queueAsset(monoFontPath, ctx);
+		// AssetHelper.queueAsset(modelPath, ctx);
+		// AssetHelper.queueAsset(spritePath, ctx);
+		// AssetHelper.queueAsset(bgmPath, ctx, (assetPath, ctx) -> {
+		// Log.info("loaded " + assetPath);
+		//	var bgm = ctx.assets.music["bgm"]?.id;
+		//	if (bgm != null) {
+		// bgm = RL.musicCreate(assetPath);
+		//		RL.musicSetLoop(bgm, true);
+		//		RL.musicPlay(bgm);
+		//	}
+		// }, (assetPath, ctx) -> {
 		//	Log.warn("Failed to load asset: " + assetPath);
-		//});
+		// });
 
 		ctx.camera = RL.camera3dCreate(12.0, 12.0, 12.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 45.0, RL.CAMERA_PERSPECTIVE);
-		//greyAlphaColor = RL.colorCreate(0, 0, 0, 128);
+		// greyAlphaColor = RL.colorCreate(0, 0, 0, 128);
 		RL.enableLighting();
 		RL.setLightDirection(-0.6, -1.0, -0.5);
 		RL.setLightAmbient(0.25);
 		RL.camera3dSetActive(ctx.camera);
 
 		// spin until assets are ready
-		AssetHelper.awaitQueuedAssets();
+		// AssetHelper.awaitQueuedAssets();
 
-		//komika = RL.fontCreate(fontPath, fontSize);
-		//komikaSmall = RL.fontCreate(fontPath, smallFontSize);
-		//monoFontSmall = RL.fontCreate(monoFontPath, smallFontSize);
-		//gumshoe = RL.modelCreate(modelPath);
-		//sprite = RL.sprite3dCreate(spritePath);
-		var gumshoe = ctx.assets.models["gumshoe"]?.id;
-		if (gumshoe != null) {
-			RL.modelSetAnimation(gumshoe, 1);
-			RL.modelSetAnimationSpeed(gumshoe, 1.0);
-			RL.modelSetAnimationLoop(gumshoe, true);
+		// komika = RL.fontCreate(fontPath, fontSize);
+		// komikaSmall = RL.fontCreate(fontPath, smallFontSize);
+		// monoFontSmall = RL.fontCreate(monoFontPath, smallFontSize);
+		// gumshoe = RL.modelCreate(modelPath);
+		// sprite = RL.sprite3dCreate(spritePath);
+		// var gumshoe = ctx.assets.models["gumshoe"]?.id;
+		if (ctx.model != null) {
+			RL.modelSetAnimation(ctx.model, 1);
+			RL.modelSetAnimationSpeed(ctx.model, 1.0);
+			RL.modelSetAnimationLoop(ctx.model, true);
 		}
 		lastTime = RL.getTime();
 		countdownTimer = 5.0;
@@ -113,41 +147,33 @@ class Main {
 
 		RL.musicUpdateAll();
 
-		var bgColor = ctx.assets.colors["bgColor"]?.id ?? RL.COLOR_RAYWHITE;  
-		var gumshoe = ctx.assets.models["gumshoe"]?.id;
-		var logo = ctx.assets.sprites["logo"]?.id;
-		var komika = ctx.assets.fonts["komika"]?.id;
-		var komikaSmall = ctx.assets.fonts["komikaSmall"]?.id;
-		var mono = ctx.assets.fonts["mono"]?.id;
-		var smallFontSize = 16;
-		
 		RL.renderBegin();
-		RL.renderClearBackground(bgColor);
+		RL.renderClearBackground(ctx.bgColor);
 		RL.renderBeginMode3D();
-		if (gumshoe != null) {
-			RL.modelAnimate(gumshoe, deltaTime);
-			RL.modelSetTransform(gumshoe, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
-			RL.modelDraw(gumshoe, RL.COLOR_WHITE);
+		if (ctx.model != null) {
+			RL.modelAnimate(ctx.model, deltaTime);
+			RL.modelSetTransform(ctx.model, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+			RL.modelDraw(ctx.model, RL.COLOR_WHITE);
 		}
-		if (logo != null) {
-			RL.sprite3dSetTransform(logo, 0.0, 0.0, 0.0, 1.0);
-			RL.sprite3dDraw(logo, RL.COLOR_WHITE);
+		if (ctx.sprite != null) {
+			RL.sprite3dSetTransform(ctx.sprite, 0.0, 0.0, 0.0, 1.0);
+			RL.sprite3dDraw(ctx.sprite, RL.COLOR_WHITE);
 		}
 		RL.renderEndMode3D();
 
 		var screen = RL.windowGetScreenSize();
 		var w = Std.int(screen.x);
 		var h = Std.int(screen.y);
-		if (komika != null) {
-			var textSize = RL.textMeasureEx(komika, message, 16, 0);
+		if (ctx.monoFont != null) {
+			var textSize = RL.textMeasureEx(ctx.monoFont, ctx.message, ctx.monoFontSize, 0);
 			var textX = Std.int((w - textSize.x) / 2);
 			var textY = Std.int((h - textSize.y) / 2);
-			RL.textDrawEx(komika, message, textX, textY, smallFontSize, 1.0, RL.COLOR_BLUE);
+			RL.textDrawEx(ctx.monoFont, ctx.message, textX, textY, ctx.monoFontSize, 1.0, RL.COLOR_BLUE);
 		} else {
-			var fallbackWidth = RL.textMeasure(message, smallFontSize);
+			var fallbackWidth = RL.textMeasure(ctx.message, 16);
 			var fallbackX = Std.int((w - fallbackWidth) / 2);
 			var fallbackY = Std.int(h / 2);
-			RL.textDraw(message, fallbackX, fallbackY, smallFontSize, RL.COLOR_BLUE);
+			RL.textDraw(ctx.message, fallbackX, fallbackY, ctx.smallFontSize, RL.COLOR_BLUE);
 		}
 
 		var remaining = "Remaining: " + (Math.floor(countdownTimer * 100.0) / 100.0);
@@ -167,28 +193,27 @@ class Main {
 			+ mouse.middle
 			+ "]";
 
-		if (mono != null) {
-			RL.textDrawEx(mono, remaining, 10, 36, smallFontSize, 1.0, RL.COLOR_BLACK);
+		if (ctx.monoFont != null) {
+			RL.textDrawEx(ctx.monoFont, remaining, 10, 36, 16, 1.0, RL.COLOR_BLACK);
 		} else {
-			RL.textDraw(remaining, 10, 36, smallFontSize, RL.COLOR_BLACK);
+			RL.textDraw(remaining, 10, 36, 16, RL.COLOR_BLACK);
 		}
-		if (komikaSmall != null) {
-			RL.textDrawEx(komikaSmall, elapsed, 10, 56, smallFontSize, 1.0, RL.COLOR_BLACK);
-			RL.textDrawEx(komikaSmall, mouseText, 10, 76, smallFontSize, 1.0, RL.COLOR_BLACK);
-			RL.textDrawFpsEx(komikaSmall, 10, 10, smallFontSize, ctx.assets.colors["greyAlpha"]?.id ?? RL.COLOR_LIME);
+		if (ctx.smallFont != null) {
+			RL.textDrawEx(ctx.smallFont, elapsed, 10, 56, ctx.smallFontSize, 1.0, RL.COLOR_BLACK);
+			RL.textDrawEx(ctx.smallFont, mouseText, 10, 76, ctx.smallFontSize, 1.0, RL.COLOR_BLACK);
+			RL.textDrawFpsEx(ctx.smallFont, 10, 10, ctx.smallFontSize, ctx.bgColor);
 		} else {
-			RL.textDraw(elapsed, 10, 56, smallFontSize, RL.COLOR_BLACK);
-			RL.textDraw(mouseText, 10, 76, smallFontSize, RL.COLOR_BLACK);
+			RL.textDraw(elapsed, 10, 56, ctx.smallFontSize, RL.COLOR_BLACK);
+			RL.textDraw(mouseText, 10, 76, ctx.smallFontSize, RL.COLOR_BLACK);
 			RL.textDrawFps(10, 10);
 		}
 
 		RL.renderEnd();
-		
 	}
 
 	static function onShutdown(ctx:AppContext):Void {
 		RL.disableLighting();
-		Context.destroy(ctx);
+		//Context.destroy(ctx);
 		RL.deinit();
 
 		// for now, we have to close the window after deinit().
@@ -199,15 +224,29 @@ class Main {
 	}
 
 	static function main():Void {
+		trace("MAIN START");
 		RL.loggerSetLevel(RL.LOGGER_LEVEL_WARN);
 
-		RL.init();
+		trace("About to RL.init");
+		try {
+			RL.init();
+			trace("RL.init done");
+		} catch(e) {
+			trace("RL.init error: " + e);
+		}
+		trace("About to setAssetHost");
 		RL.setAssetHost(ASSET_HOST);
+		trace("About to loaderClearCache");
 		RL.loaderClearCache();
+		trace("About to create ctx");
 
-		var ctx:AppContext = Context.create();
-
-
+		var ctx:AppContext = {
+			monoFontSize: 24,
+			smallFontSize: 16,
+			message: ""
+		};
+		trace("About to RL.run");
 		RL.run(onInit, onTick, onShutdown, ctx);
+		trace("RL.run returned");
 	}
 }

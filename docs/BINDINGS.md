@@ -168,6 +168,7 @@ Async loader sugar:
 
 - The binding exposes:
   - `RL.loaderImportAssetAsync(path: String): RLLoaderTaskPtr`
+  - `RL.loaderWaitTasks(tasks: Array<Dynamic>): Int` (each item is an `RLLoaderTaskPtr`)
   - `RL.loaderQueueTask(task, path, onSuccess, onFailure, ctx)`
 - `rl_run` is wrapped so Haxe passes plain lifecycle functions with a Haxe context object:
   - `RL.run(onInit, onTick, onShutdown, ctx)`

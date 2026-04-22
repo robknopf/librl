@@ -20,6 +20,8 @@ class sys.net.Address
 class sys.io.Process
 class sys.io._Process.Stdout
 class sys.io._Process.Stdin
+class sys.io.FileOutput
+class sys.io.FileInput
 class sys.io.File
 class sys.db.Sqlite
 class sys.db._Sqlite.SqliteResultSet
@@ -134,7 +136,6 @@ class cpp.vm.Debugger
 class cpp.vm.ThreadInfo
 class cpp.vm.StackFrame
 class cpp.vm.Parameter
-class cpp.cppia.Host
 class cpp.Lib
 interface haxe.IMap
 class cpp.Finalizable
@@ -185,6 +186,8 @@ file /home/rknopf/toolchains/haxe/current/std/cpp/_std/sys/FileSystem.hx /home/r
 file /home/rknopf/toolchains/haxe/current/std/cpp/_std/sys/db/Mysql.hx /home/rknopf/toolchains/haxe/current/std/cpp/_std/sys/db/Mysql.hx
 file /home/rknopf/toolchains/haxe/current/std/cpp/_std/sys/db/Sqlite.hx /home/rknopf/toolchains/haxe/current/std/cpp/_std/sys/db/Sqlite.hx
 file /home/rknopf/toolchains/haxe/current/std/cpp/_std/sys/io/File.hx /home/rknopf/toolchains/haxe/current/std/cpp/_std/sys/io/File.hx
+file /home/rknopf/toolchains/haxe/current/std/cpp/_std/sys/io/FileInput.hx /home/rknopf/toolchains/haxe/current/std/cpp/_std/sys/io/FileInput.hx
+file /home/rknopf/toolchains/haxe/current/std/cpp/_std/sys/io/FileOutput.hx /home/rknopf/toolchains/haxe/current/std/cpp/_std/sys/io/FileOutput.hx
 file /home/rknopf/toolchains/haxe/current/std/cpp/_std/sys/io/Process.hx /home/rknopf/toolchains/haxe/current/std/cpp/_std/sys/io/Process.hx
 file /home/rknopf/toolchains/haxe/current/std/cpp/_std/sys/net/Host.hx /home/rknopf/toolchains/haxe/current/std/cpp/_std/sys/net/Host.hx
 file /home/rknopf/toolchains/haxe/current/std/cpp/_std/sys/net/Socket.hx /home/rknopf/toolchains/haxe/current/std/cpp/_std/sys/net/Socket.hx
@@ -200,7 +203,6 @@ file /home/rknopf/toolchains/haxe/current/std/cpp/_std/sys/thread/Mutex.hx /home
 file /home/rknopf/toolchains/haxe/current/std/cpp/_std/sys/thread/Semaphore.hx /home/rknopf/toolchains/haxe/current/std/cpp/_std/sys/thread/Semaphore.hx
 file /home/rknopf/toolchains/haxe/current/std/cpp/_std/sys/thread/Thread.hx /home/rknopf/toolchains/haxe/current/std/cpp/_std/sys/thread/Thread.hx
 file /home/rknopf/toolchains/haxe/current/std/cpp/_std/sys/thread/Tls.hx /home/rknopf/toolchains/haxe/current/std/cpp/_std/sys/thread/Tls.hx
-file /home/rknopf/toolchains/haxe/current/std/cpp/cppia/Host.hx /home/rknopf/toolchains/haxe/current/std/cpp/cppia/Host.hx
 file /home/rknopf/toolchains/haxe/current/std/cpp/vm/Debugger.hx /home/rknopf/toolchains/haxe/current/std/cpp/vm/Debugger.hx
 file /home/rknopf/toolchains/haxe/current/std/cpp/vm/ExecutionTrace.hx /home/rknopf/toolchains/haxe/current/std/cpp/vm/ExecutionTrace.hx
 file /home/rknopf/toolchains/haxe/current/std/cpp/vm/Gc.hx /home/rknopf/toolchains/haxe/current/std/cpp/vm/Gc.hx

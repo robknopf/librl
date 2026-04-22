@@ -6,9 +6,10 @@
 all: test_script build
 
 build:
-	haxe compile.hxml
+	haxe build.hxml
 
 test_script:
+	cp export_classes.info ../www/public/assets/scripts/haxe
 	cd ../www/public/assets/scripts/haxe && haxe compile.hxml
 
 clean:

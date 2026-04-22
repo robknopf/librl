@@ -6,7 +6,8 @@ when declared(switch):
   switch("hints", "off")
 
 const
-  librlRoot = absolutePath("../..", getCurrentDir())
+  thisDir = currentSourcePath().parentDir()
+  librlRoot = absolutePath("../..", thisDir)
   includeDir = librlRoot / "include"
   libDir = librlRoot / "lib"
   outDir = getCurrentDir() / "out"

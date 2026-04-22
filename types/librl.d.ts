@@ -106,8 +106,10 @@ export interface RLApi {
   endDrawing(): void;
   beginMode3D(): void;
   endMode3D(): void;
+  start(init: (() => void) | null | undefined, tick: () => void, shutdown?: (() => void) | null): number;
+  tick(): number;
+  stop(): void;
   run(init: (() => void) | null | undefined, tick: () => void, shutdown?: (() => void) | null): void;
-  requestStop(): void;
 
   createCamera3D(
     positionX: number, positionY: number, positionZ: number,

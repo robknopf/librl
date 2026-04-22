@@ -4,7 +4,7 @@
 #include <lauxlib.h>
 
 #include "rl.h"
-#include "rl_sprite2d.h"
+#include "rl_lua_sprite2d.h"
 
 static int rl_sprite2d_create_lua(lua_State *L)
 {

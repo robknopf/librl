@@ -134,10 +134,10 @@
 
 - Lua binding architecture:
   - Keep Lua bindings as .c files for maximum build flexibility (static, shared, WASM)
-  - Location: `bindings/lua/lua_rl.c` (Lua convention: no `lib` prefix)
+  - Location: `bindings/lua/rl_lua.c` (Lua convention: no `lib` prefix)
   - Entry point: `luaopen_rl()` following Lua module convention
   - **Build flags:**
-    - `WITH_LUA=1` — includes `bindings/lua/lua_rl.c` into `librl.a`/`librl.wasm.a` (Lua headers only, no liblua link)
+    - `WITH_LUA=1` — includes `bindings/lua/rl_lua.c` into `librl.a`/`librl.wasm.a` (Lua headers only, no liblua link)
     - `WITH_LUA_MODULE=1` — includes full `modules/lua/` (asset loader, HCR, frame commands); implies `WITH_LUA=1`
   - Host provides Lua VM; bindings provide glue via `luaopen_rl()`
   - Desktop LuaJIT path: FFI bindings loading `librl.so` (core library) directly, bypassing C bindings entirely
@@ -146,10 +146,10 @@
   - Wrapper: `rl.lua` detects LuaJIT → FFI bindings, else → C bindings
   - **Implementation tasks:**
     1. `rl_submit_frame_buffer(lua_State *L)` — C function to read packed Lua table, execute directly
-    2. `bindings/lua/lua_rl.c` — direct `rl_*` call bindings for all render APIs
+    2. `bindings/lua/rl_lua.c` — direct `rl_*` call bindings for all render APIs
     3. `bindings/lua/rl.lua` — FFI detection, buffer packing helpers, C fallback
     4. v2 frame executor — sequential read, tight loops per section, no switches per element
-    5. Makefile: `WITH_LUA=1` adds `bindings/lua/lua_rl.c` to sources; `WITH_LUA_MODULE=1` adds `modules/lua/`
+    5. Makefile: `WITH_LUA=1` adds `bindings/lua/rl_lua.c` to sources; `WITH_LUA_MODULE=1` adds `modules/lua/`
 - Lua module frame command wiring:
   - ~~all `draw_*` bindings now emit frame commands~~ ✓
   - `draw_model`, `draw_sprite3d`, `draw_sprite2d` use split transform/draw pattern

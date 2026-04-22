@@ -1109,6 +1109,113 @@ int rl_loader_finish_task(rl_loader_task_t *task)
     return task->status;
 }
 
+static void rl_loader_import_asset_failed_cb_default(const char *path, void *user_data)
+{
+    (void)user_data;
+    log_warn("Failed to load asset: %s", path != NULL ? path : "(null)");
+}
+
+int rl_loader_wait_task(rl_loader_task_t *task)
+{
+    int rc = -1;
+
+    if (task == NULL) {
+        return -1;
+    }
+
+    while (!rl_loader_poll_task(task)) {
+        rl_loader_tick();
+    }
+
+    rc = rl_loader_finish_task(task);
+    rl_loader_free_task(task);
+    return rc;
+}
+
+int rl_loader_wait_tasks(rl_loader_task_t **tasks,
+                         size_t count,
+                         rl_loader_callback_fn on_failure,
+                         void *user_data)
+{
+    size_t i = 0;
+    int pending = 0;
+    int failed = 0;
+
+    if (tasks == NULL) {
+        return count == 0 ? 0 : -1;
+    }
+
+    for (i = 0; i < count; i++) {
+        if (tasks[i] == NULL) {
+            failed++;
+            if (on_failure != NULL) {
+                on_failure(NULL, user_data);
+            } else {
+                rl_loader_import_asset_failed_cb_default(NULL, user_data);
+            }
+            continue;
+        }
+        pending++;
+    }
+
+    while (pending > 0) {
+        rl_loader_tick();
+        for (i = 0; i < count; i++) {
+            int rc = 0;
+            const char *path = NULL;
+
+            if (tasks[i] == NULL || !rl_loader_poll_task(tasks[i])) {
+                continue;
+            }
+
+            path = rl_loader_get_task_path(tasks[i]);
+            rc = rl_loader_finish_task(tasks[i]);
+            rl_loader_free_task(tasks[i]);
+            tasks[i] = NULL;
+            pending--;
+
+            if (rc != 0) {
+                failed++;
+                if (on_failure != NULL) {
+                    on_failure(path != NULL ? path : "(null)", user_data);
+                } else {
+                    rl_loader_import_asset_failed_cb_default(path, user_data);
+                }
+            }
+        }
+    }
+
+    return failed == 0 ? 0 : -1;
+}
+
+const char *rl_loader_get_task_path(rl_loader_task_t *task)
+{
+    if (task == NULL) {
+        return NULL;
+    }
+
+    switch (task->kind) {
+        case RL_LOADER_TASK_KIND_IMPORT_ASSET:
+            if (task->pending_fetch_path[0] != '\0') {
+                return task->pending_fetch_path;
+            }
+            if (task->resolved_path[0] != '\0') {
+                return task->resolved_path;
+            }
+            return NULL;
+        case RL_LOADER_TASK_KIND_IMPORT_ASSETS:
+            if (task->child_task != NULL) {
+                return rl_loader_get_task_path(task->child_task);
+            }
+            if (task->batch_index < task->batch_count) {
+                return task->batch_paths[task->batch_index];
+            }
+            return NULL;
+        default:
+            return NULL;
+    }
+}
+
 void rl_loader_free_task(rl_loader_task_t *task)
 {
     if (!task) {
@@ -1274,11 +1381,11 @@ typedef struct rl_loader_managed_task_t {
 
 static rl_loader_managed_task_t rl_loader_managed_tasks[RL_LOADER_MAX_MANAGED_TASKS] = {{0}};
 
-rl_loader_add_task_result_t rl_loader_add_task(rl_loader_task_t *task,
-                                               const char *path,
-                                               rl_loader_callback_fn on_success,
-                                               rl_loader_callback_fn on_failure,
-                                               void *user_data)
+rl_loader_queue_task_result_t rl_loader_queue_task(rl_loader_task_t *task,
+                                                   const char *path,
+                                                   rl_loader_callback_fn on_success,
+                                                   rl_loader_callback_fn on_failure,
+                                                   void *user_data)
 {
     int i = 0;
     rl_loader_managed_task_t *slot = NULL;
@@ -1287,7 +1394,7 @@ rl_loader_add_task_result_t rl_loader_add_task(rl_loader_task_t *task,
         if (on_failure != NULL) {
             on_failure(path, user_data);
         }
-        return RL_LOADER_ADD_TASK_ERR_INVALID;
+        return RL_LOADER_QUEUE_TASK_ERR_INVALID;
     }
 
     for (i = 0; i < RL_LOADER_MAX_MANAGED_TASKS; i++) {
@@ -1302,7 +1409,7 @@ rl_loader_add_task_result_t rl_loader_add_task(rl_loader_task_t *task,
             on_failure(path, user_data);
         }
         rl_loader_free_task(task);
-        return RL_LOADER_ADD_TASK_ERR_QUEUE_FULL;
+        return RL_LOADER_QUEUE_TASK_ERR_QUEUE_FULL;
     }
 
     slot->task = task;
@@ -1314,7 +1421,7 @@ rl_loader_add_task_result_t rl_loader_add_task(rl_loader_task_t *task,
     slot->on_failure = on_failure;
     slot->user_data = user_data;
     slot->in_use = true;
-    return RL_LOADER_ADD_TASK_OK;
+    return RL_LOADER_QUEUE_TASK_OK;
 }
 
 void rl_loader_tick(void)

@@ -4,7 +4,7 @@
 #include <lauxlib.h>
 
 #include "rl.h"
-#include "rl_text.h"
+#include "rl_lua_text.h"
 
 static int rl_text_draw_fps_lua(lua_State *L)
 {

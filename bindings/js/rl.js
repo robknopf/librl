@@ -161,8 +161,22 @@ const RL = {
     finishTask: (task) => {
         return moduleInstance.ccall('rl_loader_finish_task', 'number', ['number'], [task]);
     },
+    waitTask: (task) => {
+        return moduleInstance.ccall('rl_loader_wait_task', 'number', ['number'], [task]);
+    },
+    getTaskPath: (task) => {
+        return moduleInstance.ccall('rl_loader_get_task_path', 'string', ['number'], [task]);
+    },
     freeTask: (task) => {
         return moduleInstance.ccall('rl_loader_free_task', null, ['number'], [task]);
+    },
+    queueTask: (task, path) => {
+        return moduleInstance.ccall(
+            'rl_loader_queue_task',
+            'number',
+            ['number', 'string', 'number', 'number', 'number'],
+            [task, path, 0, 0, 0]
+        );
     },
     isLocalFile: (filename) => {
         return moduleInstance.ccall('rl_loader_is_local', 'number', ['string'], [filename]) !== 0;
@@ -362,15 +376,15 @@ const RL = {
             ? moduleInstance.addFunction(() => init(), "vi")
             : 0;
         RL._runTickPtr = moduleInstance.addFunction(() => tick(), "vi");
-        RL._runShutdownPtr = typeof shutdown === "function"
-            ? moduleInstance.addFunction(() => {
+        RL._runShutdownPtr = moduleInstance.addFunction(() => {
                 try {
+                    if (typeof shutdown === "function") {
                     shutdown();
+                    }
                 } finally {
                     RL._clearRunCallbacks();
                 }
-            }, "vi")
-            : 0;
+            }, "vi");
 
         return moduleInstance.ccall(
             'rl_run',
@@ -379,8 +393,39 @@ const RL = {
             [RL._runInitPtr, RL._runTickPtr, RL._runShutdownPtr, 0]
         );
     },
-    requestStop: () => {
-        return moduleInstance.ccall('rl_request_stop', null, [], []);
+    start: (init, tick, shutdown) => {
+        if (typeof tick !== "function") {
+            throw new Error("RL.start requires a tick callback.");
+        }
+
+        RL._clearRunCallbacks();
+
+        RL._runInitPtr = typeof init === "function"
+            ? moduleInstance.addFunction(() => init(), "vi")
+            : 0;
+        RL._runTickPtr = moduleInstance.addFunction(() => tick(), "vi");
+        RL._runShutdownPtr = moduleInstance.addFunction(() => {
+            try {
+                if (typeof shutdown === "function") {
+                    shutdown();
+                }
+            } finally {
+                RL._clearRunCallbacks();
+            }
+        }, "vi");
+
+        return moduleInstance.ccall(
+            'rl_start',
+            'number',
+            ['number', 'number', 'number', 'number'],
+            [RL._runInitPtr, RL._runTickPtr, RL._runShutdownPtr, 0]
+        );
+    },
+    tick: () => {
+        return moduleInstance.ccall('rl_tick', 'number', [], []);
+    },
+    stop: () => {
+        return moduleInstance.ccall('rl_stop', null, [], []);
     },
     createCamera3D: (
         positionX, positionY, positionZ,

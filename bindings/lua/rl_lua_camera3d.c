@@ -4,7 +4,7 @@
 #include <lauxlib.h>
 
 #include "rl.h"
-#include "rl_camera3d.h"
+#include "rl_lua_camera3d.h"
 
 static int rl_camera3d_create_lua(lua_State *L)
 {

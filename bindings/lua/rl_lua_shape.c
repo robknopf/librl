@@ -4,7 +4,7 @@
 #include <lauxlib.h>
 
 #include "rl.h"
-#include "rl_shape.h"
+#include "rl_lua_shape.h"
 
 static int rl_shape_draw_rectangle_lua(lua_State *L)
 {

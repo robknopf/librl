@@ -4,7 +4,7 @@
 #include <lauxlib.h>
 
 #include "rl.h"
-#include "rl_pick.h"
+#include "rl_lua_pick.h"
 
 static void rl_push_pick_result(lua_State *L, rl_pick_result_t result)
 {

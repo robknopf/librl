@@ -107,7 +107,7 @@ class Main {
 		lastTime = currentTime;
 		countdownTimer -= deltaTime;
 		if (countdownTimer <= 0) {
-			RL.requestStop();
+			RL.stop();
 			return;
 		}
 

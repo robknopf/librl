@@ -121,9 +121,9 @@ const
   RL_LOGGER_LEVEL_ERROR* = 4.cint
   RL_LOGGER_LEVEL_FATAL* = 5.cint
   RL_MODULE_ABI_VERSION* = 1.cint
-  RL_LOADER_ADD_TASK_OK* = 0.cint
-  RL_LOADER_ADD_TASK_ERR_INVALID* = (-1).cint
-  RL_LOADER_ADD_TASK_ERR_QUEUE_FULL* = (-2).cint
+  RL_LOADER_QUEUE_TASK_OK* = 0.cint
+  RL_LOADER_QUEUE_TASK_ERR_INVALID* = (-1).cint
+  RL_LOADER_QUEUE_TASK_ERR_QUEUE_FULL* = (-2).cint
 proc rl_init*() {.importc, cdecl, header: "rl.h".}
 proc rl_deinit*() {.importc, cdecl, header: "rl.h".}
 proc rl_set_asset_host*(assetHost: cstring): cint {.importc, cdecl, header: "rl.h".}
@@ -142,8 +142,14 @@ proc rl_loader_import_assets_async*(filenames: openArray[string]): ptr RLLoaderT
 
 proc rl_loader_poll_task*(task: ptr RLLoaderTask): bool {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_finish_task*(task: ptr RLLoaderTask): cint {.importc, cdecl, header: "rl_loader.h".}
+proc rl_loader_wait_task*(task: ptr RLLoaderTask): cint {.importc, cdecl, header: "rl_loader.h".}
+proc rl_loader_wait_tasks*(tasks: ptr ptr RLLoaderTask,
+                           count: csize_t,
+                           onFailure: RLLoaderCallbackFn,
+                           userData: pointer): cint {.importc, cdecl, header: "rl_loader.h".}
+proc rl_loader_get_task_path*(task: ptr RLLoaderTask): cstring {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_free_task*(task: ptr RLLoaderTask) {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_add_task*(task: ptr RLLoaderTask, path: cstring,
+proc rl_loader_queue_task*(task: ptr RLLoaderTask, path: cstring,
                          onSuccess: RLLoaderCallbackFn, onFailure: RLLoaderCallbackFn,
                          userData: pointer): cint {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_tick*() {.importc, cdecl, header: "rl_loader.h".}
@@ -178,8 +184,10 @@ proc rl_event_off_all*(eventName: cstring): cint {.importc, cdecl, header: "rl_e
 proc rl_event_emit*(eventName: cstring, payload: pointer): cint {.importc, cdecl, header: "rl_event.h".}
 proc rl_event_listener_count*(eventName: cstring): cint {.importc, cdecl, header: "rl_event.h".}
 proc rl_update*() {.importc, cdecl, header: "rl.h".}
+proc rl_start*(initFn: RLInitFn, tickFn: RLTickFn, shutdownFn: RLShutdownFn, userData: pointer): cint {.importc, cdecl, header: "rl.h".}
+proc rl_tick*(): cint {.importc, cdecl, header: "rl.h".}
 proc rl_run*(initFn: RLInitFn, tickFn: RLTickFn, shutdownFn: RLShutdownFn, userData: pointer) {.importc, cdecl, header: "rl.h".}
-proc rl_request_stop*() {.importc, cdecl, header: "rl.h".}
+proc rl_stop*() {.importc, cdecl, header: "rl.h".}
 proc rl_get_time*(): cdouble {.importc, cdecl, header: "rl.h".}
 proc rl_get_delta_time*(): cfloat {.importc, cdecl, header: "rl.h".}
 proc rl_window_open*(width: cint, height: cint, title: cstring, flags: cint) {.importc, cdecl, header: "rl.h".}
@@ -357,4 +365,3 @@ proc textLen*(text: array[256, char]): cint {.inline.} =
   while i < text.len and text[i] != '\0':
     inc i
   i.cint
-

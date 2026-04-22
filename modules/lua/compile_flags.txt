@@ -1,7 +1,8 @@
 -I.
 -Isrc
 -Iinclude
--Ideps/liblua/include
+-I../../deps/liblua/include
 -I../../include
+-I../../bindings/lua
 -I../../deps/wgutils/include
 -DPLATFORM_DESKTOP

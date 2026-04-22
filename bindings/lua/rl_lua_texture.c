@@ -4,7 +4,7 @@
 #include <lauxlib.h>
 
 #include "rl.h"
-#include "rl_texture.h"
+#include "rl_lua_texture.h"
 
 static int rl_texture_create_lua(lua_State *L)
 {

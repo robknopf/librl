@@ -4,7 +4,7 @@
 #include <lauxlib.h>
 
 #include "rl.h"
-#include "rl_music.h"
+#include "rl_lua_music.h"
 
 static int rl_music_create_lua(lua_State *L)
 {

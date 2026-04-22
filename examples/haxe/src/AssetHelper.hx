@@ -23,15 +23,7 @@ class AssetHelper {
 			return;
 		}
 
-		var timeout = haxe.Timer.stamp() + (timeoutSec != null ? timeoutSec : 5.0);
-		var ready = RL.loaderPollTask(task);
-		while (!ready && haxe.Timer.stamp() < timeout) {
-			Sys.sleep(0.001);
-			ready = RL.loaderPollTask(task);
-		}
-
-		var rc = ready ? RL.loaderFinishTask(task) : 1;
-		RL.loaderFreeTask(task);
+		var rc = RL.loaderWaitTask(task);
 
 		if (rc == 0) {
 			if (successCallback != null)
@@ -47,7 +39,7 @@ class AssetHelper {
 		queuedAssetsRemaining++;
 		var callbackInvoked = false;
 		var task = RL.loaderImportAssetAsync(assetPath);
-		var rc = RL.loaderAddTask(task, assetPath, (assetPath:String, ctx:Any) -> {
+		var rc = RL.loaderQueueTask(task, assetPath, (assetPath:String, ctx:Any) -> {
 			callbackInvoked = true;
 			queuedAssetsRemaining--;
 			if (successCallback != null) {
@@ -67,7 +59,7 @@ class AssetHelper {
 				Log.warn("Failed to load asset: " + assetPath);
 			}
 		}, ctx);
-		if (rc != RL.LOADER_ADD_TASK_OK) {
+		if (rc != RL.LOADER_QUEUE_TASK_OK) {
 			if (!callbackInvoked) {
 				queuedAssetsRemaining--;
 			}

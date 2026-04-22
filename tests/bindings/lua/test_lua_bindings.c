@@ -14,7 +14,7 @@
 #define LUA_OK 0
 #endif
 
-/* Forward declaration from lua_rl.c */
+/* Forward declaration from rl_lua.c */
 int luaopen_rl(lua_State *L);
 
 int main(int argc, char *argv[])

@@ -63,12 +63,13 @@ proc buildDesktop() =
   let outBin = outDir / "desktop" / outFile
   echo "Building Desktop Nim binary: '" & outBin & "'..."
   mkDir(outDir / "desktop")
+  echo "Building dependency: librl (desktop)"
+  exec "make -C " & librlRoot & " desktop -j4"
   let entry = getCurrentDir() / mainEntry
   exec "nim c -d:release" &
     " --out:" & outBin &
     " --passC:-I" & includeDir &
-    " --passL:-L" & libDir &
-    " --passL:-lrl" &
+    " --passL:" & (libDir / "librl.a") & # to ensure we don't link to the shared lib (default linker behavior if both libs exist)
     " --passL:-lm" &
     " --passL:-lpthread" &
     " --passL:-ldl" &
@@ -82,6 +83,8 @@ proc buildWasm() =
   let outBin = outDir / "wasm" / "main.js"
   echo "Building WASM Nim binary: '" & outBin & "'..."
   mkDir(outDir / "wasm")
+  echo "Building dependency: librl (wasm)"
+  exec "make -C " & librlRoot & " wasm_archive -j4"
   let entry = getCurrentDir() / mainEntry
   exec "nim c -d:emscripten -d:release " & 
         " --out:" & outBin &

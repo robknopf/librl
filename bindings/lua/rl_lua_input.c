@@ -4,7 +4,7 @@
 #include <lauxlib.h>
 
 #include "rl.h"
-#include "rl_input.h"
+#include "rl_lua_input.h"
 
 static void rl_push_mouse_state(lua_State *L, rl_mouse_state_t state)
 {

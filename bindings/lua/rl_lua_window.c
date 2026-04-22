@@ -4,7 +4,7 @@
 #include <lauxlib.h>
 
 #include "rl.h"
-#include "rl_window.h"
+#include "rl_lua_window.h"
 
 static int rl_window_open_lua(lua_State *L)
 {

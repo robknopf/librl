@@ -26,10 +26,10 @@ private extern class RLNative {
   static inline var CAMERA_PERSPECTIVE: Int = 0;
   static inline var CAMERA_ORTHOGRAPHIC: Int = 1;
 
-  // --- Loader add_task result codes (rl_loader.h) ---
-  static inline var LOADER_ADD_TASK_OK: Int = 0;
-  static inline var LOADER_ADD_TASK_ERR_INVALID: Int = -1;
-  static inline var LOADER_ADD_TASK_ERR_QUEUE_FULL: Int = -2;
+  // --- Loader queue_task result codes (rl_loader.h) ---
+  static inline var LOADER_QUEUE_TASK_OK: Int = 0;
+  static inline var LOADER_QUEUE_TASK_ERR_INVALID: Int = -1;
+  static inline var LOADER_QUEUE_TASK_ERR_QUEUE_FULL: Int = -2;
 
   // --- Logger levels (rl_logger.h) ---
   static inline var LOGGER_LEVEL_TRACE: Int = 0;
@@ -61,8 +61,19 @@ private extern class RLNative {
     userData: cpp.RawPointer<cpp.Void>
   ): Void;
 
-  @:native("rl_request_stop")
-  static function requestStop(): Void;
+  @:native("rl_start")
+  static function start(
+    initFn: cpp.Callable<cpp.RawPointer<cpp.Void>->Void>,
+    tickFn: cpp.Callable<cpp.RawPointer<cpp.Void>->Void>,
+    shutdownFn: cpp.Callable<cpp.RawPointer<cpp.Void>->Void>,
+    userData: cpp.RawPointer<cpp.Void>
+  ): Int;
+
+  @:native("rl_tick")
+  static function tick(): Int;
+
+  @:native("rl_stop")
+  static function stop(): Void;
 
   // --- Time ---
   @:native("rl_get_delta_time")
@@ -207,14 +218,20 @@ private extern class RLNative {
   @:native("rl_loader_finish_task")
   static function loaderFinishTask(task: RLLoaderTaskPtr): Int;
 
+  @:native("rl_loader_wait_task")
+  static function loaderWaitTask(task: RLLoaderTaskPtr): Int;
+
+  @:native("rl_loader_get_task_path")
+  static function loaderGetTaskPath(task: RLLoaderTaskPtr): String;
+
   @:native("rl_loader_free_task")
   static function loaderFreeTask(task: RLLoaderTaskPtr): Void;
 
   @:native("rl_loader_is_local")
   static function loaderIsLocal(filename: String): Bool;
 
-  @:native("rl_loader_add_task")
-  static function loaderAddTaskNative(task: RLLoaderTaskPtr, path: String,
+  @:native("rl_loader_queue_task")
+  static function loaderQueueTaskNative(task: RLLoaderTaskPtr, path: String,
     onSuccess: cpp.Callable<cpp.ConstCharStar->cpp.RawPointer<cpp.Void>->Void>,
     onFailure: cpp.Callable<cpp.ConstCharStar->cpp.RawPointer<cpp.Void>->Void>,
     userData: cpp.RawPointer<cpp.Void>): Int;
@@ -595,7 +612,7 @@ abstract RL(RLNative) from RLNative to RLNative {
     );
   }
 
-  public static inline function loaderAddTask<T>(task: RLLoaderTaskPtr, path: String,
+  public static inline function loaderQueueTask<T>(task: RLLoaderTaskPtr, path: String,
     onSuccess: String->T->Void, onFailure: String->T->Void, ctx: T): Int {
     var successSpringboard: cpp.Callable<cpp.ConstCharStar->cpp.RawPointer<cpp.Void>->Void> =
       cpp.Function.fromStaticFunction(RLBridge.onLoaderSuccessSpringboard);
@@ -608,7 +625,7 @@ abstract RL(RLNative) from RLNative to RLNative {
       if (onFailure != null) {
         onFailure(path, ctx);
       }
-      return RLNative.LOADER_ADD_TASK_ERR_INVALID;
+      return RLNative.LOADER_QUEUE_TASK_ERR_INVALID;
     }
     RLBridge.loaderCallbacks.set(callbackKey, {
       onSuccess: cast function(callbackPath:String, callbackCtx:T):Void {
@@ -625,14 +642,14 @@ abstract RL(RLNative) from RLNative to RLNative {
       },
       ctx: ctx
     });
-    var rc = RLNative.loaderAddTaskNative(
+    var rc = RLNative.loaderQueueTaskNative(
       task,
       path,
       successSpringboard,
       failureSpringboard,
       callbackUserData
     );
-    if (rc != RLNative.LOADER_ADD_TASK_OK && !callbackInvoked) {
+    if (rc != RLNative.LOADER_QUEUE_TASK_OK && !callbackInvoked) {
       RLBridge.loaderCallbacks.remove(callbackKey);
       RLLoaderCallbackBridge.free(callbackUserData);
     }

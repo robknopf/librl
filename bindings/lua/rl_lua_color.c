@@ -4,7 +4,7 @@
 #include <lauxlib.h>
 
 #include "rl.h"
-#include "rl_color.h"
+#include "rl_lua_color.h"
 
 static int rl_color_create_lua(lua_State *L)
 {

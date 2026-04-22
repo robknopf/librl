@@ -52,7 +52,7 @@ class Main {
   static function queueCppia(ctx: AppContext): Void {
     var path = cppiaPath;
     var task = RL.loaderImportAssetAsync(path);
-    RL.loaderAddTask(task, path, onCppiaReady, onCppiaFailed, ctx);
+    RL.loaderQueueTask(task, path, onCppiaReady, onCppiaFailed, ctx);
   }
 
   static function onInit(ctx: AppContext): Void {

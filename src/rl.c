@@ -31,17 +31,25 @@ typedef struct rl_loop_state_t {
     rl_tick_fn tick_fn;
     rl_shutdown_fn shutdown_fn;
     void *user_data;
-    int running;
-    int init_complete;
+    int ready;
+    int looping;
 } rl_loop_state_t;
 
 static rl_loop_state_t rl_loop_state = {0};
+
+static void rl_tick_internal(void) {
+    rl_loader_tick();
+    if (rl_loop_state.tick_fn != NULL) {
+        rl_loop_state.tick_fn(rl_loop_state.user_data);
+    }
+}
 
 static void rl_finish_run(void) {
     rl_shutdown_fn shutdown_fn = rl_loop_state.shutdown_fn;
     void *user_data = rl_loop_state.user_data;
 
-    rl_loop_state.running = 0;
+    rl_loop_state.ready = 0;
+    rl_loop_state.looping = 0;
     rl_loop_state.init_fn = NULL;
     rl_loop_state.tick_fn = NULL;
     rl_loop_state.shutdown_fn = NULL;
@@ -54,38 +62,22 @@ static void rl_finish_run(void) {
 
 #if defined(PLATFORM_WEB)
 static void rl_web_step(void) {
-    if (!rl_loop_state.running) {
+    if (!rl_loop_state.looping) {
         emscripten_cancel_main_loop();
-        rl_finish_run();
+        rl_stop();
         return;
     }
 
-    rl_loader_tick();
-
-    if (!rl_loop_state.init_complete) {
-        if (!rl_loader_is_ready()) {
-            return;
-        }
-
-        if (rl_loop_state.init_fn != NULL) {
-            rl_loop_state.init_fn(rl_loop_state.user_data);
-        }
-        rl_loop_state.init_complete = 1;
-
-        if (!rl_loop_state.running) {
-            emscripten_cancel_main_loop();
-            rl_finish_run();
-            return;
-        }
+    if (WindowShouldClose()) {
+        rl_stop();
+        return;
     }
 
-    if (rl_loop_state.tick_fn != NULL) {
-        rl_loop_state.tick_fn(rl_loop_state.user_data);
-    }
+    rl_tick_internal();
 
-    if (!rl_loop_state.running) {
+    if (!rl_loop_state.looping) {
         emscripten_cancel_main_loop();
-        rl_finish_run();
+        rl_stop();
     }
 }
 #endif
@@ -157,55 +149,86 @@ void rl_update(void) {
 }
 
 RL_KEEP
-void rl_run(rl_init_fn init_fn,
-            rl_tick_fn tick_fn,
-            rl_shutdown_fn shutdown_fn,
-            void *user_data) {
+int rl_start(rl_init_fn init_fn,
+             rl_tick_fn tick_fn,
+             rl_shutdown_fn shutdown_fn,
+             void *user_data) {
+    if (rl_loop_state.ready || rl_loop_state.looping) {
+        return -1;
+    }
+
     if (tick_fn == NULL) {
-        return;
+        return -1;
     }
 
     rl_loop_state.init_fn = init_fn;
     rl_loop_state.tick_fn = tick_fn;
     rl_loop_state.shutdown_fn = shutdown_fn;
     rl_loop_state.user_data = user_data;
-    rl_loop_state.running = 1;
-    rl_loop_state.init_complete = 0;
+    rl_loop_state.ready = 0;
+    rl_loop_state.looping = 0;
+
+    while (!rl_loader_is_ready()) {
+        rl_loader_tick();
+    }
+
+    rl_loop_state.ready = 1;
+    if (rl_loop_state.init_fn != NULL) {
+        rl_loop_state.init_fn(rl_loop_state.user_data);
+    }
+
+    return rl_loop_state.ready ? 0 : -1;
+}
+
+RL_KEEP
+int rl_tick(void) {
+    if (!rl_loop_state.ready || rl_loop_state.looping) {
+        return -1;
+    }
+
+    rl_tick_internal();
+
+    return 0;
+}
+
+RL_KEEP
+void rl_run(rl_init_fn init_fn,
+            rl_tick_fn tick_fn,
+            rl_shutdown_fn shutdown_fn,
+            void *user_data) {
+    if (rl_start(init_fn, tick_fn, shutdown_fn, user_data) != 0) {
+        return;
+    }
+
+    rl_loop_state.looping = 1;
 
 #if defined(PLATFORM_WEB)
     emscripten_set_main_loop(rl_web_step, 0, 1);
 #else
-    while (rl_loop_state.running) {
-        rl_loader_tick();
-
-        if (!rl_loop_state.init_complete) {
-            if (!rl_loader_is_ready()) {
-                continue;
-            }
-
-            if (rl_loop_state.init_fn != NULL) {
-                rl_loop_state.init_fn(rl_loop_state.user_data);
-            }
-            rl_loop_state.init_complete = 1;
-
-            if (!rl_loop_state.running) {
-                break;
-            }
-        }
-
+    while (rl_loop_state.looping) {
         if (WindowShouldClose()) {
+            rl_stop();
             break;
         }
 
-        rl_loop_state.tick_fn(rl_loop_state.user_data);
+        rl_tick_internal();
     }
-    rl_finish_run();
+    rl_stop();
 #endif
 }
 
 RL_KEEP
-void rl_request_stop(void) {
-    rl_loop_state.running = 0;
+void rl_stop(void) {
+    if (rl_loop_state.looping) {
+        rl_loop_state.looping = 0;
+        return;
+    }
+
+    if (!rl_loop_state.ready) {
+        return;
+    }
+
+    rl_finish_run();
 }
 
 RL_KEEP

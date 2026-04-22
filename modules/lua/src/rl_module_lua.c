@@ -12,6 +12,7 @@
 #include "rl_texture.h"
 #include "rl_input.h"
 #include "rl_window.h"
+#include "rl_lua_searcher.h"
 
 #include <lua.h>
 #include <lauxlib.h>
@@ -174,8 +175,6 @@ static int lua_module_destroy_font_binding(lua_State *L);
 static int lua_module_event_on_binding(lua_State *L);
 static int lua_module_event_off_binding(lua_State *L);
 static int lua_module_event_emit_binding(lua_State *L);
-static int lua_module_require_searcher(lua_State *L);
-static int lua_module_expand_template(const char *prefix, const char *token, const char *suffix, char *out, size_t out_size);
 static const char *lua_module_debug_source(lua_Debug *ar, char *buffer, size_t buffer_size);
 static int lua_vm_call_update(rl_module_lua_state_t *state, float dt_seconds);
 static int lua_vm_call_init(rl_module_lua_state_t *state);
@@ -216,10 +215,6 @@ static void lua_module_cached_destroy_colors(rl_lua_cached_color_t *cache,
 static bool lua_module_cached_destroy_color_handle(rl_lua_cached_color_t *cache,
                                                    int cache_count,
                                                    rl_handle_t handle);
-static int lua_vm_load_file_chunk(lua_State *L, const char *filename);
-static void lua_vm_install_searcher(rl_module_lua_state_t *state);
-static int lua_module_resolve_path(rl_module_lua_state_t *state, const char *filename, char *resolved_path, size_t resolved_path_size);
-static int lua_module_is_explicit_path(const char *filename);
 static void lua_module_push_pick_result(lua_State *L, rl_pick_result_t result);
 static void lua_module_clear_serialized_state(rl_module_lua_state_t *state);
 static int lua_module_prepare_reload(rl_module_lua_state_t *state);
@@ -581,242 +576,6 @@ static void lua_vm_bind_log(rl_module_lua_state_t *state)
     lua_setglobal(L, "FLAG_INTERLACED_HINT");
 }
 
-static int lua_module_fetch_to_fileio(const char *relative_path)
-{
-    rl_loader_task_t *task = NULL;
-    int rc = 0;
-
-    if (relative_path == NULL || relative_path[0] == '\0') {
-        return -1;
-    }
-
-    task = rl_loader_import_asset_async(relative_path);
-    if (task == NULL) {
-        return -1;
-    }
-
-    while (!rl_loader_poll_task(task)) {
-        /* spin - fetch_url_async is synchronous on desktop so this should not iterate */
-    }
-
-    rc = rl_loader_finish_task(task);
-    rl_loader_free_task(task);
-    return rc;
-}
-
-static int lua_vm_load_file_chunk(lua_State *L, const char *filename)
-{
-    rl_loader_read_result_t read_result = {0};
-    char chunk_name[512];
-    int rc = 0;
-
-    if (L == NULL || filename == NULL || filename[0] == '\0') {
-        return LUA_ERRFILE;
-    }
-
-    read_result = rl_loader_read_local(filename);
-    if (read_result.error != 0 || read_result.data == NULL || read_result.size == 0) {
-        rl_loader_read_result_free(&read_result);
-        return LUA_ERRFILE;
-    }
-
-    (void)snprintf(chunk_name, sizeof(chunk_name), "@%s", filename);
-    rc = luaL_loadbuffer(L, (const char *)read_result.data, read_result.size, chunk_name);
-    rl_loader_read_result_free(&read_result);
-    return rc;
-}
-
-static int lua_module_resolve_path(rl_module_lua_state_t *state, const char *filename, char *resolved_path, size_t resolved_path_size)
-{
-    int explicit_path = 0;
-    (void)state;
-
-    if (resolved_path == NULL || resolved_path_size == 0 || filename == NULL || filename[0] == '\0') {
-        return -1;
-    }
-
-    explicit_path = lua_module_is_explicit_path(filename);
-
-    if (explicit_path) {
-        rl_loader_normalize_path(filename, resolved_path, resolved_path_size);
-        if (rl_loader_is_local(resolved_path)) {
-            return 0;
-        }
-    }
-
-    if (!explicit_path) {
-        rl_loader_normalize_path(filename, resolved_path, resolved_path_size);
-        if (rl_loader_is_local(resolved_path)) {
-            return 0;
-        }
-    }
-
-    resolved_path[0] = '\0';
-    return -1;
-}
-
-
-static int lua_module_is_explicit_path(const char *filename)
-{
-    if (filename == NULL || filename[0] == '\0') {
-        return 0;
-    }
-
-    return filename[0] == '/' ||
-           strncmp(filename, "./", 2) == 0 ||
-           strncmp(filename, "../", 3) == 0 ||
-           strchr(filename, '/') != NULL;
-}
-
-static int lua_module_expand_template(const char *prefix, const char *token, const char *suffix,
-                                      char *out, size_t out_size)
-{
-    size_t plen = strlen(prefix);
-    size_t tlen = strlen(token);
-    size_t slen = strlen(suffix);
-    if (plen + tlen + slen + 1 > out_size) {
-        return -1;
-    }
-    memcpy(out, prefix, plen);
-    memcpy(out + plen, token, tlen);
-    memcpy(out + plen + tlen, suffix, slen);
-    out[plen + tlen + slen] = '\0';
-    return 0;
-}
-
-static int lua_module_require_searcher(lua_State *L)
-{
-    const char *module_name = luaL_checkstring(L, 1);
-    char module_token[2048];
-    int rc = 0;
-
-    if (module_name == NULL || module_name[0] == '\0') {
-        lua_pushstring(L, "\n\tinvalid module name");
-        return 1;
-    }
-
-    (void)snprintf(module_token, sizeof(module_token), "%s", module_name);
-    for (char *p = module_token; *p != '\0'; ++p) {
-        if (*p == '.') { *p = '/'; }
-    }
-
-    /* --- package.path: fetch missing Lua files and return a loader --- */
-    lua_getglobal(L, "package");
-    lua_getfield(L, -1, "path");
-    {
-        const char *pkg_path = lua_tostring(L, -1);
-        if (pkg_path != NULL) {
-            char templates[2048];
-            char *saveptr = NULL;
-            char *templ = NULL;
-            (void)snprintf(templates, sizeof(templates), "%s", pkg_path);
-            templ = strtok_r(templates, ";", &saveptr);
-            while (templ != NULL) {
-                char *q = strchr(templ, '?');
-                if (q != NULL) {
-                    char candidate[2048];
-                    const char *suffix = q + 1;
-                    *q = '\0'; /* null-terminate at '?' in mutable templates buffer */
-                    rc = lua_module_expand_template(templ, module_token, suffix,
-                                                   candidate, sizeof(candidate));
-                    *q = '?'; /* restore */
-                    if (rc != 0) { templ = strtok_r(NULL, ";", &saveptr); continue; }
-                    rl_loader_normalize_path(candidate, candidate, sizeof(candidate));
-                    if (candidate[0] != '/' && !rl_loader_is_local(candidate)) {
-                        (void)lua_module_fetch_to_fileio(candidate);
-                    }
-                    if (rl_loader_is_local(candidate)) {
-                        lua_pop(L, 2); /* path, package */
-                        rc = lua_vm_load_file_chunk(L, candidate);
-                        if (rc == LUA_OK) {
-                            return 1;
-                        }
-                        lua_settop(L, 1);
-                        lua_pushfstring(L, "\n\terror loading '%s'", candidate);
-                        return 1;
-                    }
-                }
-                templ = strtok_r(NULL, ";", &saveptr);
-            }
-        }
-    }
-    lua_pop(L, 1); /* package.path */
-
-    /* --- package.cpath: pre-fetch native modules for the stock C searcher --- */
-    lua_getfield(L, -1, "cpath");
-    {
-        const char *pkg_cpath = lua_tostring(L, -1);
-        int native_fetched = 0;
-        if (pkg_cpath != NULL) {
-            char templates[2048];
-            char *saveptr = NULL;
-            char *templ = NULL;
-            (void)snprintf(templates, sizeof(templates), "%s", pkg_cpath);
-            templ = strtok_r(templates, ";", &saveptr);
-            while (templ != NULL && !native_fetched) {
-                char *q = strchr(templ, '?');
-                if (q != NULL) {
-                    char candidate[2048];
-                    const char *suffix = q + 1;
-                    *q = '\0';
-                    rc = lua_module_expand_template(templ, module_token, suffix,
-                                                   candidate, sizeof(candidate));
-                    *q = '?';
-                    if (rc != 0) { templ = strtok_r(NULL, ";", &saveptr); continue; }
-                    rl_loader_normalize_path(candidate, candidate, sizeof(candidate));
-                    if (candidate[0] != '/') {
-                        (void)lua_module_fetch_to_fileio(candidate);
-                    }
-                    if (rl_loader_is_local(candidate)) {
-                        native_fetched = 1;
-                    }
-                }
-                templ = strtok_r(NULL, ";", &saveptr);
-            }
-        }
-        lua_pop(L, 2); /* cpath, package */
-        if (native_fetched) {
-            lua_pushfstring(L, "\n\tfetched native module candidate for '%s'", module_name);
-            return 1;
-        }
-    }
-
-    lua_pushfstring(L, "\n\tno module '%s' found in lua search paths", module_name);
-    return 1;
-}
-
-static void lua_vm_install_searcher(rl_module_lua_state_t *state)
-{
-    lua_State *L = NULL;
-    int len = 0;
-
-    if (state == NULL || state->vm.state == NULL) {
-        return;
-    }
-
-    L = state->vm.state;
-    lua_getglobal(L, "package");
-    if (!lua_istable(L, -1)) {
-        lua_pop(L, 1);
-        return;
-    }
-
-    lua_getfield(L, -1, "searchers");
-    if (!lua_istable(L, -1)) {
-        lua_pop(L, 1);
-        lua_getfield(L, -1, "loaders");
-    }
-    if (!lua_istable(L, -1)) {
-        lua_pop(L, 2);
-        return;
-    }
-
-    len = (int)lua_objlen(L, -1);
-    lua_pushlightuserdata(L, state);
-    lua_pushcclosure(L, lua_module_require_searcher, 1);
-    lua_rawseti(L, -2, len + 1);
-    lua_pop(L, 2);
-}
 
 static int lua_vm_exec_file(rl_lua_vm_t *vm, const char *filename)
 {
@@ -828,7 +587,7 @@ static int lua_vm_exec_file(rl_lua_vm_t *vm, const char *filename)
         return -1;
     }
 
-    rc = lua_vm_load_file_chunk(vm->state, filename);
+    rc = rl_lua_load_file_chunk(vm->state, filename);
     if (rc != LUA_OK) {
         set_error(vm, "lua do_file failed: fileio_read failed");
         return -1;
@@ -1329,7 +1088,7 @@ static int rl_module_lua_init_impl(const rl_module_host_api_t *host, void **modu
     }
 
     lua_vm_bind_log(state);
-    lua_vm_install_searcher(state);
+    rl_lua_install_searcher(state->vm.state);
 
     *module_state = (void *)state;
     (void)rl_module_event_on(&state->host, "lua.add_path",  lua_module_on_add_path,  state);
@@ -2710,11 +2469,11 @@ static void lua_module_on_do_file(void *payload, void *listener_user_data)
         return;
     }
 
-    if (lua_module_resolve_path(state, filename, resolved_path, sizeof(resolved_path)) != 0) {
+    if (rl_lua_resolve_path(filename, resolved_path, sizeof(resolved_path)) != 0) {
         char normalized[512] = {0};
         rl_loader_normalize_path(filename, normalized, sizeof(normalized));
-        (void)lua_module_fetch_to_fileio(normalized);
-        if (lua_module_resolve_path(state, filename, resolved_path, sizeof(resolved_path)) != 0) {
+        (void)rl_lua_fetch_to_fileio(normalized);
+        if (rl_lua_resolve_path(filename, resolved_path, sizeof(resolved_path)) != 0) {
             set_error(&state->vm, "lua do_file path resolution failed");
             rl_module_log(&state->host, RL_MODULE_LOG_ERROR, "lua do_file path resolution failed");
             (void)rl_module_event_emit(&state->host, "lua.error", (void *)state->vm.last_error);

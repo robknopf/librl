@@ -12,11 +12,11 @@ extern "C" {
 typedef struct rl_loader_task rl_loader_task_t;
 typedef void (*rl_loader_callback_fn)(const char *path, void *user_data);
 
-typedef enum rl_loader_add_task_result_t {
-  RL_LOADER_ADD_TASK_OK = 0,
-  RL_LOADER_ADD_TASK_ERR_INVALID = -1,
-  RL_LOADER_ADD_TASK_ERR_QUEUE_FULL = -2,
-} rl_loader_add_task_result_t;
+typedef enum rl_loader_queue_task_result_t {
+  RL_LOADER_QUEUE_TASK_OK = 0,
+  RL_LOADER_QUEUE_TASK_ERR_INVALID = -1,
+  RL_LOADER_QUEUE_TASK_ERR_QUEUE_FULL = -2,
+} rl_loader_queue_task_result_t;
 
 int rl_loader_set_asset_host(const char *asset_host);
 const char *rl_loader_get_asset_host(void);
@@ -26,6 +26,12 @@ rl_loader_task_t *rl_loader_import_assets_async(const char *const *filenames, si
 rl_loader_task_t *rl_loader_import_assets_from_scratch_async(size_t filename_count);
 bool rl_loader_poll_task(rl_loader_task_t *task);
 int rl_loader_finish_task(rl_loader_task_t *task);
+int rl_loader_wait_task(rl_loader_task_t *task);
+int rl_loader_wait_tasks(rl_loader_task_t **tasks,
+                         size_t count,
+                         rl_loader_callback_fn on_failure,
+                         void *user_data);
+const char *rl_loader_get_task_path(rl_loader_task_t *task);
 void rl_loader_free_task(rl_loader_task_t *task);
 bool rl_loader_is_local(const char *filename);
 
@@ -42,11 +48,11 @@ void rl_loader_normalize_path(const char *path, char *buffer, size_t buffer_size
 int rl_loader_uncache_file(const char *filename);
 int rl_loader_clear_cache(void);
 
-rl_loader_add_task_result_t rl_loader_add_task(rl_loader_task_t *task,
-                                               const char *path,
-                                               rl_loader_callback_fn on_success,
-                                               rl_loader_callback_fn on_failure,
-                                               void *user_data);
+rl_loader_queue_task_result_t rl_loader_queue_task(rl_loader_task_t *task,
+                                                   const char *path,
+                                                   rl_loader_callback_fn on_success,
+                                                   rl_loader_callback_fn on_failure,
+                                                   void *user_data);
 void rl_loader_tick(void);
 
 #ifdef __cplusplus

@@ -1,6 +1,6 @@
 import rl
 import rl_log as log
-import std/[times,monotimes, os, strutils, strformat]
+import std/[os, strutils, strformat]
 
 when defined(emscripten):
   # wasm/browser can use relative path to the host
@@ -53,20 +53,12 @@ proc ensureAssetSync(
   successCallback: EnsureAssetSyncCallback = nil,
   failCallback: EnsureAssetSyncCallback = nil
 ) =
-  const assetTimeout = initDuration(seconds = 5)
   let task = rl_loader_import_asset_async(assetPath)
   if task.isNil:
     if failCallback != nil:
       failCallback(assetPath)
     return
-  let timeout = getMonoTime() + assetTimeout
-  var ready = rl_loader_poll_task(task)
-  while not ready and getMonoTime() < timeout:
-    sleep(1)
-    ready = rl_loader_poll_task(task)
-
-  let rc = if ready: rl_loader_finish_task(task) else: 1
-  rl_loader_free_task(task)
+  let rc = rl_loader_wait_task(task)
 
   if rc == 0:
     if successCallback != nil:
@@ -84,14 +76,14 @@ proc ensureAsset(
   userData: pointer
 ) =
   let task = rl_loader_import_asset_async(path)
-  let rc = rl_loader_add_task(task, path, onSuccess, onFail, userData)
-  if rc != RL_LOADER_ADD_TASK_OK:
+  let rc = rl_loader_queue_task(task, path, onSuccess, onFail, userData)
+  if rc != RL_LOADER_QUEUE_TASK_OK:
     log.error("Failed to queue asset: " & $path)
 
 proc queueAsset(path: cstring, ctx: ptr AppContext) =
   let task = rl_loader_import_asset_async(path)
-  let rc = rl_loader_add_task(task, path, onAssetReady, onAssetFailed, ctx)
-  if rc != RL_LOADER_ADD_TASK_OK:
+  let rc = rl_loader_queue_task(task, path, onAssetReady, onAssetFailed, ctx)
+  if rc != RL_LOADER_QUEUE_TASK_OK:
     log.error("Failed to queue asset: " & $path)
 
 proc onInit(userData: pointer) {.cdecl.} =
@@ -158,7 +150,7 @@ proc onTick(userData: pointer) {.cdecl.} =
   ctx.lastTime = currentTime
   ctx.countdownTimer -= deltaTime
   if ctx.countdownTimer <= 0:
-    rl_request_stop()
+    rl_stop()
     return
 
   rl_music_update_all()

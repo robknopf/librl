@@ -4,7 +4,7 @@
 #include <lauxlib.h>
 
 #include "rl.h"
-#include "rl_log.h"
+#include "rl_lua_log.h"
 
 static int rl_log_set_level_lua(lua_State *L)
 {

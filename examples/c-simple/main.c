@@ -1,7 +1,10 @@
 // C version of the Nim example: simple handle-based demo with async asset load.
 #include "rl.h"
+#include "rl_color.h"
 #include "rl_loader.h"
+#include "rl_logger.h"
 #include "rl_music.h"
+#include "rl_render.h"
 #include "rl_window.h"
 
 #include <stdbool.h>
@@ -30,85 +33,100 @@ typedef struct app_context_t {
   float countdown_timer;
   float total_time;
   double last_time;
-  int assets_ready;
 } app_context_t;
 
-static void on_asset_ready(const char *path, void *user_data) {
-  (void)path;
-  app_context_t *ctx = (app_context_t *)user_data;
-  if (ctx) {
-    ctx->assets_ready++;
-  }
-}
-
-static void on_asset_failed(const char *path, void *user_data) {
+static void rl_loader_import_asset_failed_cb_default(const char *path,
+                                                     void *user_data) {
   (void)user_data;
-  rl_logger_message_source(RL_LOGGER_LEVEL_WARN, "example", 0,
+  rl_logger_message_source(RL_LOGGER_LEVEL_WARN, "unknown", 0,
                            "Failed to load asset: %s",
                            path != NULL ? path : "(null)");
 }
 
-static void queue_asset(const char *path, app_context_t *ctx) {
-  rl_loader_task_t *task = rl_loader_import_asset_async(path);
-  int rc = rl_loader_add_task(task, path, (rl_loader_callback_fn)on_asset_ready,
-                              (rl_loader_callback_fn)on_asset_failed, ctx);
-  if (rc != RL_LOADER_ADD_TASK_OK) {
-    rl_logger_message_source(RL_LOGGER_LEVEL_WARN, "example", 0,
-                             "Failed to queue asset: %s (rc=%d)",
-                             path != NULL ? path : "(null)", rc);
-  }
-}
-
 static void on_bgm_ready(const char *path, void *user_data) {
   app_context_t *ctx = (app_context_t *)user_data;
-  (void)path;
-  ctx->bgm = rl_music_create(BGM_PATH);
+  if (ctx->bgm != 0) {
+    rl_music_stop(ctx->bgm);
+  }
+  ctx->bgm = rl_music_create(path);
   rl_music_set_loop(ctx->bgm, true);
   rl_music_set_volume(ctx->bgm, 0.1);
   rl_music_play(ctx->bgm);
 }
 
+static void play_bgm(const char *path, void *user_data) {
+  rl_loader_task_t *bgm_asset_task = rl_loader_import_asset_async(path);
+  rl_loader_queue_task(bgm_asset_task, path, on_bgm_ready, NULL, user_data);
+}
+
 static void on_init(void *user_data) {
   app_context_t *ctx = (app_context_t *)user_data;
 
+  // window
   rl_window_open(1024, 1280, "Hello, World! (C simple)",
                  RL_WINDOW_FLAG_MSAA_4X_HINT);
   rl_set_target_fps(60);
 
-  queue_asset(FONT_PATH, ctx);
-  queue_asset(MODEL_PATH, ctx);
-  queue_asset(SPRITE_PATH, ctx);
-  rl_loader_add_task(rl_loader_import_asset_async(BGM_PATH), BGM_PATH,
-                     on_bgm_ready, on_asset_failed, ctx);
+  // camera
+  ctx->camera =
+      rl_camera3d_create(12.0f, 12.0f, 12.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+                         0.0f, 45.0f, 0 /* CAMERA_PERSPECTIVE */);
+  rl_camera3d_set_active(ctx->camera);
+
+  // lighting
+  // TODO:  create rl_lights.c?  Add light instances?
+  rl_enable_lighting();
+  rl_set_light_direction(-0.6f, -1.0f, -0.5f);
+  rl_set_light_ambient(0.25f);
+
+  // draw a blank screen while loading
+  rl_render_begin();
+  rl_render_clear_background(RL_COLOR_BLACK);
+  rl_render_end();
+
+  // start fetching the bgm, asyncronously
+  play_bgm(BGM_PATH, ctx);
+
+  // fetch the assets we'll need
+  rl_loader_task_t *asset_import_tasks[] = {
+      rl_loader_import_asset_async(FONT_PATH),
+      rl_loader_import_asset_async(MODEL_PATH),
+      rl_loader_import_asset_async(SPRITE_PATH)};
+      
+  const size_t asset_import_tasks_count =
+      sizeof(asset_import_tasks) / sizeof(asset_import_tasks[0]);
+
+  // wait until they all have been fetched/loaded
+  if (rl_loader_wait_tasks(asset_import_tasks, asset_import_tasks_count,
+                           rl_loader_import_asset_failed_cb_default,
+                           NULL) != 0) {
+    rl_logger_message_source(RL_LOGGER_LEVEL_ERROR, "example", 0,
+                             "Failed to import required startup assets");
+    rl_stop();
+    return;
+  }
+
+  ctx->grey_alpha_color = rl_color_create(0, 0, 0, 128);
+  ctx->komika = rl_font_create(FONT_PATH, 24.0f);
+  ctx->komika_small = rl_font_create(FONT_PATH, 16.0f);
+  ctx->gumshoe = rl_model_create(MODEL_PATH);
+  ctx->sprite = rl_sprite3d_create(SPRITE_PATH);
+  rl_model_set_animation(ctx->gumshoe, 1);
+  rl_model_set_animation_speed(ctx->gumshoe, 1.0f);
+  rl_model_set_animation_loop(ctx->gumshoe, true);
+  ctx->last_time = rl_get_time();
+  ctx->countdown_timer = 5.0f;
 }
 
 static void on_tick(void *user_data) {
   app_context_t *ctx = (app_context_t *)user_data;
 
-  if (ctx->assets_ready < 3) {
-    return;
-  }
-
-  if (ctx->komika == 0) {
-    ctx->grey_alpha_color = rl_color_create(0, 0, 0, 128);
-    rl_enable_lighting();
-    rl_set_light_direction(-0.6f, -1.0f, -0.5f);
-    rl_set_light_ambient(0.25f);
-
-    ctx->komika = rl_font_create(FONT_PATH, 24.0f);
-    ctx->komika_small = rl_font_create(FONT_PATH, 16.0f);
-    ctx->gumshoe = rl_model_create(MODEL_PATH);
-    ctx->sprite = rl_sprite3d_create(SPRITE_PATH);
-    ctx->camera =
-        rl_camera3d_create(12.0f, 12.0f, 12.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
-                           0.0f, 45.0f, 0 /* CAMERA_PERSPECTIVE */);
-    rl_camera3d_set_active(ctx->camera);
-    rl_model_set_animation(ctx->gumshoe, 1);
-    rl_model_set_animation_speed(ctx->gumshoe, 1.0f);
-    rl_model_set_animation_loop(ctx->gumshoe, true);
-    ctx->last_time = rl_get_time();
-    ctx->countdown_timer = 5.0f;
-  }
+  /*
+  if (ctx->komika == 0 || ctx->komika_small == 0 || ctx->gumshoe == 0 ||
+       ctx->sprite == 0 || ctx->camera == 0 || ctx->grey_alpha_color == 0) {
+     return;
+   }
+ */
 
   double current_time = rl_get_time();
   float delta_time = (float)(current_time - ctx->last_time);
@@ -116,7 +134,7 @@ static void on_tick(void *user_data) {
   ctx->last_time = current_time;
   ctx->countdown_timer -= delta_time;
   if (ctx->countdown_timer <= 0.0f) {
-    rl_request_stop();
+    rl_stop();
     return;
   }
 
@@ -168,7 +186,7 @@ static void on_tick(void *user_data) {
 static void on_shutdown(void *user_data) {
   app_context_t *ctx = (app_context_t *)user_data;
 
-  if (ctx->bgm != 0) 
+  if (ctx->bgm != 0)
     rl_music_destroy(ctx->bgm);
   rl_disable_lighting();
   if (ctx->sprite != 0)
@@ -183,6 +201,13 @@ static void on_shutdown(void *user_data) {
     rl_color_destroy(ctx->grey_alpha_color);
   if (ctx->camera != 0)
     rl_camera3d_destroy(ctx->camera);
+
+  // NOTE: rl_deinit() doesn't belong here, it should be in main.
+  // There is an issue with rl_window_close() releasing bound elements 
+  // like textures, causing a failure when rl_deinit() tries to clean up.
+  // TODO:  Fix this issue. 
+  // - Force window lifecycle to be owned by init/deinit?   
+  // - Guard in rl_deinit() to prevent releasing things the window already did?
   rl_deinit();
   rl_window_close();
 }

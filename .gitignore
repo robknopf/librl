@@ -9,3 +9,5 @@ examples/**/cache/
 node_modules/
 !.gitkeep
 /cache
+tests/bindings/lua/test_rl_lua
+tests/bindings/nim/test_rl

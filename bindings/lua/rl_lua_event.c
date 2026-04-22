@@ -8,7 +8,7 @@
 #include <string.h>
 
 #include "rl.h"
-#include "rl_event.h"
+#include "rl_lua_event.h"
 
 #define RL_LUA_EVENT_MAX_LISTENERS 256
 

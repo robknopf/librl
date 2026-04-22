@@ -20,8 +20,11 @@ OBJ_DIR := $(LUA_MODULE_DIR)/obj
 OBJ_DESKTOP_DIR := $(OBJ_DIR)/desktop
 OBJ_WASM_DIR := $(OBJ_DIR)/wasm
 MODULE_IMPL_SRC := $(LUA_MODULE_DIR)/src/rl_module_lua.c
+MODULE_SEARCHER_SRC := $(ROOT_DIR)/bindings/lua/rl_lua_searcher.c
 MODULE_DESKTOP_OBJ := $(OBJ_DESKTOP_DIR)/rl_module_lua.o
+MODULE_SEARCHER_DESKTOP_OBJ := $(OBJ_DESKTOP_DIR)/rl_searcher.o
 MODULE_WASM_OBJ := $(OBJ_WASM_DIR)/rl_module_lua.o
+MODULE_SEARCHER_WASM_OBJ := $(OBJ_WASM_DIR)/rl_searcher.o
 MODULE_DESKTOP_LIB := $(OUT_DIR)/librl_lua.a
 MODULE_WASM_LIB := $(OUT_DIR)/librl_lua.wasm.a
 CORE_LIBRL_DESKTOP := $(ROOT_DIR)/lib/librl.a
@@ -100,19 +103,26 @@ $(OBJ_WASM_DIR):
 	@mkdir -p $(OBJ_WASM_DIR)
 
 $(MODULE_DESKTOP_OBJ): $(MODULE_IMPL_SRC) | $(OBJ_DESKTOP_DIR)
-	$(CC) $(CFLAGS) -I$(ROOT_DIR)/include -I$(ROOT_DIR)/deps/wgutils/include -I$(LUA_MODULE_DIR)/include -I$(LIBLUA_INC) -c $< -o $@
+	$(CC) $(CFLAGS) -I$(ROOT_DIR)/include -I$(ROOT_DIR)/bindings/lua -I$(ROOT_DIR)/deps/wgutils/include -I$(LUA_MODULE_DIR)/include -I$(LIBLUA_INC) -c $< -o $@
+
+$(MODULE_SEARCHER_DESKTOP_OBJ): $(MODULE_SEARCHER_SRC) | $(OBJ_DESKTOP_DIR)
+	$(CC) $(CFLAGS) -I$(ROOT_DIR)/include -I$(ROOT_DIR)/bindings/lua -I$(ROOT_DIR)/deps/wgutils/include -I$(LUA_MODULE_DIR)/include -I$(LIBLUA_INC) -c $< -o $@
 
 $(MODULE_WASM_OBJ): $(MODULE_IMPL_SRC) | $(OBJ_WASM_DIR)
 	@mkdir -p "$(EM_CACHE_DIR)"
-	$(EM_ENV) $(CC_WASM) $(CFLAGS_WASM) -I$(ROOT_DIR)/include -I$(ROOT_DIR)/deps/wgutils/include -I$(LUA_MODULE_DIR)/include -I$(LIBLUA_INC) -c $< -o $@
+	$(EM_ENV) $(CC_WASM) $(CFLAGS_WASM) -I$(ROOT_DIR)/include -I$(ROOT_DIR)/bindings/lua -I$(ROOT_DIR)/deps/wgutils/include -I$(LUA_MODULE_DIR)/include -I$(LIBLUA_INC) -c $< -o $@
 
-desktop: ensure_desktop_archive $(MODULE_DESKTOP_OBJ) | $(OUT_DIR)
-	$(AR) rcs $(MODULE_DESKTOP_LIB) $(MODULE_DESKTOP_OBJ)
+$(MODULE_SEARCHER_WASM_OBJ): $(MODULE_SEARCHER_SRC) | $(OBJ_WASM_DIR)
+	@mkdir -p "$(EM_CACHE_DIR)"
+	$(EM_ENV) $(CC_WASM) $(CFLAGS_WASM) -I$(ROOT_DIR)/include -I$(ROOT_DIR)/bindings/lua -I$(ROOT_DIR)/deps/wgutils/include -I$(LUA_MODULE_DIR)/include -I$(LIBLUA_INC) -c $< -o $@
+
+desktop: ensure_desktop_archive $(MODULE_DESKTOP_OBJ) $(MODULE_SEARCHER_DESKTOP_OBJ) | $(OUT_DIR)
+	$(AR) rcs $(MODULE_DESKTOP_LIB) $(MODULE_DESKTOP_OBJ) $(MODULE_SEARCHER_DESKTOP_OBJ)
 	@echo "Built Lua module desktop archive: $(MODULE_DESKTOP_LIB)"
 
-wasm: ensure_wasm_archive $(MODULE_WASM_OBJ) | $(OUT_DIR)
+wasm: ensure_wasm_archive $(MODULE_WASM_OBJ) $(MODULE_SEARCHER_WASM_OBJ) | $(OUT_DIR)
 	@mkdir -p "$(EM_CACHE_DIR)"
-	$(EM_ENV) $(EMAR) rcs $(MODULE_WASM_LIB) $(MODULE_WASM_OBJ)
+	$(EM_ENV) $(EMAR) rcs $(MODULE_WASM_LIB) $(MODULE_WASM_OBJ) $(MODULE_SEARCHER_WASM_OBJ)
 	@echo "Built Lua module wasm archive: $(MODULE_WASM_LIB)"
 
 lua_module_test_desktop: desktop

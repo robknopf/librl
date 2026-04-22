@@ -4,7 +4,7 @@
 #include <lauxlib.h>
 
 #include "rl.h"
-#include "rl_frame_buffer.h"
+#include "rl_lua_frame_buffer.h"
 
 /* Version and flags */
 #define RL_SUBMIT_VERSION 1

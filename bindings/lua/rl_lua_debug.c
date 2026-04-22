@@ -4,7 +4,7 @@
 #include <lauxlib.h>
 
 #include "rl.h"
-#include "rl_debug.h"
+#include "rl_lua_debug.h"
 
 static int rl_debug_enable_fps_lua(lua_State *L)
 {

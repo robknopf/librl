@@ -72,8 +72,10 @@ LDFLAGS_WASM = \
 	"_rl_init", \
 	"_rl_deinit", \
 	"_rl_update_to_scratch", \
+	"_rl_start", \
+	"_rl_tick", \
 	"_rl_run", \
-	"_rl_request_stop", \
+	"_rl_stop", \
 	"_rl_get_time", \
 	"_rl_get_delta_time", \
 	"_rl_window_open", \
@@ -185,7 +187,11 @@ LDFLAGS_WASM = \
 		"_rl_loader_import_assets_from_scratch_async", \
 		"_rl_loader_poll_task", \
 		"_rl_loader_finish_task", \
+		"_rl_loader_wait_task", \
+		"_rl_loader_wait_tasks", \
+		"_rl_loader_get_task_path", \
 		"_rl_loader_free_task", \
+		"_rl_loader_queue_task", \
 		"_rl_loader_is_local", \
 		"_rl_loader_uncache_file", \
 		"_rl_loader_clear_cache", \

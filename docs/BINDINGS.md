@@ -129,10 +129,10 @@ Async loader sugar:
 
 - For examples that want higher-level async asset loading, prefer:
   - `rl_loader_import_asset_async(path)` to get a task pointer.
-  - `rl_loader_add_task(task, path, onSuccess, onFailure, userData)` to register callbacks.
+  - `rl_loader_queue_task(task, path, onSuccess, onFailure, userData)` to register callbacks.
 - The Nim example (`examples/nim/src/main.nim`) shows the canonical pattern:
   - `rl_run(onInit, onTick, onShutdown, addr ctx)` drives the main loop on both desktop and wasm.
-  - Asset imports are queued via `rl_loader_add_task`, and user code only touches handles once callbacks fire.
+  - Asset imports are queued via `rl_loader_queue_task`, and user code only touches handles once callbacks fire.
 
 ## Haxe Binding
 
@@ -148,7 +148,7 @@ Role:
 - Uses `@:cppInclude`, `@:buildXml`, and `@:functionCode` to:
   - Include `rl.h` / `rl_loader.h`.
   - Inject link flags (`librl.a` / `librl.wasm.a`).
-  - Bridge static Haxe methods to C callbacks for `rl_run` and `rl_loader_add_task`.
+  - Bridge static Haxe methods to C callbacks for `rl_run` and `rl_loader_queue_task`.
 
 Used by:
 
@@ -168,14 +168,14 @@ Async loader sugar:
 
 - The binding exposes:
   - `RL.loaderImportAssetAsync(path: String): RLLoaderTaskPtr`
-  - `RL.loaderAddTask(task, path, onSuccess, onFailure, ctx)`
+  - `RL.loaderQueueTask(task, path, onSuccess, onFailure, ctx)`
 - `rl_run` is wrapped so Haxe passes plain lifecycle functions with a Haxe context object:
   - `RL.run(onInit, onTick, onShutdown, ctx)`
-- `rl_loader_add_task` is wrapped so Haxe loader callbacks use plain `(path, ctx)` handlers:
-  - `RL.loaderAddTask(task, path, onAssetReady, onAssetFailed, ctx)`
+- `rl_loader_queue_task` is wrapped so Haxe loader callbacks use plain `(path, ctx)` handlers:
+  - `RL.loaderQueueTask(task, path, onAssetReady, onAssetFailed, ctx)`
 - The example (`examples/haxe/src/Main.hx`) is the canonical reference for:
   - Using `rl_run` with `init/tick/shutdown`.
-  - Queuing async asset loads via `rl_loader_add_task` on both desktop and wasm.
+  - Queuing async asset loads via `rl_loader_queue_task` on both desktop and wasm.
 
 ## Status and Scope
 

@@ -1,8 +1,8 @@
 -I.
 -Isrc
--Ideps/wgutils/include
 -Iinclude
+-Ideps/wgutils/include
+-Ideps/liblua/include
 -Ideps/libraylib/include
 -I${EMSDK}/upstream/emscripten/cache/sysroot/include
--Imodules/lua/deps/liblua/lua-5.1.5/src
 -DPLATFORM_DESKTOP

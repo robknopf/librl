@@ -4,7 +4,7 @@
 #include <lauxlib.h>
 
 #include "rl.h"
-#include "rl_font.h"
+#include "rl_lua_font.h"
 
 static int rl_font_create_lua(lua_State *L)
 {

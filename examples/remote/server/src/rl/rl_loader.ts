@@ -1,9 +1,9 @@
 export type rl_loader_callback_fn = (path: string, userData?: unknown) => void;
 
-export enum rl_loader_add_task_result_t {
-  RL_LOADER_ADD_TASK_OK = 0,
-  RL_LOADER_ADD_TASK_ERR_INVALID = -1,
-  RL_LOADER_ADD_TASK_ERR_QUEUE_FULL = -2,
+export enum rl_loader_queue_task_result_t {
+  RL_LOADER_QUEUE_TASK_OK = 0,
+  RL_LOADER_QUEUE_TASK_ERR_INVALID = -1,
+  RL_LOADER_QUEUE_TASK_ERR_QUEUE_FULL = -2,
 }
 
 type task_state_t = "pending" | "done" | "failed" | "freed";
@@ -146,23 +146,23 @@ export function rl_loader_clear_cache(): number {
   return 0;
 }
 
-export function rl_loader_add_task(
+export function rl_loader_queue_task(
   task: rl_loader_task_t | null | undefined,
   path: string,
   on_success?: rl_loader_callback_fn | null,
   on_failure?: rl_loader_callback_fn | null,
   user_data?: unknown,
-): rl_loader_add_task_result_t {
+): rl_loader_queue_task_result_t {
   if (task == null) {
     on_failure?.(path, user_data);
-    return rl_loader_add_task_result_t.RL_LOADER_ADD_TASK_ERR_INVALID;
+    return rl_loader_queue_task_result_t.RL_LOADER_QUEUE_TASK_ERR_INVALID;
   }
 
   const slot = rl_loader_managed_tasks.find((candidate) => !candidate.in_use);
   if (slot == null) {
     on_failure?.(path, user_data);
     rl_loader_free_task(task);
-    return rl_loader_add_task_result_t.RL_LOADER_ADD_TASK_ERR_QUEUE_FULL;
+    return rl_loader_queue_task_result_t.RL_LOADER_QUEUE_TASK_ERR_QUEUE_FULL;
   }
 
   slot.task = task;
@@ -171,7 +171,7 @@ export function rl_loader_add_task(
   slot.on_failure = on_failure;
   slot.user_data = user_data;
   slot.in_use = true;
-  return rl_loader_add_task_result_t.RL_LOADER_ADD_TASK_OK;
+  return rl_loader_queue_task_result_t.RL_LOADER_QUEUE_TASK_OK;
 }
 
 export function rl_loader_tick(): void {

@@ -6,7 +6,7 @@
 #include <stdint.h>
 
 #include "rl.h"
-#include "rl_module.h"
+#include "rl_lua_module.h"
 
 #define RL_LUA_MODULE_ERROR_BUFFER_SIZE 1024
 

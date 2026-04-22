@@ -45,11 +45,16 @@ void rl_set_light_direction(float x, float y, float z);
 void rl_set_light_ambient(float ambient);
 void rl_update_to_scratch(void);
 void rl_update(void);
+int rl_start(rl_init_fn init_fn,
+             rl_tick_fn tick_fn,
+             rl_shutdown_fn shutdown_fn,
+             void *user_data);
+int rl_tick(void);
+void rl_stop(void);
 void rl_run(rl_init_fn init_fn,
             rl_tick_fn tick_fn,
             rl_shutdown_fn shutdown_fn,
             void *user_data);
-void rl_request_stop(void);
 void rl_set_target_fps(int fps);
 float rl_get_delta_time(void);
 double rl_get_time(void);

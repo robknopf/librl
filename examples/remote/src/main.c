@@ -74,7 +74,7 @@ static void on_overlay_font_ready(const char *path, void *user_data) {
 static void on_init(void *user_data) {
   remote_context_t *context = (remote_context_t *)user_data;
   const char *ws_url = get_remote_ws_url();
-  rl_loader_add_task_result_t loader_rc = RL_LOADER_ADD_TASK_OK;
+  rl_loader_queue_task_result_t loader_rc = RL_LOADER_QUEUE_TASK_OK;
 
   if (context == NULL) {
     return;
@@ -86,9 +86,9 @@ static void on_init(void *user_data) {
 
   // In init:
   loader_rc =
-      rl_loader_add_task(rl_loader_import_asset_async(debug_font_path),
+      rl_loader_queue_task(rl_loader_import_asset_async(debug_font_path),
                          debug_font_path, on_debug_font_ready, NULL, NULL);
-  if (loader_rc != RL_LOADER_ADD_TASK_OK) {
+  if (loader_rc != RL_LOADER_QUEUE_TASK_OK) {
     log_error("[Remote] Failed to queue debug font load (%d)", loader_rc);
   }
 
@@ -99,7 +99,7 @@ static void on_init(void *user_data) {
   context->ws_client = rl_ws_client_create(ws_url);
   if (context->ws_client == NULL) {
     log_error("[Remote] Failed to create websocket client");
-    rl_request_stop();
+    rl_stop();
     return;
   }
 
@@ -109,10 +109,10 @@ static void on_init(void *user_data) {
 
   context->overlay_font = 0;
   context->overlay_font_size = 24;
-  loader_rc = rl_loader_add_task(
+  loader_rc = rl_loader_queue_task(
       rl_loader_import_asset_async(overlay_font_path), overlay_font_path,
       on_overlay_font_ready, NULL, context);
-  if (loader_rc != RL_LOADER_ADD_TASK_OK) {
+  if (loader_rc != RL_LOADER_QUEUE_TASK_OK) {
     log_error("[Remote] Failed to queue overlay font load (%d)", loader_rc);
   }
 }

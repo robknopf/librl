@@ -17,7 +17,7 @@ end
 rl.run(nil, function()
     draw()
     if rl.get_time() - t0 >= 8.0 then
-        rl.request_stop()
+        rl.stop()
     end
 end, nil, nil)
 

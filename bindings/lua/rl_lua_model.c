@@ -4,7 +4,7 @@
 #include <lauxlib.h>
 
 #include "rl.h"
-#include "rl_model.h"
+#include "rl_lua_model.h"
 
 static int rl_model_create_lua(lua_State *L)
 {

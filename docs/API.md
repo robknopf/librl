@@ -22,12 +22,13 @@ This document summarizes the current public C API exposed by `include/*.h`.  As 
 Main responsibilities:
 
 - Runtime lifecycle (`rl_init`, `rl_deinit`)
-- Render lifecycle (`rl_frame_runner_run`, `rl_frame_runner_request_stop`, `rl_frame_runner_set_target_fps`, `rl_render_begin`, `rl_render_end`)
+- App loop lifecycle (`rl_start`, `rl_tick`, `rl_stop`, `rl_run`, `rl_set_target_fps`)
+- Render lifecycle (`rl_render_begin`, `rl_render_end`)
 - Basic drawing (text, fps helpers)
 - 2D/3D mode switching
 - Mouse/keyboard input helpers (`rl_input_get_mouse*`, `rl_input_get_keyboard_state`)
 - Basic lighting toggles and parameters
-- Timing helpers (`rl_render_get_time`)
+- Timing helpers (`rl_get_time`, `rl_get_delta_time`)
 - Text measurement helpers
 
 Header note:
@@ -226,20 +227,21 @@ Notes:
 - `rl_debug_disable()` turns the overlay off and releases any font owned by the debug subsystem.
 - The current implementation draws the debug overlay automatically during `rl_render_end()`.
 
-## Frame Runner (`include/rl_frame_runner.h`)
+## App Loop (`include/rl.h`)
 
 Main responsibilities:
 
-- Cross-platform frame loop entrypoint
-- Frame pacing configuration
-- Explicit run-loop stop request
+- One-time app startup (`rl_start(init_fn, tick_fn, shutdown_fn, user_data)`)
+- Manual stepping (`rl_tick()`)
+- Loop stop/teardown (`rl_stop()`)
+- Convenience one-stop run (`rl_run(init_fn, tick_fn, shutdown_fn, user_data)`)
 
 Notes:
 
-- `rl_frame_runner_run(init_fn, tick_fn, shutdown_fn, context)` is the high-level app loop helper used by the C example.
-- `init_fn` runs once at startup, `tick_fn` runs once per frame, and `shutdown_fn` runs once when the loop exits.
-- `rl_frame_runner_request_stop()` requests loop termination.
-- `rl_frame_runner_set_target_fps(...)` configures frame pacing policy independently of the lower-level frame begin/end calls.
+- `rl_start(...)` blocks until loader readiness, then runs `init_fn` once.
+- `rl_tick()` is for manual stepping and returns `0` on success, `-1` for invalid usage/state.
+- `rl_stop()` breaks `rl_run(...)` loops; outside loop mode it performs shutdown teardown.
+- `rl_run(...)` is the convenience wrapper that starts, loops, and stops for you.
 
 ## Frame Commands (`include/rl_frame_commands.h`)
 

@@ -20,7 +20,7 @@ typedef AppContext = {
 }
 
 class Main {
-	#if PLATFORM_WEB
+	#if (emscripten || PLATFORM_WEB)
 	static final ASSET_HOST:String = "./";
 	#else
 	static final ASSET_HOST:String = "https://localhost:4444";

@@ -4,6 +4,7 @@ common.hxml
 
 # emscriptem flags
 -D emscripten
+-D PLATFORM_WEB
 -D HXCPP_M64
 -D HXCPP_LINK_EMSCRIPTEN_EXT=.js
 

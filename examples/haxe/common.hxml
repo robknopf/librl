@@ -10,7 +10,7 @@
 #-debug
 
 -D analyzer-optimize
-#-D no-traces
+-D no-traces
 --dce full
 
 

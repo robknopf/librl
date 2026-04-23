@@ -1,10 +1,11 @@
 # Bindings
 
-This project currently maintains three primary bindings in a 'add as I need' cycle:
+This project currently maintains four primary bindings in an 'add as I need' cycle:
 
 - JavaScript (wasm runtime wrapper)
 - Nim (C FFI imports)
 - Haxe (hxcpp / C++ FFI)
+- Lua (C module + Lua-side helpers)
 
 ## Architecture: Direct API vs Frame Commands
 
@@ -80,6 +81,15 @@ Notes:
 - Loader/cache helpers currently exposed in JS:
   - `uncacheFile(filename)`
   - `clearCache()`
+- JS binding-level TaskGroup ergonomics:
+  - `createTaskGroup(onComplete?, onError?, ctx?)`
+  - `addTask`, `addImportTask`, `addImportTasks`
+  - `tick()`, `process()`, `remainingTasks()`, `failedPaths()`
+- JS local-create helpers for staged imports:
+  - `createModelFromLocal(path)`
+  - `createSprite3DFromLocal(path)`
+  - `createFontFromLocal(path, fontSize)`
+  - `createMusicFromLocal(path)`
 - JS still carries some older wasm cache/readiness convenience helpers.
   - Treat those as compatibility wrappers until the JS binding is fully migrated to the new async loader-op API.
 
@@ -127,20 +137,22 @@ Notes:
   - `rl_loader_uncache_file(filename)`
   - `rl_loader_clear_cache()`
 
-Async loader sugar:
+Binding-level async loader ergonomics:
 
-- For examples that want higher-level async asset loading, prefer:
-  - `rl_loader_import_asset_async(path)` to get a task pointer.
-  - `rl_loader_queue_task(task, path, onSuccess, onFailure, userData)` to register callbacks.
-- The Nim example (`examples/nim/src/main.nim`) shows the canonical pattern:
-  - `rl_run(onInit, onTick, onShutdown, addr ctx)` drives the main loop on both desktop and wasm.
-  - Asset imports are queued via `rl_loader_queue_task`, and user code only touches handles once callbacks fire.
+- `RLTaskGroup[T]` is available in Nim via `bindings/nim/rl.nim`:
+  - `loaderCreateTaskGroup[T](ctx, onComplete?, onError?)`
+  - `addTask`, `addImportTask`, `addImportTasks`
+  - `tick()`, `process()`, `remainingTasks()`, `failedPaths()`
+- The Nim example (`examples/nim/src/main.nim`) is the canonical pattern:
+  - `rl_run(onInit, onTick, onShutdown, addr ctx)` drives the main loop.
+  - `if not ctx.loadingGroup.isNil and ctx.loadingGroup.process() > 0: return` gates frame work until imports finish.
 
 ## Haxe Binding
 
 Files:
 
 - `bindings/haxe/rl/RL.hx`
+- `bindings/haxe/rl/RLTaskGroup.hx`
 - `examples/haxe/src/InjectLibRL.hx`
 - `examples/haxe/src/Main.hx`
 
@@ -172,7 +184,9 @@ Async loader sugar:
   - `RL.loaderImportAssetAsync(path: String): RLLoaderTaskPtr`
   - `RL.loaderPollTask(task: RLLoaderTaskPtr): Bool`
   - `RL.loaderFinishTask(task: RLLoaderTaskPtr): Int`
-  - `RL.loaderTaskGroup(): RLTaskGroup` convenience wrapper (tracks remaining/failures over `loaderTick()`)
+  - `RL.loaderCreateTaskGroup<T>(onComplete?, onError?, ctx?)`
+  - `RLTaskGroup.addImportTask(path, onSuccess?, onError?)`
+  - `RLTaskGroup.process()`, `RLTaskGroup.remainingTasks()`, `RLTaskGroup.failedPaths()`
   - `RL.loaderQueueTask(task, path, onSuccess, onFailure, ctx)`
 - `rl_run` is wrapped so Haxe passes plain lifecycle functions with a Haxe context object:
   - `RL.run(onInit, onTick, onShutdown, ctx)`
@@ -180,11 +194,32 @@ Async loader sugar:
   - `RL.loaderQueueTask(task, path, onAssetReady, onAssetFailed, ctx)`
 - The example (`examples/haxe/src/Main.hx`) is the canonical reference for:
   - Using `rl_run` with `init/tick/shutdown`.
-  - Queuing async asset loads via `rl_loader_queue_task` on both desktop and wasm.
+  - Non-blocking async import gating via `loadingGroup.process()`.
+  - Per-task import callbacks receiving `(path, ctx)` for handle construction.
+
+## Lua Binding
+
+Files:
+
+- `bindings/lua/rl_lua.c`
+- `bindings/lua/rl_lua_loader.c`
+- `bindings/lua/rl_task_group.lua`
+
+Role:
+
+- `bindings/lua/rl_lua*.c` exposes direct C-backed Lua APIs.
+- `bindings/lua/rl_task_group.lua` provides helper ergonomics for non-blocking multi-task loader orchestration.
+
+Notes:
+
+- Keep direct C binding files separate from helper/ergonomic Lua modules.
+- Lua TaskGroup helper mirrors the same non-blocking pattern used in Haxe/JS/Nim:
+  - `create(on_complete?, on_error?, ctx?)`
+  - `add_import_task(...)`, `tick()`, `process()`, `failed_paths()`
 
 ## Status and Scope
 
-- Active: JavaScript, Nim
+- Active primary bindings: JavaScript, Nim, Haxe, Lua
 - Not treated as a primary binding surface: generated/auxiliary artifacts
 
 ## Binding Naming

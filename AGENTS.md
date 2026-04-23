@@ -16,3 +16,7 @@
   - Do not add aliases or backward-compatibility shims unless explicitly requested.
 - When creating or updating bindings, keep non-C-API files (helpers, wrappers, ergonomics layers) separate from direct C-API binding files.
 - If a binding intentionally does not expose an API, document that decision in `docs/BINDINGS.md`.
+
+## Commit Workflow
+
+- Before any commits, update relevant documentation (`docs/*`, API notes, and binding docs) to match behavior and API changes in the commit.

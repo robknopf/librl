@@ -281,12 +281,16 @@ Main responsibilities:
 Notes:
 
 - The loader no longer performs hidden blocking fetches during synchronous file reads.
+- Blocking wait helpers were removed from the public C API:
+  - `rl_loader_wait_task(...)`
+  - `rl_loader_wait_tasks(...)`
 - Synchronous consumers like raylib file callbacks are expected to read already-local files.
 - On wasm, the intended flow is:
   - start restore once
   - begin one or more prepare operations
   - poll/finish those ops across frames
   - only then call APIs that synchronously consume the prepared assets
+- Higher-level "task group" ergonomics are intentionally binding-level (Haxe/JS/Nim/Lua helpers), not part of the C loader API.
 - `rl_loader_import_asset_async(...)` is dependency-aware for assets like `.gltf` that may require additional files at load time.
 - `rl_loader_import_assets_async(...)` is the convenience batch entry point used by the C example bootstrap flow.
 - URL and file-path normalization flow is centralized through `path_normalize()`.

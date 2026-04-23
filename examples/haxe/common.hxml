@@ -7,6 +7,10 @@
 # Note that this is a relative path to the output directory.
 -D LIBRL_ROOT=../../../..
 
+-debug
+
+-D HAXE_OUTPUT_FILE=example
+
 #-D analyzer-optimize
 #-D no-traces
 #--dce full

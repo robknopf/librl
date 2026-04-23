@@ -4,9 +4,6 @@ import rl.RL;
 import rl.RLHandle;
 import rl.Log;
 
-// import AssetHelper;
-// import Context;
-
 typedef AppContext = {
 	var ?monoFontSize:Int;
 	var ?monoFont:RLHandle;
@@ -28,17 +25,6 @@ class Main {
 	static final ASSET_HOST:String = "https://localhost:4444";
 	#end
 
-	/*
-		static var komika:Int = 0;
-		static var komikaSmall:Int = 0;
-		static var gumshoe:Int = 0;
-		static var sprite:Int = 0;
-		static var camera:Int = 0;
-		static var bgm:Int = 0;
-		static var greyAlphaColor:Int = 0;
-		static var blue = RL.colorCreate(0, 121, 241, 255);
-		static var bgColor = RL.colorCreate(245, 245, 245, 255);
-	 */
 	static var countdownTimer:Float = 5.0;
 	static var totalTime:Float = 0.0;
 	static var lastTime:Float = 0.0;
@@ -48,7 +34,7 @@ class Main {
 		RL.setTargetFps(60);
 
 		var musicTask = RL.loaderImportAssetAsync("assets/music/ethernight_club.mp3");
-		if (musicTask != null) {
+		if (RL.loaderTaskIsValid(musicTask)) {
 			RL.loaderQueueTask(musicTask, (path, ctx) -> {
 				ctx.bgm = RL.musicCreate(path);
 				RL.musicSetLoop(ctx.bgm, true);
@@ -60,7 +46,7 @@ class Main {
 
 		Log.info("here");
 
-		var tasks:Array<Dynamic> = [
+		var tasks = [
 			RL.loaderImportAssetAsync("assets/models/gumshoe/gumshoe.glb"),
 			RL.loaderImportAssetAsync("assets/sprites/logo/wg-logo-bw-alpha.png"),
 			RL.loaderImportAssetAsync("assets/fonts/JetBrainsMono/JetBrainsMono-Regular.ttf"),
@@ -72,59 +58,20 @@ class Main {
 		//Log.info(result);
 
 		ctx.model = RL.modelCreate("assets/models/gumshoe/gumshoe.glb");
-		ctx.sprite = RL.textureCreate("assets/sprites/logo/wg-logo-bw-alpha.png");
+		ctx.sprite = RL.sprite3dCreate("assets/sprites/logo/wg-logo-bw-alpha.png");
 		ctx.monoFont = RL.fontCreate("assets/fonts/JetBrainsMono/JetBrainsMono-Regular.ttf", ctx.monoFontSize);
 		ctx.smallFont = RL.fontCreate("assets/fonts/Komika/KOMIKAH_.ttf", ctx.smallFontSize);
+		ctx.bgColor = RL.colorCreate(245, 245, 245, 255);
 		ctx.fpsColor = RL.colorCreate(0, 121, 241, 255);
 		ctx.message = "Hello, World!";
 
-		/*
-			ctx.assets.models["gumshoe"] = {path:"assets/models/gumshoe/gumshoe.glb"};
-			ctx.assets.sprites["logo"] = {path:"assets/sprites/logo/wg-logo-bw-alpha.png"};
-			ctx.assets.fonts["mono"] = {path:"assets/fonts/JetBrainsMono/JetBrainsMono-Regular.ttf", size: smallFontSize};
-			ctx.assets.fonts["komika"] = {path:"assets/fonts/Komika/KOMIKAH_.ttf", size: fontSize};
-			ctx.assets.fonts["komikaSmall"] = {path:"assets/fonts/Komika/KOMIKAH_.ttf", size: smallFontSize};
-			ctx.assets.music["bgm"] = {path:"assets/music/ethernight_club.mp3"};
-			ctx.assets.colors["bgColor"] = {r:245, g:245, b:245, a:255};
-			ctx.assets.colors["greyAlpha"] = {r:0, g:0, b:0, a:128};
-		 */
-
-		// preload all assets
-		// AssetHelper.queueContextAssets(ctx);
-		// AssetHelper.awaitQueuedAssets();
-
-		// AssetHelper.queueAsset(fontPath, ctx);
-		// AssetHelper.queueAsset(monoFontPath, ctx);
-		// AssetHelper.queueAsset(modelPath, ctx);
-		// AssetHelper.queueAsset(spritePath, ctx);
-		// AssetHelper.queueAsset(bgmPath, ctx, (assetPath, ctx) -> {
-		// Log.info("loaded " + assetPath);
-		//	var bgm = ctx.assets.music["bgm"]?.id;
-		//	if (bgm != null) {
-		// bgm = RL.musicCreate(assetPath);
-		//		RL.musicSetLoop(bgm, true);
-		//		RL.musicPlay(bgm);
-		//	}
-		// }, (assetPath, ctx) -> {
-		//	Log.warn("Failed to load asset: " + assetPath);
-		// });
 
 		ctx.camera = RL.camera3dCreate(12.0, 12.0, 12.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 45.0, RL.CAMERA_PERSPECTIVE);
-		// greyAlphaColor = RL.colorCreate(0, 0, 0, 128);
 		RL.enableLighting();
 		RL.setLightDirection(-0.6, -1.0, -0.5);
 		RL.setLightAmbient(0.25);
 		RL.camera3dSetActive(ctx.camera);
 
-		// spin until assets are ready
-		// AssetHelper.awaitQueuedAssets();
-
-		// komika = RL.fontCreate(fontPath, fontSize);
-		// komikaSmall = RL.fontCreate(fontPath, smallFontSize);
-		// monoFontSmall = RL.fontCreate(monoFontPath, smallFontSize);
-		// gumshoe = RL.modelCreate(modelPath);
-		// sprite = RL.sprite3dCreate(spritePath);
-		// var gumshoe = ctx.assets.models["gumshoe"]?.id;
 		if (ctx.model != null) {
 			RL.modelSetAnimation(ctx.model, 1);
 			RL.modelSetAnimationSpeed(ctx.model, 1.0);
@@ -213,9 +160,8 @@ class Main {
 
 	static function onShutdown(ctx:AppContext):Void {
 		RL.disableLighting();
-		//Context.destroy(ctx);
-		RL.deinit();
 
+		RL.deinit();
 		// for now, we have to close the window after deinit().
 		// RayLib's CloseWindow will destroy the GPU backed elements (like Texture, etc) and then their
 		// cleanup will segfault.

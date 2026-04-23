@@ -9,7 +9,9 @@ package rl;
 
 import haxe.ds.StringMap;
 
-abstract RLHandle(Int) from Int to Int {}
+import rl.InjectLibRL;
+import rl.RLHandle;
+import rl.RLLoader.RLLoaderTaskPtr;
 
 #if cpp
 @:include("rl.h")
@@ -205,45 +207,6 @@ private extern class RLNative {
   @:native("rl_get_asset_host")
   static function getAssetHost(): String;
 
-  // --- Loader (rl_loader.h) ---
-  @:native("rl_loader_restore_fs_async")
-  static function loaderRestoreFsAsync(): RLLoaderTaskPtr;
-
-  @:native("rl_loader_import_asset_async")
-  static function loaderImportAssetAsync(filename: String): RLLoaderTaskPtr;
-
-  @:native("rl_loader_poll_task")
-  static function loaderPollTask(task: RLLoaderTaskPtr): Bool;
-
-  @:native("rl_loader_finish_task")
-  static function loaderFinishTask(task: RLLoaderTaskPtr): Int;
-
-  @:native("rl_loader_wait_task")
-  static function loaderWaitTask(task: RLLoaderTaskPtr): Int;
-
-  @:native("rl_loader_get_task_path")
-  static function loaderGetTaskPath(task: RLLoaderTaskPtr): String;
-
-  @:native("rl_loader_free_task")
-  static function loaderFreeTask(task: RLLoaderTaskPtr): Void;
-
-  @:native("rl_loader_is_local")
-  static function loaderIsLocal(filename: String): Bool;
-
-  @:native("rl_loader_queue_task")
-  static function loaderQueueTaskNative(task: RLLoaderTaskPtr, path: String,
-    onSuccess: cpp.Callable<cpp.ConstCharStar->cpp.RawPointer<cpp.Void>->Void>,
-    onFailure: cpp.Callable<cpp.ConstCharStar->cpp.RawPointer<cpp.Void>->Void>,
-    userData: cpp.RawPointer<cpp.Void>): Int;
-
-  @:native("rl_loader_tick")
-  static function loaderTick(): Void;
-
-  @:native("rl_loader_clear_cache")
-  static function loaderClearCache(): Int;
-
-  @:native("rl_loader_uncache_file")
-  static function loaderUncacheFile(filename: String): Int;
 
   // --- Music (rl_music.h) ---
   @:native("rl_music_create")
@@ -542,11 +505,13 @@ class RLKeyboardState {
   public function new() {}
 }
 
-@:include("rl_loader.h")
-@:native("rl_loader_task_t")
-extern class RLLoaderTask {}
-
 @:forwardStatics
+#if cpp
+@:include("rl.h")
+@:include("rl_loader.h")
+@:headerInclude("rl_loader.h")
+@:headerInclude("alloca.h")
+#end
 abstract RL(RLNative) from RLNative to RLNative {
   public static inline function inputGetKeyboardState(): RLKeyboardState {
     return RLKeyboardBridge.getState();
@@ -612,12 +577,80 @@ abstract RL(RLNative) from RLNative to RLNative {
     );
   }
 
-  public static inline function loaderQueueTask<T>(task: RLLoaderTaskPtr, path: String,
+  public static function loaderRestoreFsAsync(): RLLoaderTaskPtr {
+    return RLLoader.loaderRestoreFsAsync();
+  }
+
+  public static function loaderImportAssetAsync(filename: String): RLLoaderTaskPtr {
+    return RLLoader.loaderImportAssetAsync(filename);
+  }
+
+  public static function loaderImportAssetsAsync(filenames: Array<String>): RLLoaderTaskPtr {
+    return RLLoader.loaderImportAssetsAsync(filenames);
+  }
+
+  public static function loaderPollTask(task: RLLoaderTaskPtr): Bool {
+    return RLLoader.loaderPollTask(task);
+  }
+
+  public static function loaderFinishTask(task: RLLoaderTaskPtr): Int {
+    return RLLoader.loaderFinishTask(task);
+  }
+
+  public static function loaderWaitTask(task: RLLoaderTaskPtr): Int {
+    return RLLoader.loaderWaitTask(task);
+  }
+
+  public static function loaderWaitTasks(tasks: Array<RLLoaderTaskPtr>): Int {
+    return RLLoader.loaderWaitTasks(tasks);
+  }
+
+  public static inline function loaderTaskInvalid(): RLLoaderTaskPtr {
+    return RLLoaderTaskPtr.invalid();
+  }
+
+  public static inline function loaderTaskIsValid(task: RLLoaderTaskPtr): Bool {
+    return task.isValid();
+  }
+
+  public static function loaderGetTaskPath(task: RLLoaderTaskPtr): String {
+    return RLLoader.loaderGetTaskPath(task);
+  }
+
+  public static function loaderFreeTask(task: RLLoaderTaskPtr): Void {
+    RLLoader.loaderFreeTask(task);
+  }
+
+  public static function loaderIsLocal(filename: String): Bool {
+    return RLLoader.loaderIsLocal(filename);
+  }
+
+  static function loaderQueueTaskNative(task: RLLoaderTaskPtr, path: String,
+    onSuccess: cpp.Callable<cpp.ConstCharStar->cpp.RawPointer<cpp.Void>->Void>,
+    onFailure: cpp.Callable<cpp.ConstCharStar->cpp.RawPointer<cpp.Void>->Void>,
+    userData: cpp.RawPointer<cpp.Void>): Int {
+    return RLLoader.loaderQueueTask(task, path, onSuccess, onFailure, userData);
+  }
+
+  public static function loaderTick(): Void {
+    RLLoader.loaderTick();
+  }
+
+  public static function loaderClearCache(): Int {
+    return RLLoader.loaderClearCache();
+  }
+
+  public static function loaderUncacheFile(filename: String): Int {
+    return RLLoader.loaderUncacheFile(filename);
+  }
+
+  public static inline function loaderQueueTask<T>(task: RLLoaderTaskPtr,
     onSuccess: String->T->Void, onFailure: String->T->Void, ctx: T): Int {
     var successSpringboard: cpp.Callable<cpp.ConstCharStar->cpp.RawPointer<cpp.Void>->Void> =
       cpp.Function.fromStaticFunction(RLBridge.onLoaderSuccessSpringboard);
     var failureSpringboard: cpp.Callable<cpp.ConstCharStar->cpp.RawPointer<cpp.Void>->Void> =
       cpp.Function.fromStaticFunction(RLBridge.onLoaderFailureSpringboard);
+    var path = loaderGetTaskPath(task);
     var callbackKey = RLBridge.makeLoaderCallbackKey(path);
     var callbackInvoked = false;
     var callbackUserData = RLLoaderCallbackBridge.alloc(callbackKey);
@@ -642,7 +675,7 @@ abstract RL(RLNative) from RLNative to RLNative {
       },
       ctx: ctx
     });
-    var rc = RLNative.loaderQueueTaskNative(
+    var rc = loaderQueueTaskNative(
       task,
       path,
       successSpringboard,
@@ -655,6 +688,7 @@ abstract RL(RLNative) from RLNative to RLNative {
     }
     return rc;
   }
+
 
   public static inline function loggerMessage(level: Int, message: String): Void {
     RLLoggerBridge.message(level, message == null ? "" : message);
@@ -834,8 +868,6 @@ private class RLBridge {
     if (fn != null) fn(path, callbacks.ctx);
   }
 }
-
-typedef RLLoaderTaskPtr = cpp.RawPointer<RLLoaderTask>;
 #else
 typedef RLVec2 = {
   var x: Float;

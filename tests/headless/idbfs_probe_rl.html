@@ -77,9 +77,15 @@ async function run() {
   };
 
   try {
-    await rl.init();
+    const initRc = await rl.init({
+      windowWidth: 64,
+      windowHeight: 64,
+      windowTitle: 'idbfs-probe',
+    });
+    if (initRc !== 0) {
+      throw new Error(`rl.init failed: ${initRc}`);
+    }
     final.step = 'init-window';
-    rl.initWindow(64, 64, 'idbfs-probe');
 
     final.step = 'wait-ready';
     final.idbReadyAtInit = await rl.waitForIdbfsReady(5000);
@@ -93,7 +99,6 @@ async function run() {
     final.step = 'deinit-sync';
     rl.destroyFont(final.fontHandle);
     rl.deinit();
-    rl.closeWindow();
 
     await sleep(1200);
 

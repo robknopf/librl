@@ -5,6 +5,7 @@ import rl.RLHandle;
 import rl.Log;
 
 typedef AppContext = {
+	var ?loadingGroup:rl.RLTaskGroup;
 	var ?monoFontSize:Int;
 	var ?monoFont:RLHandle;
 	var ?smallFont:RLHandle;
@@ -29,10 +30,8 @@ class Main {
 	static var totalTime:Float = 0.0;
 	static var lastTime:Float = 0.0;
 
-	static function onInit(ctx:AppContext):Void {
-		RL.windowOpen(1024, 1280, "Hello, World! (Haxe)", RL.FLAG_MSAA_4X_HINT);
-		RL.setTargetFps(60);
-
+	static function setupScene(ctx:AppContext):Void {
+		// import the bgm so it plays while loading assets
 		var musicTask = RL.loaderImportAssetAsync("assets/music/ethernight_club.mp3");
 		if (RL.loaderTaskIsValid(musicTask)) {
 			RL.loaderQueueTask(musicTask, (path, ctx) -> {
@@ -44,27 +43,9 @@ class Main {
 			Log.warn("Failed to create music import task");
 		}
 
-		Log.info("here");
-
-		var tasks = [
-			RL.loaderImportAssetAsync("assets/models/gumshoe/gumshoe.glb"),
-			RL.loaderImportAssetAsync("assets/sprites/logo/wg-logo-bw-alpha.png"),
-			RL.loaderImportAssetAsync("assets/fonts/JetBrainsMono/JetBrainsMono-Regular.ttf"),
-			RL.loaderImportAssetAsync("assets/fonts/Komika/KOMIKAH_.ttf"),
-		];
-		Log.info("here 2");
-		var result = RL.loaderWaitTasks(tasks);
-		Log.info("past loaderWaitTasks");
-		//Log.info(result);
-
-		ctx.model = RL.modelCreate("assets/models/gumshoe/gumshoe.glb");
-		ctx.sprite = RL.sprite3dCreate("assets/sprites/logo/wg-logo-bw-alpha.png");
-		ctx.monoFont = RL.fontCreate("assets/fonts/JetBrainsMono/JetBrainsMono-Regular.ttf", ctx.monoFontSize);
-		ctx.smallFont = RL.fontCreate("assets/fonts/Komika/KOMIKAH_.ttf", ctx.smallFontSize);
 		ctx.bgColor = RL.colorCreate(245, 245, 245, 255);
 		ctx.fpsColor = RL.colorCreate(0, 121, 241, 255);
 		ctx.message = "Hello, World!";
-
 
 		ctx.camera = RL.camera3dCreate(12.0, 12.0, 12.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 45.0, RL.CAMERA_PERSPECTIVE);
 		RL.enableLighting();
@@ -72,16 +53,54 @@ class Main {
 		RL.setLightAmbient(0.25);
 		RL.camera3dSetActive(ctx.camera);
 
-		if (ctx.model != null) {
-			RL.modelSetAnimation(ctx.model, 1);
-			RL.modelSetAnimationSpeed(ctx.model, 1.0);
-			RL.modelSetAnimationLoop(ctx.model, true);
-		}
 		lastTime = RL.getTime();
 		countdownTimer = 5.0;
+
+		// create a blank screen while loading assets
+		RL.renderBegin();
+		RL.renderClearBackground(ctx.bgColor);
+		RL.renderEnd();
+	}
+
+	static function onInit(ctx:AppContext):Void {
+		RL.setTargetFps(60);
+
+		setupScene(ctx);
+
+		ctx.loadingGroup = RL.loaderCreateTaskGroup(
+			(group, loadedCtx) -> {
+				loadedCtx.loadingGroup = null;
+			},
+			(group, loadedCtx) -> {
+				Log.error("asset import failed: " + group.failedPaths().join(", "));
+				loadedCtx.loadingGroup = null;
+				RL.stop();
+			},
+			ctx
+		);
+		ctx.loadingGroup.addImportTask("assets/models/gumshoe/gumshoe.glb", (path, loadedCtx) -> {
+			loadedCtx.model = RL.modelCreate(path);
+			RL.modelSetAnimation(loadedCtx.model, 1);
+			RL.modelSetAnimationSpeed(loadedCtx.model, 1.0);
+			RL.modelSetAnimationLoop(loadedCtx.model, true);
+		});
+		ctx.loadingGroup.addImportTask("assets/sprites/logo/wg-logo-bw-alpha.png", (path, loadedCtx) -> {
+			loadedCtx.sprite = RL.sprite3dCreate(path);
+		});
+		ctx.loadingGroup.addImportTask("assets/fonts/JetBrainsMono/JetBrainsMono-Regular.ttf", (path, loadedCtx) -> {
+			loadedCtx.monoFont = RL.fontCreate(path, loadedCtx.monoFontSize);
+		});
+		ctx.loadingGroup.addImportTask("assets/fonts/Komika/KOMIKAH_.ttf", (path, loadedCtx) -> {
+			loadedCtx.smallFont = RL.fontCreate(path, loadedCtx.smallFontSize);
+		});
 	}
 
 	static function onTick(ctx:AppContext):Void {
+		// wait for assets to load
+		if (ctx.loadingGroup != null && ctx.loadingGroup.process() > 0) {
+			return;
+		}
+
 		var currentTime = RL.getTime();
 		var deltaTime = currentTime - lastTime;
 		totalTime += deltaTime;
@@ -148,7 +167,7 @@ class Main {
 		if (ctx.smallFont != null) {
 			RL.textDrawEx(ctx.smallFont, elapsed, 10, 56, ctx.smallFontSize, 1.0, RL.COLOR_BLACK);
 			RL.textDrawEx(ctx.smallFont, mouseText, 10, 76, ctx.smallFontSize, 1.0, RL.COLOR_BLACK);
-			RL.textDrawFpsEx(ctx.smallFont, 10, 10, ctx.smallFontSize, ctx.bgColor);
+			RL.textDrawFpsEx(ctx.smallFont, 10, 10, ctx.smallFontSize, ctx.fpsColor);
 		} else {
 			RL.textDraw(elapsed, 10, 56, ctx.smallFontSize, RL.COLOR_BLACK);
 			RL.textDraw(mouseText, 10, 76, ctx.smallFontSize, RL.COLOR_BLACK);
@@ -162,37 +181,29 @@ class Main {
 		RL.disableLighting();
 
 		RL.deinit();
-		// for now, we have to close the window after deinit().
-		// RayLib's CloseWindow will destroy the GPU backed elements (like Texture, etc) and then their
-		// cleanup will segfault.
-		// TODO:  Consider moving windowCreate into rl_init() so rl owns window lifecycle?
-		RL.windowClose();
 	}
 
 	static function main():Void {
-		trace("MAIN START");
-		RL.loggerSetLevel(RL.LOGGER_LEVEL_WARN);
+		RL.loggerSetLevel(RL.LOGGER_LEVEL_DEBUG);
 
-		trace("About to RL.init");
-		try {
-			RL.init();
-			trace("RL.init done");
-		} catch(e) {
-			trace("RL.init error: " + e);
+		var errCode = RL.init({
+			windowWidth: 1024,
+			windowHeight: 1280,
+			windowTitle: "Hello, World! (Haxe)",
+			windowFlags: RL.FLAG_MSAA_4X_HINT,
+			assetHost: ASSET_HOST,
+		});
+		if (errCode != 0) {
+			Log.error("RL.init failed: " + errCode);
+			return;
 		}
-		trace("About to setAssetHost");
-		RL.setAssetHost(ASSET_HOST);
-		trace("About to loaderClearCache");
 		RL.loaderClearCache();
-		trace("About to create ctx");
 
 		var ctx:AppContext = {
 			monoFontSize: 24,
 			smallFontSize: 16,
 			message: ""
 		};
-		trace("About to RL.run");
 		RL.run(onInit, onTick, onShutdown, ctx);
-		trace("RL.run returned");
 	}
 }

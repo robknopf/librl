@@ -2,8 +2,12 @@
 local rl = require("rl")
 
 print("Loaded librl Lua module.")
-rl.init()
-rl.window_open(1024, 1280, "Hello, librl (using rl.so lua library)", rl.RL_WINDOW_FLAG_MSAA_4X_HINT);
+assert(rl.init({
+  window_width = 1024,
+  window_height = 1280,
+  window_title = "Hello, librl (using rl.so lua library)",
+  window_flags = rl.RL_WINDOW_FLAG_MSAA_4X_HINT,
+}) == 0)
 rl.set_target_fps(60);
 local bg = rl.color_create(20, 20, 24, 255)
 local t0 = rl.get_time()
@@ -22,5 +26,4 @@ rl.run(nil, function()
 end, nil, nil)
 
 rl.color_destroy(bg)
-rl.window_close()
 rl.deinit()

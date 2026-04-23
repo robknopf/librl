@@ -61,13 +61,6 @@ class RLLoader {
   }
 
   @:functionCode('
-    return rl_loader_wait_task((rl_loader_task_t *)(uintptr_t)task);
-  ')
-  static function waitTaskNative(task: RLLoaderTaskPtr): Int {
-    return 0;
-  }
-
-  @:functionCode('
     return rl_loader_get_task_path((rl_loader_task_t *)(uintptr_t)task);
   ')
   static function getTaskPathNative(task: RLLoaderTaskPtr): String {
@@ -106,37 +99,6 @@ class RLLoader {
 
   public static inline function loaderFinishTask(task: RLLoaderTaskPtr): Int {
     return finishTaskNative(task);
-  }
-
-  public static inline function loaderWaitTask(task: RLLoaderTaskPtr): Int {
-    return waitTaskNative(task);
-  }
-
-  @:functionCode('
-    int n = tasks->length;
-    if (n <= 0) {
-      return 0;
-    }
-    rl_loader_task_t **ptrs = (rl_loader_task_t **)alloca(n * sizeof(rl_loader_task_t *));
-    size_t count = 0;
-    for (int i = 0; i < n; i++) {
-      cpp::UInt64 raw = tasks->__get(i);
-      rl_loader_task_t *task = (rl_loader_task_t *)(uintptr_t)raw;
-      if (task != nullptr) {
-        ptrs[count++] = task;
-      }
-    }
-    if (count == 0) {
-      return 0;
-    }
-    return rl_loader_wait_tasks(ptrs, count, nullptr, nullptr);
-  ')
-  static function waitTasksNative(tasks: Array<RLLoaderTaskPtr>): Int {
-    return 0;
-  }
-
-  public static inline function loaderWaitTasks(tasks: Array<RLLoaderTaskPtr>): Int {
-    return waitTasksNative(tasks);
   }
 
   public static inline function loaderGetTaskPath(task: RLLoaderTaskPtr): String {

@@ -448,7 +448,7 @@ static void on_shutdown(void *user_data) {
   (void)rl_event_off("lua.ready", on_module_ready, NULL);
   (void)rl_event_off("lua.error", on_module_error, NULL);
   (void)rl_event_off("resource.load", on_resource_load, context);
-  rl_window_close();
+  rl_deinit();
 }
 
 static void on_init(void *user_data) {
@@ -466,8 +466,6 @@ static void on_init(void *user_data) {
 
   (void)rl_event_on("resource.load", on_resource_load, context);
 
-  rl_window_open(context->script_config.width, context->script_config.height,
-                 context->script_config.title, context->script_config.flags);
   rl_set_target_fps(context->script_config.target_fps > 0
                                      ? context->script_config.target_fps
                                      : 60);
@@ -531,7 +529,18 @@ int main(void) {
                            "librl + raylib + lua(C example)"};
   g_example_context.boot_state = EXAMPLE_BOOT_RESTORE;
 
-  rl_init();
+  {
+    rl_init_config_t init_cfg;
+    memset(&init_cfg, 0, sizeof(init_cfg));
+    init_cfg.window_width = g_example_context.script_config.width;
+    init_cfg.window_height = g_example_context.script_config.height;
+    init_cfg.window_title = g_example_context.script_config.title;
+    init_cfg.window_flags = g_example_context.script_config.flags;
+    init_cfg.asset_host = g_asset_host;
+    if (rl_init(&init_cfg) != 0) {
+      return 1;
+    }
+  }
   rl_run(on_init, on_tick, on_shutdown,
                       &g_example_context);
 

@@ -3,18 +3,8 @@
 #include <lua.h>
 #include <lauxlib.h>
 
-#include "rl.h"
+#include "rl_window.h"
 #include "rl_lua_window.h"
-
-static int rl_window_open_lua(lua_State *L)
-{
-    int width = (int)luaL_checkinteger(L, 1);
-    int height = (int)luaL_checkinteger(L, 2);
-    const char *title = luaL_checkstring(L, 3);
-    int flags = (int)luaL_optinteger(L, 4, 0);
-    rl_window_open(width, height, title, flags);
-    return 0;
-}
 
 static int rl_window_set_title_lua(lua_State *L)
 {
@@ -99,18 +89,8 @@ static int rl_window_set_position_lua(lua_State *L)
     return 0;
 }
 
-static int rl_window_close_lua(lua_State *L)
-{
-    (void)L;
-    rl_window_close();
-    return 0;
-}
-
 void rl_register_window_bindings(lua_State *L)
 {
-    lua_pushcfunction(L, rl_window_open_lua);
-    lua_setfield(L, -2, "window_open");
-
     lua_pushcfunction(L, rl_window_set_title_lua);
     lua_setfield(L, -2, "window_set_title");
 
@@ -143,7 +123,4 @@ void rl_register_window_bindings(lua_State *L)
 
     lua_pushcfunction(L, rl_window_set_position_lua);
     lua_setfield(L, -2, "window_set_position");
-
-    lua_pushcfunction(L, rl_window_close_lua);
-    lua_setfield(L, -2, "window_close");
 }

@@ -87,7 +87,10 @@ async function run() {
 
   try {
     const mod = await ModuleFactory({ noInitialRun: true, print: () => {}, printErr: () => {} });
-    mod.ccall('rl_init', null, [], []);
+    const initRc = mod.ccall('rl_init', 'number', ['number'], [0]);
+    if (initRc !== 0) {
+      throw new Error(`rl_init failed: ${initRc}`);
+    }
 
     final.step = 'wait-ready';
     const ready = await waitForReady(mod, 5000);

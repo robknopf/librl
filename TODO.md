@@ -32,6 +32,7 @@
   - add missing Nim APIs to `bindings/nim/` with idiomatic wrappers where appropriate
   - add missing Haxe APIs to `bindings/haxe/` with idiomatic lowerCamelCase surface
   - align logging ergonomics across Nim/Haxe/Lua (`log.debug/info/warn/error/...` style)
+  - **JS binding tests:** add automated coverage for `bindings/js/*` (e.g. `tests/bindings/js` with Node or a small headless harness calling `rl.init` / core `RL` APIs). Today `make test` runs Haxe and Nim binding smoke tests and wasm C unit tests, but nothing equivalent for the JS wrapper layer.
 - Naming convention cleanup:
   - Rename `async/wg_*` to drop the `wg_` prefix (align with `websocket_`, `fetch_url_`)
 - Audit bindings to ensure they haven't gotten stale (JS + Nim)

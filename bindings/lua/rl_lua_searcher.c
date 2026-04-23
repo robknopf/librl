@@ -59,7 +59,11 @@ int rl_lua_fetch_to_fileio(const char *relative_path)
         return -1;
     }
 
-    rc = rl_loader_wait_task(task);
+    while (!rl_loader_poll_task(task)) {
+        rl_loader_tick();
+    }
+    rc = rl_loader_finish_task(task);
+    rl_loader_free_task(task);
     return rc;
 }
 

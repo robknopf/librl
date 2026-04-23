@@ -22,7 +22,18 @@ extern "C" {
 #define RL_WINDOW_FLAG_WINDOW_HIGHDPI 0x00002000u
 #define RL_WINDOW_FLAG_INTERLACED_HINT 0x00010000u
 
-void rl_window_open(int width, int height, const char *title, int flags);
+/*
+ * Window lifecycle is owned by core runtime:
+ * - rl_init(...) opens/configures the window
+ * - rl_deinit() closes the window
+ *
+ * These entry points are intentionally internal and should not be exposed
+ * or called by user code:
+ *
+ * void rl_window_open(int width, int height, const char *title, unsigned int flags);
+ * void rl_window_close(void);
+ */
+
 void rl_window_set_title(const char *title);
 void rl_window_set_size(int width, int height);
 vec2_t rl_window_get_screen_size(void);
@@ -34,7 +45,6 @@ int rl_window_get_monitor_height(int monitor);
 vec2_t rl_window_get_monitor_position(int monitor);
 vec2_t rl_window_get_position(void);
 void rl_window_set_position(int x, int y);
-void rl_window_close(void);
 
 #ifdef __cplusplus
 }

@@ -15,8 +15,10 @@
 #include "internal/rl_sprite2d.h"
 #include "internal/rl_sprite3d.h"
 #include "internal/rl_texture.h"
+#include "internal/rl_window.h"
 #include "raylib.h"
 #include "rl_loader.h"
+#include <stddef.h>
 #include <string.h>
 
 #if defined(PLATFORM_WEB)
@@ -26,19 +28,49 @@
 
 bool initialized = false;
 
+static void rl_init_apply_defaults(rl_init_config_t *out)
+{
+    if (out->window_width == 0) {
+        out->window_width = 1024;
+    }
+    if (out->window_height == 0) {
+        out->window_height = 1280;
+    }
+    if (out->window_title == NULL) {
+        out->window_title = "librl";
+    }
+    if (out->loader_cache_dir == NULL) {
+        out->loader_cache_dir = "cache";
+    }
+}
+
+RL_KEEP
+size_t rl_init_config_sizeof(void) { return sizeof(rl_init_config_t); }
+
 typedef struct rl_loop_state_t {
     rl_init_fn init_fn;
     rl_tick_fn tick_fn;
     rl_shutdown_fn shutdown_fn;
     void *user_data;
-    int ready;
+    int armed;       /* start() returned OK; session active for tick/stop */
+    int user_inited; /* user init callback has run, or is not used */
     int looping;
 } rl_loop_state_t;
 
 static rl_loop_state_t rl_loop_state = {0};
 
-static void rl_tick_internal(void) {
+static void rl_dispatch(void) {
     rl_loader_tick();
+    if (!rl_loader_is_ready()) {
+        return;
+    }
+    if (!rl_loop_state.user_inited) {
+        if (rl_loop_state.init_fn != NULL) {
+            rl_loop_state.init_fn(rl_loop_state.user_data);
+        }
+        rl_loop_state.user_inited = 1;
+        return;
+    }
     if (rl_loop_state.tick_fn != NULL) {
         rl_loop_state.tick_fn(rl_loop_state.user_data);
     }
@@ -48,7 +80,8 @@ static void rl_finish_run(void) {
     rl_shutdown_fn shutdown_fn = rl_loop_state.shutdown_fn;
     void *user_data = rl_loop_state.user_data;
 
-    rl_loop_state.ready = 0;
+    rl_loop_state.armed = 0;
+    rl_loop_state.user_inited = 0;
     rl_loop_state.looping = 0;
     rl_loop_state.init_fn = NULL;
     rl_loop_state.tick_fn = NULL;
@@ -68,12 +101,11 @@ static void rl_web_step(void) {
         return;
     }
 
-    if (WindowShouldClose()) {
-        rl_stop();
-        return;
-    }
-
-    rl_tick_internal();
+    /* Do not call WindowShouldClose() here: raylib's rcore_web.c implementation
+     * always ends with emscripten_sleep(12) to yield, which requires ASYNCIFY/JSPI
+     * in the app link. On web it always returns false anyway; closing is not
+     * driven the same way as desktop GLFW. */
+    rl_dispatch();
 
     if (!rl_loop_state.looping) {
         emscripten_cancel_main_loop();
@@ -83,12 +115,41 @@ static void rl_web_step(void) {
 #endif
 
 RL_KEEP
-void rl_init() {
+int rl_init(const rl_init_config_t *config) {
+    rl_init_config_t cfg;
     if (initialized) {
-        return;
-    }    
+        return -1;
+    }
+
+    memset(&cfg, 0, sizeof(cfg));
+    if (config != NULL) {
+        cfg = *config;
+    }
+    rl_init_apply_defaults(&cfg);
+
     rl_logger_init();
-    rl_loader_init("cache");
+    if (rl_loader_init(cfg.loader_cache_dir) != 0) {
+        rl_logger_deinit();
+        return -1;
+    }
+    if (cfg.asset_host != NULL && cfg.asset_host[0] != '\0') {
+        if (rl_set_asset_host(cfg.asset_host) != 0) {
+            rl_loader_deinit();
+            rl_logger_deinit();
+            return -1;
+        }
+    }
+    rl_window_open_internal(
+        cfg.window_width,
+        cfg.window_height,
+        cfg.window_title,
+        cfg.window_flags
+    );
+    if (!IsWindowReady()) {
+        rl_loader_deinit();
+        rl_logger_deinit();
+        return -1;
+    }
     rl_scratch_init();
     rl_color_init();
     rl_font_init();
@@ -102,6 +163,7 @@ void rl_init() {
     rl_sprite3d_init();
     rl_debug_init();
     initialized = true;
+    return 0;
 }
 
 RL_KEEP
@@ -110,7 +172,6 @@ void rl_deinit() {
         return;
     }
     rl_camera3d_deinit();
-    initialized = false;
     rl_debug_deinit();
     rl_sprite2d_deinit();
     rl_sprite3d_deinit();
@@ -121,12 +182,14 @@ void rl_deinit() {
     rl_event_deinit();
     rl_font_deinit();
     rl_color_deinit();
-    rl_scratch_deinit();
-    rl_loader_deinit();
-    rl_logger_deinit();
     if (IsAudioDeviceReady()) {
         CloseAudioDevice();
     }
+    rl_scratch_deinit();
+    rl_loader_deinit();
+    initialized = false;
+    rl_window_close_internal();
+    rl_logger_deinit();
 }
 
 RL_KEEP
@@ -153,7 +216,7 @@ int rl_start(rl_init_fn init_fn,
              rl_tick_fn tick_fn,
              rl_shutdown_fn shutdown_fn,
              void *user_data) {
-    if (rl_loop_state.ready || rl_loop_state.looping) {
+    if (rl_loop_state.armed || rl_loop_state.looping) {
         return -1;
     }
 
@@ -165,28 +228,22 @@ int rl_start(rl_init_fn init_fn,
     rl_loop_state.tick_fn = tick_fn;
     rl_loop_state.shutdown_fn = shutdown_fn;
     rl_loop_state.user_data = user_data;
-    rl_loop_state.ready = 0;
+    rl_loop_state.user_inited = (init_fn == NULL) ? 1 : 0;
     rl_loop_state.looping = 0;
 
-    while (!rl_loader_is_ready()) {
-        rl_loader_tick();
-    }
-
-    rl_loop_state.ready = 1;
-    if (rl_loop_state.init_fn != NULL) {
-        rl_loop_state.init_fn(rl_loop_state.user_data);
-    }
-
-    return rl_loop_state.ready ? 0 : -1;
+    /* Loader readiness and user init_fn run in rl_dispatch (tick / run loop) so
+     * the host can return between frames (e.g. web IDBFS restore). */
+    rl_loop_state.armed = 1;
+    return 0;
 }
 
 RL_KEEP
 int rl_tick(void) {
-    if (!rl_loop_state.ready || rl_loop_state.looping) {
+    if (!rl_loop_state.armed || rl_loop_state.looping) {
         return -1;
     }
 
-    rl_tick_internal();
+    rl_dispatch();
 
     return 0;
 }
@@ -211,7 +268,7 @@ void rl_run(rl_init_fn init_fn,
             break;
         }
 
-        rl_tick_internal();
+        rl_dispatch();
     }
     rl_stop();
 #endif
@@ -224,7 +281,7 @@ void rl_stop(void) {
         return;
     }
 
-    if (!rl_loop_state.ready) {
+    if (!rl_loop_state.armed) {
         return;
     }
 

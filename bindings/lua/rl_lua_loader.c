@@ -189,47 +189,6 @@ static int rl_loader_finish_task_lua(lua_State *L)
     return 1;
 }
 
-static int rl_loader_wait_task_lua(lua_State *L)
-{
-    rl_loader_task_t *task = (rl_loader_task_t *)(uintptr_t)luaL_checkinteger(L, 1);
-    lua_pushinteger(L, rl_loader_wait_task(task));
-    return 1;
-}
-
-static int rl_loader_wait_tasks_lua(lua_State *L)
-{
-    size_t count = 0;
-    size_t i = 0;
-    rl_loader_task_t **tasks = NULL;
-    int rc = -1;
-
-    luaL_checktype(L, 1, LUA_TTABLE);
-    count = (size_t)lua_rawlen(L, 1);
-
-    if (count == 0) {
-        lua_pushinteger(L, 0);
-        return 1;
-    }
-
-    tasks = (rl_loader_task_t **)calloc(count, sizeof(rl_loader_task_t *));
-    if (tasks == NULL) {
-        lua_pushinteger(L, -1);
-        return 1;
-    }
-
-    for (i = 0; i < count; i++) {
-        lua_rawgeti(L, 1, (int)i + 1);
-        tasks[i] = (rl_loader_task_t *)(uintptr_t)luaL_checkinteger(L, -1);
-        lua_pop(L, 1);
-    }
-
-    rc = rl_loader_wait_tasks(tasks, count, NULL, NULL);
-    free(tasks);
-
-    lua_pushinteger(L, rc);
-    return 1;
-}
-
 static int rl_loader_free_task_lua(lua_State *L)
 {
     rl_loader_task_t *task = (rl_loader_task_t *)(uintptr_t)luaL_checkinteger(L, 1);
@@ -375,12 +334,6 @@ void rl_register_loader_bindings(lua_State *L)
 
     lua_pushcfunction(L, rl_loader_finish_task_lua);
     lua_setfield(L, -2, "loader_finish_task");
-
-    lua_pushcfunction(L, rl_loader_wait_task_lua);
-    lua_setfield(L, -2, "loader_wait_task");
-
-    lua_pushcfunction(L, rl_loader_wait_tasks_lua);
-    lua_setfield(L, -2, "loader_wait_tasks");
 
     lua_pushcfunction(L, rl_loader_free_task_lua);
     lua_setfield(L, -2, "loader_free_task");

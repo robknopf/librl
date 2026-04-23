@@ -13,6 +13,7 @@ package rl;
     <echo value="LIBRL_ROOT: ${LIBRL_ROOT}" />
     <compilerflag value="-I${LIBRL_ROOT}/include" />
     <compilerflag value="-DPLATFORM_WEB" if="emscripten" />
+    <compilerflag value="-Wno-incompatible-function-pointer-types" />
   </files>
 
   <!-- Desktop linking -->

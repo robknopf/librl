@@ -31,6 +31,11 @@ UNIT_TEST_LIB_SRCS := \
 UNIT_TEST_DESKTOP_BIN := /tmp/librl_unit_tests
 UNIT_TEST_WASM_JS := /tmp/librl_unit_tests.js
 
+# `tests/unit/fetch_url_stub.c` provides test doubles for the same symbol names
+# as `libwgutils.a` (real fetch_url implementation). Link the stub objects before
+# the archive and allow multiple definitions so the stub wins.
+UNIT_TEST_LINK_FLAGS := -Wl,-z,muldefs
+
 WASM_COMMON_LDFLAGS ?= \
 	-s WASM=1 \
 	-lidbfs.js \
@@ -67,27 +72,27 @@ test: test_desktop test_wasm
 	@echo "All smoke tests passed."
 
 test_haxe_bindings:
-	@$(MAKE) -C bindings/haxe test ROOT_DIR="$(abspath $(ROOT_DIR))"
+	@$(MAKE) -C $(ROOT_DIR)/tests/bindings/haxe test ROOT_DIR="$(abspath $(ROOT_DIR))"
 	@echo "Haxe binding tests passed."
 
 test_nim_bindings:
-	@$(MAKE) -C bindings/nim test ROOT_DIR="$(abspath $(ROOT_DIR))"
+	@$(MAKE) -C $(ROOT_DIR)/tests/bindings/nim test ROOT_DIR="$(abspath $(ROOT_DIR))"
 	@echo "Nim binding tests passed."
 
 test_lua_bindings:
-	@$(MAKE) -C bindings/lua test ROOT_DIR="$(abspath $(ROOT_DIR))"
+	@$(MAKE) -C $(ROOT_DIR)/tests/bindings/lua test ROOT_DIR="$(abspath $(ROOT_DIR))"
 	@echo "Lua binding tests passed."
 
 unit_test_desktop:
 	@$(MAKE) -C $(ROOT_DIR)/deps/wgutils desktop
-	$(CC_DESKTOP) $(CFLAGS) -DHEADLESS -I$(UNIT_TEST_DIR) $(INCLUDES) $(UNIT_TEST_MAIN) $(UNIT_TEST_SRCS) $(UNIT_TEST_LIB_SRCS) $(CORE_DESKTOP_ARCHIVE) -lssl -lcrypto -lz -o $(UNIT_TEST_DESKTOP_BIN)
+	$(CC_DESKTOP) $(CFLAGS) -DHEADLESS -I$(UNIT_TEST_DIR) $(INCLUDES) $(UNIT_TEST_MAIN) $(UNIT_TEST_SRCS) $(UNIT_TEST_LIB_SRCS) $(CORE_DESKTOP_ARCHIVE) $(UNIT_TEST_LINK_FLAGS) -lssl -lcrypto -lz -o $(UNIT_TEST_DESKTOP_BIN)
 	@$(UNIT_TEST_DESKTOP_BIN) > /tmp/librl_unit_tests_desktop.log 2>&1 || (cat /tmp/librl_unit_tests_desktop.log && exit 1)
 	@tail -n 1 /tmp/librl_unit_tests_desktop.log
 
 unit_test_wasm: check_node
 	@$(MAKE) -C $(ROOT_DIR)/deps/wgutils wasm
 	@mkdir -p "$(EM_CACHE_DIR)"
-	$(EM_ENV) $(CC_WASM) $(CFLAGS) -DHEADLESS -I$(UNIT_TEST_DIR) $(INCLUDES) $(UNIT_TEST_MAIN) $(UNIT_TEST_SRCS) $(UNIT_TEST_LIB_SRCS) $(CORE_WASM_ARCHIVE) -o $(UNIT_TEST_WASM_JS) $(WASM_COMMON_LDFLAGS) -s ENVIRONMENT=node -s EXIT_RUNTIME=1
+	$(EM_ENV) $(CC_WASM) $(CFLAGS) -DHEADLESS -I$(UNIT_TEST_DIR) $(INCLUDES) $(UNIT_TEST_MAIN) $(UNIT_TEST_SRCS) $(UNIT_TEST_LIB_SRCS) $(CORE_WASM_ARCHIVE) -o $(UNIT_TEST_WASM_JS) $(WASM_COMMON_LDFLAGS) $(UNIT_TEST_LINK_FLAGS) -s ENVIRONMENT=node -s EXIT_RUNTIME=1
 	@$(NODE) $(UNIT_TEST_WASM_JS) > /tmp/librl_unit_tests_wasm.log 2>&1 || (cat /tmp/librl_unit_tests_wasm.log && exit 1)
 	@tail -n 1 /tmp/librl_unit_tests_wasm.log
 

@@ -3,9 +3,18 @@ import { rl } from "../../lib/librl.js";
 (async function () {
   try {
     const assetHost = new URL(".", window.location.href).href.replace(/\/$/, "");
-    await rl.init({ idealWidth: 1024, idealHeight: 1280 });
-    rl.setAssetHost(assetHost);
-    rl.initWindow(800, 600, "Pick Example (Web)", rl.FLAG_MSAA_4X_HINT);
+    const initRc = await rl.init({
+      idealWidth: 1024,
+      idealHeight: 1280,
+      windowWidth: 800,
+      windowHeight: 600,
+      windowTitle: "Pick Example (Web)",
+      windowFlags: rl.FLAG_MSAA_4X_HINT,
+      assetHost: assetHost,
+    });
+    if (initRc !== 0) {
+      throw new Error(`rl.init failed: ${initRc}`);
+    }
     rl.setTargetFPS(60);
 
     const fontSize = 24;
@@ -47,7 +56,6 @@ import { rl } from "../../lib/librl.js";
       rl.destroyFont(komikaSmall);
       rl.destroyCamera3D(camera);
       rl.deinit();
-      rl.closeWindow();
     };
 
     window.addEventListener("beforeunload", cleanup);

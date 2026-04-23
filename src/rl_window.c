@@ -1,18 +1,15 @@
-#include "rl.h"
 #include "internal/exports.h"
-#include "internal/rl_state.h"
+#include "rl_window.h"
 #include "raylib.h"
-#include "logger/logger.h"
+#include "rl_scratch.h"
 
-RL_KEEP
-void rl_window_open(int width, int height, const char *title, int flags) {
-    if (!initialized) {
-        log_error("rl_window_open() called before rl_init()");
+void rl_window_open_internal(int width, int height, const char *title, unsigned int flags) {
+    if (IsWindowReady()) {
         return;
     }
-    if (flags != 0) {
-        SetConfigFlags((unsigned int)flags);
-    }
+    /* Always call before InitWindow. On some targets (e.g. Emscripten) skipping this when
+     * flags==0 can leave the GL canvas/context in a bad state; SetConfigFlags(0) is valid. */
+    SetConfigFlags((unsigned int)flags);
     InitWindow(width, height, title);
 }
 
@@ -115,8 +112,7 @@ void rl_window_set_position(int x, int y) {
     SetWindowPosition(x, y);
 }
 
-RL_KEEP
-void rl_window_close() {
+void rl_window_close_internal(void) {
     if (IsWindowReady()) {
         CloseWindow();
     }

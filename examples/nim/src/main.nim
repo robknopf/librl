@@ -30,66 +30,11 @@ type
     countdownTimer: float
     totalTime: float
     lastTime: float
-    assetsReady: int
-
-proc onAssetReady(path: cstring, userData: pointer) {.cdecl.} =
-  var ctx = cast[ptr AppContext](userData)
-  ctx.assetsReady.inc
-
-proc onAssetFailed(path: cstring, userData: pointer) {.cdecl.} =
-  log.error("Failed to load asset: " & $path)
-
-proc onMusicReady(path: cstring, userData: pointer) {.cdecl.} =
-  let ctx = cast[ptr AppContext](userData)
-  ctx.assetsReady.inc
-  ctx.bgm = rl_music_create(path)
-  discard rl_music_set_loop(ctx.bgm, true)
-  discard rl_music_play(ctx.bgm)
-
-type EnsureAssetSyncCallback = proc(path: string) {.closure.}
-
-proc ensureAssetSync(
-  assetPath: string,
-  successCallback: EnsureAssetSyncCallback = nil,
-  failCallback: EnsureAssetSyncCallback = nil
-) =
-  let task = rl_loader_import_asset_async(assetPath)
-  if task.isNil:
-    if failCallback != nil:
-      failCallback(assetPath)
-    return
-  let rc = rl_loader_wait_task(task)
-
-  if rc == 0:
-    if successCallback != nil:
-      successCallback(assetPath)
-  else:
-    if failCallback != nil:
-      failCallback(assetPath)
-
-
-
-proc ensureAsset(
-  path: cstring,
-  onSuccess: RLLoaderCallbackFn,
-  onFail: RLLoaderCallbackFn,
-  userData: pointer
-) =
-  let task = rl_loader_import_asset_async(path)
-  let rc = rl_loader_queue_task(task, path, onSuccess, onFail, userData)
-  if rc != RL_LOADER_QUEUE_TASK_OK:
-    log.error("Failed to queue asset: " & $path)
-
-proc queueAsset(path: cstring, ctx: ptr AppContext) =
-  let task = rl_loader_import_asset_async(path)
-  let rc = rl_loader_queue_task(task, path, onAssetReady, onAssetFailed, ctx)
-  if rc != RL_LOADER_QUEUE_TASK_OK:
-    log.error("Failed to queue asset: " & $path)
+    loadingGroup: RLTaskGroup[AppContext]
 
 proc onInit(userData: pointer) {.cdecl.} =
   var ctx = cast[ptr AppContext](userData)
 
-  rl_window_open(1024, 1280, "Hello, World! (Nim)", RL_FLAG_MSAA_4X_HINT)
   let monitorOverride = getEnv("RL_MONITOR", "")
   if monitorOverride.len > 0:
     try:
@@ -98,51 +43,54 @@ proc onInit(userData: pointer) {.cdecl.} =
       log.warn("Ignoring invalid RL_MONITOR value: " & monitorOverride)
   rl_window_set_monitor(1)
   rl_set_target_fps(60.cint)
+  ctx.greyAlphaColor = rl_color_create(0, 0, 0, 128)
+  rl_enable_lighting()
+  rl_set_light_direction(-0.6, -1.0, -0.5)
+  rl_set_light_ambient(0.25)
+  ctx.camera = rl_camera3d_create(
+    12.0, 12.0, 12.0,
+    0.0, 1.0, 0.0,
+    0.0, 1.0, 0.0,
+    45.0, RL_CAMERA_PERSPECTIVE
+  )
+  discard rl_camera3d_set_active(ctx.camera)
+  ctx.lastTime = rl_get_time().float
+  ctx.countdownTimer = 5.0
 
-  queueAsset(fontPath, ctx)
-  queueAsset(modelPath, ctx)
-  queueAsset(spritePath, ctx)
-
-  ensureAssetSync(bgmPath,
-    proc(path: string) =
-    log.info("Loaded " & path)
-    ctx.bgm = rl_music_create(path.cstring)
-    discard rl_music_set_loop(ctx.bgm, true)
-    discard rl_music_play(ctx.bgm),
-
-    proc(path: string) =
-    log.error("Failed to load asset: " & path)
+  ctx.loadingGroup = loaderCreateTaskGroup(
+    ctx,
+    onComplete = proc(group: RLTaskGroup[AppContext], loadedCtx: var AppContext) =
+      loadedCtx.loadingGroup = nil,
+    onError = proc(group: RLTaskGroup[AppContext], loadedCtx: var AppContext) =
+      log.error("asset import failed: " & group.failedPaths().join(", "))
+      loadedCtx.loadingGroup = nil
+      rl_stop()
+  )
+  ctx.loadingGroup.addImportTask(modelPath, onSuccess = proc(path: string, loadedCtx: var AppContext) =
+    loadedCtx.gumshoe = rl_model_create(path.cstring)
+    discard rl_model_set_animation(loadedCtx.gumshoe, 1)
+    discard rl_model_set_animation_speed(loadedCtx.gumshoe, 1.0)
+    discard rl_model_set_animation_loop(loadedCtx.gumshoe, true)
+  )
+  ctx.loadingGroup.addImportTask(spritePath, onSuccess = proc(path: string, loadedCtx: var AppContext) =
+    loadedCtx.sprite = rl_sprite3d_create(path.cstring)
+  )
+  ctx.loadingGroup.addImportTask(fontPath, onSuccess = proc(path: string, loadedCtx: var AppContext) =
+    loadedCtx.komika = rl_font_create(path.cstring, fontSize.cfloat)
+    loadedCtx.komikaSmall = rl_font_create(path.cstring, smallFontSize.cfloat)
+  )
+  ctx.loadingGroup.addImportTask(bgmPath, onSuccess = proc(path: string, loadedCtx: var AppContext) =
+    loadedCtx.bgm = rl_music_create(path.cstring)
+    discard rl_music_set_loop(loadedCtx.bgm, true)
+    discard rl_music_play(loadedCtx.bgm)
   )
 
 
 proc onTick(userData: pointer) {.cdecl.} =
   var ctx = cast[ptr AppContext](userData)
 
-  if ctx.assetsReady < 3:
+  if not ctx.loadingGroup.isNil and ctx.loadingGroup.process() > 0:
     return
-
-  if ctx.komika == 0:
-    ctx.greyAlphaColor = rl_color_create(0, 0, 0, 128)
-    rl_enable_lighting()
-    rl_set_light_direction(-0.6, -1.0, -0.5)
-    rl_set_light_ambient(0.25)
-
-    ctx.komika = rl_font_create(fontPath.cstring, fontSize.cfloat)
-    ctx.komikaSmall = rl_font_create(fontPath.cstring, smallFontSize.cfloat)
-    ctx.gumshoe = rl_model_create(modelPath.cstring)
-    ctx.sprite = rl_sprite3d_create(spritePath.cstring)
-    ctx.camera = rl_camera3d_create(
-      12.0, 12.0, 12.0,
-      0.0, 1.0, 0.0,
-      0.0, 1.0, 0.0,
-      45.0, RL_CAMERA_PERSPECTIVE
-    )
-    discard rl_camera3d_set_active(ctx.camera)
-    discard rl_model_set_animation(ctx.gumshoe, 1)
-    discard rl_model_set_animation_speed(ctx.gumshoe, 1.0)
-    discard rl_model_set_animation_loop(ctx.gumshoe, true)
-    ctx.lastTime = rl_get_time().float
-    ctx.countdownTimer = 5.0
 
   let currentTime = rl_get_time().float
   let deltaTime = currentTime - ctx.lastTime
@@ -199,10 +147,16 @@ proc onShutdown(userData: pointer) {.cdecl.} =
   if ctx.greyAlphaColor != 0: rl_color_destroy(ctx.greyAlphaColor)
   if ctx.camera != 0: rl_camera3d_destroy(ctx.camera)
   rl_deinit()
-  rl_window_close()
 
 when isMainModule:
   var ctx = AppContext()
-  rl_init()
-  discard rl_set_asset_host(assetHost)
+  var initCfg: RLInitConfig
+  zeroMem(addr initCfg, sizeof(initCfg).csize_t)
+  initCfg.window_width = 1024
+  initCfg.window_height = 1280
+  initCfg.window_title = "Hello, World! (Nim)"
+  initCfg.window_flags = RL_FLAG_MSAA_4X_HINT.cuint
+  initCfg.asset_host = assetHost
+  if rl_init(addr initCfg) != 0:
+    quit(1)
   rl_run(onInit, onTick, onShutdown, addr ctx)

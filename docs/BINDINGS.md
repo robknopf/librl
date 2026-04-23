@@ -73,8 +73,10 @@ Notes:
   - telemetry helpers:
     - `resetPickStats()`
     - `getPickStats()`
-- JS `initWindow(width, height, title, flags)` maps directly to C flags.
-  - Example: `rl.initWindow(800, 600, "Title", rl.FLAG_MSAA_4X_HINT)`
+- JS `init(opts)` calls `rl_init()` with a wasm `rl_init_config_t` built from:
+  - `windowWidth`, `windowHeight`, `windowTitle`, `windowFlags`, `assetHost`, `loaderCacheDir`
+  - (plus `idealWidth` / `idealHeight` for browser resize/aspect heuristics)
+  - Example: `await rl.init({ windowWidth: 800, windowHeight: 600, windowTitle: "Title", windowFlags: rl.FLAG_MSAA_4X_HINT, assetHost })`
 - Loader/cache helpers currently exposed in JS:
   - `uncacheFile(filename)`
   - `clearCache()`
@@ -168,7 +170,9 @@ Async loader sugar:
 
 - The binding exposes:
   - `RL.loaderImportAssetAsync(path: String): RLLoaderTaskPtr`
-  - `RL.loaderWaitTasks(tasks: Array<Dynamic>): Int` (each item is an `RLLoaderTaskPtr`)
+  - `RL.loaderPollTask(task: RLLoaderTaskPtr): Bool`
+  - `RL.loaderFinishTask(task: RLLoaderTaskPtr): Int`
+  - `RL.loaderTaskGroup(): RLTaskGroup` convenience wrapper (tracks remaining/failures over `loaderTick()`)
   - `RL.loaderQueueTask(task, path, onSuccess, onFailure, ctx)`
 - `rl_run` is wrapped so Haxe passes plain lifecycle functions with a Haxe context object:
   - `RL.run(onInit, onTick, onShutdown, ctx)`

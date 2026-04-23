@@ -39,7 +39,14 @@ class Main {
 	static function loadCppia(cppiaPath:String, ctx:AppContext):Bool {
     
 		var task = RL.loaderImportAssetAsync(cppiaPath);
-		var result = RL.loaderWaitTask(task);
+		var result = -1;
+		while (RL.loaderTaskIsValid(task) && !RL.loaderPollTask(task)) {
+			RL.loaderTick();
+		}
+		if (RL.loaderTaskIsValid(task)) {
+			result = RL.loaderFinishTask(task);
+			RL.loaderFreeTask(task);
+		}
 		if (result == 0) {
 			try {
 				var cachedPath = Path.join(["cache", cppiaPath]);
@@ -58,7 +65,6 @@ class Main {
 	static function onInit(ctx:AppContext):Void {
 		//RL.loaderClearCache();
 
-		RL.windowOpen(800, 600, "librl cppia host (Haxe)", RL.FLAG_MSAA_4X_HINT);
 		RL.setTargetFps(60);
 		lastTime = RL.getTime();
 
@@ -96,13 +102,21 @@ class Main {
 			trace("No onShutdown callback");
 		}
 		RL.deinit();
-		RL.windowClose();
 	}
 
 	static function main():Void {
 		var ctx:AppContext = {};
-		RL.init();
-		RL.setAssetHost(ASSET_HOST);
+		var initRc = RL.init({
+			windowWidth: 800,
+			windowHeight: 600,
+			windowTitle: "librl cppia host (Haxe)",
+			windowFlags: RL.FLAG_MSAA_4X_HINT,
+			assetHost: ASSET_HOST,
+		});
+		if (initRc != 0) {
+			trace("RL.init failed: " + initRc);
+			return;
+		}
 		RL.run(onInit, onTick, onShutdown, ctx);
 	}
 }

@@ -9,6 +9,7 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 
 #ifdef PLATFORM_WEB
 static const char *ASSET_HOST = "./";
@@ -43,6 +44,40 @@ static void rl_loader_import_asset_failed_cb_default(const char *path,
                            path != NULL ? path : "(null)");
 }
 
+static int finish_import_tasks(rl_loader_task_t **tasks, size_t task_count) {
+  size_t remaining = 0;
+  size_t i = 0;
+  int failures = 0;
+
+  for (i = 0; i < task_count; i++) {
+    if (tasks[i] != NULL) {
+      remaining++;
+    }
+  }
+
+  while (remaining > 0) {
+    rl_loader_tick();
+    for (i = 0; i < task_count; i++) {
+      int rc = 0;
+      const char *path = NULL;
+      if (tasks[i] == NULL || !rl_loader_poll_task(tasks[i])) {
+        continue;
+      }
+      path = rl_loader_get_task_path(tasks[i]);
+      rc = rl_loader_finish_task(tasks[i]);
+      rl_loader_free_task(tasks[i]);
+      tasks[i] = NULL;
+      remaining--;
+      if (rc != 0) {
+        failures++;
+        rl_loader_import_asset_failed_cb_default(path, NULL);
+      }
+    }
+  }
+
+  return failures == 0 ? 0 : -1;
+}
+
 static void on_bgm_ready(const char *path, void *user_data) {
   app_context_t *ctx = (app_context_t *)user_data;
   if (ctx->bgm != 0) {
@@ -62,9 +97,6 @@ static void play_bgm(const char *path, void *user_data) {
 static void on_init(void *user_data) {
   app_context_t *ctx = (app_context_t *)user_data;
 
-  // window
-  rl_window_open(1024, 1280, "Hello, World! (C simple)",
-                 RL_WINDOW_FLAG_MSAA_4X_HINT);
   rl_set_target_fps(60);
 
   // camera
@@ -97,9 +129,7 @@ static void on_init(void *user_data) {
       sizeof(asset_import_tasks) / sizeof(asset_import_tasks[0]);
 
   // wait until they all have been fetched/loaded
-  if (rl_loader_wait_tasks(asset_import_tasks, asset_import_tasks_count,
-                           rl_loader_import_asset_failed_cb_default,
-                           NULL) != 0) {
+  if (finish_import_tasks(asset_import_tasks, asset_import_tasks_count) != 0) {
     rl_logger_message_source(RL_LOGGER_LEVEL_ERROR, "example", 0,
                              "Failed to import required startup assets");
     rl_stop();
@@ -202,21 +232,24 @@ static void on_shutdown(void *user_data) {
   if (ctx->camera != 0)
     rl_camera3d_destroy(ctx->camera);
 
-  // NOTE: rl_deinit() doesn't belong here, it should be in main.
-  // There is an issue with rl_window_close() releasing bound elements 
-  // like textures, causing a failure when rl_deinit() tries to clean up.
-  // TODO:  Fix this issue. 
-  // - Force window lifecycle to be owned by init/deinit?   
-  // - Guard in rl_deinit() to prevent releasing things the window already did?
   rl_deinit();
-  rl_window_close();
 }
 
 int main(void) {
   app_context_t ctx = {0};
 
-  rl_init();
-  rl_set_asset_host(ASSET_HOST);
+  {
+    rl_init_config_t init_cfg;
+    memset(&init_cfg, 0, sizeof(init_cfg));
+    init_cfg.window_width = 1024;
+    init_cfg.window_height = 1280;
+    init_cfg.window_title = "Hello, World! (C simple)";
+    init_cfg.window_flags = RL_WINDOW_FLAG_MSAA_4X_HINT;
+    init_cfg.asset_host = ASSET_HOST;
+    if (rl_init(&init_cfg) != 0) {
+      return 1;
+    }
+  }
   rl_run(on_init, on_tick, on_shutdown, &ctx);
 
   return 0;

@@ -12,9 +12,25 @@ import haxe.ds.StringMap;
 import rl.InjectLibRL;
 import rl.RLHandle;
 import rl.RLLoader.RLLoaderTaskPtr;
+import rl.RLTaskGroup.RLTaskGroupCallback;
+import rl.RLTaskGroup.RLTaskGroupTaskCallback;
+
+/**
+ * Optional `rl_init` settings (`rl_config.h`). Omitted / null fields are 0 or empty
+ * on the C side so `rl_init_apply_defaults` can fill them.
+ */
+typedef RLInitConfig = {
+	?windowWidth: Int,
+	?windowHeight: Int,
+	?windowTitle: String,
+	?windowFlags: Int,
+	?assetHost: String,
+	?loaderCacheDir: String,
+};
 
 #if cpp
 @:include("rl.h")
+@:include("rl_config.h")
 #end
 private extern class RLNative {
   // --- Types (rl_handle_t = unsigned int) ---
@@ -42,8 +58,29 @@ private extern class RLNative {
   static inline var LOGGER_LEVEL_FATAL: Int = 5;
 
   // --- Core lifecycle ---
-  @:native("rl_init")
-  static function init(): Void;
+  // NOTE: hxcpp may ignore `@:functionCode` bodies in some configurations; `untyped __cpp__` is reliable here.
+  static inline function initOrNullConfigNative(): Int {
+    return untyped __cpp__("::rl_init((const rl_init_config_t *)0)");
+  }
+
+  static inline function initConfigNative(
+    width: Int,
+    height: Int,
+    title: String,
+    flags: Int,
+    asset: String,
+    cache: String
+  ): Int {
+    return untyped __cpp__(
+      "({int _hx_out = 0; rl_init_config_t cfg = {}; cfg.window_width = (int){0}; cfg.window_height = (int){1}; cfg.window_flags = (unsigned int){2}; cfg.window_title = (({3}).length > 0) ? ({3}).utf8_str() : (const char *)0; cfg.asset_host = (({4}).length > 0) ? ({4}).utf8_str() : (const char *)0; cfg.loader_cache_dir = (({5}).length > 0) ? ({5}).utf8_str() : (const char *)0; _hx_out = (int)::rl_init(&cfg); _hx_out;})",
+      width,
+      height,
+      flags,
+      title,
+      asset,
+      cache
+    );
+  }
 
   @:native("rl_deinit")
   static function deinit(): Void;
@@ -309,17 +346,11 @@ private extern class RLNative {
   static function renderEndMode3D(): Void;
 
   // --- Window ---
-  @:native("rl_window_open")
-  static function windowOpen(width: Int, height: Int, title: String, flags: Int): Void;
-
   @:native("rl_window_set_title")
   static function windowSetTitle(title: String): Void;
 
   @:native("rl_window_set_size")
   static function windowSetSize(width: Int, height: Int): Void;
-
-  @:native("rl_window_close")
-  static function windowClose(): Void;
 
   @:native("rl_window_get_screen_size")
   static function windowGetScreenSize(): RLVec2;
@@ -558,6 +589,19 @@ abstract RL(RLNative) from RLNative to RLNative {
     return result;
   }
 
+  public static inline function init(?config: RLInitConfig): Int {
+    if (config == null) {
+      return RLNative.initOrNullConfigNative();
+    }
+    var w: Int = config.windowWidth != null ? config.windowWidth : 0;
+    var h: Int = config.windowHeight != null ? config.windowHeight : 0;
+    var title: String = config.windowTitle != null ? config.windowTitle : "";
+    var flags: Int = config.windowFlags != null ? config.windowFlags : 0;
+    var asset: String = config.assetHost != null ? config.assetHost : "";
+    var cache: String = config.loaderCacheDir != null ? config.loaderCacheDir : "";
+    return RLNative.initConfigNative(w, h, title, flags, asset, cache);
+  }
+
   public static inline function run<T>(initFn: T->Void, tickFn: T->Void, shutdownFn: T->Void, ctx: T): Void {
     var initSpringboard: cpp.Callable<cpp.RawPointer<cpp.Void>->Void> =
       cpp.Function.fromStaticFunction(RLBridge.onInitSpringboard);
@@ -597,12 +641,8 @@ abstract RL(RLNative) from RLNative to RLNative {
     return RLLoader.loaderFinishTask(task);
   }
 
-  public static function loaderWaitTask(task: RLLoaderTaskPtr): Int {
-    return RLLoader.loaderWaitTask(task);
-  }
-
-  public static function loaderWaitTasks(tasks: Array<RLLoaderTaskPtr>): Int {
-    return RLLoader.loaderWaitTasks(tasks);
+  public static inline function loaderCreateTaskGroup<T>(?onComplete:RLTaskGroupCallback<T>, ?onError:RLTaskGroupCallback<T>, ?ctx:T): RLTaskGroup {
+    return new RLTaskGroup(cast onComplete, cast onError, ctx);
   }
 
   public static inline function loaderTaskInvalid(): RLLoaderTaskPtr {

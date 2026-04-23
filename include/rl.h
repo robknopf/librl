@@ -24,6 +24,7 @@
 #include "rl_text.h" // IWYU pragma: keep
 #include "rl_texture.h" // IWYU pragma: keep
 #include "rl_types.h" // IWYU pragma: keep
+#include "rl_config.h"
 #include "rl_window.h" // IWYU pragma: keep
 
 #ifdef __cplusplus
@@ -34,7 +35,7 @@ typedef void (*rl_init_fn)(void *user_data);
 typedef void (*rl_tick_fn)(void *user_data);
 typedef void (*rl_shutdown_fn)(void *user_data);
 
-void rl_init();
+int rl_init(const rl_init_config_t *config);
 void rl_deinit();
 int rl_set_asset_host(const char *asset_host);
 const char *rl_get_asset_host(void);

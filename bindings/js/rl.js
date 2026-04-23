@@ -77,11 +77,83 @@ const RL = {
     waitForIdbfsReady: async (timeoutMs = 2000) => {
         return RL._waitForIdbfsReady(timeoutMs);
     },
+    _mallocOrThrow: (size) => {
+        const m = moduleInstance && (moduleInstance._malloc || moduleInstance.malloc);
+        if (typeof m !== "function") {
+            throw new Error("malloc not available in emscripten module (expected _malloc or malloc)");
+        }
+        const p = m(size) >>> 0;
+        if (!p) {
+            throw new Error("malloc failed");
+        }
+        return p;
+    },
+    _freeIfPossible: (p) => {
+        if (!p) {
+            return;
+        }
+        const f = moduleInstance && (moduleInstance._free || moduleInstance.free);
+        if (typeof f === "function") {
+            f(p);
+        }
+    },
+    _stringToNewUtf8OrNull: (s) => {
+        if (s == null) {
+            return 0;
+        }
+        if (typeof s !== "string") {
+            s = String(s);
+        }
+        if (moduleInstance.stringToNewUTF8) {
+            return moduleInstance.stringToNewUTF8(s) >>> 0;
+        }
+        const len = (moduleInstance.lengthBytesUTF8 ? moduleInstance.lengthBytesUTF8(s) : (s.length * 4 + 1)) + 0;
+        const bytes = RL._mallocOrThrow(len);
+        if (moduleInstance.stringToUTF8) {
+            moduleInstance.stringToUTF8(s, bytes, len);
+        } else {
+            throw new Error("stringToUTF8 not available; cannot encode JS strings to wasm memory");
+        }
+        return bytes;
+    },
+    _installWebResizeHandler: (opts) => {
+        if (typeof window === "undefined" || !window.addEventListener) {
+            return;
+        }
+
+        const idealWidth = opts.idealWidth || opts.windowWidth || 1024;
+        const idealHeight = opts.idealHeight || opts.windowHeight || 1280;
+        const aspectRatio = idealWidth / idealHeight;
+
+        window.addEventListener("resize", (_event) => {
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+
+            let newWidth;
+            let newHeight;
+            if (windowWidth / windowHeight > aspectRatio) {
+                newHeight = windowHeight;
+                newWidth = windowHeight * aspectRatio;
+            } else {
+                newWidth = windowWidth;
+                newHeight = windowWidth / aspectRatio;
+            }
+
+            moduleInstance.ccall("rl_window_set_size", null, ["number", "number"], [newWidth, newHeight]);
+        });
+    },
     init: async (opts) => {
         opts = opts || {};
         opts.env = opts.env || {};
         moduleOptions = {...opts};
         moduleOptions.env = {...opts.env};
+
+        if (moduleOptions.idealWidth == null) {
+            moduleOptions.idealWidth = moduleOptions.windowWidth;
+        }
+        if (moduleOptions.idealHeight == null) {
+            moduleOptions.idealHeight = moduleOptions.windowHeight;
+        }
 
         // set up env for the Module
         if (!moduleOptions.env.canvas) {
@@ -112,7 +184,101 @@ const RL = {
 
         moduleInstance.initScratchArea();
 
-        moduleInstance.ccall('rl_init', null, [], []);
+        const cfgSize = moduleInstance.ccall("rl_init_config_sizeof", "number", [], []) >>> 0;
+        if (!cfgSize) {
+            throw new Error("rl_init_config_sizeof returned 0");
+        }
+
+        const heapMalloc = moduleInstance && (moduleInstance._malloc || moduleInstance.malloc);
+        const useHeapAlloc = typeof heapMalloc === "function";
+        const canUseStack =
+            moduleInstance &&
+            typeof moduleInstance.stackSave === "function" &&
+            typeof moduleInstance.stackAlloc === "function" &&
+            typeof moduleInstance.stackRestore === "function";
+        if (!useHeapAlloc && !canUseStack) {
+            throw new Error("init config allocation unavailable (need malloc or stackAlloc)");
+        }
+
+        let stackTop = 0;
+        const allocTemp = (size) => {
+            if (useHeapAlloc) {
+                return RL._mallocOrThrow(size);
+            }
+            return moduleInstance.stackAlloc(size) >>> 0;
+        };
+        const freeTemp = (ptr) => {
+            if (useHeapAlloc) {
+                RL._freeIfPossible(ptr);
+            }
+        };
+        const stringToTempUtf8OrNull = (s) => {
+            if (s == null) {
+                return 0;
+            }
+            if (typeof s !== "string") {
+                s = String(s);
+            }
+            const len = (moduleInstance.lengthBytesUTF8 ? moduleInstance.lengthBytesUTF8(s) : (s.length * 4 + 1)) + 1;
+            const ptr = allocTemp(len);
+            if (moduleInstance.stringToUTF8) {
+                moduleInstance.stringToUTF8(s, ptr, len);
+                return ptr >>> 0;
+            }
+            throw new Error("stringToUTF8 not available; cannot encode JS strings to wasm memory");
+        };
+
+        const allocatedPtrs = [];
+        let initRc = -1;
+        try {
+            if (!useHeapAlloc) {
+                stackTop = moduleInstance.stackSave();
+            }
+
+            const cfgPtr = allocTemp(cfgSize);
+            allocatedPtrs.push(cfgPtr);
+            const heapU8 = moduleInstance.HEAPU8;
+            heapU8.fill(0, cfgPtr, cfgPtr + cfgSize);
+
+            const heapI32 = moduleInstance.HEAP32;
+            const setI32 = (offset, v) => {
+                heapI32[(cfgPtr + offset) >> 2] = v | 0;
+            };
+
+            // Layout must match `rl_init_config_t` in include/rl_config.h
+            setI32(0, (moduleOptions.windowWidth || 0) | 0);
+            setI32(4, (moduleOptions.windowHeight || 0) | 0);
+
+            const titlePtr = stringToTempUtf8OrNull(moduleOptions.windowTitle);
+            const assetPtr = stringToTempUtf8OrNull(moduleOptions.assetHost);
+            const cachePtr = stringToTempUtf8OrNull(moduleOptions.loaderCacheDir);
+            allocatedPtrs.push(titlePtr, assetPtr, cachePtr);
+
+            setI32(8, titlePtr >>> 0);
+            setI32(12, (moduleOptions.windowFlags || 0) >>> 0);
+            setI32(16, assetPtr >>> 0);
+            setI32(20, cachePtr >>> 0);
+
+            initRc = moduleInstance.ccall("rl_init", "number", ["number"], [cfgPtr]) | 0;
+        } finally {
+            if (useHeapAlloc) {
+                for (const ptr of allocatedPtrs) {
+                    freeTemp(ptr);
+                }
+            } else if (canUseStack) {
+                moduleInstance.stackRestore(stackTop);
+            }
+        }
+
+        if (initRc !== 0) {
+            return initRc;
+        }
+
+        RL._installWebResizeHandler(moduleOptions);
+        if (typeof window !== "undefined" && window.dispatchEvent) {
+            window.dispatchEvent(new Event("resize"));
+        }
+        return 0;
     },
     setAssetHost: (assetHost) => {
         if (typeof assetHost !== "string") {
@@ -161,9 +327,6 @@ const RL = {
     finishTask: (task) => {
         return moduleInstance.ccall('rl_loader_finish_task', 'number', ['number'], [task]);
     },
-    waitTask: (task) => {
-        return moduleInstance.ccall('rl_loader_wait_task', 'number', ['number'], [task]);
-    },
     getTaskPath: (task) => {
         return moduleInstance.ccall('rl_loader_get_task_path', 'string', ['number'], [task]);
     },
@@ -177,6 +340,101 @@ const RL = {
             ['number', 'string', 'number', 'number', 'number'],
             [task, path, 0, 0, 0]
         );
+    },
+    loaderTick: () => {
+        moduleInstance.ccall('rl_loader_tick', null, [], []);
+    },
+    createTaskGroup: (onComplete = null, onError = null, ctx = null) => {
+        const group = {
+            entries: [],
+            callbackContext: ctx,
+            onCompleteCallback: typeof onComplete === "function" ? onComplete : null,
+            onErrorCallback: typeof onError === "function" ? onError : null,
+            terminalCallbackInvoked: false,
+            failedCount: 0,
+            completedCount: 0,
+            addTask(task, onSuccess = null, onTaskError = null) {
+                if (!task) {
+                    return;
+                }
+                this.entries.push({
+                    task,
+                    path: RL.getTaskPath(task),
+                    done: false,
+                    rc: 1,
+                    onSuccess: typeof onSuccess === "function" ? onSuccess : null,
+                    onError: typeof onTaskError === "function" ? onTaskError : null,
+                });
+            },
+            addImportTask(path, onSuccess = null, onTaskError = null) {
+                this.addTask(RL.importAsset(path), onSuccess, onTaskError);
+            },
+            addImportTasks(paths, onSuccess = null, onTaskError = null) {
+                if (!Array.isArray(paths)) {
+                    return;
+                }
+                for (const path of paths) {
+                    this.addImportTask(path, onSuccess, onTaskError);
+                }
+            },
+            remainingTasks() {
+                return this.entries.length - this.completedCount;
+            },
+            isDone() {
+                return this.remainingTasks() === 0;
+            },
+            hasFailures() {
+                return this.failedCount > 0;
+            },
+            tick() {
+                RL.loaderTick();
+                for (const entry of this.entries) {
+                    if (entry.done) {
+                        continue;
+                    }
+                    if (!RL.pollTask(entry.task)) {
+                        continue;
+                    }
+                    entry.rc = RL.finishTask(entry.task);
+                    RL.freeTask(entry.task);
+                    entry.done = true;
+                    this.completedCount += 1;
+                    if (entry.rc !== 0) {
+                        this.failedCount += 1;
+                        if (entry.onError) {
+                            entry.onError(entry.path, this.callbackContext);
+                        }
+                    } else if (entry.onSuccess) {
+                        entry.onSuccess(entry.path, this.callbackContext);
+                    }
+                }
+                return this.remainingTasks() > 0;
+            },
+            process() {
+                this.tick();
+                if (!this.terminalCallbackInvoked && this.remainingTasks() === 0) {
+                    this.terminalCallbackInvoked = true;
+                    if (this.hasFailures()) {
+                        if (this.onErrorCallback) {
+                            this.onErrorCallback(this, this.callbackContext);
+                        }
+                    } else if (this.onCompleteCallback) {
+                        this.onCompleteCallback(this, this.callbackContext);
+                    }
+                }
+                return this.remainingTasks();
+            },
+            failedPaths() {
+                const out = [];
+                for (const entry of this.entries) {
+                    if (entry.done && entry.rc !== 0) {
+                        out.push(entry.path);
+                    }
+                }
+                return out;
+            },
+        };
+        return group;
     },
     isLocalFile: (filename) => {
         return moduleInstance.ccall('rl_loader_is_local', 'number', ['string'], [filename]) !== 0;
@@ -306,46 +564,6 @@ const RL = {
     },
     getEventListenerCount: (eventName) => {
         return moduleInstance.ccall('rl_event_listener_count', 'number', ['string'], [eventName]);
-    },
-
-    openWindow: (width, height, title, flags = 0) => {
-        let windowFlags = Number.isInteger(flags) ? flags : 0;
-
-        // we default to keeping the canvas the same aspect ratio as the ideal dimensions
-        var idealWidth = moduleOptions.idealWidth || 1024;
-        var idealHeight = moduleOptions.idealHeight || 1280;
-        var aspectRatio = idealWidth / idealHeight;
-
-        window.addEventListener('resize', (_event) => {
-            const windowWidth = window.innerWidth;
-            const windowHeight = window.innerHeight;
-
-            let newWidth, newHeight;
-            if (windowWidth / windowHeight > aspectRatio) {
-                newHeight = windowHeight;
-                newWidth = windowHeight * aspectRatio;
-            } else {
-                newWidth = windowWidth;
-                newHeight = windowWidth / aspectRatio;
-            }
-
-            //console.log("resize", newWidth, newHeight);
-
-            moduleInstance.ccall(
-                "rl_window_set_size",
-                null,
-                ["number", "number"],
-                [newWidth, newHeight]
-            );
-        });
-
-
-        moduleInstance.ccall('rl_window_open', null, ['number', 'number', 'string', 'number'], [width, height, title, windowFlags]);
-        // force an initial resize event
-        window.dispatchEvent(new Event('resize'));
-    },
-    closeWindow: () => {
-        return moduleInstance.ccall('rl_window_close', null, [], []);
     },
     setWindowSize: (width, height) => {
         return moduleInstance.ccall('rl_window_set_size', null, ['number', 'number'], [width, height]);
@@ -604,6 +822,9 @@ const RL = {
         if (rc !== 0) throw new Error(`Failed to load font: ${path} (rc=${rc})`);
         return moduleInstance.ccall("rl_font_create", "number", ["string", "number"], [path, fontSize]);
     },
+    createFontFromLocal: (path, fontSize) => moduleInstance.ccall(
+        "rl_font_create", "number", ["string", "number"], [path, fontSize]
+    ),
     destroyFont: (font) => moduleInstance.ccall(
         "rl_font_destroy", null, ["number"], [font]
     ),
@@ -618,6 +839,9 @@ const RL = {
         if (rc !== 0) throw new Error(`Failed to load model: ${path} (rc=${rc})`);
         return moduleInstance.ccall("rl_model_create", "number", ["string"], [path]);
     },
+    createModelFromLocal: (path) => moduleInstance.ccall(
+        "rl_model_create", "number", ["string"], [path]
+    ),
     modelSetTransform: (
         model,
         positionX, positionY, positionZ,
@@ -718,6 +942,9 @@ const RL = {
         if (rc !== 0) throw new Error(`Failed to load music: ${path} (rc=${rc})`);
         return moduleInstance.ccall("rl_music_create", "number", ["string"], [path]);
     },
+    createMusicFromLocal: (path) => moduleInstance.ccall(
+        "rl_music_create", "number", ["string"], [path]
+    ),
     destroyMusic: (music) => moduleInstance.ccall(
         "rl_music_destroy", null, ["number"], [music]
     ),
@@ -790,6 +1017,9 @@ const RL = {
         if (rc !== 0) throw new Error(`Failed to load sprite3d: ${path} (rc=${rc})`);
         return moduleInstance.ccall("rl_sprite3d_create", "number", ["string"], [path]);
     },
+    createSprite3DFromLocal: (path) => moduleInstance.ccall(
+        "rl_sprite3d_create", "number", ["string"], [path]
+    ),
     createSprite3DFromTexture: (texture) => moduleInstance.ccall(
         "rl_sprite3d_create_from_texture", "number", ["number"], [texture]
     ),

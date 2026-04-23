@@ -6,7 +6,7 @@ This document summarizes the current public C API exposed by `include/*.h`.  As 
 
 - Most resource APIs use `rl_handle_t` (`unsigned int`) as an opaque handle.
 - `0` is generally an invalid handle unless a subsystem documents otherwise.
-- Call `rl_init()` before using subsystem APIs, and `rl_deinit()` at shutdown.
+- Call `rl_init(NULL)` (or `rl_init(&config)`; see `include/rl_config.h`) before using subsystem APIs, and `rl_deinit()` at shutdown.
 
 ## Resource Lifetime Semantics
 
@@ -42,14 +42,14 @@ Header note:
 
 Main responsibilities:
 
-- Window open/close lifecycle (`rl_window_open(width, height, title, flags)`, `rl_window_close()`)
-- Size/position/title helpers
+- Window size/position/title helpers
 - Monitor/screen/window queries
 
 Notes:
 
-- `rl_init()` initializes the runtime/subsystems; it does not open a window.
-- `rl_window_close()` is window-only lifecycle and no longer performs hidden `rl_deinit()` work.
+- The OS window is created by `rl_init()` (driven by `include/rl_config.h`), and destroyed by `rl_deinit()`.
+- There is no public `rl_window_open` / `rl_window_close` API anymore.
+- `include/rl_window.h` includes an explicit comment with the internal-only open/close signatures for reference.
 
 ## Shape (`include/rl_shape.h`)
 
@@ -238,10 +238,11 @@ Main responsibilities:
 
 Notes:
 
-- `rl_start(...)` blocks until loader readiness, then runs `init_fn` once.
+- `rl_start(...)` registers `init_fn` / `tick_fn` / `shutdown_fn` and returns immediately. Loader readiness, one-time `init_fn`, and per-frame `tick_fn` all run from `rl_tick()` or from the internal `rl_run()` loop (so async loader work, e.g. wasm IDBFS, can complete between host frames).
 - `rl_tick()` is for manual stepping and returns `0` on success, `-1` for invalid usage/state.
 - `rl_stop()` breaks `rl_run(...)` loops; outside loop mode it performs shutdown teardown.
 - `rl_run(...)` is the convenience wrapper that starts, loops, and stops for you.
+- **Emscripten / web:** the internal `rl_run` frame callback does **not** call `WindowShouldClose()`. In raylib’s `rcore_web.c`, that function performs `emscripten_sleep(12)` on every call (it expects an Asyncify/JSPI-capable app link) even though it always returns `false` on the web. Desktop builds still use `WindowShouldClose()` in the `rl_run` loop.
 
 ## Frame Commands (`include/rl_frame_commands.h`)
 
@@ -344,12 +345,16 @@ static void host_log(void *user_data, int level, const char *message)
 /* The real Lua-driven host example lives in examples/c-lua/main.c. */
 void run_lua_module_example(void)
 {
+    rl_init_config_t init_cfg = {0};
     rl_module_host_api_t host = {0};
     rl_module_config_t config = {800, 600, 60, 0, "module example"};
     module_runtime_t lua = {0};
     char error[256] = {0};
 
-    rl_init();
+    init_cfg.window_width = config.width;
+    init_cfg.window_height = config.height;
+    init_cfg.window_title = config.title;
+    (void)rl_init(&init_cfg);
 
     host.log = host_log;
     host.event_on = host_event_on;

@@ -28,7 +28,7 @@ WASM_COMMON_LDFLAGS ?= \
 	-s MODULARIZE=1 \
 	-s MIN_WEBGL_VERSION=2 \
 	-s MAX_WEBGL_VERSION=2 \
-	-s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "addFunction", "removeFunction"]' \
+	-s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "addFunction", "removeFunction", "stackSave", "stackAlloc", "stackRestore", "lengthBytesUTF8", "stringToUTF8", "stringToNewUTF8"]' \
 	-s ALLOW_MEMORY_GROWTH=1
 
 # destination directories and names
@@ -69,7 +69,10 @@ LDFLAGS_WASM = \
 	$(WASM_COMMON_LDFLAGS) \
 	-s INITIAL_MEMORY=67108864 \
 	-s EXPORTED_FUNCTIONS='[ \
+	"_malloc", \
+	"_free", \
 	"_rl_init", \
+	"_rl_init_config_sizeof", \
 	"_rl_deinit", \
 	"_rl_update_to_scratch", \
 	"_rl_start", \
@@ -78,10 +81,8 @@ LDFLAGS_WASM = \
 	"_rl_stop", \
 	"_rl_get_time", \
 	"_rl_get_delta_time", \
-	"_rl_window_open", \
 	"_rl_window_set_title", \
 	"_rl_window_set_size", \
-	"_rl_window_close", \
 	"_rl_scratch_get", \
 	"_rl_scratch_update", \
 	"_rl_scratch_get_offsets", \
@@ -187,11 +188,10 @@ LDFLAGS_WASM = \
 		"_rl_loader_import_assets_from_scratch_async", \
 		"_rl_loader_poll_task", \
 		"_rl_loader_finish_task", \
-		"_rl_loader_wait_task", \
-		"_rl_loader_wait_tasks", \
 		"_rl_loader_get_task_path", \
 		"_rl_loader_free_task", \
 		"_rl_loader_queue_task", \
+		"_rl_loader_tick", \
 		"_rl_loader_is_local", \
 		"_rl_loader_uncache_file", \
 		"_rl_loader_clear_cache", \

@@ -110,6 +110,18 @@ const char *fetch_url_stub_get_last_path(void)
     return g_last_path;
 }
 
+int fetch_url_head(const char *url, int timeout_ms)
+{
+    /*
+     * The real implementation performs a network I/O probe. Unit tests are fully offline
+     * and only validate the follow-up `fetch_url_with_path_async()` path, so treat HEAD
+     * as a no-op success.
+     */
+    (void)url;
+    (void)timeout_ms;
+    return 0;
+}
+
 fetch_url_op_t *fetch_url_async(const char *url, int timeout_ms)
 {
     fetch_url_op_t *op = (fetch_url_op_t *)calloc(1, sizeof(fetch_url_op_t));

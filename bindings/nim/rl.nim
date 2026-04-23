@@ -70,6 +70,13 @@ type
     name*: cstring
     get_api_fn*: RLModuleEntryGetApiFn
   RLLoaderTask* {.importc: "rl_loader_task_t", header: "rl_loader.h", bycopy.} = object
+  RLInitConfig* {.importc: "rl_init_config_t", header: "rl_config.h", bycopy.} = object
+    window_width*: cint
+    window_height*: cint
+    window_title*: cstring
+    window_flags*: cuint
+    asset_host*: cstring
+    loader_cache_dir*: cstring
 
 var
   RL_COLOR_DEFAULT* {.importc, header: "rl_color.h".}: RLHandle
@@ -124,7 +131,7 @@ const
   RL_LOADER_QUEUE_TASK_OK* = 0.cint
   RL_LOADER_QUEUE_TASK_ERR_INVALID* = (-1).cint
   RL_LOADER_QUEUE_TASK_ERR_QUEUE_FULL* = (-2).cint
-proc rl_init*() {.importc, cdecl, header: "rl.h".}
+proc rl_init*(config: ptr RLInitConfig): cint {.importc, cdecl, header: "rl.h".}
 proc rl_deinit*() {.importc, cdecl, header: "rl.h".}
 proc rl_set_asset_host*(assetHost: cstring): cint {.importc, cdecl, header: "rl.h".}
 proc rl_get_asset_host*(): cstring {.importc, cdecl, header: "rl.h".}
@@ -142,11 +149,6 @@ proc rl_loader_import_assets_async*(filenames: openArray[string]): ptr RLLoaderT
 
 proc rl_loader_poll_task*(task: ptr RLLoaderTask): bool {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_finish_task*(task: ptr RLLoaderTask): cint {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_wait_task*(task: ptr RLLoaderTask): cint {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_wait_tasks*(tasks: ptr ptr RLLoaderTask,
-                           count: csize_t,
-                           onFailure: RLLoaderCallbackFn,
-                           userData: pointer): cint {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_get_task_path*(task: ptr RLLoaderTask): cstring {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_free_task*(task: ptr RLLoaderTask) {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_queue_task*(task: ptr RLLoaderTask, path: cstring,
@@ -156,6 +158,126 @@ proc rl_loader_tick*() {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_is_local*(filename: cstring): bool {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_uncache_file*(filename: cstring): cint {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_clear_cache*(): cint {.importc, cdecl, header: "rl_loader.h".}
+
+type
+  RLTaskGroupTaskCallback*[T] = proc(path: string, ctx: var T) {.closure.}
+  RLTaskGroupCallback*[T] = proc(group: RLTaskGroup[T], ctx: var T) {.closure.}
+  RLTaskGroupEntry[T] = object
+    task: ptr RLLoaderTask
+    path: string
+    done: bool
+    rc: cint
+    onSuccess: RLTaskGroupTaskCallback[T]
+    onError: RLTaskGroupTaskCallback[T]
+  RLTaskGroup*[T] = ref object
+    entries: seq[RLTaskGroupEntry[T]]
+    callbackContext: ptr T
+    onCompleteCallback: RLTaskGroupCallback[T]
+    onErrorCallback: RLTaskGroupCallback[T]
+    terminalCallbackInvoked: bool
+    failedCount*: int
+    completedCount*: int
+
+proc loaderCreateTaskGroup*[T](
+  ctx: ptr T,
+  onComplete: RLTaskGroupCallback[T] = nil,
+  onError: RLTaskGroupCallback[T] = nil
+): RLTaskGroup[T] =
+  new(result)
+  result.entries = @[]
+  result.callbackContext = ctx
+  result.onCompleteCallback = onComplete
+  result.onErrorCallback = onError
+  result.terminalCallbackInvoked = false
+  result.failedCount = 0
+  result.completedCount = 0
+
+proc addTask*[T](
+  group: RLTaskGroup[T],
+  task: ptr RLLoaderTask,
+  onSuccess: RLTaskGroupTaskCallback[T] = nil,
+  onError: RLTaskGroupTaskCallback[T] = nil
+) =
+  if group.isNil or task.isNil:
+    return
+  group.entries.add(RLTaskGroupEntry[T](
+    task: task,
+    path: $rl_loader_get_task_path(task),
+    done: false,
+    rc: 1,
+    onSuccess: onSuccess,
+    onError: onError
+  ))
+
+proc addImportTask*[T](
+  group: RLTaskGroup[T],
+  path: string,
+  onSuccess: RLTaskGroupTaskCallback[T] = nil,
+  onError: RLTaskGroupTaskCallback[T] = nil
+) =
+  if group.isNil:
+    return
+  group.addTask(rl_loader_import_asset_async(path), onSuccess, onError)
+
+proc addImportTasks*[T](group: RLTaskGroup[T], paths: openArray[string]) =
+  for path in paths:
+    group.addImportTask(path)
+
+proc remainingTasks*[T](group: RLTaskGroup[T]): int =
+  if group.isNil:
+    return 0
+  return group.entries.len - group.completedCount
+
+proc isDone*[T](group: RLTaskGroup[T]): bool =
+  return group.remainingTasks() == 0
+
+proc hasFailures*[T](group: RLTaskGroup[T]): bool =
+  if group.isNil:
+    return false
+  return group.failedCount > 0
+
+proc tick*[T](group: RLTaskGroup[T]): bool =
+  if group.isNil:
+    return false
+  rl_loader_tick()
+  for idx in 0 ..< group.entries.len:
+    if group.entries[idx].done:
+      continue
+    if not rl_loader_poll_task(group.entries[idx].task):
+      continue
+    group.entries[idx].rc = rl_loader_finish_task(group.entries[idx].task)
+    rl_loader_free_task(group.entries[idx].task)
+    group.entries[idx].done = true
+    group.completedCount.inc
+    if group.entries[idx].rc != 0:
+      group.failedCount.inc
+      if group.entries[idx].onError != nil and not group.callbackContext.isNil:
+        group.entries[idx].onError(group.entries[idx].path, group.callbackContext[])
+    elif group.entries[idx].onSuccess != nil and not group.callbackContext.isNil:
+      group.entries[idx].onSuccess(group.entries[idx].path, group.callbackContext[])
+  return group.remainingTasks() > 0
+
+proc process*[T](group: RLTaskGroup[T]): int =
+  if group.isNil:
+    return 0
+  discard group.tick()
+  if not group.terminalCallbackInvoked and group.remainingTasks() == 0 and not group.callbackContext.isNil:
+    group.terminalCallbackInvoked = true
+    if group.hasFailures():
+      if group.onErrorCallback != nil:
+        group.onErrorCallback(group, group.callbackContext[])
+    elif group.onCompleteCallback != nil:
+      group.onCompleteCallback(group, group.callbackContext[])
+  return group.remainingTasks()
+
+proc failedPaths*[T](group: RLTaskGroup[T]): seq[string] =
+  result = @[]
+  if group.isNil:
+    return
+  for entry in group.entries:
+    if entry.done and entry.rc != 0:
+      result.add(entry.path)
+
 proc rl_logger_set_level*(level: cint) {.importc, cdecl, header: "rl_logger.h".}
 proc rl_logger_message*(level: cint, format: cstring) {.importc, cdecl, varargs, header: "rl_logger.h".}
 proc rl_logger_message_source*(level: cint, sourceFile: cstring, sourceLine: cint,
@@ -190,7 +312,6 @@ proc rl_run*(initFn: RLInitFn, tickFn: RLTickFn, shutdownFn: RLShutdownFn, userD
 proc rl_stop*() {.importc, cdecl, header: "rl.h".}
 proc rl_get_time*(): cdouble {.importc, cdecl, header: "rl.h".}
 proc rl_get_delta_time*(): cfloat {.importc, cdecl, header: "rl.h".}
-proc rl_window_open*(width: cint, height: cint, title: cstring, flags: cint) {.importc, cdecl, header: "rl.h".}
 proc rl_window_set_title*(title: cstring) {.importc, cdecl, header: "rl_window.h".}
 proc rl_window_set_size*(width: cint, height: cint) {.importc, cdecl, header: "rl_window.h".}
 proc rl_window_get_monitor_count*(): cint {.importc, cdecl, header: "rl.h".}
@@ -207,7 +328,6 @@ proc rl_input_get_mouse_wheel*(): cint {.importc, cdecl, header: "rl.h".}
 proc rl_input_get_mouse_button*(button: cint): cint {.importc, cdecl, header: "rl.h".}
 proc rl_input_get_mouse_state*(): RLMouseState {.importc, cdecl, header: "rl.h".}
 proc rl_input_get_keyboard_state*(): RLKeyboardState {.importc, cdecl, header: "rl.h".}
-proc rl_window_close*() {.importc, cdecl, header: "rl.h".}
 proc rl_render_begin*() {.importc, cdecl, header: "rl.h".}
 proc rl_render_end*() {.importc, cdecl, header: "rl.h".}
 proc rl_render_begin_mode_2d*(camera: RLHandle) {.importc, cdecl, header: "rl_render.h".}

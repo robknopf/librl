@@ -11,6 +11,7 @@
 #include "rl_ws_client.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #ifdef PLATFORM_WEB
 static const char *ASSET_HOST = "./";
@@ -80,8 +81,6 @@ static void on_init(void *user_data) {
     return;
   }
 
-  rl_window_open(1024, 1280, "librl Remote Client",
-                 RL_WINDOW_FLAG_MSAA_4X_HINT);
   rl_set_target_fps(60);
 
   // In init:
@@ -133,7 +132,12 @@ static void on_shutdown(void *user_data) {
     context->ws_client = NULL;
   }
 
-  rl_window_close();
+  if (context->overlay_font != 0) {
+    rl_font_destroy(context->overlay_font);
+    context->overlay_font = 0;
+  }
+
+  rl_deinit();
 }
 
 static void draw_status_overlay(remote_context_t *context,
@@ -268,8 +272,16 @@ static void on_tick(void *user_data) {
 }
 
 int main(void) {
-  rl_init();
-  rl_set_asset_host(ASSET_HOST);
+  rl_init_config_t init_cfg;
+  memset(&init_cfg, 0, sizeof(init_cfg));
+  init_cfg.window_width = 1024;
+  init_cfg.window_height = 1280;
+  init_cfg.window_title = "librl Remote Client";
+  init_cfg.window_flags = RL_WINDOW_FLAG_MSAA_4X_HINT;
+  init_cfg.asset_host = ASSET_HOST;
+  if (rl_init(&init_cfg) != 0) {
+    return 1;
+  }
   rl_run(on_init, on_tick, on_shutdown, &g_remote_context);
   return 0;
 }

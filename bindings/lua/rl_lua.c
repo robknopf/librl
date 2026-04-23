@@ -4,6 +4,7 @@
 #include <lauxlib.h>
 
 #include <stdio.h>
+#include <string.h>
 
 #include "rl.h"
 #include "rl_lua_camera3d.h"
@@ -135,9 +136,38 @@ static void rl_lua_run_reset(lua_State *L)
 /* Core lifecycle */
 static int rl_init_lua(lua_State *L)
 {
-    (void)L;  /* Unused */
-    rl_init();
-    return 0;
+    rl_init_config_t cfg;
+    const int have_table = lua_istable(L, 1);
+
+    memset(&cfg, 0, sizeof(cfg));
+    if (have_table) {
+        lua_getfield(L, 1, "window_width");
+        cfg.window_width = (int)luaL_optinteger(L, -1, 0);
+        lua_pop(L, 1);
+
+        lua_getfield(L, 1, "window_height");
+        cfg.window_height = (int)luaL_optinteger(L, -1, 0);
+        lua_pop(L, 1);
+
+        lua_getfield(L, 1, "window_title");
+        cfg.window_title = lua_isstring(L, -1) ? lua_tostring(L, -1) : NULL;
+        lua_pop(L, 1);
+
+        lua_getfield(L, 1, "window_flags");
+        cfg.window_flags = (unsigned int)luaL_optinteger(L, -1, 0);
+        lua_pop(L, 1);
+
+        lua_getfield(L, 1, "asset_host");
+        cfg.asset_host = lua_isstring(L, -1) ? lua_tostring(L, -1) : NULL;
+        lua_pop(L, 1);
+
+        lua_getfield(L, 1, "loader_cache_dir");
+        cfg.loader_cache_dir = lua_isstring(L, -1) ? lua_tostring(L, -1) : NULL;
+        lua_pop(L, 1);
+    }
+
+    lua_pushinteger(L, (lua_Integer)rl_init(have_table ? &cfg : NULL));
+    return 1;
 }
 
 static int rl_deinit_lua(lua_State *L)

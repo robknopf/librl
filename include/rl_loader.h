@@ -26,11 +26,6 @@ rl_loader_task_t *rl_loader_import_assets_async(const char *const *filenames, si
 rl_loader_task_t *rl_loader_import_assets_from_scratch_async(size_t filename_count);
 bool rl_loader_poll_task(rl_loader_task_t *task);
 int rl_loader_finish_task(rl_loader_task_t *task);
-int rl_loader_wait_task(rl_loader_task_t *task);
-int rl_loader_wait_tasks(rl_loader_task_t **tasks,
-                         size_t count,
-                         rl_loader_callback_fn on_failure,
-                         void *user_data);
 const char *rl_loader_get_task_path(rl_loader_task_t *task);
 void rl_loader_free_task(rl_loader_task_t *task);
 bool rl_loader_is_local(const char *filename);

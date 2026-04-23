@@ -4,6 +4,21 @@ import utest.Assert;
 import rl.RL;
 
 class TestRL extends utest.Test {
+  #if cpp
+  /**
+   * If a test fails (or `rl_init` returns non-zero) and we don't reach the
+   * per-test `RL.deinit()`, the runtime can remain initialized and the next
+   * `RL.init()` will fail with EBUSY-style behavior. These hooks keep each test isolated.
+   */
+  public function setup(): Void {
+    RL.deinit();
+  }
+
+  public function teardown(): Void {
+    RL.deinit();
+  }
+  #end
+
   public function testConstants() {
     Assert.equals(0x00000004, RL.FLAG_WINDOW_RESIZABLE);
     Assert.equals(0x00000020, RL.FLAG_MSAA_4X_HINT);
@@ -14,14 +29,14 @@ class TestRL extends utest.Test {
 
   #if cpp
   public function testInitDeinit() {
-    RL.init();
+    Assert.equals(0, RL.init());
     Assert.isTrue(true, "rl_init completed");
     RL.deinit();
     Assert.isTrue(true, "rl_deinit completed");
   }
 
   public function testTimeFunctions() {
-    RL.init();
+    Assert.equals(0, RL.init());
     var t = RL.getTime();
     Assert.isTrue(t >= 0, "getTime returns non-negative");
     var dt = RL.getDeltaTime();
@@ -31,7 +46,7 @@ class TestRL extends utest.Test {
   }
 
   public function testAssetHost() {
-    RL.init();
+    Assert.equals(0, RL.init());
     var host = RL.getAssetHost();
     Assert.notEquals(null, host);
     var rc = RL.setAssetHost("https://example.com/assets");
@@ -42,7 +57,7 @@ class TestRL extends utest.Test {
   }
 
   public function testLighting() {
-    RL.init();
+    Assert.equals(0, RL.init());
     RL.enableLighting();
     Assert.equals(1, RL.isLightingEnabled());
     RL.disableLighting();
@@ -54,7 +69,7 @@ class TestRL extends utest.Test {
 
   public function testWindowGetScreenSize() {
     // Requires window or display; may return 0,0 without
-    RL.init();
+    Assert.equals(0, RL.init());
     var size = RL.windowGetScreenSize();
     var ok = (size.x >= 0) && (size.y >= 0);
     Assert.isTrue(ok, "screen size non-negative");
@@ -62,14 +77,14 @@ class TestRL extends utest.Test {
   }
 
   public function testWindowGetMonitorCount() {
-    RL.init();
+    Assert.equals(0, RL.init());
     var count = RL.windowGetMonitorCount();
     Assert.isTrue(count >= 0, "monitor count non-negative");
     RL.deinit();
   }
 
   public function testColorCreateDestroy() {
-    RL.init();
+    Assert.equals(0, RL.init());
     var c = RL.colorCreate(10, 20, 30, 40);
     // Just ensure we got some handle back; value is opaque.
     Assert.notEquals(0, c);
@@ -78,7 +93,7 @@ class TestRL extends utest.Test {
   }
 
   public function testInputMouseState() {
-    RL.init();
+    Assert.equals(0, RL.init());
     var mouse = RL.inputGetMouseState();
     // Validate fields exist and are numeric; exact values depend on environment.
     Assert.isTrue(mouse.x >= 0 || mouse.x <= 0, "mouse.x is an Int");

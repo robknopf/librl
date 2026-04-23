@@ -61,19 +61,44 @@ export interface RLInitEnv {
 
 export interface RLInitOptions {
   assetHost?: string;
+  /**
+   * Window dimensions and flags passed to `rl_init()`.
+   * If omitted, librl uses its internal defaults.
+   */
+  windowWidth?: number;
+  windowHeight?: number;
+  windowTitle?: string;
+  windowFlags?: number;
+  loaderCacheDir?: string;
   idealWidth?: number;
   idealHeight?: number;
   env?: RLInitEnv;
 }
 
 export type RLEventCallback = (payload: number) => void;
+export type RLTaskGroupTaskCallback<T = unknown> = (path: string, ctx: T) => void;
+export type RLTaskGroupCallback<T = unknown> = (group: RLTaskGroup<T>, ctx: T) => void;
+
+export interface RLTaskGroup<T = unknown> {
+  failedCount: number;
+  completedCount: number;
+  addTask(task: number, onSuccess?: RLTaskGroupTaskCallback<T> | null, onError?: RLTaskGroupTaskCallback<T> | null): void;
+  addImportTask(path: string, onSuccess?: RLTaskGroupTaskCallback<T> | null, onError?: RLTaskGroupTaskCallback<T> | null): void;
+  addImportTasks(paths: string[], onSuccess?: RLTaskGroupTaskCallback<T> | null, onError?: RLTaskGroupTaskCallback<T> | null): void;
+  remainingTasks(): number;
+  isDone(): boolean;
+  hasFailures(): boolean;
+  tick(): boolean;
+  process(): number;
+  failedPaths(): string[];
+}
 
 export interface RLApi {
   _waitForIdbfsReady(timeoutMs?: number): Promise<boolean>;
   isIdbfsReady(): boolean;
   waitForIdbfsReady(timeoutMs?: number): Promise<boolean>;
 
-  init(opts?: RLInitOptions): Promise<void>;
+  init(opts?: RLInitOptions): Promise<number>;
   update(): void;
   getTime(): number;
   deinit(): void;
@@ -85,6 +110,12 @@ export interface RLApi {
   pollTask(task: number): boolean;
   finishTask(task: number): number;
   freeTask(task: number): void;
+  loaderTick(): void;
+  createTaskGroup<T = unknown>(
+    onComplete?: RLTaskGroupCallback<T> | null,
+    onError?: RLTaskGroupCallback<T> | null,
+    ctx?: T
+  ): RLTaskGroup<T>;
   isLocalFile(filename: string): boolean;
   waitForTask(task: number, pollMs?: number): Promise<number>;
   restore(): Promise<number>;
@@ -97,8 +128,6 @@ export interface RLApi {
   clearEventListeners(eventName: string): number;
   getEventListenerCount(eventName: string): number;
 
-  openWindow(width: number, height: number, title: string, flags?: number): void;
-  closeWindow(): void;
   setWindowSize(width: number, height: number): void;
   setWindowPosition(x: number, y: number): void;
 
@@ -157,12 +186,14 @@ export interface RLApi {
   createColor(r: number, g: number, b: number, a: number): RLHandle;
   destroyColor(color: RLHandle): void;
   createFont(path: string, fontSize: number): Promise<RLHandle>;
+  createFontFromLocal(path: string, fontSize: number): RLHandle;
   destroyFont(font: RLHandle): void;
   rl_font_get_default(): RLHandle;
 
   setTargetFPS(fps: number): void;
 
   createModel(path: string): Promise<RLHandle>;
+  createModelFromLocal(path: string): RLHandle;
   modelSetTransform(
     model: RLHandle,
     positionX: number, positionY: number, positionZ: number,
@@ -193,6 +224,7 @@ export interface RLApi {
   getPickStats(): RLPickStats;
 
   createMusic(path: string): Promise<RLHandle>;
+  createMusicFromLocal(path: string): RLHandle;
   destroyMusic(music: RLHandle): void;
   playMusic(music: RLHandle): boolean;
   pauseMusic(music: RLHandle): boolean;
@@ -218,6 +250,7 @@ export interface RLApi {
   destroyTexture(texture: RLHandle): void;
 
   createSprite3D(path: string): Promise<RLHandle>;
+  createSprite3DFromLocal(path: string): RLHandle;
   createSprite3DFromTexture(texture: RLHandle): RLHandle;
   sprite3DSetTransform(sprite: RLHandle, positionX: number, positionY: number, positionZ: number, size: number): boolean;
   drawSprite3D(sprite: RLHandle, tint: RLHandle): void;

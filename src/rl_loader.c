@@ -31,6 +31,7 @@
 #define RL_LOADER_CACHE_MAX_ENTRY_BYTES (8u * 1024u * 1024u)
 #define RL_LOADER_MAX_ASSET_HOST_LENGTH 256u
 #define RL_LOADER_FETCH_TIMEOUT_MS 5000
+#define RL_LOADER_HOST_PROBE_TIMEOUT_MS 1000
 #define RL_LOADER_RESTORE_TIMEOUT_MS 5000
 
 static bool rl_loader_initialized = false;
@@ -151,6 +152,30 @@ static const char *rl_loader_strip_leading_slash(const char *path)
         return path + 1;
     }
     return path;
+}
+
+static void rl_loader_trim_trailing_slashes(const char *input, char *output, size_t output_size)
+{
+    size_t len = 0;
+
+    if (output == NULL || output_size == 0) {
+        return;
+    }
+    output[0] = '\0';
+    if (input == NULL || input[0] == '\0') {
+        return;
+    }
+
+    if (snprintf(output, output_size, "%s", input) >= (int)output_size) {
+        output[0] = '\0';
+        return;
+    }
+
+    len = strlen(output);
+    while (len > 1 && output[len - 1] == '/') {
+        output[len - 1] = '\0';
+        len--;
+    }
 }
 
 static const char *rl_loader_get_extension(const char *path)
@@ -566,6 +591,7 @@ static int rl_loader_collect_gltf_dependency_uris(rl_loader_task_t *task,
 
 static int rl_loader_start_fetch(rl_loader_task_t *task, const char *path)
 {
+    char fetch_host[RL_LOADER_MAX_ASSET_HOST_LENGTH] = {0};
     char full_url[512];
 
     if (!task || !path || path[0] == '\0') {
@@ -580,13 +606,19 @@ static int rl_loader_start_fetch(rl_loader_task_t *task, const char *path)
     if (path[0] == '/') {
         return -1;
     }
-    snprintf(full_url, sizeof(full_url), "%s/%s", task->fetch_host, path);
+
+    rl_loader_trim_trailing_slashes(task->fetch_host, fetch_host, sizeof(fetch_host));
+    if (fetch_host[0] == '\0') {
+        return -1;
+    }
+
+    snprintf(full_url, sizeof(full_url), "%s/%s", fetch_host, path);
     if (fetch_url_head(full_url, RL_LOADER_FETCH_TIMEOUT_MS) != 0) {
         return -1;
     }
 
     snprintf(task->pending_fetch_path, sizeof(task->pending_fetch_path), "%s", path);
-    task->fetch_op = fetch_url_with_path_async(task->fetch_host, path, RL_LOADER_FETCH_TIMEOUT_MS);
+    task->fetch_op = fetch_url_with_path_async(fetch_host, path, RL_LOADER_FETCH_TIMEOUT_MS);
     return task->fetch_op != NULL ? 0 : -1;
 }
 
@@ -785,6 +817,22 @@ int rl_loader_set_asset_host(const char *asset_host)
 const char *rl_loader_get_asset_host(void)
 {
     return rl_loader_asset_host;
+}
+
+float rl_loader_ping_asset_host(const char *asset_host)
+{
+    const char *probe_host = asset_host;
+    char fetch_host[RL_LOADER_MAX_ASSET_HOST_LENGTH] = {0};
+
+    if (probe_host == NULL || probe_host[0] == '\0') {
+        probe_host = rl_loader_asset_host;
+    }
+    rl_loader_trim_trailing_slashes(probe_host, fetch_host, sizeof(fetch_host));
+    if (fetch_host[0] == '\0') {
+        return -1.0f;
+    }
+
+    return fetch_url_ping(fetch_host, RL_LOADER_HOST_PROBE_TIMEOUT_MS);
 }
 
 rl_loader_task_t *rl_loader_restore_fs_async(void)

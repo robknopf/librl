@@ -305,11 +305,25 @@ const RL = {
         }
         moduleInstance.ccall('rl_deinit', null, [], []);
     },
+    isInitialized: () => {
+        return moduleInstance.ccall('rl_is_initialized', 'number', [], []) !== 0;
+    },
+    getPlatform: () => {
+        return moduleInstance.ccall('rl_get_platform', 'string', [], []);
+    },
     uncacheFile: (filename) => {
         return moduleInstance.ccall('rl_loader_uncache_file', 'number', ['string'], [filename]);
     },
     clearCache: () => {
         return moduleInstance.ccall('rl_loader_clear_cache', 'number', [], []);
+    },
+    pingAssetHost: (assetHost = "") => {
+        return moduleInstance.ccall(
+            'rl_loader_ping_asset_host',
+            'number',
+            ['string'],
+            [assetHost || ""]
+        );
     },
     restoreFS: () => {
         return moduleInstance.ccall('rl_loader_restore_fs_async', 'number', [], []);
@@ -801,6 +815,12 @@ const RL = {
             RL["COLOR_" + name] = value;
         }
     },
+        INIT_OK: 0,
+        INIT_ERR_UNKNOWN: -1,
+        INIT_ERR_ALREADY_INITIALIZED: -2,
+        INIT_ERR_LOADER: -3,
+        INIT_ERR_ASSET_HOST: -4,
+        INIT_ERR_WINDOW: -5,
         CAMERA_PERSPECTIVE: 0,
         CAMERA_ORTHOGRAPHIC: 1,
         FLAG_MSAA_4X_HINT: 32,

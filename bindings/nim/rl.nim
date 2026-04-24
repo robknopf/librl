@@ -108,6 +108,12 @@ var
   RL_COLOR_RAYWHITE* {.importc, header: "rl_color.h".}: RLHandle
 
 const
+  RL_INIT_OK* = 0.cint
+  RL_INIT_ERR_UNKNOWN* = (-1).cint
+  RL_INIT_ERR_ALREADY_INITIALIZED* = (-2).cint
+  RL_INIT_ERR_LOADER* = (-3).cint
+  RL_INIT_ERR_ASSET_HOST* = (-4).cint
+  RL_INIT_ERR_WINDOW* = (-5).cint
   RL_CAMERA_PERSPECTIVE* = 0.cint
   RL_CAMERA_ORTHOGRAPHIC* = 1.cint
   RL_FLAG_WINDOW_RESIZABLE* = 4.cint
@@ -137,6 +143,7 @@ proc rl_set_asset_host*(assetHost: cstring): cint {.importc, cdecl, header: "rl.
 proc rl_get_asset_host*(): cstring {.importc, cdecl, header: "rl.h".}
 proc rl_loader_set_asset_host*(assetHost: cstring): cint {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_get_asset_host*(): cstring {.importc, cdecl, header: "rl_loader.h".}
+proc rl_loader_ping_asset_host*(assetHost: cstring): cfloat {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_restore_fs_async*(): ptr RLLoaderTask {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_import_asset_async*(filename: cstring): ptr RLLoaderTask {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_import_assets_async_raw(filenames: ptr cstring, filenameCount: csize_t): ptr RLLoaderTask {.importc: "rl_loader_import_assets_async", cdecl, header: "rl_loader.h".}
@@ -158,6 +165,10 @@ proc rl_loader_tick*() {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_is_local*(filename: cstring): bool {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_uncache_file*(filename: cstring): cint {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_clear_cache*(): cint {.importc, cdecl, header: "rl_loader.h".}
+
+proc loaderPingAssetHost*(assetHost = ""): float32 =
+  let host = if assetHost.len == 0: nil else: assetHost.cstring
+  rl_loader_ping_asset_host(host).float32
 
 type
   RLTaskGroupTaskCallback*[T] = proc(path: string, ctx: var T) {.closure.}
@@ -330,6 +341,8 @@ proc rl_input_get_mouse_state*(): RLMouseState {.importc, cdecl, header: "rl.h".
 proc rl_input_get_keyboard_state*(): RLKeyboardState {.importc, cdecl, header: "rl.h".}
 proc rl_render_begin*() {.importc, cdecl, header: "rl.h".}
 proc rl_render_end*() {.importc, cdecl, header: "rl.h".}
+proc rl_is_initialized*(): bool {.importc, cdecl, header: "rl.h".}
+proc rl_get_platform*(): cstring {.importc, cdecl, header: "rl.h".}
 proc rl_render_begin_mode_2d*(camera: RLHandle) {.importc, cdecl, header: "rl_render.h".}
 proc rl_render_end_mode_2d*() {.importc, cdecl, header: "rl_render.h".}
 proc rl_render_begin_mode_3d*() {.importc, cdecl, header: "rl.h".}

@@ -35,6 +35,14 @@ typedef RLInitConfig = {
 private extern class RLNative {
   // --- Types (rl_handle_t = unsigned int) ---
 
+  // --- Init result codes (rl.h) ---
+  static inline var INIT_OK: Int = 0;
+  static inline var INIT_ERR_UNKNOWN: Int = -1;
+  static inline var INIT_ERR_ALREADY_INITIALIZED: Int = -2;
+  static inline var INIT_ERR_LOADER: Int = -3;
+  static inline var INIT_ERR_ASSET_HOST: Int = -4;
+  static inline var INIT_ERR_WINDOW: Int = -5;
+
   // --- Window flags (rl_window.h) ---
   static inline var FLAG_WINDOW_RESIZABLE: Int = 0x00000004;
   static inline var FLAG_MSAA_4X_HINT: Int = 0x00000020;
@@ -84,6 +92,13 @@ private extern class RLNative {
 
   @:native("rl_deinit")
   static function deinit(): Void;
+
+  @:native("rl_is_initialized")
+  static function isInitializedNative(): Bool;
+
+  static inline function getPlatformNative(): String {
+    return untyped __cpp__("::String(::rl_get_platform())");
+  }
 
   @:native("rl_update")
   static function update(): Void;
@@ -602,6 +617,14 @@ abstract RL(RLNative) from RLNative to RLNative {
     return RLNative.initConfigNative(w, h, title, flags, asset, cache);
   }
 
+  public static inline function isInitialized(): Bool {
+    return RLNative.isInitializedNative();
+  }
+
+  public static inline function getPlatform(): String {
+    return RLNative.getPlatformNative();
+  }
+
   public static inline function run<T>(initFn: T->Void, tickFn: T->Void, shutdownFn: T->Void, ctx: T): Void {
     var initSpringboard: cpp.Callable<cpp.RawPointer<cpp.Void>->Void> =
       cpp.Function.fromStaticFunction(RLBridge.onInitSpringboard);
@@ -663,6 +686,10 @@ abstract RL(RLNative) from RLNative to RLNative {
 
   public static function loaderIsLocal(filename: String): Bool {
     return RLLoader.loaderIsLocal(filename);
+  }
+
+  public static function loaderPingAssetHost(?assetHost: String): Float {
+    return RLLoader.loaderPingAssetHost(assetHost);
   }
 
   static function loaderQueueTaskNative(task: RLLoaderTaskPtr, path: String,

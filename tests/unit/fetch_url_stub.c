@@ -122,6 +122,13 @@ int fetch_url_head(const char *url, int timeout_ms)
     return 0;
 }
 
+float fetch_url_ping(const char *url, int timeout_ms)
+{
+    (void)url;
+    (void)timeout_ms;
+    return 1.0f;
+}
+
 fetch_url_op_t *fetch_url_async(const char *url, int timeout_ms)
 {
     fetch_url_op_t *op = (fetch_url_op_t *)calloc(1, sizeof(fetch_url_op_t));

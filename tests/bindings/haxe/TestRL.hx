@@ -29,9 +29,13 @@ class TestRL extends utest.Test {
 
   #if cpp
   public function testInitDeinit() {
+    Assert.equals(false, RL.isInitialized());
+    Assert.isTrue(RL.getPlatform() == "desktop" || RL.getPlatform() == "web", "platform is known");
     Assert.equals(0, RL.init());
+    Assert.equals(true, RL.isInitialized());
     Assert.isTrue(true, "rl_init completed");
     RL.deinit();
+    Assert.equals(false, RL.isInitialized());
     Assert.isTrue(true, "rl_deinit completed");
   }
 

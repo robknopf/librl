@@ -34,16 +34,57 @@ end
 
 print("OK: Loaded rl module")
 
-if type(rl.log) ~= "table" then
-    print("FAIL: Expected rl.log table")
+if rl.RL_INIT_OK ~= 0 or rl.RL_INIT_ERR_UNKNOWN ~= -1 or rl.RL_INIT_ERR_ALREADY_INITIALIZED ~= -2 then
+    print("FAIL: Expected rl init result constants")
     os.exit(1)
 end
-if type(rl.log.info) ~= "function" then
-    print("FAIL: Expected rl.log.info function")
+print("OK: init result constants available")
+
+if type(rl.is_initialized) ~= "function" or rl.is_initialized() ~= false then
+    print("FAIL: Expected rl.is_initialized function returning false before init")
     os.exit(1)
 end
-rl.log.info("lua binding smoke test")
-print("OK: log module available")
+print("OK: is_initialized available")
+
+if type(rl.get_platform) ~= "function" or (rl.get_platform() ~= "desktop" and rl.get_platform() ~= "web") then
+    print("FAIL: Expected rl.get_platform function returning desktop or web")
+    os.exit(1)
+end
+print("OK: get_platform available:", rl.get_platform())
+
+if type(rl.logger_info) ~= "function" then
+    print("FAIL: Expected rl.logger_info function")
+    os.exit(1)
+end
+rl.logger_info("lua binding smoke test")
+print("OK: logger functions available")
+
+if type(rl.log) ~= "function" then
+    print("FAIL: Expected rl.log alias (same as logger_info)")
+    os.exit(1)
+end
+if type(rl.debug) ~= "function" then
+    print("FAIL: Expected rl.debug alias (same as logger_debug)")
+    os.exit(1)
+end
+rl.log("logger alias: log")
+rl.debug("logger alias: debug")
+print("OK: logger log/debug aliases")
+
+if type(rl.loader_create_task_group) ~= "function" then
+    print("FAIL: Expected rl.loader_create_task_group (Haxe: RL.loaderCreateTaskGroup)")
+    os.exit(1)
+end
+if type(rl.loader_ping_asset_host) ~= "function" then
+    print("FAIL: Expected rl.loader_ping_asset_host function")
+    os.exit(1)
+end
+local g = rl.loader_create_task_group()
+if g == nil or type(g.remaining_tasks) ~= "function" then
+    print("FAIL: loader_create_task_group should return a group with :remaining_tasks()")
+    os.exit(1)
+end
+print("OK: loader task group (empty remaining:", g:remaining_tasks(), ")")
 
 -- Test color creation
 local white = rl.color_create(255, 255, 255, 255)
@@ -59,7 +100,7 @@ print("\nNOTE: Skipping texture/sprite tests (need assets)")
 
 -- Test batch submission format
 print("\n=== Batch Submission Format Test ===")
-local version, flags = rl.get_frame_buffer_format()
+local version, flags = rl.frame_buffer_get_format()
 print("OK: frame buffer format version:", version, "flags:", flags)
 
 local include_type_tag = (flags % 4) >= 2 -- RL_SUBMIT_FLAG_INCLUDES_TYPE_TAG (0x02)
@@ -87,7 +128,7 @@ else
     table.insert(buf, 0)
 end
 
-local consumed = rl.submit_frame_buffer(buf)
+local consumed = rl.frame_buffer_submit(buf)
 print("OK: Batch submission consumed", consumed, "elements")
 
 -- Verify expected count for empty sections

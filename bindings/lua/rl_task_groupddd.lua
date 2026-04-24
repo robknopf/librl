@@ -1,3 +1,4 @@
+-- Reference: native implementation is bindings/lua/rl_lua_task_group.c (rl.loader_create_task_group).
 local rl = require("rl")
 
 local task_group = {}

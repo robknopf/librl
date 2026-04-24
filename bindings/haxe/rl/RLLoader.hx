@@ -81,6 +81,13 @@ class RLLoader {
     return 0;
   }
 
+  @:functionCode('
+    return rl_loader_ping_asset_host(assetHost.utf8_str());
+  ')
+  static function pingAssetHostNative(assetHost: String): Float {
+    return -1.0;
+  }
+
   public static inline function loaderRestoreFsAsync(): RLLoaderTaskPtr {
     return restoreFsAsyncNative();
   }
@@ -117,6 +124,10 @@ class RLLoader {
     onSuccess: RLLoaderCallbackFn, onFailure: RLLoaderCallbackFn,
     userData: cpp.RawPointer<cpp.Void>): Int {
     return queueTaskNative(task, path, onSuccess, onFailure, userData);
+  }
+
+  public static inline function loaderPingAssetHost(?assetHost: String): Float {
+    return pingAssetHostNative(assetHost == null ? "" : assetHost);
   }
 
   public static inline function loaderTick(): Void {

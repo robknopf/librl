@@ -104,6 +104,7 @@ export interface RLApi {
   deinit(): void;
   uncacheFile(filename: string): number;
   clearCache(): number;
+  pingAssetHost(assetHost?: string): number;
   restoreFS(): number;
   importAsset(filename: string): number;
   importAssets(filenames: string[]): number;
@@ -283,6 +284,12 @@ export interface RLApi {
   COLOR_BLANK: number;
   COLOR_MAGENTA: number;
   COLOR_RAYWHITE: number;
+  INIT_OK: number;
+  INIT_ERR_UNKNOWN: number;
+  INIT_ERR_ALREADY_INITIALIZED: number;
+  INIT_ERR_LOADER: number;
+  INIT_ERR_ASSET_HOST: number;
+  INIT_ERR_WINDOW: number;
   CAMERA_PERSPECTIVE: number;
   CAMERA_ORTHOGRAPHIC: number;
   FLAG_MSAA_4X_HINT: number;

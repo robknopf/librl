@@ -126,6 +126,19 @@ static int rl_loader_get_asset_host_lua(lua_State *L)
     return 1;
 }
 
+static int rl_loader_ping_asset_host_lua(lua_State *L)
+{
+    const char *asset_host = NULL;
+    double rtt_ms = 0.0;
+
+    if (!lua_isnoneornil(L, 1)) {
+        asset_host = luaL_checkstring(L, 1);
+    }
+    rtt_ms = (double)rl_loader_ping_asset_host(asset_host);
+    lua_pushnumber(L, rtt_ms);
+    return 1;
+}
+
 static int rl_loader_restore_fs_async_lua(lua_State *L)
 {
     rl_loader_task_t *task = rl_loader_restore_fs_async();
@@ -319,6 +332,9 @@ void rl_register_loader_bindings(lua_State *L)
 
     lua_pushcfunction(L, rl_loader_get_asset_host_lua);
     lua_setfield(L, -2, "loader_get_asset_host");
+
+    lua_pushcfunction(L, rl_loader_ping_asset_host_lua);
+    lua_setfield(L, -2, "loader_ping_asset_host");
 
     lua_pushcfunction(L, rl_loader_restore_fs_async_lua);
     lua_setfield(L, -2, "loader_restore_fs_async");

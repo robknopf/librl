@@ -78,6 +78,9 @@ Notes:
   - `windowWidth`, `windowHeight`, `windowTitle`, `windowFlags`, `assetHost`, `loaderCacheDir`
   - (plus `idealWidth` / `idealHeight` for browser resize/aspect heuristics)
   - Example: `await rl.init({ windowWidth: 800, windowHeight: 600, windowTitle: "Title", windowFlags: rl.FLAG_MSAA_4X_HINT, assetHost })`
+  - Init result constants are exposed (`INIT_OK`, `INIT_ERR_UNKNOWN`, `INIT_ERR_ALREADY_INITIALIZED`, `INIT_ERR_LOADER`, `INIT_ERR_ASSET_HOST`, `INIT_ERR_WINDOW`).
+- JS exposes `isInitialized()` for `rl_is_initialized()`.
+- JS exposes `getPlatform()` for `rl_get_platform()`.
 - Loader/cache helpers currently exposed in JS:
   - `uncacheFile(filename)`
   - `clearCache()`
@@ -115,6 +118,7 @@ Notes:
 - Keep declarations synchronized with header changes in `include/`.
 - It maps `RLMouseState` directly to `rl_mouse_state_t` via `rl_input_get_mouse_state()`.
 - It maps `RLKeyboardState` directly to `rl_keyboard_state_t` via `rl_input_get_keyboard_state()`.
+- It exposes `rl_is_initialized()` and `rl_get_platform()` directly.
 - Mouse button states use shared constants:
   - `RL_BUTTON_UP`
   - `RL_BUTTON_PRESSED`
@@ -127,6 +131,7 @@ Notes:
   - `rl_window_init(width, height, title, flags)`
   - `RL_FLAG_MSAA_4X_HINT`
 - Loader helpers in Nim:
+  - `loaderPingAssetHost(assetHost?)` → RTT ms, or `< 0` on failure
   - `rl_loader_restore_fs_async()`
   - `rl_loader_import_asset_async(filename)`
   - `rl_loader_import_assets_async(filenames, count)`
@@ -136,6 +141,7 @@ Notes:
   - `rl_loader_is_local(filename)`
   - `rl_loader_uncache_file(filename)`
   - `rl_loader_clear_cache()`
+- Init result constants are exposed as `RL_INIT_OK` / `RL_INIT_ERR_*`.
 
 Binding-level async loader ergonomics:
 
@@ -173,6 +179,9 @@ Notes:
 - The Haxe binding mirrors the C naming:
   - `RL.modelCreate`, `RL.sprite3dCreate`, `RL.camera3dCreate`, etc.
   - Constants like `RL.FLAG_MSAA_4X_HINT`, `RL.CAMERA_PERSPECTIVE`.
+  - Init result constants like `RL.INIT_OK`, `RL.INIT_ERR_ALREADY_INITIALIZED`.
+  - `RL.isInitialized()` wraps `rl_is_initialized()`.
+  - `RL.getPlatform()` wraps `rl_get_platform()`.
 - WASM builds use hxcpp's emscripten toolchain with `MODULARIZE=1` and `EXPORT_ES6=1`:
   - `examples/haxe/build.wasm.hxml`
   - `examples/haxe/build.hxml` dispatches between the desktop and wasm build configs.
@@ -181,6 +190,7 @@ Notes:
 Async loader sugar:
 
 - The binding exposes:
+  - `RL.loaderPingAssetHost(assetHost?): Float` → RTT ms, or `< 0` on failure
   - `RL.loaderImportAssetAsync(path: String): RLLoaderTaskPtr`
   - `RL.loaderPollTask(task: RLLoaderTaskPtr): Bool`
   - `RL.loaderFinishTask(task: RLLoaderTaskPtr): Int`
@@ -203,19 +213,22 @@ Files:
 
 - `bindings/lua/rl_lua.c`
 - `bindings/lua/rl_lua_loader.c`
-- `bindings/lua/rl_task_group.lua`
+- `bindings/lua/rl_task_group.lua` (optional reference; logic is native in `rl_lua_task_group.c`)
 
 Role:
 
 - `bindings/lua/rl_lua*.c` exposes direct C-backed Lua APIs.
-- `bindings/lua/rl_task_group.lua` provides helper ergonomics for non-blocking multi-task loader orchestration.
+- **`rl.loader_create_task_group`** is implemented in C (`rl_lua_task_group.c`), same role as:
+  - Haxe: `RL.loaderCreateTaskGroup` → `RLTaskGroup` (`rl/RL.hx`, `rl/RLTaskGroup.hx`)
+  - Nim: `loaderCreateTaskGroup` / `RLTaskGroup` in `rl.nim`
 
 Notes:
 
-- Keep direct C binding files separate from helper/ergonomic Lua modules.
-- Lua TaskGroup helper mirrors the same non-blocking pattern used in Haxe/JS/Nim:
-  - `create(on_complete?, on_error?, ctx?)`
-  - `add_import_task(...)`, `tick()`, `process()`, `failed_paths()`
+- The returned userdata exposes `add_task`, `add_import_task`, `add_import_tasks`, `tick`, `process`, `failed_paths`, etc.
+- Lua exposes `rl.loader_ping_asset_host([asset_host])`, returning RTT ms or `< 0` on failure, for proactive asset-host diagnostics before importing.
+- Lua exposes init result constants (`rl.RL_INIT_OK`, `rl.RL_INIT_ERR_UNKNOWN`, `rl.RL_INIT_ERR_ALREADY_INITIALIZED`, `rl.RL_INIT_ERR_LOADER`, `rl.RL_INIT_ERR_ASSET_HOST`, `rl.RL_INIT_ERR_WINDOW`).
+- Lua exposes `rl.is_initialized()` for `rl_is_initialized()`.
+- Lua exposes `rl.get_platform()` for `rl_get_platform()`.
 
 ## Status and Scope
 

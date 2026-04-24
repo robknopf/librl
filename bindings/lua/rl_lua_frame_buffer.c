@@ -3,7 +3,10 @@
 #include <lua.h>
 #include <lauxlib.h>
 
-#include "rl.h"
+//#include "rl.h"
+#include "rl_sprite2d.h"
+#include "rl_sprite3d.h"
+#include "rl_model.h"
 #include "rl_lua_frame_buffer.h"
 
 /* Version and flags */
@@ -241,8 +244,8 @@ static int rl_frame_buffer_get_format(lua_State *L)
 void rl_register_frame_buffer_bindings(lua_State *L)
 {
     lua_pushcfunction(L, rl_frame_buffer_submit);
-    lua_setfield(L, -2, "submit_frame_buffer");
+    lua_setfield(L, -2, "frame_buffer_submit");
 
     lua_pushcfunction(L, rl_frame_buffer_get_format);
-    lua_setfield(L, -2, "get_frame_buffer_format");
+    lua_setfield(L, -2, "frame_buffer_get_format");
 }

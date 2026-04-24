@@ -91,6 +91,36 @@ static int rl_window_set_position_lua(lua_State *L)
 
 void rl_register_window_bindings(lua_State *L)
 {
+    /* Match include/rl_window.h (for rl.init { window_flags = ... }) */
+    lua_pushinteger(L, (lua_Integer)RL_WINDOW_FLAG_FULLSCREEN_MODE);
+    lua_setfield(L, -2, "RL_WINDOW_FLAG_FULLSCREEN_MODE");
+    lua_pushinteger(L, (lua_Integer)RL_WINDOW_FLAG_WINDOW_RESIZABLE);
+    lua_setfield(L, -2, "RL_WINDOW_FLAG_WINDOW_RESIZABLE");
+    lua_pushinteger(L, (lua_Integer)RL_WINDOW_FLAG_WINDOW_UNDECORATED);
+    lua_setfield(L, -2, "RL_WINDOW_FLAG_WINDOW_UNDECORATED");
+    lua_pushinteger(L, (lua_Integer)RL_WINDOW_FLAG_WINDOW_TRANSPARENT);
+    lua_setfield(L, -2, "RL_WINDOW_FLAG_WINDOW_TRANSPARENT");
+    lua_pushinteger(L, (lua_Integer)RL_WINDOW_FLAG_MSAA_4X_HINT);
+    lua_setfield(L, -2, "RL_WINDOW_FLAG_MSAA_4X_HINT");
+    lua_pushinteger(L, (lua_Integer)RL_WINDOW_FLAG_VSYNC_HINT);
+    lua_setfield(L, -2, "RL_WINDOW_FLAG_VSYNC_HINT");
+    lua_pushinteger(L, (lua_Integer)RL_WINDOW_FLAG_WINDOW_HIDDEN);
+    lua_setfield(L, -2, "RL_WINDOW_FLAG_WINDOW_HIDDEN");
+    lua_pushinteger(L, (lua_Integer)RL_WINDOW_FLAG_WINDOW_ALWAYS_RUN);
+    lua_setfield(L, -2, "RL_WINDOW_FLAG_WINDOW_ALWAYS_RUN");
+    lua_pushinteger(L, (lua_Integer)RL_WINDOW_FLAG_WINDOW_MINIMIZED);
+    lua_setfield(L, -2, "RL_WINDOW_FLAG_WINDOW_MINIMIZED");
+    lua_pushinteger(L, (lua_Integer)RL_WINDOW_FLAG_WINDOW_MAXIMIZED);
+    lua_setfield(L, -2, "RL_WINDOW_FLAG_WINDOW_MAXIMIZED");
+    lua_pushinteger(L, (lua_Integer)RL_WINDOW_FLAG_WINDOW_UNFOCUSED);
+    lua_setfield(L, -2, "RL_WINDOW_FLAG_WINDOW_UNFOCUSED");
+    lua_pushinteger(L, (lua_Integer)RL_WINDOW_FLAG_WINDOW_TOPMOST);
+    lua_setfield(L, -2, "RL_WINDOW_FLAG_WINDOW_TOPMOST");
+    lua_pushinteger(L, (lua_Integer)RL_WINDOW_FLAG_WINDOW_HIGHDPI);
+    lua_setfield(L, -2, "RL_WINDOW_FLAG_WINDOW_HIGHDPI");
+    lua_pushinteger(L, (lua_Integer)RL_WINDOW_FLAG_INTERLACED_HINT);
+    lua_setfield(L, -2, "RL_WINDOW_FLAG_INTERLACED_HINT");
+
     lua_pushcfunction(L, rl_window_set_title_lua);
     lua_setfield(L, -2, "window_set_title");
 

@@ -118,7 +118,7 @@ RL_KEEP
 int rl_init(const rl_init_config_t *config) {
     rl_init_config_t cfg;
     if (initialized) {
-        return -1;
+        return RL_INIT_ERR_ALREADY_INITIALIZED;
     }
 
     memset(&cfg, 0, sizeof(cfg));
@@ -130,13 +130,13 @@ int rl_init(const rl_init_config_t *config) {
     rl_logger_init();
     if (rl_loader_init(cfg.loader_cache_dir) != 0) {
         rl_logger_deinit();
-        return -1;
+        return RL_INIT_ERR_LOADER;
     }
     if (cfg.asset_host != NULL && cfg.asset_host[0] != '\0') {
         if (rl_set_asset_host(cfg.asset_host) != 0) {
             rl_loader_deinit();
             rl_logger_deinit();
-            return -1;
+            return RL_INIT_ERR_ASSET_HOST;
         }
     }
     rl_window_open_internal(
@@ -148,7 +148,7 @@ int rl_init(const rl_init_config_t *config) {
     if (!IsWindowReady()) {
         rl_loader_deinit();
         rl_logger_deinit();
-        return -1;
+        return RL_INIT_ERR_WINDOW;
     }
     rl_scratch_init();
     rl_color_init();
@@ -164,6 +164,20 @@ int rl_init(const rl_init_config_t *config) {
     rl_debug_init();
     initialized = true;
     return 0;
+}
+
+RL_KEEP
+bool rl_is_initialized(void) {
+    return initialized;
+}
+
+RL_KEEP
+const char *rl_get_platform(void) {
+#if defined(PLATFORM_WEB)
+    return "web";
+#else
+    return "desktop";
+#endif
 }
 
 RL_KEEP

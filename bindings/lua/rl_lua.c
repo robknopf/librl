@@ -15,12 +15,13 @@
 #include "rl_lua_frame_buffer.h"
 #include "rl_lua_input.h"
 #include "rl_lua_loader.h"
-#include "rl_lua_log.h"
+#include "rl_lua_logger.h"
 #include "rl_lua_model.h"
 #include "rl_lua_module.h"
 #include "rl_lua_music.h"
 #include "rl_lua_pick.h"
 #include "rl_lua_searcher.h"
+#include "rl_lua_task_group.h"
 #include "rl_lua_shape.h"
 #include "rl_lua_sound.h"
 #include "rl_lua_sprite2d.h"
@@ -175,6 +176,20 @@ static int rl_deinit_lua(lua_State *L)
     (void)L;  /* Unused */
     rl_deinit();
     return 0;
+}
+
+static int rl_is_initialized_lua(lua_State *L)
+{
+    (void)L;
+    lua_pushboolean(L, rl_is_initialized() ? 1 : 0);
+    return 1;
+}
+
+static int rl_get_platform_lua(lua_State *L)
+{
+    (void)L;
+    lua_pushstring(L, rl_get_platform());
+    return 1;
 }
 
 static int rl_update_lua(lua_State *L)
@@ -430,6 +445,8 @@ static const luaL_Reg rl_functions[] = {
     /* Core */
     {"init", rl_init_lua},
     {"deinit", rl_deinit_lua},
+    {"is_initialized", rl_is_initialized_lua},
+    {"get_platform", rl_get_platform_lua},
     {"update", rl_update_lua},
     {"begin_drawing", rl_begin_drawing_lua},
     {"end_drawing", rl_end_drawing_lua},
@@ -459,12 +476,24 @@ static const luaL_Reg rl_functions[] = {
 int luaopen_rl(lua_State *L)
 {
     luaL_newlib(L, rl_functions);
+    lua_pushinteger(L, RL_INIT_OK);
+    lua_setfield(L, -2, "RL_INIT_OK");
+    lua_pushinteger(L, RL_INIT_ERR_UNKNOWN);
+    lua_setfield(L, -2, "RL_INIT_ERR_UNKNOWN");
+    lua_pushinteger(L, RL_INIT_ERR_ALREADY_INITIALIZED);
+    lua_setfield(L, -2, "RL_INIT_ERR_ALREADY_INITIALIZED");
+    lua_pushinteger(L, RL_INIT_ERR_LOADER);
+    lua_setfield(L, -2, "RL_INIT_ERR_LOADER");
+    lua_pushinteger(L, RL_INIT_ERR_ASSET_HOST);
+    lua_setfield(L, -2, "RL_INIT_ERR_ASSET_HOST");
+    lua_pushinteger(L, RL_INIT_ERR_WINDOW);
+    lua_setfield(L, -2, "RL_INIT_ERR_WINDOW");
     rl_register_camera3d_bindings(L);
     rl_register_color_bindings(L);
     rl_register_debug_bindings(L);
     rl_register_event_bindings(L);
     rl_register_font_bindings(L);
-    rl_register_log_bindings(L);
+    rl_register_logger_bindings(L);
     rl_register_frame_buffer_bindings(L);
     rl_register_input_bindings(L);
     rl_register_loader_bindings(L);
@@ -479,6 +508,7 @@ int luaopen_rl(lua_State *L)
     rl_register_text_bindings(L);
     rl_register_texture_bindings(L);
     rl_register_window_bindings(L);
+    rl_register_lua_task_group(L);
     rl_lua_install_searcher(L);
     return 1;
 }

@@ -73,6 +73,8 @@ LDFLAGS_WASM = \
 	"_free", \
 	"_rl_init", \
 	"_rl_init_config_sizeof", \
+	"_rl_is_initialized", \
+	"_rl_get_platform", \
 	"_rl_deinit", \
 	"_rl_update_to_scratch", \
 	"_rl_start", \

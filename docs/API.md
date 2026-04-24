@@ -7,6 +7,9 @@ This document summarizes the current public C API exposed by `include/*.h`.  As 
 - Most resource APIs use `rl_handle_t` (`unsigned int`) as an opaque handle.
 - `0` is generally an invalid handle unless a subsystem documents otherwise.
 - Call `rl_init(NULL)` (or `rl_init(&config)`; see `include/rl_config.h`) before using subsystem APIs, and `rl_deinit()` at shutdown.
+  `rl_init()` returns `RL_INIT_OK` (`0`) on success or a negative `RL_INIT_ERR_*` code on failure (`RL_INIT_ERR_UNKNOWN`, `RL_INIT_ERR_ALREADY_INITIALIZED`, `RL_INIT_ERR_LOADER`, `RL_INIT_ERR_ASSET_HOST`, `RL_INIT_ERR_WINDOW`).
+- Use `rl_is_initialized()` to query whether the runtime is currently initialized.
+- Use `rl_get_platform()` to query the build/runtime platform string (`"desktop"` or `"web"`).
 
 ## Resource Lifetime Semantics
 

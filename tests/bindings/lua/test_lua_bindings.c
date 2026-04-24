@@ -49,6 +49,40 @@ int main(int argc, char *argv[])
         lua_pop(L, 1);
     }
 
+    status = luaL_dostring(L,
+        "if rl.RL_INIT_OK ~= 0 or rl.RL_INIT_ERR_UNKNOWN ~= -1 or rl.RL_INIT_ERR_ALREADY_INITIALIZED ~= -2 then\n"
+        "  error('rl init result constants missing')\n"
+        "end\n"
+        "print('OK: init result constants')");
+    if (status != LUA_OK) {
+        fprintf(stderr, "Error testing init constants: %s\n", lua_tostring(L, -1));
+        lua_pop(L, 1);
+    }
+
+    status = luaL_dostring(L,
+        "if type(rl.is_initialized) ~= 'function' or rl.is_initialized() ~= false then\n"
+        "  error('rl.is_initialized missing or incorrect before init')\n"
+        "end\n"
+        "print('OK: is_initialized')");
+    if (status != LUA_OK) {
+        fprintf(stderr, "Error testing is_initialized: %s\n", lua_tostring(L, -1));
+        lua_pop(L, 1);
+    }
+
+    status = luaL_dostring(L,
+        "if type(rl.get_platform) ~= 'function' then\n"
+        "  error('rl.get_platform missing')\n"
+        "end\n"
+        "local platform = rl.get_platform()\n"
+        "if platform ~= 'desktop' and platform ~= 'web' then\n"
+        "  error('unexpected rl.get_platform value: ' .. tostring(platform))\n"
+        "end\n"
+        "print('OK: get_platform', platform)");
+    if (status != LUA_OK) {
+        fprintf(stderr, "Error testing get_platform: %s\n", lua_tostring(L, -1));
+        lua_pop(L, 1);
+    }
+
     /* Test 2: Create and destroy colors */
     status = luaL_dostring(L,
         "local white = rl.color_create(255, 255, 255, 255)\n"
@@ -64,9 +98,44 @@ int main(int argc, char *argv[])
         lua_pop(L, 1);
     }
 
+    /* Logger short aliases (log -> info, debug -> debug) */
+    status = luaL_dostring(L,
+        "if type(rl.log) ~= 'function' then\n"
+        "  error('rl.log alias missing (expected same as logger_info)')\n"
+        "end\n"
+        "if type(rl.debug) ~= 'function' then\n"
+        "  error('rl.debug alias missing (expected same as logger_debug)')\n"
+        "end\n"
+        "rl.log('C embedded test: log alias')\n"
+        "rl.debug('C embedded test: debug alias')\n"
+        "print('OK: logger log/debug aliases')"
+    );
+    if (status != LUA_OK) {
+        fprintf(stderr, "Error testing logger aliases: %s\n", lua_tostring(L, -1));
+        lua_pop(L, 1);
+    }
+
+    /* loader_create_task_group (embedded task group, same as Haxe RL.loaderCreateTaskGroup) */
+    status = luaL_dostring(L,
+        "if type(rl.loader_create_task_group) ~= 'function' then\n"
+        "  error('rl.loader_create_task_group missing')\n"
+        "end\n"
+        "if type(rl.loader_ping_asset_host) ~= 'function' then\n"
+        "  error('rl.loader_ping_asset_host missing')\n"
+        "end\n"
+        "local g = rl.loader_create_task_group()\n"
+        "if g == nil or type(g.remaining_tasks) ~= 'function' then\n"
+        "  error('task group object invalid')\n"
+        "end\n"
+        "print('OK: loader_create_task_group (remaining', g:remaining_tasks(), ')')");
+    if (status != LUA_OK) {
+        fprintf(stderr, "Error testing loader_create_task_group: %s\n", lua_tostring(L, -1));
+        lua_pop(L, 1);
+    }
+
     /* Test 3: Query frame buffer format */
     status = luaL_dostring(L,
-        "local version, flags = rl.get_frame_buffer_format()\n"
+        "local version, flags = rl.frame_buffer_get_format()\n"
         "print('OK: Frame buffer format - version:', version, 'flags:', flags)\n"
         "if version == 1 then\n"
         "    print('OK: Version 1 supported')\n"
@@ -100,7 +169,7 @@ int main(int argc, char *argv[])
         "    15,  -- TYPE_MODEL_DRAW\n"
         "    0,   -- count\n"
         "}\n"
-        "local consumed = rl.submit_frame_buffer(buf)\n"
+        "local consumed = rl.frame_buffer_submit(buf)\n"
         "print('OK: Type-included mode consumed', consumed, 'elements')\n"
         "if consumed == 14 then\n"
         "    print('OK: Type-included mode element count correct (2 header + 6*[type+count])')\n"
@@ -137,7 +206,7 @@ int main(int argc, char *argv[])
         "    14, 0,    -- TYPE_MODEL_XFORM, count=0\n"
         "    15, 0,    -- TYPE_MODEL_DRAW, count=0\n"
         "}\n"
-        "local consumed = rl.submit_frame_buffer(buf)\n"
+        "local consumed = rl.frame_buffer_submit(buf)\n"
         "print('OK: Stride test consumed', consumed, 'elements')\n"
         "-- Expected: 2 header + 6*[type+count] + 6+2 (data) = 22\n"
         "if consumed == 22 then\n"

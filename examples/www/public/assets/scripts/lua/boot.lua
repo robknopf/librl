@@ -81,6 +81,7 @@ end
 -- The host always enters through boot.lua, then explicitly tells it which app
 -- module to import by calling boot("<script_root>", "<name>").
 function boot(script_root, name)
+  print("boot", script_root, name)
   local path, module_name = resolve_boot_lua_file(script_root, name)
   local thread = nil
 

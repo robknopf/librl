@@ -35,7 +35,18 @@ typedef void (*rl_init_fn)(void *user_data);
 typedef void (*rl_tick_fn)(void *user_data);
 typedef void (*rl_shutdown_fn)(void *user_data);
 
+typedef enum rl_init_result_t {
+  RL_INIT_OK = 0,
+  RL_INIT_ERR_UNKNOWN = -1,
+  RL_INIT_ERR_ALREADY_INITIALIZED = -2,
+  RL_INIT_ERR_LOADER = -3,
+  RL_INIT_ERR_ASSET_HOST = -4,
+  RL_INIT_ERR_WINDOW = -5,
+} rl_init_result_t;
+
 int rl_init(const rl_init_config_t *config);
+bool rl_is_initialized(void);
+const char *rl_get_platform(void);
 void rl_deinit();
 int rl_set_asset_host(const char *asset_host);
 const char *rl_get_asset_host(void);

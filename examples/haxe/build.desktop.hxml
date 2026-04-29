@@ -1,6 +1,6 @@
 common.hxml
 
 #--library hxcpp-debug-server
--D debug
+#-D debug
 
 -cpp out/desktop

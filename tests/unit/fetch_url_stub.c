@@ -129,6 +129,86 @@ float fetch_url_ping(const char *url, int timeout_ms)
     return 1.0f;
 }
 
+int fetch_url_sync(const char *url, int timeout_ms, fetch_url_result_t *result)
+{
+    (void)url;
+    (void)timeout_ms;
+
+    if (!result)
+    {
+        return -1;
+    }
+
+    memset(result, 0, sizeof(*result));
+    result->code = 501;
+    return result->code;
+}
+
+int fetch_url_with_path_sync(const char *host_url,
+                             const char *relative_path,
+                             int timeout_ms,
+                             fetch_url_result_t *result)
+{
+    (void)timeout_ms;
+
+    if (!result)
+    {
+        return -1;
+    }
+
+    g_call_count++;
+
+    if (host_url == NULL) {
+        host_url = "";
+    }
+    if (relative_path == NULL) {
+        relative_path = "";
+    }
+
+    memset(result, 0, sizeof(*result));
+    (void)snprintf(g_last_host, sizeof(g_last_host), "%s", host_url);
+    (void)snprintf(g_last_path, sizeof(g_last_path), "%s", relative_path);
+    (void)snprintf(result->url, sizeof(result->url), "%s/%s", host_url, relative_path);
+
+    if (g_response_queue_index < g_response_queue_len)
+    {
+        fetch_url_stub_response_t *response = &g_response_queue[g_response_queue_index++];
+
+        result->code = response->code;
+        if (response->code == 200 && response->data != NULL && response->size > 0)
+        {
+            result->data = (char *)malloc(response->size);
+            if (result->data != NULL)
+            {
+                memcpy(result->data, response->data, response->size);
+                result->size = response->size;
+            }
+            else
+            {
+                result->code = 500;
+            }
+        }
+        return result->code;
+    }
+
+    result->code = g_response_code;
+    if (g_response_code == 200 && g_response_data != NULL && g_response_size > 0)
+    {
+        result->data = (char *)malloc(g_response_size);
+        if (result->data != NULL)
+        {
+            memcpy(result->data, g_response_data, g_response_size);
+            result->size = g_response_size;
+        }
+        else
+        {
+            result->code = 500;
+        }
+    }
+
+    return result->code;
+}
+
 fetch_url_op_t *fetch_url_async(const char *url, int timeout_ms)
 {
     fetch_url_op_t *op = (fetch_url_op_t *)calloc(1, sizeof(fetch_url_op_t));

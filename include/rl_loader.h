@@ -21,6 +21,7 @@ typedef enum rl_loader_queue_task_result_t {
 int rl_loader_set_asset_host(const char *asset_host);
 const char *rl_loader_get_asset_host(void);
 float rl_loader_ping_asset_host(const char *asset_host);
+bool rl_loader_is_ready(void);
 rl_loader_task_t *rl_loader_restore_fs_async(void);
 rl_loader_task_t *rl_loader_create_import_task(const char *filename);
 rl_loader_task_t *rl_loader_import_assets_async(const char *const *filenames, size_t filename_count);

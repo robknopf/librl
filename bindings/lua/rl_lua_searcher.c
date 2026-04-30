@@ -3,9 +3,12 @@
 #include <lua.h>
 #include <lauxlib.h>
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
+#include "fetch_url/fetch_url.h"
+#include "fileio/fileio.h"
 #include "rl_loader.h"
 #include "rl_lua_searcher.h"
 
@@ -47,23 +50,39 @@ static int rl_lua_expand_template(const char *prefix, const char *token, const c
 
 int rl_lua_fetch_to_fileio(const char *relative_path)
 {
-    rl_loader_task_t *task = NULL;
+    fetch_url_result_t result = {0};
+    const char *asset_host = NULL;
     int rc = 0;
 
     if (relative_path == NULL || relative_path[0] == '\0') {
         return -1;
     }
 
-    task = rl_loader_create_import_task(relative_path);
-    if (task == NULL) {
+    if (rl_loader_is_local(relative_path)) {
+        return 0;
+    }
+
+    while (!rl_loader_is_ready()) {
+        rl_loader_tick();
+    }
+
+    if (rl_loader_is_local(relative_path)) {
+        return 0;
+    }
+
+    asset_host = rl_loader_get_asset_host();
+    if (asset_host == NULL || asset_host[0] == '\0') {
         return -1;
     }
 
-    while (!rl_loader_poll_task(task)) {
-        rl_loader_tick();
+    rc = fetch_url_with_path_sync(asset_host, relative_path, 5000, &result);
+    if (rc != 200 || result.data == NULL || result.size == 0) {
+        free(result.data);
+        return rc != 0 ? rc : -1;
     }
-    rc = rl_loader_finish_task(task);
-    rl_loader_free_task(task);
+
+    rc = fileio_write(relative_path, result.data, result.size);
+    free(result.data);
     return rc;
 }
 

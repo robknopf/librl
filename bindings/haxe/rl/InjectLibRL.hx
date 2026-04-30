@@ -62,13 +62,13 @@ package rl;
     <!-- hxcpp GC requires spill-pointers -->
     <flag value="--Wno-limited-postlink-optimizations" />
     <flag value="-s" />
-    <flag value="BINARYEN_EXTRA_PASSES=&#39;--spill-pointers&#39;" />
+    <flag value="BINARYEN_EXTRA_PASSES=&apos;--spill-pointers&apos;" />
 
     <!-- wasm exceptions for Haxe try/catch -->
     <flag value="-fwasm-exceptions" />
 
     <section unless="debug">
-      <flag value="-Oz"/>
+      <flag value="-O3"/>
     </section>
     <section if="debug">
       <flag value="-g"/>

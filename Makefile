@@ -414,6 +414,8 @@ desktop: libraylib_desktop wgutils_desktop ensure_out_dir ensure_obj_dir $(DESKT
 	$(info [desktop] Adding wgutils archive: $(WGUTILS_DESKTOP_ARCHIVE))
 	$(Q)test -f "$(LIBRAYLIB_DESKTOP_ARCHIVE)" || (echo "Missing raylib archive: $(LIBRAYLIB_DESKTOP_ARCHIVE)" && exit 1)
 	$(Q)test -f "$(WGUTILS_DESKTOP_ARCHIVE)" || (echo "Missing wgutils archive: $(WGUTILS_DESKTOP_ARCHIVE)" && exit 1)
+	# Uses fixed unpack directories under obj/desktop, so concurrent `make ... desktop`
+	# invocations can race with each other while removing/extracting archive contents.
 	$(Q)rm -rf $(OBJ_DESKTOP_DIR)/.raylib_unpack
 	$(Q)rm -rf $(OBJ_DESKTOP_DIR)/.wgutils_unpack
 	$(Q)mkdir -p $(OBJ_DESKTOP_DIR)/.raylib_unpack $(OBJ_DESKTOP_DIR)/.wgutils_unpack

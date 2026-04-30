@@ -437,7 +437,7 @@ shared: libraylib_desktop wgutils_desktop ensure_out_dir ensure_obj_dir $(DESKTO
 		$(DESKTOP_SRCS) \
 		$(INCLUDES) \
 		$(LIBRAYLIB_DESKTOP_ARCHIVE) $(WGUTILS_DESKTOP_ARCHIVE) \
-		-lcurl -lssl -lcrypto -lz -lm -lpthread -ldl -lX11
+		-lcurl -lnghttp2 -lssl -lcrypto -lz -lm -lpthread -ldl -lX11
 	@echo "Built: $(LIBRL_SHARED_SO)"
 
 # Desktop Lua module for require("rl"), linked against librl.so

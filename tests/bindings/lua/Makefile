@@ -33,7 +33,7 @@ build:
 		-I$(ROOT_DIR)/deps/wgutils/include \
 		-I$(LIBLUA_INC) \
 		$(ROOT_DIR)/lib/librl.a $(LIBLUA_ARCHIVE) \
-		-lm -ldl -lpthread -lX11 -lcurl -lssl -lcrypto -lz
+		-lm -ldl -lpthread -lX11 -lcurl -lnghttp2 -lssl -lcrypto -lz
 
 test_require:
 	@if [ -z "$(LUA)" ]; then \

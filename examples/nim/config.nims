@@ -78,6 +78,7 @@ proc buildDesktop() =
     " --passL:-lcrypto" &
     " --passL:-lz" &
     " --passL:-lssl" &
+    " --passL:-lnghttp2" &
     " " & entry
 
 proc buildWasm() =

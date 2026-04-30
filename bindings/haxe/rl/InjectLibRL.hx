@@ -24,6 +24,7 @@ package rl;
     <lib name="-ldl" />
     <lib name="-lX11" />
     <lib name="-lcurl" />
+    <lib name="-lnghttp2" />
     <lib name="-lz" />
     <lib name="-lssl" />
     <lib name="-lcrypto" />

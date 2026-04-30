@@ -33,7 +33,7 @@ WASM_OBJS := $(patsubst $(SRC_DIR)/%.c,$(OUT_DIR)/%.wasm.o,$(SRC))
 
 INCLUDES := -Iinclude -I$(ROOT)/include -I$(ROOT)/deps/wgutils/include -I$(ROOT)/deps/libraylib/include 
 RL_STATIC_LIB := $(ROOT)/lib/librl.a
-LIBS := $(RL_STATIC_LIB) -lssl -lcrypto -lz -lm -lpthread -ldl -lX11
+LIBS := $(RL_STATIC_LIB) -lnghttp2 -lssl -lcrypto -lz -lm -lpthread -ldl -lX11
 WASM_LIBS := $(ROOT)/lib/librl.wasm.a -lm
 
 .PHONY: all desktop wasm clean

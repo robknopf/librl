@@ -13,7 +13,7 @@ EMAR ?= emar
 EM_CACHE_DIR ?= $(abspath $(ROOT_DIR)/.emcache)
 EM_ENV := EM_CACHE=$(EM_CACHE_DIR)
 CFLAGS ?= -Wall -Wextra -fdiagnostics-color=always -O2
-CFLAGS_WASM ?= -DPLATFORM_WEB -O2
+CFLAGS_WASM ?= -DPLATFORM_WEB -O2 -fwasm-exceptions
 
 OUT_DIR := $(LUA_MODULE_DIR)/lib
 OBJ_DIR := $(LUA_MODULE_DIR)/obj

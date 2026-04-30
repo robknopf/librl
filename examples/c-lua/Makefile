@@ -15,11 +15,16 @@ WASM_COMMON_LDFLAGS ?= \
 	-s MIN_WEBGL_VERSION=2 \
 	-s MAX_WEBGL_VERSION=2 \
 	-s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' \
-	-s ALLOW_MEMORY_GROWTH=1
-CFLAGS_WASM ?= $(WASM_PLATFORM_CFLAGS)
-LDFLAGS_WASM ?= $(WASM_COMMON_LDFLAGS)
+	-s ALLOW_MEMORY_GROWTH=1 \
+	-s EXPORTED_FUNCTIONS='["_main"]'
+# The browser drives the Lua frame pump through `Module.ccall(..., { async: true })`,
+# which gives the exported entrypoint a JSPI-promising wrapper.
+WASM_SYNC_LDFLAGS ?= -s JSPI=1 -s JSPI_EXPORTS='["rl_tick"]' -fwasm-exceptions
+CFLAGS_WASM ?= $(WASM_PLATFORM_CFLAGS) -fwasm-exceptions
+LDFLAGS_WASM ?= $(WASM_COMMON_LDFLAGS) $(WASM_SYNC_LDFLAGS)
 DEBUG_CFLAGS_WASM ?= -Wall -Wextra -O0 -g3 $(WASM_PLATFORM_CFLAGS)
 DEBUG_LDFLAGS_WASM ?= $(WASM_COMMON_LDFLAGS) \
+	$(WASM_SYNC_LDFLAGS) \
 	-s ASSERTIONS=2 \
 	-s SAFE_HEAP=1 \
 	-s STACK_OVERFLOW_CHECK=2
@@ -30,7 +35,7 @@ BIN := $(OUT_DIR)/main
 CACHE_DIR := cache
 WASM_JS := $(OUT_DIR)/main.js
 WASM_DEBUG_JS := $(OUT_DIR)/main.debug.js
-SRC := main.c
+SRC := main.c example_task_group.c
 MODULE_REGISTRY_SRC := $(OUT_DIR)/module_registry.c
 USES_MODULE_LUA ?= 1
 MODULE_LUA_DIR := $(ROOT)/modules/lua

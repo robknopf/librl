@@ -1,7 +1,7 @@
 #include "rl.h"
 #include "rl_window.h"
+#include "example_task_group.h"
 
-#include <stdbool.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,14 +33,9 @@ typedef enum example_resource_kind_t {
   EXAMPLE_RESOURCE_KIND_MUSIC
 } example_resource_kind_t;
 
-#define EXAMPLE_MAX_PENDING_RESOURCE_REQUESTS 64
-
 typedef struct example_resource_request_t {
-  bool in_use;
   int rid;
   example_resource_kind_t kind;
-  rl_loader_task_t *loader_task;
-  char path[256];
   float size;
 } example_resource_request_t;
 
@@ -48,8 +43,8 @@ typedef struct example_context_t {
   rl_module_config_t script_config;
   rl_module_instance_t script_module;
   rl_module_host_api_t module_host;
-  rl_loader_task_t *loader_task;
-  example_resource_request_t resource_requests[EXAMPLE_MAX_PENDING_RESOURCE_REQUESTS];
+  rl_loader_task_t *restore_task;
+  example_task_group_t resource_tasks;
   example_boot_state_t boot_state;
   char module_error[256];
   char boot_error[256];
@@ -80,24 +75,25 @@ static example_resource_kind_t parse_resource_kind(const char *kind) {
   return EXAMPLE_RESOURCE_KIND_NONE;
 }
 
-static rl_handle_t create_resource_handle(const example_resource_request_t *request) {
+static rl_handle_t create_resource_handle(const example_resource_request_t *request,
+                                         const char *path) {
   if (request == NULL) {
     return 0;
   }
 
   switch (request->kind) {
   case EXAMPLE_RESOURCE_KIND_TEXTURE:
-    return rl_texture_create(request->path);
+    return rl_texture_create(path);
   case EXAMPLE_RESOURCE_KIND_MODEL:
-    return rl_model_create(request->path);
+    return rl_model_create(path);
   case EXAMPLE_RESOURCE_KIND_SPRITE3D:
-    return rl_sprite3d_create(request->path);
+    return rl_sprite3d_create(path);
   case EXAMPLE_RESOURCE_KIND_FONT:
-    return rl_font_create(request->path, request->size);
+    return rl_font_create(path, request->size);
   case EXAMPLE_RESOURCE_KIND_SOUND:
-    return rl_sound_create(request->path);
+    return rl_sound_create(path);
   case EXAMPLE_RESOURCE_KIND_MUSIC:
-    return rl_music_create(request->path);
+    return rl_music_create(path);
   case EXAMPLE_RESOURCE_KIND_NONE:
   default:
     return 0;
@@ -144,32 +140,6 @@ static int parse_resource_request_payload(const char *payload, int *out_rid,
                     : 0.0f;
   }
   return 0;
-}
-
-static example_resource_request_t *alloc_resource_request(
-    example_context_t *context) {
-  int i = 0;
-
-  if (context == NULL) return NULL;
-
-  for (i = 0; i < EXAMPLE_MAX_PENDING_RESOURCE_REQUESTS; i++) {
-    if (!context->resource_requests[i].in_use) {
-      memset(&context->resource_requests[i], 0,
-             sizeof(context->resource_requests[i]));
-      context->resource_requests[i].in_use = true;
-      return &context->resource_requests[i];
-    }
-  }
-
-  return NULL;
-}
-
-static void free_resource_request(example_resource_request_t *request) {
-  if (request == NULL) return;
-  if (request->loader_task != NULL) {
-    rl_loader_free_task(request->loader_task);
-  }
-  memset(request, 0, sizeof(*request));
 }
 
 static const char *get_asset_host(void) {
@@ -232,9 +202,10 @@ static void on_module_error(void *payload, void *user_data) {
 
 static void on_resource_load(void *payload, void *user_data) {
   example_context_t *context = (example_context_t *)user_data;
-  example_resource_request_t *request = NULL;
+  example_resource_request_t request;
   char kind[32];
   char path[256];
+  int group_rc = 0;
   int rid = 0;
   float size = 0.0f;
 
@@ -249,36 +220,35 @@ static void on_resource_load(void *payload, void *user_data) {
     return;
   }
 
-  request = alloc_resource_request(context);
-  if (request == NULL) {
-    emit_resource_error(rid, "resource request queue is full");
-    return;
-  }
+  memset(&request, 0, sizeof(request));
+  request.rid = rid;
+  request.kind = parse_resource_kind(kind);
+  request.size = size;
 
-  request->rid = rid;
-  request->kind = parse_resource_kind(kind);
-  request->size = size;
-  (void)snprintf(request->path, sizeof(request->path), "%s", path);
-
-  switch (request->kind) {
+  switch (request.kind) {
   case EXAMPLE_RESOURCE_KIND_MODEL:
   case EXAMPLE_RESOURCE_KIND_SPRITE3D:
   case EXAMPLE_RESOURCE_KIND_TEXTURE:
   case EXAMPLE_RESOURCE_KIND_FONT:
   case EXAMPLE_RESOURCE_KIND_SOUND:
   case EXAMPLE_RESOURCE_KIND_MUSIC:
-    request->loader_task = rl_loader_create_import_task(request->path);
     break;
   case EXAMPLE_RESOURCE_KIND_NONE:
   default:
     emit_resource_error(rid, "unsupported resource kind");
-    free_resource_request(request);
     return;
   }
 
-  if (request->loader_task == NULL) {
+  group_rc = example_task_group_add_import_task(
+      &context->resource_tasks, request.rid, path, &request, sizeof(request));
+  if (group_rc == EXAMPLE_TASK_GROUP_OK) {
+    return;
+  }
+
+  if (group_rc == EXAMPLE_TASK_GROUP_ERR_GROUP_FULL) {
+    emit_resource_error(rid, "resource request queue is full");
+  } else {
     emit_resource_error(rid, "failed to start resource prepare");
-    free_resource_request(request);
   }
 }
 
@@ -305,11 +275,11 @@ static void draw_boot_status(const char *title, const char *detail) {
 }
 
 static void handle_boot_restore(example_context_t *context) {
-  if (context->loader_task == NULL ||
-      rl_loader_poll_task(context->loader_task)) {
-    if (context->loader_task != NULL) {
-      rl_loader_free_task(context->loader_task);
-      context->loader_task = NULL;
+  if (context->restore_task == NULL ||
+      rl_loader_poll_task(context->restore_task)) {
+    if (context->restore_task != NULL) {
+      rl_loader_free_task(context->restore_task);
+      context->restore_task = NULL;
     }
     rl_loader_clear_cache();
     context->boot_state = EXAMPLE_BOOT_INIT_MODULE;
@@ -340,6 +310,8 @@ static void handle_boot_init_module(example_context_t *context) {
                    context->module_error);
     return;
   }
+  rl_loader_clear_cache();
+
   (void)rl_event_on("lua.ready", on_module_ready, NULL);
   (void)rl_event_on("lua.error", on_module_error, NULL);
   (void)rl_event_emit("lua.set_path", LUA_SCRIPT_ROOT);
@@ -376,68 +348,49 @@ static void handle_boot_init_module(example_context_t *context) {
   context->boot_state = EXAMPLE_BOOT_RUNNING;
 }
 
-static void poll_resource_requests(example_context_t *context) {
-  int i = 0;
+static void on_resource_task_complete(example_task_group_entry_t *entry, int rc,
+                                      void *group_user_data) {
+  const example_resource_request_t *request =
+      (const example_resource_request_t *)example_task_group_entry_user_data(
+          entry);
+  const char *path = example_task_group_entry_path(entry);
+  char payload[64];
+  rl_handle_t handle = 0;
 
-  if (context == NULL) {
+  (void)group_user_data;
+
+  if (request == NULL) {
     return;
   }
 
-  for (i = 0; i < EXAMPLE_MAX_PENDING_RESOURCE_REQUESTS; i++) {
-    char payload[64];
-    int rc = 0;
-    example_resource_request_t *request = &context->resource_requests[i];
-
-    if (!request->in_use || request->loader_task == NULL) {
-      continue;
-    }
-
-    if (!rl_loader_poll_task(request->loader_task)) {
-      continue;
-    }
-
-    rc = rl_loader_finish_task(request->loader_task);
-    rl_loader_free_task(request->loader_task);
-    request->loader_task = NULL;
-
-    if (rc != 0) {
-      emit_resource_error(request->rid, "resource prepare failed");
-      free_resource_request(request);
-      continue;
-    }
-
-    {
-      rl_handle_t handle = create_resource_handle(request);
-      if (handle == 0) {
-        emit_resource_error(request->rid, "resource create failed");
-        free_resource_request(request);
-        continue;
-      }
-
-      (void)snprintf(payload, sizeof(payload), "%d|%u", request->rid,
-                     (unsigned int)handle);
-      (void)rl_event_emit("resource.loaded", payload);
-    }
-
-    free_resource_request(request);
+  if (rc != 0) {
+    emit_resource_error(request->rid, "resource prepare failed");
+    return;
   }
+
+  handle = create_resource_handle(request, path);
+  if (handle == 0) {
+    emit_resource_error(request->rid, "resource create failed");
+    return;
+  }
+
+  (void)snprintf(payload, sizeof(payload), "%d|%u", request->rid,
+                 (unsigned int)handle);
+  (void)rl_event_emit("resource.loaded", payload);
 }
 
 static void on_shutdown(void *user_data) {
   example_context_t *context = (example_context_t *)user_data;
-  int i = 0;
 
   if (context == NULL) {
     return;
   }
 
-  if (context->loader_task != NULL) {
-    rl_loader_free_task(context->loader_task);
-    context->loader_task = NULL;
+  if (context->restore_task != NULL) {
+    rl_loader_free_task(context->restore_task);
+    context->restore_task = NULL;
   }
-  for (i = 0; i < EXAMPLE_MAX_PENDING_RESOURCE_REQUESTS; i++) {
-    free_resource_request(&context->resource_requests[i]);
-  }
+  example_task_group_reset(&context->resource_tasks);
   rl_debug_disable();
   if (context->script_module.api != NULL) {
     rl_module_deinit_instance(context->script_module.api,
@@ -477,7 +430,9 @@ static void on_init(void *user_data) {
   context->module_host.event_off = module_event_off;
   context->module_host.event_emit = module_event_emit;
   context->module_host.frame_command = rl_frame_commands_append;
-  context->loader_task = rl_loader_restore_fs_async();
+  example_task_group_init(&context->resource_tasks, context,
+                          on_resource_task_complete);
+  context->restore_task = rl_loader_restore_fs_async();
 }
 
 static void on_tick(void *user_data) {
@@ -504,7 +459,7 @@ static void on_tick(void *user_data) {
     break;
   }
 
-  poll_resource_requests(context);
+  example_task_group_poll(&context->resource_tasks);
   rl_frame_commands_reset(&g_frame_command_buffer);
   if (script_module->api != NULL && script_module->api->update != NULL) {
     (void)script_module->api->update(script_module->state, dt);
@@ -525,7 +480,7 @@ int main(void) {
   rl_logger_set_level(RL_LOGGER_LEVEL_DEBUG);
 
   g_example_context.script_config =
-      (rl_module_config_t){800, 600, 60, RL_WINDOW_FLAG_MSAA_4X_HINT,
+      (rl_module_config_t){1024, 1280, 60, RL_WINDOW_FLAG_MSAA_4X_HINT,
                            "librl + raylib + lua(C example)"};
   g_example_context.boot_state = EXAMPLE_BOOT_RESTORE;
 
@@ -541,8 +496,16 @@ int main(void) {
       return 1;
     }
   }
+
+#ifdef PLATFORM_WEB
+  if (rl_start(on_init, on_tick, on_shutdown, &g_example_context) != 0) {
+    rl_deinit();
+    return 1;
+  }
+#else
   rl_run(on_init, on_tick, on_shutdown,
-                      &g_example_context);
+         &g_example_context);
+#endif
 
   return 0;
 }

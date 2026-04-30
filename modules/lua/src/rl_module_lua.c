@@ -84,7 +84,7 @@ typedef struct rl_lua_cached_resource_t {
 
 typedef struct rl_lua_cached_font_t {
     rl_handle_t handle;
-    float size;
+    int size;
     char path[256];
 } rl_lua_cached_font_t;
 
@@ -198,7 +198,7 @@ static bool lua_module_cached_destroy_handle(rl_lua_cached_resource_t *cache,
 static rl_handle_t lua_module_cached_load_font(rl_lua_cached_font_t *cache,
                                                int cache_count,
                                                const char *path,
-                                               float size);
+                                               int size);
 static void lua_module_cached_destroy_fonts(rl_lua_cached_font_t *cache,
                                             int cache_count);
 static bool lua_module_cached_destroy_font_handle(rl_lua_cached_font_t *cache,
@@ -877,7 +877,7 @@ static bool lua_module_cached_destroy_handle(rl_lua_cached_resource_t *cache,
 static rl_handle_t lua_module_cached_load_font(rl_lua_cached_font_t *cache,
                                                int cache_count,
                                                const char *path,
-                                               float size)
+                                               int size)
 {
     char normalized_path[256] = {0};
     int i = 0;
@@ -933,7 +933,7 @@ static void lua_module_cached_destroy_fonts(rl_lua_cached_font_t *cache,
 
         rl_font_destroy(cache[i].handle);
         cache[i].handle = 0;
-        cache[i].size = 0.0f;
+        cache[i].size = 0;
         cache[i].path[0] = '\0';
     }
 }
@@ -955,7 +955,7 @@ static bool lua_module_cached_destroy_font_handle(rl_lua_cached_font_t *cache,
 
         rl_font_destroy(cache[i].handle);
         cache[i].handle = 0;
-        cache[i].size = 0.0f;
+        cache[i].size = 0;
         cache[i].path[0] = '\0';
         return true;
     }
@@ -2325,7 +2325,7 @@ static int lua_module_load_font_binding(lua_State *L)
 {
     rl_module_lua_state_t *state = NULL;
     const char *path = NULL;
-    float size = 0.0f;
+    int size = 0;
     rl_handle_t handle = 0;
 
     state = (rl_module_lua_state_t *)lua_touserdata(L, lua_upvalueindex(1));
@@ -2335,7 +2335,7 @@ static int lua_module_load_font_binding(lua_State *L)
     }
 
     path = luaL_checkstring(L, 1);
-    size = (float)luaL_checknumber(L, 2);
+    size = (int)luaL_checkinteger(L, 2);
     handle = lua_module_cached_load_font(state->font_cache,
                                          RL_LUA_MODULE_MAX_CACHED_RESOURCES,
                                          path, size);

@@ -113,10 +113,11 @@ function applyLetterboxCanvasStyle(canvas, idealWidth, idealHeight) {
 }
 
 export async function runExample(displayName, modulePath, options = {}) {
-  const { buildEnv } = options;
+  const { buildEnv, onModuleReady } = options;
   const pageBase = getPageBase();
   const moduleUrl = new URL(modulePath, pageBase).href;
   const moduleDir = new URL("./", moduleUrl);
+  let cleanup = null;
 
   try {
     const canvas = document.getElementById("renderCanvas");
@@ -125,9 +126,15 @@ export async function runExample(displayName, modulePath, options = {}) {
     const mod = await waitForModuleWithTimeout(factory, env);
 
     console.log(`${displayName} module initialized:`, mod);
+    if (onModuleReady) {
+      cleanup = await onModuleReady(mod);
+    }
     applyLetterboxCanvasStyle(canvas, IDEAL_WIDTH, IDEAL_HEIGHT);
   } catch (e) {
     console.error(e);
+    if (typeof cleanup === "function") {
+      cleanup();
+    }
     const outputLog = createOutputLog();
     const message = e instanceof Error ? e.message : String(e);
     outputLog(`[wasm] startup failed: ${message}`);

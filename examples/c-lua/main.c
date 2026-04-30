@@ -1,6 +1,8 @@
 #include "rl.h"
-#include "rl_window.h"
-#include "example_task_group.h"
+
+#include <lauxlib.h>
+#include <lua.h>
+#include <lualib.h>
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -13,246 +15,59 @@ static const char *ASSET_HOST = "./";
 static const char *ASSET_HOST = "https://localhost:4444";
 #endif
 
+#define EXAMPLE_WINDOW_WIDTH 1024
+#define EXAMPLE_WINDOW_HEIGHT 1280
+#define EXAMPLE_WINDOW_TITLE "librl + raylib + lua(C example)"
 #define LUA_SCRIPT_ROOT "assets/scripts/lua"
-#define LUA_ENTRY_SCRIPT LUA_SCRIPT_ROOT "/main.lua"
+#define LUA_ENTRY_MODULE "simple"
+#define LUA_PACKAGE_PATH LUA_SCRIPT_ROOT "/?.lua;" LUA_SCRIPT_ROOT "/?/init.lua"
 
-typedef enum example_boot_state_t {
-  EXAMPLE_BOOT_RESTORE = 0,
-  EXAMPLE_BOOT_INIT_MODULE = 1,
-  EXAMPLE_BOOT_RUNNING = 2,
-  EXAMPLE_BOOT_ERROR = 3
-} example_boot_state_t;
+typedef struct host_callback_state_t {
+  int init_ref;
+  int tick_ref;
+  int shutdown_ref;
+  int user_ref;
+} host_callback_state_t;
 
-typedef enum example_resource_kind_t {
-  EXAMPLE_RESOURCE_KIND_NONE = 0,
-  EXAMPLE_RESOURCE_KIND_TEXTURE,
-  EXAMPLE_RESOURCE_KIND_MODEL,
-  EXAMPLE_RESOURCE_KIND_SPRITE3D,
-  EXAMPLE_RESOURCE_KIND_FONT,
-  EXAMPLE_RESOURCE_KIND_SOUND,
-  EXAMPLE_RESOURCE_KIND_MUSIC
-} example_resource_kind_t;
-
-typedef struct example_resource_request_t {
-  int rid;
-  example_resource_kind_t kind;
-  float size;
-} example_resource_request_t;
-
-typedef struct example_context_t {
-  rl_module_config_t script_config;
-  rl_module_instance_t script_module;
-  rl_module_host_api_t module_host;
-  rl_loader_task_t *restore_task;
-  example_task_group_t resource_tasks;
-  example_boot_state_t boot_state;
-  char module_error[256];
+typedef struct host_context_t {
+  lua_State *lua_state;
+  host_callback_state_t callbacks;
+  int callbacks_installed;
+  int lua_callback_depth;
+  int shutdown_finalize_pending;
+  int shutdown_finalized;
+  int boot_failed;
   char boot_error[256];
-} example_context_t;
+} host_context_t;
 
-// Keep the command buffer out of the wasm stack; the example only needs one
-// app-wide instance.
-static rl_frame_command_buffer_t g_frame_command_buffer = {0};
-static example_context_t g_example_context = {0};
 static const char *g_asset_host = NULL;
+static host_context_t g_host_context = {0};
 
-static void emit_resource_error(int rid, const char *message) {
-  char payload[512];
+int luaopen_rl(lua_State *L);
 
-  (void)snprintf(payload, sizeof(payload), "%d|%s", rid,
-                 message != NULL ? message : "resource load failed");
-  (void)rl_event_emit("resource.error", payload);
+/* Registry refs for the Lua callbacks that the outer C host forwards to. */
+static void callback_state_init(host_callback_state_t *state) {
+  if (state == NULL) {
+    return;
+  }
+
+  state->init_ref = LUA_NOREF;
+  state->tick_ref = LUA_NOREF;
+  state->shutdown_ref = LUA_NOREF;
+  state->user_ref = LUA_NOREF;
 }
 
-static example_resource_kind_t parse_resource_kind(const char *kind) {
-  if (kind == NULL) return EXAMPLE_RESOURCE_KIND_NONE;
-  if (strcmp(kind, "texture") == 0) return EXAMPLE_RESOURCE_KIND_TEXTURE;
-  if (strcmp(kind, "model") == 0) return EXAMPLE_RESOURCE_KIND_MODEL;
-  if (strcmp(kind, "sprite3d") == 0) return EXAMPLE_RESOURCE_KIND_SPRITE3D;
-  if (strcmp(kind, "font") == 0) return EXAMPLE_RESOURCE_KIND_FONT;
-  if (strcmp(kind, "sound") == 0) return EXAMPLE_RESOURCE_KIND_SOUND;
-  if (strcmp(kind, "music") == 0) return EXAMPLE_RESOURCE_KIND_MUSIC;
-  return EXAMPLE_RESOURCE_KIND_NONE;
-}
-
-static rl_handle_t create_resource_handle(const example_resource_request_t *request,
-                                         const char *path) {
-  if (request == NULL) {
-    return 0;
-  }
-
-  switch (request->kind) {
-  case EXAMPLE_RESOURCE_KIND_TEXTURE:
-    return rl_texture_create(path);
-  case EXAMPLE_RESOURCE_KIND_MODEL:
-    return rl_model_create(path);
-  case EXAMPLE_RESOURCE_KIND_SPRITE3D:
-    return rl_sprite3d_create(path);
-  case EXAMPLE_RESOURCE_KIND_FONT:
-    return rl_font_create(path, request->size);
-  case EXAMPLE_RESOURCE_KIND_SOUND:
-    return rl_sound_create(path);
-  case EXAMPLE_RESOURCE_KIND_MUSIC:
-    return rl_music_create(path);
-  case EXAMPLE_RESOURCE_KIND_NONE:
-  default:
-    return 0;
-  }
-}
-
-static int parse_resource_request_payload(const char *payload, int *out_rid,
-                                          char *kind, size_t kind_size,
-                                          char *path, size_t path_size,
-                                          float *out_size) {
-  char buffer[512];
-  char *cursor = NULL;
-  char *rid_text = NULL;
-  char *kind_text = NULL;
-  char *path_text = NULL;
-  char *size_text = NULL;
-
-  if (payload == NULL || out_rid == NULL || kind == NULL || path == NULL) {
-    return -1;
-  }
-
-  (void)snprintf(buffer, sizeof(buffer), "%s", payload);
-  rid_text = buffer;
-  cursor = strchr(rid_text, '|');
-  if (cursor == NULL) return -1;
-  *cursor++ = '\0';
-  kind_text = cursor;
-  cursor = strchr(kind_text, '|');
-  if (cursor == NULL) return -1;
-  *cursor++ = '\0';
-  path_text = cursor;
-  cursor = strchr(path_text, '|');
-  if (cursor != NULL) {
-    *cursor++ = '\0';
-    size_text = cursor;
-  }
-
-  *out_rid = atoi(rid_text);
-  (void)snprintf(kind, kind_size, "%s", kind_text);
-  (void)snprintf(path, path_size, "%s", path_text);
-  if (out_size != NULL) {
-    *out_size = size_text != NULL && size_text[0] != '\0'
-                    ? (float)strtod(size_text, NULL)
-                    : 0.0f;
-  }
-  return 0;
-}
-
+/* Resolve the asset host for desktop runs; web uses relative assets. */
 static const char *get_asset_host(void) {
   const char *value = getenv("RL_ASSET_HOST");
-  if (value && value[0] != '\0') {
+  if (value != NULL && value[0] != '\0') {
     return value;
   }
   return ASSET_HOST;
 }
 
-static void module_log(void *user_data, int level, const char *message) {
-  (void)user_data;
-  rl_logger_message_source((rl_log_level_t)level, "module", 0, "%s",
-                           message != NULL ? message : "(null)");
-}
-
-static void module_log_source(void *user_data, int level,
-                              const char *source_file, int source_line,
-                              const char *message) {
-  (void)user_data;
-  rl_logger_message_source((rl_log_level_t)level,
-                           source_file != NULL && source_file[0] != '\0'
-                               ? source_file
-                               : "module",
-                           source_line, "%s",
-                           message != NULL ? message : "(null)");
-}
-
-static int module_event_on(void *host_user_data, const char *event_name,
-                           rl_module_event_listener_fn listener,
-                           void *listener_user_data) {
-  (void)host_user_data;
-  return rl_event_on(event_name, listener, listener_user_data);
-}
-
-static int module_event_off(void *host_user_data, const char *event_name,
-                            rl_module_event_listener_fn listener,
-                            void *listener_user_data) {
-  (void)host_user_data;
-  return rl_event_off(event_name, listener, listener_user_data);
-}
-
-static int module_event_emit(void *host_user_data, const char *event_name,
-                             void *payload) {
-  (void)host_user_data;
-  return rl_event_emit(event_name, payload);
-}
-
-static void on_module_ready(void *payload, void *user_data) {
-  (void)payload;
-  (void)user_data;
-  log_info("Lua module ready");
-}
-
-static void on_module_error(void *payload, void *user_data) {
-  const char *error = (const char *)payload;
-  (void)user_data;
-  log_error("Lua module error: %s", error != NULL ? error : "(unknown)");
-}
-
-static void on_resource_load(void *payload, void *user_data) {
-  example_context_t *context = (example_context_t *)user_data;
-  example_resource_request_t request;
-  char kind[32];
-  char path[256];
-  int group_rc = 0;
-  int rid = 0;
-  float size = 0.0f;
-
-  if (context == NULL) {
-    return;
-  }
-
-  if (parse_resource_request_payload((const char *)payload, &rid, kind,
-                                     sizeof(kind), path, sizeof(path),
-                                     &size) != 0) {
-    emit_resource_error(rid, "invalid resource request");
-    return;
-  }
-
-  memset(&request, 0, sizeof(request));
-  request.rid = rid;
-  request.kind = parse_resource_kind(kind);
-  request.size = size;
-
-  switch (request.kind) {
-  case EXAMPLE_RESOURCE_KIND_MODEL:
-  case EXAMPLE_RESOURCE_KIND_SPRITE3D:
-  case EXAMPLE_RESOURCE_KIND_TEXTURE:
-  case EXAMPLE_RESOURCE_KIND_FONT:
-  case EXAMPLE_RESOURCE_KIND_SOUND:
-  case EXAMPLE_RESOURCE_KIND_MUSIC:
-    break;
-  case EXAMPLE_RESOURCE_KIND_NONE:
-  default:
-    emit_resource_error(rid, "unsupported resource kind");
-    return;
-  }
-
-  group_rc = example_task_group_add_import_task(
-      &context->resource_tasks, request.rid, path, &request, sizeof(request));
-  if (group_rc == EXAMPLE_TASK_GROUP_OK) {
-    return;
-  }
-
-  if (group_rc == EXAMPLE_TASK_GROUP_ERR_GROUP_FULL) {
-    emit_resource_error(rid, "resource request queue is full");
-  } else {
-    emit_resource_error(rid, "failed to start resource prepare");
-  }
-}
-
-static void set_boot_error(example_context_t *context, const char *format, ...) {
+/* Record a host-visible boot error that can be rendered during early failure. */
+static void set_boot_error(host_context_t *context, const char *format, ...) {
   va_list args;
 
   if (context == NULL || format == NULL) {
@@ -262,9 +77,10 @@ static void set_boot_error(example_context_t *context, const char *format, ...) 
   va_start(args, format);
   (void)vsnprintf(context->boot_error, sizeof(context->boot_error), format, args);
   va_end(args);
-  context->boot_state = EXAMPLE_BOOT_ERROR;
+  context->boot_failed = 1;
 }
 
+/* Draw a simple status screen while booting or when boot fails. */
 static void draw_boot_status(const char *title, const char *detail) {
   rl_render_begin();
   rl_render_clear_background(RL_COLOR_RAYWHITE);
@@ -274,237 +90,360 @@ static void draw_boot_status(const char *title, const char *detail) {
   rl_render_end();
 }
 
-static void handle_boot_restore(example_context_t *context) {
-  if (context->restore_task == NULL ||
-      rl_loader_poll_task(context->restore_task)) {
-    if (context->restore_task != NULL) {
-      rl_loader_free_task(context->restore_task);
-      context->restore_task = NULL;
-    }
-    rl_loader_clear_cache();
-    context->boot_state = EXAMPLE_BOOT_INIT_MODULE;
+/* Release any stored Lua callback refs from the registry. */
+static void clear_callback_refs(lua_State *state, host_callback_state_t *callbacks) {
+  if (state == NULL || callbacks == NULL) {
     return;
   }
 
-  draw_boot_status("Loading", "Restoring cache...");
+  if (callbacks->init_ref != LUA_NOREF) {
+    luaL_unref(state, LUA_REGISTRYINDEX, callbacks->init_ref);
+    callbacks->init_ref = LUA_NOREF;
+  }
+  if (callbacks->tick_ref != LUA_NOREF) {
+    luaL_unref(state, LUA_REGISTRYINDEX, callbacks->tick_ref);
+    callbacks->tick_ref = LUA_NOREF;
+  }
+  if (callbacks->shutdown_ref != LUA_NOREF) {
+    luaL_unref(state, LUA_REGISTRYINDEX, callbacks->shutdown_ref);
+    callbacks->shutdown_ref = LUA_NOREF;
+  }
+  if (callbacks->user_ref != LUA_NOREF) {
+    luaL_unref(state, LUA_REGISTRYINDEX, callbacks->user_ref);
+    callbacks->user_ref = LUA_NOREF;
+  }
 }
 
-static void handle_boot_init_module(example_context_t *context) {
-  int w = 0;
-  int h = 0;
-  int current_monitor = 0;
-  int mon_width = 0;
-  int mon_height = 0;
-  float margin_scalar = 0.9f;
-  float width_scale = 1.0f;
-  float height_scale = 1.0f;
-  float scale = 1.0f;
-  rl_module_config_t *script_config = &context->script_config;
-  rl_module_instance_t *script_module = &context->script_module;
-  rl_module_host_api_t *module_host = &context->module_host;
-
-  if (rl_module_init("lua", module_host, &script_module->api,
-                     &script_module->state, context->module_error,
-                     sizeof(context->module_error)) != 0) {
-    set_boot_error(context, "Lua module init failed: %.220s",
-                   context->module_error);
-    return;
-  }
-  rl_loader_clear_cache();
-
-  (void)rl_event_on("lua.ready", on_module_ready, NULL);
-  (void)rl_event_on("lua.error", on_module_error, NULL);
-  (void)rl_event_emit("lua.set_path", LUA_SCRIPT_ROOT);
-  (void)rl_event_emit("lua.set_cpath", LUA_SCRIPT_ROOT);
-  (void)rl_event_emit("lua.do_file", LUA_ENTRY_SCRIPT);
-  if (rl_module_get_config_instance(script_module->api, script_module->state,
-                                    script_config) != 0) {
-    log_warn("Lua script get_config failed");
-  }
-
-  rl_window_set_title(script_config->title);
-  rl_set_target_fps(script_config->target_fps > 0
-                                     ? script_config->target_fps
-                                     : 60);
-  w = script_config->width;
-  h = script_config->height;
-
-  current_monitor = rl_window_get_current_monitor();
-  mon_width = rl_window_get_monitor_width(current_monitor);
-  mon_height = rl_window_get_monitor_height(current_monitor);
-  width_scale = ((float)mon_width * margin_scalar) / (float)w;
-  height_scale = ((float)mon_height * margin_scalar) / (float)h;
-  scale = width_scale < height_scale ? width_scale : height_scale;
-  w = (int)((float)w * scale);
-  h = (int)((float)h * scale);
-  rl_window_set_size(w > 0 ? w : 1, h > 0 ? h : 1);
-
-  rl_debug_enable_fps(10, 10, 16, NULL);
-  if (script_module->api != NULL &&
-      rl_module_start_instance(script_module->api, script_module->state) != 0) {
-    log_warn("Lua script start failed");
-  }
-
-  context->boot_state = EXAMPLE_BOOT_RUNNING;
-}
-
-static void on_resource_task_complete(example_task_group_entry_t *entry, int rc,
-                                      void *group_user_data) {
-  const example_resource_request_t *request =
-      (const example_resource_request_t *)example_task_group_entry_user_data(
-          entry);
-  const char *path = example_task_group_entry_path(entry);
-  char payload[64];
-  rl_handle_t handle = 0;
-
-  (void)group_user_data;
-
-  if (request == NULL) {
+/* Tear down the embedded Lua VM and librl runtime once the hosted app stops. */
+static void finalize_runtime_shutdown(host_context_t *context) {
+  if (context == NULL || context->shutdown_finalized) {
     return;
   }
 
-  if (rc != 0) {
-    emit_resource_error(request->rid, "resource prepare failed");
-    return;
+  context->shutdown_finalized = 1;
+  context->shutdown_finalize_pending = 0;
+  if (context->lua_state != NULL) {
+    clear_callback_refs(context->lua_state, &context->callbacks);
+    lua_close(context->lua_state);
+    context->lua_state = NULL;
   }
-
-  handle = create_resource_handle(request, path);
-  if (handle == 0) {
-    emit_resource_error(request->rid, "resource create failed");
-    return;
-  }
-
-  (void)snprintf(payload, sizeof(payload), "%d|%u", request->rid,
-                 (unsigned int)handle);
-  (void)rl_event_emit("resource.loaded", payload);
-}
-
-static void on_shutdown(void *user_data) {
-  example_context_t *context = (example_context_t *)user_data;
-
-  if (context == NULL) {
-    return;
-  }
-
-  if (context->restore_task != NULL) {
-    rl_loader_free_task(context->restore_task);
-    context->restore_task = NULL;
-  }
-  example_task_group_reset(&context->resource_tasks);
-  rl_debug_disable();
-  if (context->script_module.api != NULL) {
-    rl_module_deinit_instance(context->script_module.api,
-                              context->script_module.state);
-    context->script_module.api = NULL;
-    context->script_module.state = NULL;
-  }
-  (void)rl_event_off("lua.ready", on_module_ready, NULL);
-  (void)rl_event_off("lua.error", on_module_error, NULL);
-  (void)rl_event_off("resource.load", on_resource_load, context);
   rl_deinit();
 }
 
-static void on_init(void *user_data) {
-  example_context_t *context = (example_context_t *)user_data;
+/* Prepend the example asset script directory to package.path. */
+static void prepend_package_path(lua_State *state, const char *prefix) {
+  const char *current_path = NULL;
+  char buffer[2048];
 
-  if (context == NULL) {
+  if (state == NULL || prefix == NULL) {
     return;
   }
 
-  if (rl_set_asset_host(g_asset_host) != 0) {
-    set_boot_error(context, "Failed to set asset host: %s",
-                   g_asset_host != NULL ? g_asset_host : "(null)");
-    return;
-  }
-
-  (void)rl_event_on("resource.load", on_resource_load, context);
-
-  rl_set_target_fps(context->script_config.target_fps > 0
-                                     ? context->script_config.target_fps
-                                     : 60);
-
-  context->module_host.user_data = &g_frame_command_buffer;
-  context->module_host.log = module_log;
-  context->module_host.log_source = module_log_source;
-  context->module_host.event_on = module_event_on;
-  context->module_host.event_off = module_event_off;
-  context->module_host.event_emit = module_event_emit;
-  context->module_host.frame_command = rl_frame_commands_append;
-  example_task_group_init(&context->resource_tasks, context,
-                          on_resource_task_complete);
-  context->restore_task = rl_loader_restore_fs_async();
+  lua_getglobal(state, "package");
+  lua_getfield(state, -1, "path");
+  current_path = lua_tostring(state, -1);
+  (void)snprintf(buffer, sizeof(buffer), "%s;%s", prefix,
+                 current_path != NULL ? current_path : "");
+  lua_pop(state, 1);
+  lua_pushstring(state, buffer);
+  lua_setfield(state, -2, "path");
+  lua_pop(state, 1);
 }
 
-static void on_tick(void *user_data) {
-  example_context_t *context = (example_context_t *)user_data;
-  rl_module_instance_t *script_module = NULL;
-  const float dt = rl_get_delta_time();
+/* Require a Lua module and leave no return value on the stack. */
+static int require_module(lua_State *state, const char *module_name) {
+  if (state == NULL || module_name == NULL) {
+    return -1;
+  }
+
+  lua_getglobal(state, "require");
+  lua_pushstring(state, module_name);
+  if (lua_pcall(state, 1, 1, 0) != 0) {
+    return -1;
+  }
+
+  lua_pop(state, 1);
+  return 0;
+}
+
+/* Hosted-only Lua API: register callbacks that the C springboard will invoke. */
+static int example_rl_set_callbacks(lua_State *L) {
+  host_context_t *context = NULL;
+  host_callback_state_t *callbacks = NULL;
+
+  /* `rl.set_callbacks(...)` is a C closure with the host context stored as an
+   * upvalue, not a normal Lua argument. */
+  context = (host_context_t *)lua_touserdata(L, lua_upvalueindex(1));
+  if (context == NULL) {
+    return luaL_error(L, "invalid hosted Lua context");
+  }
+
+  luaL_checktype(L, 1, LUA_TFUNCTION);
+  luaL_checktype(L, 2, LUA_TFUNCTION);
+  if (!lua_isnoneornil(L, 3)) {
+    luaL_checktype(L, 3, LUA_TFUNCTION);
+  }
+
+  callbacks = &context->callbacks;
+  clear_callback_refs(L, callbacks);
+
+  lua_pushvalue(L, 1);
+  callbacks->init_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+  lua_pushvalue(L, 2);
+  callbacks->tick_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+
+  if (!lua_isnoneornil(L, 3)) {
+    lua_pushvalue(L, 3);
+    callbacks->shutdown_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+  } else {
+    callbacks->shutdown_ref = LUA_NOREF;
+  }
+
+  if (!lua_isnoneornil(L, 4)) {
+    lua_pushvalue(L, 4);
+    callbacks->user_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+  } else {
+    callbacks->user_ref = LUA_NOREF;
+  }
+
+  context->callbacks_installed = 1;
+  return 0;
+}
+
+/* Load `rl` and inject the hosted-only helper used by embedded mode. */
+static int install_rl_helpers(host_context_t *context, char *error,
+                              size_t error_size) {
+  lua_State *state = NULL;
+
+  if (context == NULL || context->lua_state == NULL ||
+      error == NULL || error_size == 0) {
+    return -1;
+  }
+
+  state = context->lua_state;
+  if (require_module(state, "rl") != 0) {
+    const char *message = lua_tostring(state, -1);
+    (void)snprintf(error, error_size, "Failed to require rl: %.220s",
+                   message != NULL ? message : "unknown error");
+    lua_pop(state, 1);
+    return -1;
+  }
+
+  lua_getglobal(state, "package");
+  lua_getfield(state, -1, "loaded");
+  lua_getfield(state, -1, "rl");
+  if (!lua_istable(state, -1)) {
+    lua_pop(state, 3);
+    (void)snprintf(error, error_size, "Loaded rl module is not a table");
+    return -1;
+  }
+
+  /* Inject a hosted-only helper into the `rl` table. The C function keeps a
+   * pointer to the host context as a closure upvalue so Lua can register the
+   * callbacks that the outer C lifecycle will springboard into later. */
+  lua_pushlightuserdata(state, context);
+  lua_pushcclosure(state, example_rl_set_callbacks, 1);
+  lua_setfield(state, -2, "set_callbacks");
+
+  lua_pop(state, 3);
+  return 0;
+}
+
+/* Create the Lua VM used by the host and prepare it for hosted script loading. */
+static int create_lua_vm(host_context_t *context, char *error,
+                         size_t error_size) {
+  lua_State *state = NULL;
+
+  if (context == NULL || error == NULL || error_size == 0) {
+    return -1;
+  }
+
+  error[0] = '\0';
+  state = luaL_newstate();
+  if (state == NULL) {
+    (void)snprintf(error, error_size, "Failed to create Lua state");
+    return -1;
+  }
+
+  callback_state_init(&context->callbacks);
+  context->callbacks_installed = 0;
+  context->lua_state = state;
+  luaL_openlibs(state);
+
+  lua_getglobal(state, "package");
+  lua_getfield(state, -1, "preload");
+  lua_pushcfunction(state, luaopen_rl);
+  lua_setfield(state, -2, "rl");
+  lua_pop(state, 2);
+
+  lua_pushboolean(state, 1);
+  lua_setglobal(state, "__LIBRL_HOSTED");
+
+  prepend_package_path(state, LUA_PACKAGE_PATH);
+
+  if (install_rl_helpers(context, error, error_size) != 0) {
+    return -1;
+  }
+
+  return 0;
+}
+
+/* Invoke one registered Lua callback, deferring final shutdown until unwind. */
+static int call_lua_callback(host_context_t *context, int callback_ref,
+                             const char *callback_name) {
+  int arg_count = 0;
+  const char *message = NULL;
+
+  if (context == NULL || context->lua_state == NULL ||
+      callback_ref == LUA_NOREF) {
+    return 0;
+  }
+
+  lua_rawgeti(context->lua_state, LUA_REGISTRYINDEX, callback_ref);
+  if (context->callbacks.user_ref != LUA_NOREF) {
+    lua_rawgeti(context->lua_state, LUA_REGISTRYINDEX,
+                context->callbacks.user_ref);
+    arg_count = 1;
+  }
+
+  context->lua_callback_depth++;
+  if (lua_pcall(context->lua_state, arg_count, 0, 0) != 0) {
+    context->lua_callback_depth--;
+    message = lua_tostring(context->lua_state, -1);
+    set_boot_error(context, "%s failed: %.220s",
+                   callback_name != NULL ? callback_name : "callback",
+                   message != NULL ? message : "unknown Lua error");
+    lua_pop(context->lua_state, 1);
+    if (context->lua_callback_depth == 0 &&
+        context->shutdown_finalize_pending) {
+      finalize_runtime_shutdown(context);
+    }
+    return -1;
+  }
+
+  context->lua_callback_depth--;
+  if (context->lua_callback_depth == 0 &&
+      context->shutdown_finalize_pending) {
+    finalize_runtime_shutdown(context);
+  }
+
+  return 0;
+}
+
+/* Outer init callback: require the Lua entry module after loader readiness. */
+static void host_init(void *user_data) {
+  host_context_t *context = (host_context_t *)user_data;
 
   if (context == NULL) {
     return;
   }
 
-  script_module = &context->script_module;
-  switch (context->boot_state) {
-  case EXAMPLE_BOOT_RESTORE:
-    handle_boot_restore(context);
+  if (context->boot_failed) {
     return;
-  case EXAMPLE_BOOT_INIT_MODULE:
-    handle_boot_init_module(context);
+  }
+
+  if (require_module(context->lua_state, LUA_ENTRY_MODULE) != 0) {
+    const char *message = lua_tostring(context->lua_state, -1);
+    set_boot_error(context, "Failed to load Lua app '%s': %.220s",
+                   LUA_ENTRY_MODULE, message != NULL ? message : "unknown error");
+    lua_pop(context->lua_state, 1);
     return;
-  case EXAMPLE_BOOT_ERROR:
+  }
+
+  if (!context->callbacks_installed) {
+    set_boot_error(context, "Hosted Lua app '%s' did not call rl.set_callbacks(...)",
+                   LUA_ENTRY_MODULE);
+    return;
+  }
+
+  (void)call_lua_callback(context, context->callbacks.init_ref, "init");
+}
+
+/* Outer tick callback: render boot errors or forward ticks into Lua. */
+static void host_tick(void *user_data) {
+  host_context_t *context = (host_context_t *)user_data;
+
+  if (context == NULL) {
+    return;
+  }
+
+  if (context->boot_failed) {
     draw_boot_status("Boot failed", context->boot_error);
     return;
-  case EXAMPLE_BOOT_RUNNING:
-    break;
   }
 
-  example_task_group_poll(&context->resource_tasks);
-  rl_frame_commands_reset(&g_frame_command_buffer);
-  if (script_module->api != NULL && script_module->api->update != NULL) {
-    (void)script_module->api->update(script_module->state, dt);
-  }
-  rl_frame_commands_execute_audio(&g_frame_command_buffer);
-  rl_render_begin();
-  rl_render_clear_background(RL_COLOR_RAYWHITE);
-  rl_frame_commands_execute_clear(&g_frame_command_buffer);
-  rl_render_begin_mode_3d();
-  rl_frame_commands_execute_3d(&g_frame_command_buffer);
-  rl_render_end_mode_3d();
-  rl_frame_commands_execute_2d(&g_frame_command_buffer);
-  rl_render_end();
+  (void)call_lua_callback(context, context->callbacks.tick_ref, "tick");
 }
 
-int main(void) {
-  g_asset_host = get_asset_host();
-  rl_logger_set_level(RL_LOGGER_LEVEL_DEBUG);
+/* Outer shutdown callback: forward to Lua and finalize once callbacks unwind. */
+static void host_shutdown(void *user_data) {
+  host_context_t *context = (host_context_t *)user_data;
 
-  g_example_context.script_config =
-      (rl_module_config_t){1024, 1280, 60, RL_WINDOW_FLAG_MSAA_4X_HINT,
-                           "librl + raylib + lua(C example)"};
-  g_example_context.boot_state = EXAMPLE_BOOT_RESTORE;
+  if (context == NULL) {
+    return;
+  }
 
-  {
-    rl_init_config_t init_cfg;
-    memset(&init_cfg, 0, sizeof(init_cfg));
-    init_cfg.window_width = g_example_context.script_config.width;
-    init_cfg.window_height = g_example_context.script_config.height;
-    init_cfg.window_title = g_example_context.script_config.title;
-    init_cfg.window_flags = g_example_context.script_config.flags;
-    init_cfg.asset_host = g_asset_host;
-    if (rl_init(&init_cfg) != 0) {
-      return 1;
+  context->shutdown_finalize_pending = 1;
+  if (context->callbacks.shutdown_ref != LUA_NOREF) {
+    char error_before[sizeof(context->boot_error)];
+
+    (void)snprintf(error_before, sizeof(error_before), "%s", context->boot_error);
+    if (call_lua_callback(context, context->callbacks.shutdown_ref, "shutdown") !=
+        0) {
+      rl_logger_message_source(RL_LOGGER_LEVEL_ERROR, "lua", 0, "%s",
+                               context->boot_error);
+      (void)snprintf(context->boot_error, sizeof(context->boot_error), "%s",
+                     error_before);
     }
   }
 
+  if (context->lua_callback_depth == 0 &&
+      context->shutdown_finalize_pending) {
+    finalize_runtime_shutdown(context);
+  }
+}
+
+int main(void) {
+  char error[256];
+  rl_init_config_t init_cfg;
+
+  memset(&g_host_context, 0, sizeof(g_host_context));
+  callback_state_init(&g_host_context.callbacks);
+
+  g_asset_host = get_asset_host();
+  rl_logger_set_level(RL_LOGGER_LEVEL_DEBUG);
+
+  memset(&init_cfg, 0, sizeof(init_cfg));
+  init_cfg.window_width = EXAMPLE_WINDOW_WIDTH;
+  init_cfg.window_height = EXAMPLE_WINDOW_HEIGHT;
+  init_cfg.window_title = EXAMPLE_WINDOW_TITLE;
+  init_cfg.window_flags = RL_WINDOW_FLAG_MSAA_4X_HINT;
+  init_cfg.asset_host = g_asset_host;
+  if (rl_init(&init_cfg) != 0) {
+    return 1;
+  }
+
+  if (create_lua_vm(&g_host_context, error, sizeof(error)) != 0) {
+    rl_logger_message_source(RL_LOGGER_LEVEL_ERROR, "lua", 0, "%s", error);
+    finalize_runtime_shutdown(&g_host_context);
+    return 1;
+  }
+
+  rl_loader_clear_cache();
+
 #ifdef PLATFORM_WEB
-  if (rl_start(on_init, on_tick, on_shutdown, &g_example_context) != 0) {
-    rl_deinit();
+  /* On web, JS owns the frame pump and drives exported `rl_tick()` through
+   * JSPI. We only arm the outer host lifecycle here. */
+  if (rl_start(host_init, host_tick, host_shutdown, &g_host_context) != 0) {
+    finalize_runtime_shutdown(&g_host_context);
     return 1;
   }
 #else
-  rl_run(on_init, on_tick, on_shutdown,
-         &g_example_context);
+  /* On desktop, librl owns the frame loop directly through `rl_run()`. */
+  rl_run(host_init, host_tick, host_shutdown, &g_host_context);
+  if (!g_host_context.shutdown_finalized) {
+    finalize_runtime_shutdown(&g_host_context);
+  }
 #endif
 
   return 0;

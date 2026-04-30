@@ -207,27 +207,34 @@ local function on_shutdown(c)
     if c.camera and c.camera ~= 0 then
         rl.camera3d_destroy(c.camera)
     end
-    rl.deinit()
-end
-
-if (not rl.is_initialized()) then
-    local init_rc = rl.init({
-        window_width = 1024,
-        window_height = 1280,
-        window_title = "Hello, World! (Lua)",
-        window_flags = rl.RL_WINDOW_FLAG_MSAA_4X_HINT,
-        asset_host = "https://localhost:4444",
-    })
-    if init_rc == rl.RL_INIT_OK then
-        rl.loader_clear_cache()
-        rl.log("Loaded librl Lua module.")
-    elseif init_rc == rl.RL_INIT_ERR_ALREADY_INITIALIZED then
-        rl.log("librl runtime already initialized by host.")
-    else
-        error("rl.init failed: " .. tostring(init_rc))
-        return
+    if not rawget(_G, "__LIBRL_HOSTED") then
+        rl.deinit()
     end
 end
 
-
-rl.run(on_init, on_tick, on_shutdown, app_context)
+-- if we are hosted in wasm, the ticks have to be manually hit to allow js to pause for sync
+-- loads (like require())
+if rawget(_G, "__LIBRL_HOSTED") then
+    rl.set_callbacks(on_init, on_tick, on_shutdown, app_context)
+    return
+else
+    -- hosted by something like stock lua/luajit
+    if (not rl.is_initialized()) then
+        local init_rc = rl.init({
+            window_width = 1024,
+            window_height = 1280,
+            window_title = "Hello, World! (Lua)",
+            window_flags = rl.RL_WINDOW_FLAG_MSAA_4X_HINT,
+            asset_host = "https://localhost:4444",
+        })
+        if init_rc == rl.RL_INIT_OK then
+            rl.log("Loaded librl Lua module.")
+        elseif init_rc == rl.RL_INIT_ERR_ALREADY_INITIALIZED then
+            rl.log("librl runtime already initialized by host.")
+        else
+            error("rl.init failed: " .. tostring(init_rc))
+            return
+        end
+    end
+    rl.run(on_init, on_tick, on_shutdown, app_context)
+end

@@ -1,5 +1,5 @@
 -I.
 -I../../include
--I../../modules/lua/include
+-I../../deps/liblua/include
 -I${EMSDK}/upstream/emscripten/cache/sysroot/include
 -DPLATFORM_DESKTOP

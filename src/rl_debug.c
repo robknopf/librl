@@ -36,7 +36,7 @@ void rl_debug_enable_fps(int x, int y, int font_size, const char *font_path) {
     rl_debug_state.fps_font_size = font_size > 0 ? font_size : 16;
 
     if (font_path != NULL && font_path[0] != '\0') {
-        rl_debug_state.fps_font = rl_font_create(font_path, (float)rl_debug_state.fps_font_size);
+        rl_debug_state.fps_font = rl_font_create(font_path, rl_debug_state.fps_font_size);
         rl_debug_state.owns_fps_font = rl_debug_state.fps_font != 0;
     }
 }

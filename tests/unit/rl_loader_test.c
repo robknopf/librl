@@ -80,7 +80,7 @@ int test_rl_loader_run(void)
     TEST_ASSERT(data == NULL);
 
     fetch_url_stub_set_response(200, glb_payload, sizeof(glb_payload) - 1);
-    task = rl_loader_import_asset_async("https://example.com/assets/model.glb?x=1#frag");
+    task = rl_loader_create_import_task("https://example.com/assets/model.glb?x=1#frag");
     TEST_ASSERT(task != NULL);
     TEST_ASSERT(rl_loader_poll_task(task) == true);
     TEST_ASSERT(rl_loader_finish_task(task) == 0);
@@ -105,7 +105,7 @@ int test_rl_loader_run(void)
     free(data);
 
     fetch_url_stub_set_response(200, txt_payload, sizeof(txt_payload) - 1);
-    task = rl_loader_import_asset_async("assets/readme.txt");
+    task = rl_loader_create_import_task("assets/readme.txt");
     TEST_ASSERT(task != NULL);
     TEST_ASSERT(rl_loader_poll_task(task) == true);
     TEST_ASSERT(rl_loader_finish_task(task) == 0);
@@ -128,7 +128,7 @@ int test_rl_loader_run(void)
     fetch_url_stub_enqueue_response(200, gltf_payload, sizeof(gltf_payload) - 1);
     fetch_url_stub_enqueue_response(200, (const char *)mesh_payload, sizeof(mesh_payload));
     fetch_url_stub_enqueue_response(200, (const char *)tex_payload, sizeof(tex_payload));
-    task = rl_loader_import_asset_async("assets/scene.gltf");
+    task = rl_loader_create_import_task("assets/scene.gltf");
     TEST_ASSERT(task != NULL);
     TEST_ASSERT(rl_loader_poll_task(task) == false);
     TEST_ASSERT(rl_loader_poll_task(task) == false);

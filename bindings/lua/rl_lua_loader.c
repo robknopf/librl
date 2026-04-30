@@ -146,10 +146,10 @@ static int rl_loader_restore_fs_async_lua(lua_State *L)
     return 1;
 }
 
-static int rl_loader_import_asset_async_lua(lua_State *L)
+static int rl_loader_create_import_task_lua(lua_State *L)
 {
     const char *filename = luaL_checkstring(L, 1);
-    rl_loader_task_t *task = rl_loader_import_asset_async(filename);
+    rl_loader_task_t *task = rl_loader_create_import_task(filename);
     lua_pushinteger(L, (lua_Integer)(uintptr_t)task);
     return 1;
 }
@@ -273,7 +273,7 @@ static int rl_loader_clear_cache_lua(lua_State *L)
     return 1;
 }
 
-static int rl_loader_queue_task_lua(lua_State *L)
+static int rl_loader_add_task_lua(lua_State *L)
 {
     rl_loader_task_t *task = (rl_loader_task_t *)(uintptr_t)luaL_checkinteger(L, 1);
     const char *path = luaL_checkstring(L, 2);
@@ -302,7 +302,7 @@ static int rl_loader_queue_task_lua(lua_State *L)
         return 1;
     }
 
-    rc = rl_loader_queue_task(task,
+    rc = rl_loader_add_task(task,
                             path,
                             success_ref == LUA_NOREF ? NULL : rl_lua_loader_on_success,
                             failure_ref == LUA_NOREF ? NULL : rl_lua_loader_on_failure,
@@ -339,7 +339,7 @@ void rl_register_loader_bindings(lua_State *L)
     lua_pushcfunction(L, rl_loader_restore_fs_async_lua);
     lua_setfield(L, -2, "loader_restore_fs_async");
 
-    lua_pushcfunction(L, rl_loader_import_asset_async_lua);
+    lua_pushcfunction(L, rl_loader_create_import_task_lua);
     lua_setfield(L, -2, "loader_import_asset_async");
 
     lua_pushcfunction(L, rl_loader_import_assets_async_lua);
@@ -372,8 +372,8 @@ void rl_register_loader_bindings(lua_State *L)
     lua_pushcfunction(L, rl_loader_clear_cache_lua);
     lua_setfield(L, -2, "loader_clear_cache");
 
-    lua_pushcfunction(L, rl_loader_queue_task_lua);
-    lua_setfield(L, -2, "loader_queue_task");
+    lua_pushcfunction(L, rl_loader_add_task_lua);
+    lua_setfield(L, -2, "loader_add_task");
 
     lua_pushcfunction(L, rl_loader_tick_lua);
     lua_setfield(L, -2, "loader_tick");

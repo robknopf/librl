@@ -34,7 +34,7 @@ class Main {
 		// import the bgm so it plays while loading assets
 		var musicTask = RL.loaderImportAssetAsync("assets/music/ethernight_club.mp3");
 		if (RL.loaderTaskIsValid(musicTask)) {
-			RL.loaderQueueTask(musicTask, (path, ctx) -> {
+			RL.loaderAddTask(musicTask, (path, ctx) -> {
 				ctx.bgm = RL.musicCreate(path);
 				RL.musicSetLoop(ctx.bgm, true);
 				RL.musicPlay(ctx.bgm);

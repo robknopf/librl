@@ -8,7 +8,7 @@ extern "C" {
 #include "rl_types.h"
 
 void rl_text_draw_fps(int x, int y);
-void rl_text_draw_fps_ex(rl_handle_t font, int x, int y, int fontSize, rl_handle_t color);
+void rl_text_draw_fps_ex(rl_handle_t font, int x, int y, float fontSize, rl_handle_t color);
 void rl_text_draw(const char *text, int x, int y, int fontSize, rl_handle_t color);
 void rl_text_draw_ex(rl_handle_t font, const char *text, int x, int y, float fontSize, float spacing, rl_handle_t color);
 int rl_text_measure(const char *text, int fontSize);

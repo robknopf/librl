@@ -22,7 +22,7 @@ int rl_loader_set_asset_host(const char *asset_host);
 const char *rl_loader_get_asset_host(void);
 float rl_loader_ping_asset_host(const char *asset_host);
 rl_loader_task_t *rl_loader_restore_fs_async(void);
-rl_loader_task_t *rl_loader_import_asset_async(const char *filename);
+rl_loader_task_t *rl_loader_create_import_task(const char *filename);
 rl_loader_task_t *rl_loader_import_assets_async(const char *const *filenames, size_t filename_count);
 rl_loader_task_t *rl_loader_import_assets_from_scratch_async(size_t filename_count);
 bool rl_loader_poll_task(rl_loader_task_t *task);
@@ -44,11 +44,11 @@ void rl_loader_normalize_path(const char *path, char *buffer, size_t buffer_size
 int rl_loader_uncache_file(const char *filename);
 int rl_loader_clear_cache(void);
 
-rl_loader_queue_task_result_t rl_loader_queue_task(rl_loader_task_t *task,
-                                                   const char *path,
-                                                   rl_loader_callback_fn on_success,
-                                                   rl_loader_callback_fn on_failure,
-                                                   void *user_data);
+rl_loader_queue_task_result_t rl_loader_add_task(rl_loader_task_t *task,
+                                                 const char *path,
+                                                 rl_loader_callback_fn on_success,
+                                                 rl_loader_callback_fn on_failure,
+                                                 void *user_data);
 void rl_loader_tick(void);
 
 #ifdef __cplusplus

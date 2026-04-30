@@ -84,7 +84,7 @@ export function rl_loader_restore_fs_async(): rl_loader_task_t {
   return task;
 }
 
-export function rl_loader_import_asset_async(filename: string): rl_loader_task_t {
+export function rl_loader_create_import_task(filename: string): rl_loader_task_t {
   const task = new rl_loader_task_t([filename]);
 
   queueMicrotask(() => task.complete(0));
@@ -146,7 +146,7 @@ export function rl_loader_clear_cache(): number {
   return 0;
 }
 
-export function rl_loader_queue_task(
+export function rl_loader_add_task(
   task: rl_loader_task_t | null | undefined,
   path: string,
   on_success?: rl_loader_callback_fn | null,

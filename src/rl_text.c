@@ -13,7 +13,7 @@ void rl_text_draw_fps(int x, int y) {
 }
 
 RL_KEEP
-void rl_text_draw_fps_ex(rl_handle_t font, int x, int y, int fontSize, rl_handle_t color) {
+void rl_text_draw_fps_ex(rl_handle_t font, int x, int y, float fontSize, rl_handle_t color) {
     Color c = rl_color_get(color);
     Font f = rl_font_get(font);
     int fps = GetFPS();

@@ -186,13 +186,13 @@ LDFLAGS_WASM = \
 		"_rl_text_measure_ex_to_scratch", \
 		"_rl_set_asset_host", \
 		"_rl_loader_restore_fs_async", \
-		"_rl_loader_import_asset_async", \
+		"_rl_loader_create_import_task", \
 		"_rl_loader_import_assets_from_scratch_async", \
 		"_rl_loader_poll_task", \
 		"_rl_loader_finish_task", \
 		"_rl_loader_get_task_path", \
 		"_rl_loader_free_task", \
-		"_rl_loader_queue_task", \
+		"_rl_loader_add_task", \
 		"_rl_loader_tick", \
 		"_rl_loader_is_local", \
 		"_rl_loader_uncache_file", \

@@ -648,7 +648,7 @@ static int rl_loader_handle_fetch_completion(rl_loader_task_t *task, fetch_url_r
 
 static rl_loader_task_t *rl_loader_import_auto(const char *filename)
 {
-    return rl_loader_import_asset_async(filename);
+    return rl_loader_create_import_task(filename);
 }
 
 static int rl_loader_clear_cache_dir(const char *abs_dir, const char *rel_dir)
@@ -885,7 +885,7 @@ static rl_loader_task_t *rl_loader_import_single_asset(const char *filename)
     return task;
 }
 
-rl_loader_task_t *rl_loader_import_asset_async(const char *filename)
+rl_loader_task_t *rl_loader_create_import_task(const char *filename)
 {
     rl_loader_task_t *task = NULL;
     const char *ext = NULL;
@@ -1350,11 +1350,11 @@ typedef struct rl_loader_managed_task_t {
 
 static rl_loader_managed_task_t rl_loader_managed_tasks[RL_LOADER_MAX_MANAGED_TASKS] = {{0}};
 
-rl_loader_queue_task_result_t rl_loader_queue_task(rl_loader_task_t *task,
-                                                   const char *path,
-                                                   rl_loader_callback_fn on_success,
-                                                   rl_loader_callback_fn on_failure,
-                                                   void *user_data)
+rl_loader_queue_task_result_t rl_loader_add_task(rl_loader_task_t *task,
+                                                 const char *path,
+                                                 rl_loader_callback_fn on_success,
+                                                 rl_loader_callback_fn on_failure,
+                                                 void *user_data)
 {
     int i = 0;
     rl_loader_managed_task_t *slot = NULL;

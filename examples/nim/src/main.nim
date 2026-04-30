@@ -76,8 +76,8 @@ proc onInit(userData: pointer) {.cdecl.} =
     loadedCtx.sprite = rl_sprite3d_create(path.cstring)
   )
   ctx.loadingGroup.addImportTask(fontPath, onSuccess = proc(path: string, loadedCtx: var AppContext) =
-    loadedCtx.komika = rl_font_create(path.cstring, fontSize.cfloat)
-    loadedCtx.komikaSmall = rl_font_create(path.cstring, smallFontSize.cfloat)
+    loadedCtx.komika = rl_font_create(path.cstring, fontSize.cint)
+    loadedCtx.komikaSmall = rl_font_create(path.cstring, smallFontSize.cint)
   )
   ctx.loadingGroup.addImportTask(bgmPath, onSuccess = proc(path: string, loadedCtx: var AppContext) =
     loadedCtx.bgm = rl_music_create(path.cstring)
@@ -133,7 +133,7 @@ proc onTick(userData: pointer) {.cdecl.} =
       smallFontSize.cfloat, 1.0, RL_COLOR_BLACK)
   rl_text_draw_ex(ctx.komikaSmall, mouseText.cstring, 10.cint, 76.cint,
       smallFontSize.cfloat, 1.0, RL_COLOR_BLACK)
-  rl_text_draw_fps_ex(ctx.komikaSmall, 10.cint, 10.cint, smallFontSize.cint,
+  rl_text_draw_fps_ex(ctx.komikaSmall, 10.cint, 10.cint, smallFontSize.cfloat,
       ctx.greyAlphaColor)
   rl_render_end()
 
@@ -157,6 +157,6 @@ when isMainModule:
   initCfg.window_title = "Hello, World! (Nim)"
   initCfg.window_flags = RL_FLAG_MSAA_4X_HINT.cuint
   initCfg.asset_host = assetHost
-  if rl_init(addr initCfg) != 0:
+  if rl_init(initCfg) != 0:
     quit(1)
   rl_run(onInit, onTick, onShutdown, addr ctx)

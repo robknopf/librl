@@ -1,5 +1,6 @@
 type
   RLHandle* = uint32
+  RLWindowFlags* = cuint
   Vec2* {.importc: "vec2_t", header: "rl.h", bycopy.} = object
     x*: cfloat
     y*: cfloat
@@ -41,6 +42,8 @@ type
                              listener: RLModuleEventListenerFn, listenerUserData: pointer): cint {.cdecl.}
   RLModuleEventEmitFn* = proc(hostUserData: pointer, eventName: cstring, payload: pointer): cint {.cdecl.}
   RLLoaderCallbackFn* = proc(path: cstring, userData: pointer) {.cdecl.}
+  RLLoaderClosureCallback* = proc(path: string) {.closure.}
+  RLRunCallback*[T] = proc(ctx: var T) {.closure.}
   RLInitFn* = proc(userData: pointer) {.cdecl.}
   RLTickFn* = proc(userData: pointer) {.cdecl.}
   RLShutdownFn* = proc(userData: pointer) {.cdecl.}
@@ -74,9 +77,23 @@ type
     window_width*: cint
     window_height*: cint
     window_title*: cstring
-    window_flags*: cuint
+    window_flags*: RLWindowFlags
     asset_host*: cstring
     loader_cache_dir*: cstring
+  RLLoaderClosureTask = ref object
+    onSuccess: RLLoaderClosureCallback
+    onFailure: RLLoaderClosureCallback
+  RLRunBridgeBase = ref object of RootObj
+    ctxPtr: pointer
+
+var rlLoaderClosureTasks: seq[RLLoaderClosureTask] = @[]
+var rlRunBridgeActive: RLRunBridgeBase = nil
+
+type
+  RLRunBridge[T] = ref object of RLRunBridgeBase
+    initFn: RLRunCallback[T]
+    tickFn: RLRunCallback[T]
+    shutdownFn: RLRunCallback[T]
 
 var
   RL_COLOR_DEFAULT* {.importc, header: "rl_color.h".}: RLHandle
@@ -116,8 +133,8 @@ const
   RL_INIT_ERR_WINDOW* = (-5).cint
   RL_CAMERA_PERSPECTIVE* = 0.cint
   RL_CAMERA_ORTHOGRAPHIC* = 1.cint
-  RL_FLAG_WINDOW_RESIZABLE* = 4.cint
-  RL_FLAG_MSAA_4X_HINT* = 32.cint
+  RL_FLAG_WINDOW_RESIZABLE* = 4.RLWindowFlags
+  RL_FLAG_MSAA_4X_HINT* = 32.RLWindowFlags
   RL_BUTTON_UP* = 0.cint
   RL_BUTTON_PRESSED* = 1.cint
   RL_BUTTON_DOWN* = 2.cint
@@ -137,7 +154,7 @@ const
   RL_LOADER_QUEUE_TASK_OK* = 0.cint
   RL_LOADER_QUEUE_TASK_ERR_INVALID* = (-1).cint
   RL_LOADER_QUEUE_TASK_ERR_QUEUE_FULL* = (-2).cint
-proc rl_init*(config: ptr RLInitConfig): cint {.importc, cdecl, header: "rl.h".}
+proc rl_init_raw(config: ptr RLInitConfig): cint {.importc: "rl_init", cdecl, header: "rl.h".}
 proc rl_deinit*() {.importc, cdecl, header: "rl.h".}
 proc rl_set_asset_host*(assetHost: cstring): cint {.importc, cdecl, header: "rl.h".}
 proc rl_get_asset_host*(): cstring {.importc, cdecl, header: "rl.h".}
@@ -145,7 +162,7 @@ proc rl_loader_set_asset_host*(assetHost: cstring): cint {.importc, cdecl, heade
 proc rl_loader_get_asset_host*(): cstring {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_ping_asset_host*(assetHost: cstring): cfloat {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_restore_fs_async*(): ptr RLLoaderTask {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_import_asset_async*(filename: cstring): ptr RLLoaderTask {.importc, cdecl, header: "rl_loader.h".}
+proc rl_loader_create_import_task*(filename: cstring): ptr RLLoaderTask {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_import_assets_async_raw(filenames: ptr cstring, filenameCount: csize_t): ptr RLLoaderTask {.importc: "rl_loader_import_assets_async", cdecl, header: "rl_loader.h".}
 
 proc rl_loader_import_assets_async*(filenames: openArray[string]): ptr RLLoaderTask =
@@ -158,13 +175,94 @@ proc rl_loader_poll_task*(task: ptr RLLoaderTask): bool {.importc, cdecl, header
 proc rl_loader_finish_task*(task: ptr RLLoaderTask): cint {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_get_task_path*(task: ptr RLLoaderTask): cstring {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_free_task*(task: ptr RLLoaderTask) {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_queue_task*(task: ptr RLLoaderTask, path: cstring,
+proc rl_loader_add_task_raw*(task: ptr RLLoaderTask, path: cstring,
                          onSuccess: RLLoaderCallbackFn, onFailure: RLLoaderCallbackFn,
-                         userData: pointer): cint {.importc, cdecl, header: "rl_loader.h".}
+                         userData: pointer): cint {.importc: "rl_loader_add_task", cdecl, header: "rl_loader.h".}
 proc rl_loader_tick*() {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_is_local*(filename: cstring): bool {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_uncache_file*(filename: cstring): cint {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_clear_cache*(): cint {.importc, cdecl, header: "rl_loader.h".}
+
+proc rl_loader_add_task*(task: ptr RLLoaderTask, path: cstring,
+                         onSuccess: RLLoaderCallbackFn, onFailure: RLLoaderCallbackFn,
+                         userData: pointer): cint {.inline.} =
+  rl_loader_add_task_raw(task, path, onSuccess, onFailure, userData)
+
+proc rl_loader_add_task*(task: ptr RLLoaderTask,
+                         onSuccess: RLLoaderCallbackFn, onFailure: RLLoaderCallbackFn,
+                         userData: pointer): cint =
+  let path = if task.isNil: nil else: rl_loader_get_task_path(task)
+  rl_loader_add_task_raw(task, path, onSuccess, onFailure, userData)
+
+proc rl_loader_release_closure_task(task: RLLoaderClosureTask) =
+  if task.isNil:
+    return
+  for idx in 0 ..< rlLoaderClosureTasks.len:
+    if rlLoaderClosureTasks[idx] == task:
+      rlLoaderClosureTasks.delete(idx)
+      break
+
+proc rl_loader_add_task_success_trampoline(path: cstring, userData: pointer) {.cdecl.} =
+  let task = cast[RLLoaderClosureTask](userData)
+  rl_loader_release_closure_task(task)
+  if not task.isNil and task.onSuccess != nil:
+    task.onSuccess($path)
+
+proc rl_loader_add_task_failure_trampoline(path: cstring, userData: pointer) {.cdecl.} =
+  let task = cast[RLLoaderClosureTask](userData)
+  rl_loader_release_closure_task(task)
+  if not task.isNil and task.onFailure != nil:
+    task.onFailure($path)
+
+proc rl_loader_add_task*(task: ptr RLLoaderTask, path: string,
+                         onSuccess: RLLoaderClosureCallback = nil,
+                         onFailure: RLLoaderClosureCallback = nil): cint =
+  if onSuccess.isNil and onFailure.isNil:
+    return rl_loader_add_task_raw(task, path.cstring, nil, nil, nil)
+  let closureTask = RLLoaderClosureTask(
+    onSuccess: onSuccess,
+    onFailure: onFailure
+  )
+  rlLoaderClosureTasks.add(closureTask)
+  result = rl_loader_add_task_raw(
+    task,
+    path.cstring,
+    rl_loader_add_task_success_trampoline,
+    rl_loader_add_task_failure_trampoline,
+    cast[pointer](closureTask)
+  )
+  if result != RL_LOADER_QUEUE_TASK_OK and onFailure.isNil:
+    rl_loader_release_closure_task(closureTask)
+
+proc rl_loader_add_task*(task: ptr RLLoaderTask,
+                         onSuccess: RLLoaderClosureCallback = nil,
+                         onFailure: RLLoaderClosureCallback = nil): cint =
+  let path = if task.isNil: "" else: $rl_loader_get_task_path(task)
+  rl_loader_add_task(task, path, onSuccess, onFailure)
+
+proc rl_init*(config: var RLInitConfig): cint {.inline.} =
+  rl_init_raw(addr config)
+
+proc rl_init*(): cint {.inline.} =
+  rl_init_raw(nil)
+
+proc rl_set_asset_host*(assetHost: string): cint {.inline.} =
+  rl_set_asset_host(assetHost.cstring)
+
+proc rl_loader_set_asset_host*(assetHost: string): cint {.inline.} =
+  rl_loader_set_asset_host(assetHost.cstring)
+
+proc rl_loader_ping_asset_host*(assetHost: string): float32 {.inline.} =
+  rl_loader_ping_asset_host(assetHost.cstring).float32
+
+proc rl_loader_create_import_task*(filename: string): ptr RLLoaderTask {.inline.} =
+  rl_loader_create_import_task(filename.cstring)
+
+proc rl_loader_is_local*(filename: string): bool {.inline.} =
+  rl_loader_is_local(filename.cstring)
+
+proc rl_loader_uncache_file*(filename: string): cint {.inline.} =
+  rl_loader_uncache_file(filename.cstring)
 
 proc loaderPingAssetHost*(assetHost = ""): float32 =
   let host = if assetHost.len == 0: nil else: assetHost.cstring
@@ -228,7 +326,7 @@ proc addImportTask*[T](
 ) =
   if group.isNil:
     return
-  group.addTask(rl_loader_import_asset_async(path), onSuccess, onError)
+  group.addTask(rl_loader_create_import_task(path), onSuccess, onError)
 
 proc addImportTasks*[T](group: RLTaskGroup[T], paths: openArray[string]) =
   for path in paths:
@@ -319,10 +417,10 @@ proc rl_event_listener_count*(eventName: cstring): cint {.importc, cdecl, header
 proc rl_update*() {.importc, cdecl, header: "rl.h".}
 proc rl_start*(initFn: RLInitFn, tickFn: RLTickFn, shutdownFn: RLShutdownFn, userData: pointer): cint {.importc, cdecl, header: "rl.h".}
 proc rl_tick*(): cint {.importc, cdecl, header: "rl.h".}
-proc rl_run*(initFn: RLInitFn, tickFn: RLTickFn, shutdownFn: RLShutdownFn, userData: pointer) {.importc, cdecl, header: "rl.h".}
+proc rl_run_raw(initFn: RLInitFn, tickFn: RLTickFn, shutdownFn: RLShutdownFn, userData: pointer) {.importc: "rl_run", cdecl, header: "rl.h".}
 proc rl_stop*() {.importc, cdecl, header: "rl.h".}
-proc rl_get_time*(): cdouble {.importc, cdecl, header: "rl.h".}
-proc rl_get_delta_time*(): cfloat {.importc, cdecl, header: "rl.h".}
+proc rl_get_time_raw*(): cdouble {.importc: "rl_get_time", cdecl, header: "rl.h".}
+proc rl_get_delta_time_raw*(): cfloat {.importc: "rl_get_delta_time", cdecl, header: "rl.h".}
 proc rl_window_set_title*(title: cstring) {.importc, cdecl, header: "rl_window.h".}
 proc rl_window_set_size*(width: cint, height: cint) {.importc, cdecl, header: "rl_window.h".}
 proc rl_window_get_monitor_count*(): cint {.importc, cdecl, header: "rl.h".}
@@ -385,10 +483,10 @@ proc rl_text_draw*(text: cstring, x: cint, y: cint, fontSize: cint, color: RLHan
 proc rl_text_draw_ex*(font: RLHandle, text: cstring, x: cint, y: cint, fontSize: cfloat, spacing: cfloat, color: RLHandle) {.importc, cdecl, header: "rl.h".}
 proc rl_text_measure*(text: cstring, fontSize: cint): cint {.importc, cdecl, header: "rl_text.h".}
 proc rl_text_measure_ex*(font: RLHandle, text: cstring, fontSize: cfloat, spacing: cfloat): Vec2 {.importc, cdecl, header: "rl.h".}
-proc rl_text_draw_fps_ex*(font: RLHandle, x: cint, y: cint, fontSize: cint, color: RLHandle) {.importc, cdecl, header: "rl.h".}
+proc rl_text_draw_fps_ex*(font: RLHandle, x: cint, y: cint, fontSize: cfloat, color: RLHandle) {.importc, cdecl, header: "rl.h".}
 proc rl_color_create*(r: cint, g: cint, b: cint, a: cint): RLHandle {.importc, cdecl, header: "rl_color.h".}
 proc rl_color_destroy*(color: RLHandle) {.importc, cdecl, header: "rl_color.h".}
-proc rl_font_create*(filename: cstring, fontSize: cfloat): RLHandle {.importc, cdecl, header: "rl_font.h".}
+proc rl_font_create*(filename: cstring, fontSize: cint): RLHandle {.importc, cdecl, header: "rl_font.h".}
 proc rl_font_destroy*(font: RLHandle) {.importc, cdecl, header: "rl_font.h".}
 proc rl_font_get_default*(): RLHandle {.importc, cdecl, header: "rl_font.h".}
 proc rl_model_create*(filename: cstring): RLHandle {.importc, cdecl, header: "rl_model.h".}
@@ -480,6 +578,233 @@ proc rl_sprite2d_set_transform*(
 ): bool {.importc, cdecl, header: "rl_sprite2d.h".}
 proc rl_sprite2d_draw*(sprite: RLHandle, tint: RLHandle) {.importc, cdecl, header: "rl_sprite2d.h".}
 proc rl_sprite2d_destroy*(sprite: RLHandle) {.importc, cdecl, header: "rl_sprite2d.h".}
+
+proc rl_run*(initFn: RLInitFn, tickFn: RLTickFn, shutdownFn: RLShutdownFn, userData: pointer) {.inline.} =
+  rl_run_raw(initFn, tickFn, shutdownFn, userData)
+
+proc rl_run_init_trampoline[T](userData: pointer) {.cdecl.} =
+  let bridge = cast[RLRunBridge[T]](userData)
+  if not bridge.isNil and bridge.initFn != nil:
+    bridge.initFn(cast[ptr T](bridge.ctxPtr)[])
+
+proc rl_run_tick_trampoline[T](userData: pointer) {.cdecl.} =
+  let bridge = cast[RLRunBridge[T]](userData)
+  if not bridge.isNil and bridge.tickFn != nil:
+    bridge.tickFn(cast[ptr T](bridge.ctxPtr)[])
+
+proc rl_run_shutdown_trampoline[T](userData: pointer) {.cdecl.} =
+  let bridge = cast[RLRunBridge[T]](userData)
+  if not bridge.isNil and bridge.shutdownFn != nil:
+    bridge.shutdownFn(cast[ptr T](bridge.ctxPtr)[])
+
+proc rl_run*[T](initFn: RLRunCallback[T], tickFn: RLRunCallback[T],
+                shutdownFn: RLRunCallback[T], ctx: var T) =
+  let bridge = RLRunBridge[T](
+    ctxPtr: addr ctx,
+    initFn: initFn,
+    tickFn: tickFn,
+    shutdownFn: shutdownFn
+  )
+  rlRunBridgeActive = bridge
+  try:
+    rl_run_raw(
+      rl_run_init_trampoline[T],
+      rl_run_tick_trampoline[T],
+      rl_run_shutdown_trampoline[T],
+      cast[pointer](bridge)
+    )
+  finally:
+    if rlRunBridgeActive == bridge:
+      rlRunBridgeActive = nil
+
+proc rl_get_time*(): float {.inline.} =
+  rl_get_time_raw().float
+
+proc rl_get_delta_time*(): float32 {.inline.} =
+  rl_get_delta_time_raw().float32
+
+proc rl_window_set_title*(title: string) {.inline.} =
+  rl_window_set_title(title.cstring)
+
+proc rl_window_set_size*[I: SomeInteger](width: I, height: I) {.inline.} =
+  rl_window_set_size(width.cint, height.cint)
+
+proc rl_window_set_monitor*[I: SomeInteger](monitor: I) {.inline.} =
+  rl_window_set_monitor(monitor.cint)
+
+proc rl_window_get_monitor_width*[I: SomeInteger](monitor: I): cint {.inline.} =
+  rl_window_get_monitor_width(monitor.cint)
+
+proc rl_window_get_monitor_height*[I: SomeInteger](monitor: I): cint {.inline.} =
+  rl_window_get_monitor_height(monitor.cint)
+
+proc rl_window_get_monitor_position*[I: SomeInteger](monitor: I): Vec2 {.inline.} =
+  rl_window_get_monitor_position(monitor.cint)
+
+proc rl_window_set_position*[I: SomeInteger](x: I, y: I) {.inline.} =
+  rl_window_set_position(x.cint, y.cint)
+
+proc rl_input_get_mouse_button*[I: SomeInteger](button: I): cint {.inline.} =
+  rl_input_get_mouse_button(button.cint)
+
+proc rl_camera3d_create*[F: SomeFloat, I: SomeInteger](
+  positionX: F, positionY: F, positionZ: F,
+  targetX: F, targetY: F, targetZ: F,
+  upX: F, upY: F, upZ: F,
+  fovy: F, projection: I
+): RLHandle {.inline.} =
+  rl_camera3d_create(
+    positionX.cfloat, positionY.cfloat, positionZ.cfloat,
+    targetX.cfloat, targetY.cfloat, targetZ.cfloat,
+    upX.cfloat, upY.cfloat, upZ.cfloat,
+    fovy.cfloat, projection.cint
+  )
+
+proc rl_camera3d_set*[F: SomeFloat, I: SomeInteger](
+  camera: RLHandle,
+  positionX: F, positionY: F, positionZ: F,
+  targetX: F, targetY: F, targetZ: F,
+  upX: F, upY: F, upZ: F,
+  fovy: F, projection: I
+): bool {.inline.} =
+  rl_camera3d_set(
+    camera,
+    positionX.cfloat, positionY.cfloat, positionZ.cfloat,
+    targetX.cfloat, targetY.cfloat, targetZ.cfloat,
+    upX.cfloat, upY.cfloat, upZ.cfloat,
+    fovy.cfloat, projection.cint
+  )
+
+proc rl_set_light_direction*[F: SomeFloat](x: F, y: F, z: F) {.inline.} =
+  rl_set_light_direction(x.cfloat, y.cfloat, z.cfloat)
+
+proc rl_set_light_ambient*[F: SomeFloat](ambient: F) {.inline.} =
+  rl_set_light_ambient(ambient.cfloat)
+
+proc rl_shape_draw_cube*[F: SomeFloat](
+  positionX: F, positionY: F, positionZ: F,
+  width: F, height: F, length: F,
+  tint: RLHandle
+) {.inline.} =
+  rl_shape_draw_cube(
+    positionX.cfloat, positionY.cfloat, positionZ.cfloat,
+    width.cfloat, height.cfloat, length.cfloat,
+    tint
+  )
+
+proc rl_shape_draw_rectangle*[I: SomeInteger](x: I, y: I, width: I, height: I,
+                                              color: RLHandle) {.inline.} =
+  rl_shape_draw_rectangle(x.cint, y.cint, width.cint, height.cint, color)
+
+proc rl_set_target_fps*[I: SomeInteger](fps: I) {.inline.} =
+  rl_set_target_fps(fps.cint)
+
+proc rl_debug_enable_fps*[I: SomeInteger](x: I, y: I, fontSize: I, fontPath: string) {.inline.} =
+  rl_debug_enable_fps(x.cint, y.cint, fontSize.cint, fontPath.cstring)
+
+proc rl_text_draw_fps*[I: SomeInteger](x: I, y: I) {.inline.} =
+  rl_text_draw_fps(x.cint, y.cint)
+
+proc rl_text_draw*[I: SomeInteger](text: string, x: I, y: I, fontSize: I, color: RLHandle) {.inline.} =
+  rl_text_draw(text.cstring, x.cint, y.cint, fontSize.cint, color)
+
+proc rl_text_draw_ex*[XP: SomeNumber, YP: SomeNumber, FS: SomeNumber, SP: SomeNumber](font: RLHandle, text: string,
+                                                                      x: XP , y: YP, fontSize: FS,
+                                                                      spacing: SP, color: RLHandle) {.inline.} =
+  rl_text_draw_ex(font, text.cstring, x.cint, y.cint, fontSize.cfloat, spacing.cfloat, color)
+
+proc rl_text_measure*[I: SomeInteger](text: string, fontSize: I): cint {.inline.} =
+  rl_text_measure(text.cstring, fontSize.cint)
+
+proc rl_text_measure_ex*[FS: SomeNumber, SP: SomeNumber](font: RLHandle, text: string,
+                                                         fontSize: FS, spacing: SP): Vec2 {.inline.} =
+  rl_text_measure_ex(font, text.cstring, fontSize.cfloat, spacing.cfloat)
+
+proc rl_text_draw_fps_ex*[XP: SomeNumber, YP:SomeNumber, F: SomeNumber](font: RLHandle, x: XP, y: YP,
+                                                         fontSize: F, color: RLHandle) {.inline.} =
+  rl_text_draw_fps_ex(font, x.cint, y.cint, fontSize.cfloat, color)
+
+proc rl_color_create*[I: SomeInteger](r: I, g: I, b: I, a: I): RLHandle {.inline.} =
+  rl_color_create(r.cint, g.cint, b.cint, a.cint)
+
+proc rl_font_create*[I: SomeInteger](filename: string, fontSize: I): RLHandle {.inline.} =
+  rl_font_create(filename.cstring, fontSize.cint)
+
+proc rl_model_create*(filename: string): RLHandle {.inline.} =
+  rl_model_create(filename.cstring)
+
+proc rl_model_set_transform*[F: SomeFloat](
+  model: RLHandle,
+  positionX: F, positionY: F, positionZ: F,
+  rotationX: F, rotationY: F, rotationZ: F,
+  scaleX: F, scaleY: F, scaleZ: F
+): bool {.inline.} =
+  rl_model_set_transform(
+    model,
+    positionX.cfloat, positionY.cfloat, positionZ.cfloat,
+    rotationX.cfloat, rotationY.cfloat, rotationZ.cfloat,
+    scaleX.cfloat, scaleY.cfloat, scaleZ.cfloat
+  )
+
+proc rl_model_animation_frame_count*[I: SomeInteger](model: RLHandle, animationIndex: I): cint {.inline.} =
+  rl_model_animation_frame_count(model, animationIndex.cint)
+
+proc rl_model_animation_update*[I: SomeInteger](model: RLHandle, animationIndex: I, frame: I) {.inline.} =
+  rl_model_animation_update(model, animationIndex.cint, frame.cint)
+
+proc rl_model_set_animation*[I: SomeInteger](model: RLHandle, animationIndex: I): bool {.inline.} =
+  rl_model_set_animation(model, animationIndex.cint)
+
+proc rl_model_set_animation_speed*[F: SomeFloat](model: RLHandle, speed: F): bool {.inline.} =
+  rl_model_set_animation_speed(model, speed.cfloat)
+
+proc rl_model_animate*[F: SomeFloat](model: RLHandle, deltaSeconds: F): bool {.inline.} =
+  rl_model_animate(model, deltaSeconds.cfloat)
+
+proc rl_music_create*(filename: string): RLHandle {.inline.} =
+  rl_music_create(filename.cstring)
+
+proc rl_music_set_volume*[F: SomeFloat](music: RLHandle, volume: F): bool {.inline.} =
+  rl_music_set_volume(music, volume.cfloat)
+
+proc rl_sound_create*(filename: string): RLHandle {.inline.} =
+  rl_sound_create(filename.cstring)
+
+proc rl_sound_set_volume*[F: SomeFloat](sound: RLHandle, volume: F): bool {.inline.} =
+  rl_sound_set_volume(sound, volume.cfloat)
+
+proc rl_sound_set_pitch*[F: SomeFloat](sound: RLHandle, pitch: F): bool {.inline.} =
+  rl_sound_set_pitch(sound, pitch.cfloat)
+
+proc rl_sound_set_pan*[F: SomeFloat](sound: RLHandle, pan: F): bool {.inline.} =
+  rl_sound_set_pan(sound, pan.cfloat)
+
+proc rl_texture_create*(filename: string): RLHandle {.inline.} =
+  rl_texture_create(filename.cstring)
+
+proc rl_texture_draw_ex*[F: SomeFloat](texture: RLHandle, x: F, y: F, scale: F,
+                                       rotation: F, tint: RLHandle) {.inline.} =
+  rl_texture_draw_ex(texture, x.cfloat, y.cfloat, scale.cfloat, rotation.cfloat, tint)
+
+proc rl_texture_draw_ground*[F: SomeFloat](texture: RLHandle, x: F, y: F, z: F,
+                                           width: F, length: F, tint: RLHandle) {.inline.} =
+  rl_texture_draw_ground(texture, x.cfloat, y.cfloat, z.cfloat, width.cfloat, length.cfloat, tint)
+
+proc rl_sprite3d_create*(filename: string): RLHandle {.inline.} =
+  rl_sprite3d_create(filename.cstring)
+
+proc rl_sprite3d_set_transform*[F: SomeFloat](sprite: RLHandle,
+                                              positionX: F, positionY: F, positionZ: F,
+                                              size: F): bool {.inline.} =
+  rl_sprite3d_set_transform(sprite, positionX.cfloat, positionY.cfloat, positionZ.cfloat, size.cfloat)
+
+proc rl_sprite2d_create*(filename: string): RLHandle {.inline.} =
+  rl_sprite2d_create(filename.cstring)
+
+proc rl_sprite2d_set_transform*[F: SomeFloat](sprite: RLHandle,
+                                              x: F, y: F,
+                                              scale: F, rotation: F): bool {.inline.} =
+  rl_sprite2d_set_transform(sprite, x.cfloat, y.cfloat, scale.cfloat, rotation.cfloat)
 
 proc clearText*(text: var array[256, char]) {.inline.} =
   text[0] = '\0'

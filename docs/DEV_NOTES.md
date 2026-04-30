@@ -93,7 +93,7 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
   - `rl_frame_runner_run`
   - `rl_module_lua_get_api`
 - For async starters that return a pollable task, make that explicit with `_async`:
-  - `rl_loader_import_asset_async`
+  - `rl_loader_create_import_task`
   - `rl_loader_restore_fs_async`
   - `fileio_restore_async`
   - `fetch_url_async`

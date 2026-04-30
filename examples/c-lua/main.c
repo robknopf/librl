@@ -267,7 +267,7 @@ static void on_resource_load(void *payload, void *user_data) {
   case EXAMPLE_RESOURCE_KIND_FONT:
   case EXAMPLE_RESOURCE_KIND_SOUND:
   case EXAMPLE_RESOURCE_KIND_MUSIC:
-    request->loader_task = rl_loader_import_asset_async(request->path);
+    request->loader_task = rl_loader_create_import_task(request->path);
     break;
   case EXAMPLE_RESOURCE_KIND_NONE:
   default:

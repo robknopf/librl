@@ -25,7 +25,7 @@ class RLLoader {
   }
 
   @:functionCode('
-    rl_loader_task_t *task = rl_loader_import_asset_async(filename.utf8_str());
+    rl_loader_task_t *task = rl_loader_create_import_task(filename.utf8_str());
     return (cpp::UInt64)(uintptr_t)task;
   ')
   static function importAssetAsyncNative(filename: String): RLLoaderTaskPtr {
@@ -73,9 +73,9 @@ class RLLoader {
   static function freeTaskNative(task: RLLoaderTaskPtr): Void {}
 
   @:functionCode('
-    return rl_loader_queue_task((rl_loader_task_t *)(uintptr_t)task, path.utf8_str(), onSuccess, onFailure, userData);
+    return rl_loader_add_task((rl_loader_task_t *)(uintptr_t)task, path.utf8_str(), onSuccess, onFailure, userData);
   ')
-  static function queueTaskNative(task: RLLoaderTaskPtr, path: String,
+  static function addTaskNative(task: RLLoaderTaskPtr, path: String,
     onSuccess: RLLoaderCallbackFn, onFailure: RLLoaderCallbackFn,
     userData: cpp.RawPointer<cpp.Void>): Int {
     return 0;
@@ -120,10 +120,10 @@ class RLLoader {
     return isLocalNative(filename);
   }
 
-  public static inline function loaderQueueTask(task: RLLoaderTaskPtr, path: String,
+  public static inline function loaderAddTask(task: RLLoaderTaskPtr, path: String,
     onSuccess: RLLoaderCallbackFn, onFailure: RLLoaderCallbackFn,
     userData: cpp.RawPointer<cpp.Void>): Int {
-    return queueTaskNative(task, path, onSuccess, onFailure, userData);
+    return addTaskNative(task, path, onSuccess, onFailure, userData);
   }
 
   public static inline function loaderPingAssetHost(?assetHost: String): Float {

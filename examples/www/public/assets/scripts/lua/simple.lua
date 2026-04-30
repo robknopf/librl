@@ -33,7 +33,7 @@ local function setup_scene(ctx)
     local music_path = "assets/music/ethernight_club.mp3"
     local music_task = rl.loader_import_asset_async(music_path)
     if music_task and music_task ~= 0 then
-        rl.loader_queue_task(music_task, music_path, function(path)
+        rl.loader_add_task(music_task, music_path, function(path)
             ctx.bgm = rl.music_create(path)
             rl.music_set_loop(ctx.bgm, true)
             rl.music_play(ctx.bgm)

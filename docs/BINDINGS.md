@@ -133,7 +133,7 @@ Notes:
 - Loader helpers in Nim:
   - `loaderPingAssetHost(assetHost?)` → RTT ms, or `< 0` on failure
   - `rl_loader_restore_fs_async()`
-  - `rl_loader_import_asset_async(filename)`
+  - `rl_loader_create_import_task(filename)`
   - `rl_loader_import_assets_async(filenames, count)`
   - `rl_loader_poll_task(task)`
   - `rl_loader_finish_task(task)`
@@ -168,7 +168,7 @@ Role:
 - Uses `@:cppInclude`, `@:buildXml`, and `@:functionCode` to:
   - Include `rl.h` / `rl_loader.h`.
   - Inject link flags (`librl.a` / `librl.wasm.a`).
-  - Bridge static Haxe methods to C callbacks for `rl_run` and `rl_loader_queue_task`.
+  - Bridge static Haxe methods to C callbacks for `rl_run` and `rl_loader_add_task`.
 
 Used by:
 
@@ -197,11 +197,11 @@ Async loader sugar:
   - `RL.loaderCreateTaskGroup<T>(onComplete?, onError?, ctx?)`
   - `RLTaskGroup.addImportTask(path, onSuccess?, onError?)`
   - `RLTaskGroup.process()`, `RLTaskGroup.remainingTasks()`, `RLTaskGroup.failedPaths()`
-  - `RL.loaderQueueTask(task, path, onSuccess, onFailure, ctx)`
+  - `RL.loaderAddTask(task, path, onSuccess, onFailure, ctx)`
 - `rl_run` is wrapped so Haxe passes plain lifecycle functions with a Haxe context object:
   - `RL.run(onInit, onTick, onShutdown, ctx)`
-- `rl_loader_queue_task` is wrapped so Haxe loader callbacks use plain `(path, ctx)` handlers:
-  - `RL.loaderQueueTask(task, path, onAssetReady, onAssetFailed, ctx)`
+- `rl_loader_add_task` is wrapped so Haxe loader callbacks use plain `(path, ctx)` handlers:
+  - `RL.loaderAddTask(task, path, onAssetReady, onAssetFailed, ctx)`
 - The example (`examples/haxe/src/Main.hx`) is the canonical reference for:
   - Using `rl_run` with `init/tick/shutdown`.
   - Non-blocking async import gating via `loadingGroup.process()`.

@@ -54,7 +54,7 @@ int rl_lua_fetch_to_fileio(const char *relative_path)
         return -1;
     }
 
-    task = rl_loader_import_asset_async(relative_path);
+    task = rl_loader_create_import_task(relative_path);
     if (task == NULL) {
         return -1;
     }

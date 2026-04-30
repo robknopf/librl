@@ -329,7 +329,7 @@ const RL = {
         return moduleInstance.ccall('rl_loader_restore_fs_async', 'number', [], []);
     },
     importAsset: (filename) => {
-        return moduleInstance.ccall('rl_loader_import_asset_async', 'number', ['string'], [filename]);
+        return moduleInstance.ccall('rl_loader_create_import_task', 'number', ['string'], [filename]);
     },
     importAssets: (filenames) => {
         const count = moduleInstance.writeScratchStringTable(filenames);
@@ -347,9 +347,9 @@ const RL = {
     freeTask: (task) => {
         return moduleInstance.ccall('rl_loader_free_task', null, ['number'], [task]);
     },
-    queueTask: (task, path) => {
+    addTask: (task, path) => {
         return moduleInstance.ccall(
-            'rl_loader_queue_task',
+            'rl_loader_add_task',
             'number',
             ['number', 'string', 'number', 'number', 'number'],
             [task, path, 0, 0, 0]

@@ -90,8 +90,8 @@ static void on_bgm_ready(const char *path, void *user_data) {
 }
 
 static void play_bgm(const char *path, void *user_data) {
-  rl_loader_task_t *bgm_asset_task = rl_loader_import_asset_async(path);
-  rl_loader_queue_task(bgm_asset_task, path, on_bgm_ready, NULL, user_data);
+  rl_loader_task_t *bgm_asset_task = rl_loader_create_import_task(path);
+  rl_loader_add_task(bgm_asset_task, path, on_bgm_ready, NULL, user_data);
 }
 
 static void on_init(void *user_data) {
@@ -121,9 +121,9 @@ static void on_init(void *user_data) {
 
   // fetch the assets we'll need
   rl_loader_task_t *asset_import_tasks[] = {
-      rl_loader_import_asset_async(FONT_PATH),
-      rl_loader_import_asset_async(MODEL_PATH),
-      rl_loader_import_asset_async(SPRITE_PATH)};
+      rl_loader_create_import_task(FONT_PATH),
+      rl_loader_create_import_task(MODEL_PATH),
+      rl_loader_create_import_task(SPRITE_PATH)};
       
   const size_t asset_import_tasks_count =
       sizeof(asset_import_tasks) / sizeof(asset_import_tasks[0]);
@@ -137,8 +137,8 @@ static void on_init(void *user_data) {
   }
 
   ctx->grey_alpha_color = rl_color_create(0, 0, 0, 128);
-  ctx->komika = rl_font_create(FONT_PATH, 24.0f);
-  ctx->komika_small = rl_font_create(FONT_PATH, 16.0f);
+  ctx->komika = rl_font_create(FONT_PATH, 24);
+  ctx->komika_small = rl_font_create(FONT_PATH, 16);
   ctx->gumshoe = rl_model_create(MODEL_PATH);
   ctx->sprite = rl_sprite3d_create(SPRITE_PATH);
   rl_model_set_animation(ctx->gumshoe, 1);
@@ -208,7 +208,7 @@ static void on_tick(void *user_data) {
                   RL_COLOR_BLACK);
   rl_text_draw_ex(ctx->komika_small, mouse_text, 10, 76, 16.0f, 1.0f,
                   RL_COLOR_BLACK);
-  rl_text_draw_fps_ex(ctx->komika_small, 10, 10, 16, ctx->grey_alpha_color);
+  rl_text_draw_fps_ex(ctx->komika_small, 10, 10, 16.0f, ctx->grey_alpha_color);
 
   rl_render_end();
 }

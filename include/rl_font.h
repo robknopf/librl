@@ -10,7 +10,7 @@ extern "C" {
 extern const rl_handle_t RL_FONT_DEFAULT;
 
 
-rl_handle_t rl_font_create(const char *filename, float fontSize) ;
+rl_handle_t rl_font_create(const char *filename, int fontSize) ;
 void rl_font_destroy(rl_handle_t handle) ;
 rl_handle_t rl_font_get_default() ;
 

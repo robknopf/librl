@@ -18,9 +18,9 @@ import {
   set_frame_command_buffer,
 } from "./frame_command_buffer";
 import {
-  rl_loader_queue_task,
+  rl_loader_add_task,
   rl_loader_queue_task_result_t,
-  rl_loader_import_asset_async,
+  rl_loader_create_import_task,
   rl_loader_tick,
 } from "./rl/rl_loader";
 import {
@@ -659,8 +659,8 @@ function queueAssetCreateTask(
   path: string,
   on_success: () => void,
 ): void {
-  const task = rl_loader_import_asset_async(path);
-  const rc = rl_loader_queue_task(
+  const task = rl_loader_create_import_task(path);
+  const rc = rl_loader_add_task(
     task,
     path,
     () => on_success(),
@@ -714,8 +714,8 @@ function beginLoadWorldResources(world: WorldState): void {
 
   {
     const logoPath = "assets/sprites/logo/wg-logo-bw-alpha.png";
-    const task = rl_loader_import_asset_async(logoPath);
-    const rc = rl_loader_queue_task(
+    const task = rl_loader_create_import_task(logoPath);
+    const rc = rl_loader_add_task(
       task,
       logoPath,
       () => {
@@ -746,8 +746,8 @@ function beginLoadWorldResources(world: WorldState): void {
 
   {
     const blobPath = "assets/textures/blobshadow.png";
-    const task = rl_loader_import_asset_async(blobPath);
-    const rc = rl_loader_queue_task(
+    const task = rl_loader_create_import_task(blobPath);
+    const rc = rl_loader_add_task(
       task,
       blobPath,
       () => {

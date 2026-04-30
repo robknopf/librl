@@ -44,7 +44,7 @@ This keeps frame delivery disposable while resource traffic stays queueable.
 ### Async Loading
 
 File-based resources (fonts, textures, models, sounds, music, sprite3ds) use async loading on the client:
-- `rl_loader_import_asset_async()` starts the fetch
+- `rl_loader_create_import_task()` creates the fetch task
 - `rl_loader_poll_task()` checks each frame
 - `rl_loader_finish_task()` + resource create on completion
 - Response sent back to server with the new handle

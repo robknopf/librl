@@ -11,9 +11,9 @@ import {
   rl_model_set_transform,
 } from "./rl/rl_model";
 import {
-  rl_loader_queue_task,
+  rl_loader_add_task,
   rl_loader_queue_task_result_t,
-  rl_loader_import_asset_async,
+  rl_loader_create_import_task,
 } from "./rl/rl_loader";
 
 export class Model {
@@ -35,8 +35,8 @@ export class Model {
   ) {}
 
   load(on_ready?: ((model: Model) => void) | null, on_failure?: ((path: string) => void) | null): void {
-    const task = rl_loader_import_asset_async(this.path);
-    const rc = rl_loader_queue_task(
+    const task = rl_loader_create_import_task(this.path);
+    const rc = rl_loader_add_task(
       task,
       this.path,
       () => {

@@ -159,7 +159,7 @@ static bool start_async_load(rl_resource_handler_t *handler, uint32_t rid,
     return false;
   }
   
-  pending->loader_task = rl_loader_import_asset_async(filename);
+  pending->loader_task = rl_loader_create_import_task(filename);
   if (pending->loader_task == NULL) {
     log_error("[ResourceHandler] Failed to start loader for: %s", filename);
     return false;

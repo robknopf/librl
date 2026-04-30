@@ -1,6 +1,5 @@
 #include "rl_font.h"
 
-#include <math.h>
 #include <raylib.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -31,9 +30,9 @@ static unsigned char rl_font_occupied[MAX_FONTS];
 
 const rl_handle_t RL_FONT_DEFAULT = RL_HANDLE_MAKE(RL_FONT_DEFAULT_INDEX, 1u);
 
-static int rl_font_size_key(float font_size)
+static int rl_font_size_key(int font_size)
 {
-    return (int)lroundf(font_size * 1000.0f);
+    return font_size;
 }
 
 static rl_font_entry_t *rl_font_get_entry(rl_handle_t handle)
@@ -77,7 +76,7 @@ static rl_handle_t rl_font_find(const char *normalized_path, int size_key)
 }
 
 RL_KEEP
-rl_handle_t rl_font_create(const char *filename, float fontSize)
+rl_handle_t rl_font_create(const char *filename, int fontSize)
 {
     int font_data_size = 0;
     unsigned char *font_data = NULL;
@@ -120,7 +119,7 @@ rl_handle_t rl_font_create(const char *filename, float fontSize)
         }
     }
 
-    loaded_font = LoadFontFromMemory(font_extension, (const unsigned char *)font_data, font_data_size, (int)fontSize, NULL, 0);
+    loaded_font = LoadFontFromMemory(font_extension, (const unsigned char *)font_data, font_data_size, fontSize, NULL, 0);
     UnloadFileData(font_data);
 
     if (!IsFontValid(loaded_font))

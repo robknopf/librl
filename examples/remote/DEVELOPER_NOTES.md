@@ -52,7 +52,7 @@ Server                                         Client
 
 **Async** (response comes in a later frame, after file fetch):
 - Font, Texture, Model, Sound, Music, Sprite3D
-- Uses `rl_loader_import_asset_async()` → poll → finish → create handle
+- Uses `rl_loader_create_import_task()` → poll → finish → create handle
 
 ## Client Rendering Pipeline
 

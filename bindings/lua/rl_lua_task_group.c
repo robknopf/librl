@@ -192,7 +192,7 @@ static int task_group_add_import_task(lua_State *L)
     rl_loader_task_t *task;
     (void)rl_tg_check(L, 1);
     path = luaL_checkstring(L, 2);
-    task = rl_loader_import_asset_async(path);
+    task = rl_loader_create_import_task(path);
     if (task == NULL) {
         return 0;
     }
@@ -220,7 +220,7 @@ static int task_group_add_import_tasks(lua_State *L)
         lua_rawgeti(L, 2, (int)i);
         path = luaL_checkstring(L, -1);
         lua_pop(L, 1);
-        task = rl_loader_import_asset_async(path);
+        task = rl_loader_create_import_task(path);
         if (task == NULL) {
             continue;
         }

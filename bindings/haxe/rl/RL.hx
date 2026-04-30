@@ -229,7 +229,7 @@ private extern class RLNative {
 
   // --- Fonts (rl_font.h, rl_text.h) ---
   @:native("rl_font_create")
-  static function fontCreate(filename: String, fontSize: Float): RLHandle;
+  static function fontCreate(filename: String, fontSize: Int): RLHandle;
 
   @:native("rl_font_destroy")
   static function fontDestroy(font: RLHandle): Void;
@@ -250,7 +250,7 @@ private extern class RLNative {
   static function textMeasureEx(font: RLHandle, text: String, fontSize: Float, spacing: Float): RLVec2;
 
   @:native("rl_text_draw_fps_ex")
-  static function textDrawFpsEx(font: RLHandle, x: Int, y: Int, fontSize: Int, color: RLHandle): Void;
+  static function textDrawFpsEx(font: RLHandle, x: Int, y: Int, fontSize: Float, color: RLHandle): Void;
 
   // --- Asset host ---
   @:native("rl_set_asset_host")
@@ -692,11 +692,11 @@ abstract RL(RLNative) from RLNative to RLNative {
     return RLLoader.loaderPingAssetHost(assetHost);
   }
 
-  static function loaderQueueTaskNative(task: RLLoaderTaskPtr, path: String,
+  static function loaderAddTaskNative(task: RLLoaderTaskPtr, path: String,
     onSuccess: cpp.Callable<cpp.ConstCharStar->cpp.RawPointer<cpp.Void>->Void>,
     onFailure: cpp.Callable<cpp.ConstCharStar->cpp.RawPointer<cpp.Void>->Void>,
     userData: cpp.RawPointer<cpp.Void>): Int {
-    return RLLoader.loaderQueueTask(task, path, onSuccess, onFailure, userData);
+    return RLLoader.loaderAddTask(task, path, onSuccess, onFailure, userData);
   }
 
   public static function loaderTick(): Void {
@@ -711,7 +711,7 @@ abstract RL(RLNative) from RLNative to RLNative {
     return RLLoader.loaderUncacheFile(filename);
   }
 
-  public static inline function loaderQueueTask<T>(task: RLLoaderTaskPtr,
+  public static inline function loaderAddTask<T>(task: RLLoaderTaskPtr,
     onSuccess: String->T->Void, onFailure: String->T->Void, ctx: T): Int {
     var successSpringboard: cpp.Callable<cpp.ConstCharStar->cpp.RawPointer<cpp.Void>->Void> =
       cpp.Function.fromStaticFunction(RLBridge.onLoaderSuccessSpringboard);
@@ -742,7 +742,7 @@ abstract RL(RLNative) from RLNative to RLNative {
       },
       ctx: ctx
     });
-    var rc = loaderQueueTaskNative(
+    var rc = loaderAddTaskNative(
       task,
       path,
       successSpringboard,

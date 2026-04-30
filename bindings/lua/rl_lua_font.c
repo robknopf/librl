@@ -9,7 +9,7 @@
 static int rl_font_create_lua(lua_State *L)
 {
     const char *filename = luaL_checkstring(L, 1);
-    float font_size = (float)luaL_checknumber(L, 2);
+    int font_size = (int)luaL_checkinteger(L, 2);
     rl_handle_t handle = rl_font_create(filename, font_size);
     lua_pushinteger(L, handle);
     return 1;

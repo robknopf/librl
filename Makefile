@@ -232,7 +232,7 @@ LDFLAGS_WASM = \
 		"_RL_COLOR_RAYWHITE" \
 		]'
 
-CFLAGS_DESKTOP = -DPLATFORM_DESKTOP
+CFLAGS_DESKTOP = -DPLATFORM_DESKTOP -fPIC
 
 
 # Development mode (can be overridden via command line)

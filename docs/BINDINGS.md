@@ -68,6 +68,7 @@ Notes:
     - `rl.BUTTON_PRESSED`
     - `rl.BUTTON_DOWN`
     - `rl.BUTTON_RELEASED`
+- Window close polling is exposed as `isWindowCloseRequested()`.
 - Picking helpers available in JS:
   - `pickModel(...)`
   - `pickSprite3D(...)`
@@ -130,6 +131,7 @@ Notes:
 - Window config flags are exposed in Nim:
   - `rl_window_init(width, height, title, flags)`
   - `RL_FLAG_MSAA_4X_HINT`
+- Window close polling is exposed in Nim as `rl_window_close_requested()`.
 - Loader helpers in Nim:
   - `loaderPingAssetHost(assetHost?)` → RTT ms, or `< 0` on failure
   - `rl_loader_restore_fs_async()`
@@ -182,6 +184,7 @@ Notes:
   - Init result constants like `RL.INIT_OK`, `RL.INIT_ERR_ALREADY_INITIALIZED`.
   - `RL.isInitialized()` wraps `rl_is_initialized()`.
   - `RL.getPlatform()` wraps `rl_get_platform()`.
+  - `RL.windowCloseRequested()` wraps `rl_window_close_requested()`.
 - WASM builds use hxcpp's emscripten toolchain with `MODULARIZE=1` and `EXPORT_ES6=1`:
   - `examples/haxe/build.wasm.hxml`
   - `examples/haxe/build.hxml` dispatches between the desktop and wasm build configs.
@@ -229,6 +232,7 @@ Notes:
 - Lua exposes init result constants (`rl.RL_INIT_OK`, `rl.RL_INIT_ERR_UNKNOWN`, `rl.RL_INIT_ERR_ALREADY_INITIALIZED`, `rl.RL_INIT_ERR_LOADER`, `rl.RL_INIT_ERR_ASSET_HOST`, `rl.RL_INIT_ERR_WINDOW`).
 - Lua exposes `rl.is_initialized()` for `rl_is_initialized()`.
 - Lua exposes `rl.get_platform()` for `rl_get_platform()`.
+- Lua exposes `rl.window_close_requested()` for `rl_window_close_requested()`.
 
 ## Status and Scope
 

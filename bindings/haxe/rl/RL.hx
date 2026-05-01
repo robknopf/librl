@@ -367,6 +367,9 @@ private extern class RLNative {
   @:native("rl_window_set_size")
   static function windowSetSize(width: Int, height: Int): Void;
 
+  @:native("rl_window_close_requested")
+  static function windowCloseRequested(): Bool;
+
   @:native("rl_window_get_screen_size")
   static function windowGetScreenSize(): RLVec2;
 

@@ -85,6 +85,7 @@ LDFLAGS_WASM = \
 	"_rl_get_delta_time", \
 	"_rl_window_set_title", \
 	"_rl_window_set_size", \
+	"_rl_window_close_requested", \
 	"_rl_scratch_get", \
 	"_rl_scratch_update", \
 	"_rl_scratch_get_offsets", \

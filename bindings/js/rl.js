@@ -582,6 +582,9 @@ const RL = {
     setWindowSize: (width, height) => {
         return moduleInstance.ccall('rl_window_set_size', null, ['number', 'number'], [width, height]);
     },
+    isWindowCloseRequested: () => {
+        return !!moduleInstance.ccall('rl_window_close_requested', 'number', [], []);
+    },
     setWindowPosition: (x, y) => {
         return moduleInstance.ccall('rl_window_set_position', null, ['number', 'number'], [x, y]);
     },

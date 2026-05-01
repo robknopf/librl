@@ -36,6 +36,7 @@ extern "C" {
 
 void rl_window_set_title(const char *title);
 void rl_window_set_size(int width, int height);
+int rl_window_close_requested(void);
 vec2_t rl_window_get_screen_size(void);
 int rl_window_get_monitor_count(void);
 int rl_window_get_current_monitor(void);

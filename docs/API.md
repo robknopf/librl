@@ -47,11 +47,13 @@ Main responsibilities:
 
 - Window size/position/title helpers
 - Monitor/screen/window queries
+- Close-request polling for externally pumped runtimes (`rl_window_close_requested()`)
 
 Notes:
 
 - The OS window is created by `rl_init()` (driven by `include/rl_config.h`), and destroyed by `rl_deinit()`.
 - There is no public `rl_window_open` / `rl_window_close` API anymore.
+- `rl_window_close_requested()` mirrors the platform close-request latch on desktop; on web it always returns `0`.
 - `include/rl_window.h` includes an explicit comment with the internal-only open/close signatures for reference.
 
 ## Shape (`include/rl_shape.h`)

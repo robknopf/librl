@@ -23,6 +23,15 @@ void rl_window_set_size(int width, int height) {
     SetWindowSize(width, height);
 }
 
+RL_KEEP
+int rl_window_close_requested() {
+#if defined(PLATFORM_WEB)
+    return 0;
+#else
+    return WindowShouldClose() ? 1 : 0;
+#endif
+}
+
 vec2_t rl_window_get_screen_size() {
     return (vec2_t){(float)GetScreenWidth(), (float)GetScreenHeight()};
 }

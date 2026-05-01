@@ -21,6 +21,12 @@ static int rl_window_set_size_lua(lua_State *L)
     return 0;
 }
 
+static int rl_window_close_requested_lua(lua_State *L)
+{
+    lua_pushboolean(L, rl_window_close_requested());
+    return 1;
+}
+
 static int rl_window_get_screen_size_lua(lua_State *L)
 {
     vec2_t size = rl_window_get_screen_size();
@@ -31,14 +37,12 @@ static int rl_window_get_screen_size_lua(lua_State *L)
 
 static int rl_window_get_monitor_count_lua(lua_State *L)
 {
-    (void)L;
     lua_pushinteger(L, rl_window_get_monitor_count());
     return 1;
 }
 
 static int rl_window_get_current_monitor_lua(lua_State *L)
 {
-    (void)L;
     lua_pushinteger(L, rl_window_get_current_monitor());
     return 1;
 }
@@ -126,6 +130,9 @@ void rl_register_window_bindings(lua_State *L)
 
     lua_pushcfunction(L, rl_window_set_size_lua);
     lua_setfield(L, -2, "window_set_size");
+
+    lua_pushcfunction(L, rl_window_close_requested_lua);
+    lua_setfield(L, -2, "window_close_requested");
 
     lua_pushcfunction(L, rl_window_get_screen_size_lua);
     lua_setfield(L, -2, "window_get_screen_size");

@@ -423,6 +423,7 @@ proc rl_get_time_raw*(): cdouble {.importc: "rl_get_time", cdecl, header: "rl.h"
 proc rl_get_delta_time_raw*(): cfloat {.importc: "rl_get_delta_time", cdecl, header: "rl.h".}
 proc rl_window_set_title*(title: cstring) {.importc, cdecl, header: "rl_window.h".}
 proc rl_window_set_size*(width: cint, height: cint) {.importc, cdecl, header: "rl_window.h".}
+proc rl_window_close_requested*(): bool {.importc, cdecl, header: "rl_window.h".}
 proc rl_window_get_monitor_count*(): cint {.importc, cdecl, header: "rl.h".}
 proc rl_window_get_current_monitor*(): cint {.importc, cdecl, header: "rl.h".}
 proc rl_window_set_monitor*(monitor: cint) {.importc, cdecl, header: "rl.h".}

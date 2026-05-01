@@ -31,6 +31,7 @@ interface sys.db.ResultSet
 class sys.db._Mysql.D
 interface sys.db.Connection
 class sys.FileSystem
+class rl.RLTaskGroup
 class rl.RLLoader
 class rl._RLLoader.RLLoaderTaskPtr_Impl_
 class rl._RL.RLBridge
@@ -257,3 +258,4 @@ file hxcpp/debug/jsonrpc/eval/Parser.hx /home/rknopf/projects/haxe/hxcpp-debugge
 file hxcpp/debug/jsonrpc/eval/Tools.hx /home/rknopf/projects/haxe/hxcpp-debugger/hxcpp-debug-server/hxcpp/debug/jsonrpc/eval/Tools.hx
 file rl/RL.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/RL.hx
 file rl/RLLoader.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/RLLoader.hx
+file rl/RLTaskGroup.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/RLTaskGroup.hx

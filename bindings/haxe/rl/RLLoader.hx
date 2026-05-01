@@ -142,22 +142,21 @@ class RLLoader {
     return uncacheFileNative(filename);
   }
 
-  @:native("rl_loader_is_local")
   static function isLocalNative(filename: String): Bool {
-    return false;
+    return untyped __cpp__("::rl_loader_is_local({0}.utf8_str())", filename);
   }
 
-  @:native("rl_loader_tick")
+  @:functionCode('
+    ::rl_loader_tick();
+  ')
   static function tickNative(): Void {}
 
-  @:native("rl_loader_clear_cache")
   static function clearCacheNative(): Int {
-    return 0;
+    return untyped __cpp__("::rl_loader_clear_cache()");
   }
 
-  @:native("rl_loader_uncache_file")
   static function uncacheFileNative(filename: String): Int {
-    return 0;
+    return untyped __cpp__("::rl_loader_uncache_file({0}.utf8_str())", filename);
   }
 }
 #else

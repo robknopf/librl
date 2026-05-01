@@ -811,18 +811,18 @@ private typedef RLLoaderCallbacks = {
 @:headerInclude("rl_logger.h")
 private class RLLoggerBridge {
   @:functionCode('
-    rl_logger_set_level((rl_log_level_t)level);
+    ::rl_logger_set_level((::rl_log_level_t)level);
   ')
   public static function setLevel(level: Int): Void {}
 
   @:functionCode('
-    rl_logger_message((rl_log_level_t)level, "%s", message.utf8_str());
+    ::rl_logger_message((::rl_log_level_t)level, "%s", message.utf8_str());
   ')
   public static function message(level: Int, message: String): Void {}
 
   @:functionCode('
-    rl_logger_message_source(
-      (rl_log_level_t)level,
+    ::rl_logger_message_source(
+      (::rl_log_level_t)level,
       sourceFile.utf8_str(),
       sourceLine,
       "%s",
@@ -878,7 +878,7 @@ private class RLLoaderCallbackBridge {
 @:headerInclude("rl_input.h")
 private class RLKeyboardBridge {
   @:functionCode('
-    rl_keyboard_state_t nativeState = rl_input_get_keyboard_state();
+    ::rl_keyboard_state_t nativeState = ::rl_input_get_keyboard_state();
     ::rl::RLKeyboardState result = ::rl::RLKeyboardState_obj::__new();
     result->max_num_keys = nativeState.max_num_keys;
     result->keys = Array_obj<int>::fromData(nativeState.keys, nativeState.max_num_keys);

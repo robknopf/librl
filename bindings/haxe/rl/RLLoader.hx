@@ -17,7 +17,7 @@ typedef RLLoaderCallbackFn = cpp.Callable<cpp.ConstCharStar->cpp.RawPointer<cpp.
 @:headerInclude("stdint.h")
 class RLLoader {
   @:functionCode('
-    rl_loader_task_t *task = rl_loader_restore_fs_async();
+    ::rl_loader_task_t *task = ::rl_loader_restore_fs_async();
     return (cpp::UInt64)(uintptr_t)task;
   ')
   static function restoreFsAsyncNative(): RLLoaderTaskPtr {
@@ -25,7 +25,7 @@ class RLLoader {
   }
 
   @:functionCode('
-    rl_loader_task_t *task = rl_loader_create_import_task(filename.utf8_str());
+    ::rl_loader_task_t *task = ::rl_loader_create_import_task(filename.utf8_str());
     return (cpp::UInt64)(uintptr_t)task;
   ')
   static function importAssetAsyncNative(filename: String): RLLoaderTaskPtr {
@@ -39,7 +39,7 @@ class RLLoader {
     }
     const char **ptrs = (const char **)alloca(n * sizeof(const char *));
     for (int i = 0; i < n; i++) ptrs[i] = filenames->__get(i).utf8_str();
-    rl_loader_task_t *task = rl_loader_import_assets_async((const char *const *)ptrs, (size_t)n);
+    ::rl_loader_task_t *task = ::rl_loader_import_assets_async((const char *const *)ptrs, (size_t)n);
     return (cpp::UInt64)(uintptr_t)task;
   ')
   static function importAssetsAsyncNative(filenames: Array<String>): RLLoaderTaskPtr {
@@ -47,33 +47,33 @@ class RLLoader {
   }
 
   @:functionCode('
-    return rl_loader_poll_task((rl_loader_task_t *)(uintptr_t)task);
+    return ::rl_loader_poll_task((::rl_loader_task_t *)(uintptr_t)task);
   ')
   static function pollTaskNative(task: RLLoaderTaskPtr): Bool {
     return false;
   }
 
   @:functionCode('
-    return rl_loader_finish_task((rl_loader_task_t *)(uintptr_t)task);
+    return ::rl_loader_finish_task((::rl_loader_task_t *)(uintptr_t)task);
   ')
   static function finishTaskNative(task: RLLoaderTaskPtr): Int {
     return 0;
   }
 
   @:functionCode('
-    return rl_loader_get_task_path((rl_loader_task_t *)(uintptr_t)task);
+    return ::rl_loader_get_task_path((::rl_loader_task_t *)(uintptr_t)task);
   ')
   static function getTaskPathNative(task: RLLoaderTaskPtr): String {
     return null;
   }
 
   @:functionCode('
-    rl_loader_free_task((rl_loader_task_t *)(uintptr_t)task);
+    ::rl_loader_free_task((::rl_loader_task_t *)(uintptr_t)task);
   ')
   static function freeTaskNative(task: RLLoaderTaskPtr): Void {}
 
   @:functionCode('
-    return rl_loader_add_task((rl_loader_task_t *)(uintptr_t)task, path.utf8_str(), onSuccess, onFailure, userData);
+    return ::rl_loader_add_task((::rl_loader_task_t *)(uintptr_t)task, path.utf8_str(), onSuccess, onFailure, userData);
   ')
   static function addTaskNative(task: RLLoaderTaskPtr, path: String,
     onSuccess: RLLoaderCallbackFn, onFailure: RLLoaderCallbackFn,
@@ -82,7 +82,7 @@ class RLLoader {
   }
 
   @:functionCode('
-    return rl_loader_ping_asset_host(assetHost.utf8_str());
+    return ::rl_loader_ping_asset_host(assetHost.utf8_str());
   ')
   static function pingAssetHostNative(assetHost: String): Float {
     return -1.0;
@@ -142,8 +142,11 @@ class RLLoader {
     return uncacheFileNative(filename);
   }
 
+  @:functionCode('
+    return ::rl_loader_is_local(filename.utf8_str());
+  ')
   static function isLocalNative(filename: String): Bool {
-    return untyped __cpp__("::rl_loader_is_local({0}.utf8_str())", filename);
+    return false;
   }
 
   @:functionCode('
@@ -151,12 +154,18 @@ class RLLoader {
   ')
   static function tickNative(): Void {}
 
+  @:functionCode('
+    return ::rl_loader_clear_cache();
+  ')
   static function clearCacheNative(): Int {
-    return untyped __cpp__("::rl_loader_clear_cache()");
+    return 0;
   }
 
+  @:functionCode('
+    return ::rl_loader_uncache_file(filename.utf8_str());
+  ')
   static function uncacheFileNative(filename: String): Int {
-    return untyped __cpp__("::rl_loader_uncache_file({0}.utf8_str())", filename);
+    return 0;
   }
 }
 #else

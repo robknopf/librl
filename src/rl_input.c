@@ -5,6 +5,12 @@
 #include "internal/exports.h"
 #include "rl_scratch.h"
 
+RL_KEEP
+void rl_input_poll_events(void) {
+    PollInputEvents();
+}
+
+// RL_KEEP is emscripten export, and we dont export this function for wasm
 vec2_t rl_input_get_mouse_position() {
     const Vector2 pos = GetMousePosition();
     return (vec2_t){pos.x, pos.y};

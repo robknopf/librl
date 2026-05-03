@@ -504,6 +504,9 @@ private extern class RLNative {
     width: Float, length: Float, tint: RLHandle): Void;
 
   // --- Input (rl_input.h) ---
+  @:native("rl_input_poll_events")
+  static function inputPollEvents(): Void;
+
   @:native("rl_input_get_mouse_position")
   static function inputGetMousePosition(): RLVec2;
 

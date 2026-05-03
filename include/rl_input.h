@@ -7,6 +7,7 @@ extern "C" {
 
 #include "rl_types.h"
 
+void rl_input_poll_events(void);
 vec2_t rl_input_get_mouse_position(void);
 int rl_input_get_mouse_wheel(void);
 int rl_input_get_mouse_button(int button);

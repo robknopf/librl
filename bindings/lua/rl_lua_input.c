@@ -3,7 +3,7 @@
 #include <lua.h>
 #include <lauxlib.h>
 
-#include "rl.h"
+#include "rl_input.h"
 #include "rl_lua_input.h"
 
 static void rl_push_mouse_state(lua_State *L, rl_mouse_state_t state)
@@ -81,6 +81,13 @@ static void rl_push_keyboard_state(lua_State *L, rl_keyboard_state_t state)
     lua_setfield(L, -2, "pressed_chars");
 }
 
+static int rl_input_poll_events_lua(lua_State *L)
+{
+    (void)L;
+    rl_input_poll_events();
+    return 0;
+}
+
 static int rl_input_get_mouse_position_lua(lua_State *L)
 {
     vec2_t mouse = rl_input_get_mouse_position();
@@ -117,6 +124,9 @@ static int rl_input_get_keyboard_state_lua(lua_State *L)
 
 void rl_register_input_bindings(lua_State *L)
 {
+    lua_pushcfunction(L, rl_input_poll_events_lua);
+    lua_setfield(L, -2, "input_poll_events");
+
     lua_pushcfunction(L, rl_input_get_mouse_position_lua);
     lua_setfield(L, -2, "input_get_mouse_position");
 

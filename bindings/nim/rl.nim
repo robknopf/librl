@@ -433,6 +433,7 @@ proc rl_window_get_screen_size*(): Vec2 {.importc, cdecl, header: "rl.h".}
 proc rl_window_get_monitor_position*(monitor: cint): Vec2 {.importc, cdecl, header: "rl.h".}
 proc rl_window_get_position*(): Vec2 {.importc, cdecl, header: "rl.h".}
 proc rl_window_set_position*(x: cint, y: cint) {.importc, cdecl, header: "rl_window.h".}
+proc rl_input_poll_events*() {.importc, cdecl, header: "rl.h".}
 proc rl_input_get_mouse_position*(): Vec2 {.importc, cdecl, header: "rl.h".}
 proc rl_input_get_mouse_wheel*(): cint {.importc, cdecl, header: "rl.h".}
 proc rl_input_get_mouse_button*(button: cint): cint {.importc, cdecl, header: "rl.h".}

@@ -650,7 +650,7 @@ abstract RL(RLNative) from RLNative to RLNative {
     );
   }
 
-  public static inline function start<T>(initFn: T->Void, tickFn: T->Void, shutdownFn: T->Void, ctx: T): Int {
+  public static inline function start<T>(initFn: T->Void = null, tickFn: T->Void = null, shutdownFn: T->Void = null, ctx: T=null): Int {
     var initSpringboard: cpp.Callable<cpp.RawPointer<cpp.Void>->Void> =
       cpp.Function.fromStaticFunction(RLBridge.onInitSpringboard);
     var tickSpringboard: cpp.Callable<cpp.RawPointer<cpp.Void>->Void> =

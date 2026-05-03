@@ -116,7 +116,7 @@ private extern class RLNative {
   ): Void;
 
   @:native("rl_start")
-  static function start(
+  static function startNative(
     initFn: cpp.Callable<cpp.RawPointer<cpp.Void>->Void>,
     tickFn: cpp.Callable<cpp.RawPointer<cpp.Void>->Void>,
     shutdownFn: cpp.Callable<cpp.RawPointer<cpp.Void>->Void>,
@@ -640,6 +640,25 @@ abstract RL(RLNative) from RLNative to RLNative {
     RLBridge.shutdownCallback = cast shutdownFn;
     RLBridge.runContext = ctx;
     RLNative.runNative(
+      initSpringboard,
+      tickSpringboard,
+      shutdownSpringboard,
+      null
+    );
+  }
+
+  public static inline function start<T>(initFn: T->Void, tickFn: T->Void, shutdownFn: T->Void, ctx: T): Int {
+    var initSpringboard: cpp.Callable<cpp.RawPointer<cpp.Void>->Void> =
+      cpp.Function.fromStaticFunction(RLBridge.onInitSpringboard);
+    var tickSpringboard: cpp.Callable<cpp.RawPointer<cpp.Void>->Void> =
+      cpp.Function.fromStaticFunction(RLBridge.onTickSpringboard);
+    var shutdownSpringboard: cpp.Callable<cpp.RawPointer<cpp.Void>->Void> =
+      cpp.Function.fromStaticFunction(RLBridge.onShutdownSpringboard);
+    RLBridge.initCallback = cast initFn;
+    RLBridge.tickCallback = cast tickFn;
+    RLBridge.shutdownCallback = cast shutdownFn;
+    RLBridge.runContext = ctx;
+    return RLNative.startNative(
       initSpringboard,
       tickSpringboard,
       shutdownSpringboard,

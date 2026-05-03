@@ -58,7 +58,15 @@ package rl;
     <flag value="MODULARIZE=1" />
     <flag value="-s" />
     <flag value="EXPORT_ES6=1" />
-
+    <!-- browser_host.js / runner.js call Module.ccall(rt_boot|...) -->
+    <flag value="-s" />
+    <flag value="EXPORTED_RUNTIME_METHODS=[\'ccall\',\'cwrap\']" />
+    
+    <!--
+    <flag value="-s" />
+    <flag value="EXPORTED_FUNCTIONS=[\'_main\',\'_rt_boot\',\'_rt_init\',\'_rt_tick\',\'_rt_shutdown\']" />
+    -->
+    
     <!-- hxcpp GC requires spill-pointers -->
     <flag value="--Wno-limited-postlink-optimizations" />
     <flag value="-s" />
@@ -77,6 +85,9 @@ package rl;
     <ext value="${HXCPP_LINK_EMSCRIPTEN_EXT}"/>
     <outflag value="-o "/>
   </linker>
-')
+  ')
 @:keep
 class InjectLibRL {}
+
+@:emscripten
+

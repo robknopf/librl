@@ -139,10 +139,19 @@ else
     print("OK: Consumed expected element count")
 end
 
-if type(rl.run) ~= "function" then
-    print("FAIL: Expected rl.run function")
+if rl.RL_TICK_RUNNING ~= 0 or rl.RL_TICK_WAITING ~= 1 or rl.RL_TICK_FAILED ~= -1 then
+    print("FAIL: Expected rl.RL_TICK_* tick result constants")
     os.exit(1)
 end
-print("OK: core run API available")
+if type(rl.tick) ~= "function" then
+    print("FAIL: Expected rl.tick function")
+    os.exit(1)
+end
+local tick_rc = rl.tick()
+if tick_rc ~= rl.RL_TICK_FAILED then
+    print("FAIL: rl.tick before init should return RL_TICK_FAILED, got", tick_rc)
+    os.exit(1)
+end
+print("OK: core tick API and RL_TICK_* constants available")
 
 print("\n=== All Tests Passed ===")

@@ -3,7 +3,6 @@
 #include <lua.h>
 #include <lauxlib.h>
 
-#include <stdio.h>
 #include <string.h>
 
 #include "rl.h"
@@ -38,101 +37,6 @@
 /* ============================================================================
  * Individual function bindings for vanilla Lua
  * ============================================================================ */
-
-typedef struct rl_lua_run_state_t {
-    lua_State *L;
-    int init_ref;
-    int tick_ref;
-    int shutdown_ref;
-    int user_ref;
-    int active;
-    int callback_depth;
-    int in_run;
-    int reset_pending;
-    char error_message[256];
-} rl_lua_run_state_t;
-
-static rl_lua_run_state_t rl_lua_run_state = {0};
-static void rl_lua_run_reset(lua_State *L);
-
-static int rl_lua_run_call(int callback_ref)
-{
-    int arg_count = 0;
-
-    if (callback_ref == LUA_NOREF || rl_lua_run_state.L == NULL) {
-        return 0;
-    }
-
-    lua_rawgeti(rl_lua_run_state.L, LUA_REGISTRYINDEX, callback_ref);
-    if (rl_lua_run_state.user_ref != LUA_NOREF) {
-        lua_rawgeti(rl_lua_run_state.L, LUA_REGISTRYINDEX, rl_lua_run_state.user_ref);
-        arg_count = 1;
-    }
-
-    rl_lua_run_state.callback_depth++;
-    if (lua_pcall(rl_lua_run_state.L, arg_count, 0, 0) != 0) {
-        rl_lua_run_state.callback_depth--;
-        const char *message = lua_tostring(rl_lua_run_state.L, -1);
-        if (message == NULL) {
-            message = "unknown error";
-        }
-        snprintf(rl_lua_run_state.error_message, sizeof(rl_lua_run_state.error_message), "%s", message);
-        lua_pop(rl_lua_run_state.L, 1);
-        rl_stop();
-        return -1;
-    }
-    rl_lua_run_state.callback_depth--;
-    if (rl_lua_run_state.callback_depth == 0 && rl_lua_run_state.reset_pending) {
-        rl_lua_run_reset(rl_lua_run_state.L);
-    }
-
-    return 0;
-}
-
-static void rl_lua_run_init_callback(void *user_data)
-{
-    (void)user_data;
-    rl_lua_run_call(rl_lua_run_state.init_ref);
-}
-
-static void rl_lua_run_tick_callback(void *user_data)
-{
-    (void)user_data;
-    rl_lua_run_call(rl_lua_run_state.tick_ref);
-}
-
-static void rl_lua_run_shutdown_callback(void *user_data)
-{
-    (void)user_data;
-    rl_lua_run_call(rl_lua_run_state.shutdown_ref);
-}
-
-static void rl_lua_run_reset(lua_State *L)
-{
-    if (rl_lua_run_state.init_ref != LUA_NOREF) {
-        luaL_unref(L, LUA_REGISTRYINDEX, rl_lua_run_state.init_ref);
-    }
-    if (rl_lua_run_state.tick_ref != LUA_NOREF) {
-        luaL_unref(L, LUA_REGISTRYINDEX, rl_lua_run_state.tick_ref);
-    }
-    if (rl_lua_run_state.shutdown_ref != LUA_NOREF) {
-        luaL_unref(L, LUA_REGISTRYINDEX, rl_lua_run_state.shutdown_ref);
-    }
-    if (rl_lua_run_state.user_ref != LUA_NOREF) {
-        luaL_unref(L, LUA_REGISTRYINDEX, rl_lua_run_state.user_ref);
-    }
-
-    rl_lua_run_state.L = NULL;
-    rl_lua_run_state.init_ref = LUA_NOREF;
-    rl_lua_run_state.tick_ref = LUA_NOREF;
-    rl_lua_run_state.shutdown_ref = LUA_NOREF;
-    rl_lua_run_state.user_ref = LUA_NOREF;
-    rl_lua_run_state.active = 0;
-    rl_lua_run_state.callback_depth = 0;
-    rl_lua_run_state.in_run = 0;
-    rl_lua_run_state.reset_pending = 0;
-    rl_lua_run_state.error_message[0] = '\0';
-}
 
 /* Core lifecycle */
 static int rl_init_lua(lua_State *L)
@@ -299,21 +203,6 @@ static int rl_set_light_ambient_lua(lua_State *L)
     return 0;
 }
 
-static int rl_stop_lua(lua_State *L)
-{
-    (void)L;
-    rl_stop();
-    if (!rl_lua_run_state.active) {
-        return 0;
-    }
-    if (rl_lua_run_state.callback_depth == 0) {
-        rl_lua_run_reset(L);
-    } else if (!rl_lua_run_state.in_run) {
-        rl_lua_run_state.reset_pending = 1;
-    }
-    return 0;
-}
-
 static int rl_set_target_fps_lua(lua_State *L)
 {
     int fps = (int)luaL_checkinteger(L, 1);
@@ -335,110 +224,11 @@ static int rl_get_time_lua(lua_State *L)
     return 1;
 }
 
-static int rl_lua_prepare_run_state(lua_State *L)
-{
-    if (rl_lua_run_state.active) {
-        return -1;
-    }
-
-    luaL_checktype(L, 2, LUA_TFUNCTION);
-
-    rl_lua_run_state.L = L;
-    rl_lua_run_state.init_ref = LUA_NOREF;
-    rl_lua_run_state.tick_ref = LUA_NOREF;
-    rl_lua_run_state.shutdown_ref = LUA_NOREF;
-    rl_lua_run_state.user_ref = LUA_NOREF;
-    rl_lua_run_state.active = 1;
-    rl_lua_run_state.callback_depth = 0;
-    rl_lua_run_state.in_run = 0;
-    rl_lua_run_state.reset_pending = 0;
-    rl_lua_run_state.error_message[0] = '\0';
-
-    if (!lua_isnoneornil(L, 1)) {
-        luaL_checktype(L, 1, LUA_TFUNCTION);
-        lua_pushvalue(L, 1);
-        rl_lua_run_state.init_ref = luaL_ref(L, LUA_REGISTRYINDEX);
-    }
-
-    lua_pushvalue(L, 2);
-    rl_lua_run_state.tick_ref = luaL_ref(L, LUA_REGISTRYINDEX);
-
-    if (!lua_isnoneornil(L, 3)) {
-        luaL_checktype(L, 3, LUA_TFUNCTION);
-        lua_pushvalue(L, 3);
-        rl_lua_run_state.shutdown_ref = luaL_ref(L, LUA_REGISTRYINDEX);
-    }
-
-    if (!lua_isnoneornil(L, 4)) {
-        lua_pushvalue(L, 4);
-        rl_lua_run_state.user_ref = luaL_ref(L, LUA_REGISTRYINDEX);
-    }
-
-    return 0;
-}
-
-static int rl_start_lua(lua_State *L)
-{
-    int rc = 0;
-
-    if (rl_lua_prepare_run_state(L) != 0) {
-        return luaL_error(L, "start already active");
-    }
-
-    rc = rl_start(rl_lua_run_state.init_ref == LUA_NOREF ? NULL : rl_lua_run_init_callback,
-                  rl_lua_run_tick_callback,
-                  rl_lua_run_state.shutdown_ref == LUA_NOREF ? NULL : rl_lua_run_shutdown_callback,
-                  NULL);
-    if (rc != 0) {
-        rl_lua_run_reset(L);
-        return luaL_error(L, "start failed");
-    }
-    return 0;
-}
-
 static int rl_tick_lua(lua_State *L)
 {
-    int rc = 0;
-    if (!rl_lua_run_state.active) {
-        lua_pushinteger(L, -1);
-        return 1;
-    }
-
-    rc = rl_tick();
-
-    if (rl_lua_run_state.error_message[0] != '\0') {
-        char message[256];
-        snprintf(message, sizeof(message), "%s", rl_lua_run_state.error_message);
-        rl_lua_run_reset(L);
-        return luaL_error(L, "run callback error: %s", message);
-    }
-
-    lua_pushinteger(L, rc);
+    (void)L;
+    lua_pushinteger(L, (lua_Integer)rl_tick());
     return 1;
-}
-
-static int rl_run_lua(lua_State *L)
-{
-    if (rl_lua_prepare_run_state(L) != 0) {
-        return luaL_error(L, "run already active");
-    }
-
-    rl_lua_run_state.in_run = 1;
-    rl_run(rl_lua_run_state.init_ref == LUA_NOREF ? NULL : rl_lua_run_init_callback,
-           rl_lua_run_tick_callback,
-           rl_lua_run_state.shutdown_ref == LUA_NOREF ? NULL : rl_lua_run_shutdown_callback,
-           NULL);
-    rl_lua_run_state.in_run = 0;
-
-    if (rl_lua_run_state.error_message[0] != '\0') {
-        char message[256];
-        snprintf(message, sizeof(message), "%s", rl_lua_run_state.error_message);
-        rl_lua_run_reset(L);
-        return luaL_error(L, "run callback error: %s", message);
-    }
-
-    rl_lua_run_reset(L);
-    return 0;
 }
 
 static const luaL_Reg rl_functions[] = {
@@ -462,13 +252,10 @@ static const luaL_Reg rl_functions[] = {
     {"is_lighting_enabled", rl_is_lighting_enabled_lua},
     {"set_light_direction", rl_set_light_direction_lua},
     {"set_light_ambient", rl_set_light_ambient_lua},
-    {"stop", rl_stop_lua},
     {"set_target_fps", rl_set_target_fps_lua},
     {"get_delta_time", rl_get_delta_time_lua},
     {"get_time", rl_get_time_lua},
-    {"start", rl_start_lua},
     {"tick", rl_tick_lua},
-    {"run", rl_run_lua},
 
     {NULL, NULL}
 };
@@ -488,6 +275,12 @@ int luaopen_rl(lua_State *L)
     lua_setfield(L, -2, "RL_INIT_ERR_ASSET_HOST");
     lua_pushinteger(L, RL_INIT_ERR_WINDOW);
     lua_setfield(L, -2, "RL_INIT_ERR_WINDOW");
+    lua_pushinteger(L, RL_TICK_RUNNING);
+    lua_setfield(L, -2, "RL_TICK_RUNNING");
+    lua_pushinteger(L, RL_TICK_WAITING);
+    lua_setfield(L, -2, "RL_TICK_WAITING");
+    lua_pushinteger(L, RL_TICK_FAILED);
+    lua_setfield(L, -2, "RL_TICK_FAILED");
     rl_register_camera3d_bindings(L);
     rl_register_color_bindings(L);
     rl_register_debug_bindings(L);

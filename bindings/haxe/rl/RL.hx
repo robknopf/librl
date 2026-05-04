@@ -43,6 +43,11 @@ private extern class RLNative {
   static inline var INIT_ERR_ASSET_HOST: Int = -4;
   static inline var INIT_ERR_WINDOW: Int = -5;
 
+  // --- Tick result codes (rl.h) ---
+  static inline var TICK_RUNNING: Int = 0;
+  static inline var TICK_WAITING: Int = 1;
+  static inline var TICK_FAILED: Int = -1;
+
   // --- Window flags (rl_window.h) ---
   static inline var FLAG_WINDOW_RESIZABLE: Int = 0x00000004;
   static inline var FLAG_MSAA_4X_HINT: Int = 0x00000020;
@@ -106,28 +111,8 @@ private extern class RLNative {
   @:native("rl_update_to_scratch")
   static function updateToScratch(): Void;
 
-  // --- Run loop (init_fn, tick_fn, shutdown_fn, user_data). ---
-  @:native("rl_run")
-  static function runNative(
-    initFn: cpp.Callable<cpp.RawPointer<cpp.Void>->Void>,
-    tickFn: cpp.Callable<cpp.RawPointer<cpp.Void>->Void>,
-    shutdownFn: cpp.Callable<cpp.RawPointer<cpp.Void>->Void>,
-    userData: cpp.RawPointer<cpp.Void>
-  ): Void;
-
-  @:native("rl_start")
-  static function startNative(
-    initFn: cpp.Callable<cpp.RawPointer<cpp.Void>->Void>,
-    tickFn: cpp.Callable<cpp.RawPointer<cpp.Void>->Void>,
-    shutdownFn: cpp.Callable<cpp.RawPointer<cpp.Void>->Void>,
-    userData: cpp.RawPointer<cpp.Void>
-  ): Int;
-
   @:native("rl_tick")
   static function tick(): Int;
-
-  @:native("rl_stop")
-  static function stop(): Void;
 
   // --- Time ---
   @:native("rl_get_delta_time")
@@ -631,44 +616,6 @@ abstract RL(RLNative) from RLNative to RLNative {
     return RLNative.getPlatformNative();
   }
 
-  public static inline function run<T>(initFn: T->Void, tickFn: T->Void, shutdownFn: T->Void, ctx: T): Void {
-    var initSpringboard: cpp.Callable<cpp.RawPointer<cpp.Void>->Void> =
-      cpp.Function.fromStaticFunction(RLBridge.onInitSpringboard);
-    var tickSpringboard: cpp.Callable<cpp.RawPointer<cpp.Void>->Void> =
-      cpp.Function.fromStaticFunction(RLBridge.onTickSpringboard);
-    var shutdownSpringboard: cpp.Callable<cpp.RawPointer<cpp.Void>->Void> =
-      cpp.Function.fromStaticFunction(RLBridge.onShutdownSpringboard);
-    RLBridge.initCallback = cast initFn;
-    RLBridge.tickCallback = cast tickFn;
-    RLBridge.shutdownCallback = cast shutdownFn;
-    RLBridge.runContext = ctx;
-    RLNative.runNative(
-      initSpringboard,
-      tickSpringboard,
-      shutdownSpringboard,
-      null
-    );
-  }
-
-  public static inline function start<T>(initFn: T->Void = null, tickFn: T->Void = null, shutdownFn: T->Void = null, ctx: T=null): Int {
-    var initSpringboard: cpp.Callable<cpp.RawPointer<cpp.Void>->Void> =
-      cpp.Function.fromStaticFunction(RLBridge.onInitSpringboard);
-    var tickSpringboard: cpp.Callable<cpp.RawPointer<cpp.Void>->Void> =
-      cpp.Function.fromStaticFunction(RLBridge.onTickSpringboard);
-    var shutdownSpringboard: cpp.Callable<cpp.RawPointer<cpp.Void>->Void> =
-      cpp.Function.fromStaticFunction(RLBridge.onShutdownSpringboard);
-    RLBridge.initCallback = cast initFn;
-    RLBridge.tickCallback = cast tickFn;
-    RLBridge.shutdownCallback = cast shutdownFn;
-    RLBridge.runContext = ctx;
-    return RLNative.startNative(
-      initSpringboard,
-      tickSpringboard,
-      shutdownSpringboard,
-      null
-    );
-  }
-
   public static function loaderRestoreFsAsync(): RLLoaderTaskPtr {
     return RLLoader.loaderRestoreFsAsync();
   }
@@ -919,10 +866,6 @@ private class RLKeyboardBridge {
 
 @:keep
 private class RLBridge {
-  public static var initCallback: Null<Dynamic->Void> = null;
-  public static var tickCallback: Null<Dynamic->Void> = null;
-  public static var shutdownCallback: Null<Dynamic->Void> = null;
-  public static var runContext: Dynamic = null;
   public static var nextLoaderCallbackId: Int = 0;
   public static var loaderCallbacks: StringMap<RLLoaderCallbacks> = new StringMap();
 
@@ -930,18 +873,6 @@ private class RLBridge {
     var key = (path == null ? "" : path) + "#" + nextLoaderCallbackId;
     nextLoaderCallbackId++;
     return key;
-  }
-
-  @:keep public static function onInitSpringboard(userData: cpp.RawPointer<cpp.Void>): Void {
-    if (initCallback != null) initCallback(runContext);
-  }
-
-  @:keep public static function onTickSpringboard(userData: cpp.RawPointer<cpp.Void>): Void {
-    if (tickCallback != null) tickCallback(runContext);
-  }
-
-  @:keep public static function onShutdownSpringboard(userData: cpp.RawPointer<cpp.Void>): Void {
-    if (shutdownCallback != null) shutdownCallback(runContext);
   }
 
   @:keep public static function onLoaderSuccessSpringboard(path: cpp.ConstCharStar, userData: cpp.RawPointer<cpp.Void>): Void {

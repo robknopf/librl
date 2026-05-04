@@ -31,10 +31,6 @@
 extern "C" {
 #endif
 
-typedef void (*rl_init_fn)(void *user_data);
-typedef void (*rl_tick_fn)(void *user_data);
-typedef void (*rl_shutdown_fn)(void *user_data);
-
 typedef enum rl_init_result_t {
   RL_INIT_OK = 0,
   RL_INIT_ERR_UNKNOWN = -1,
@@ -43,6 +39,12 @@ typedef enum rl_init_result_t {
   RL_INIT_ERR_ASSET_HOST = -4,
   RL_INIT_ERR_WINDOW = -5,
 } rl_init_result_t;
+
+typedef enum rl_tick_result_t {
+  RL_TICK_RUNNING = 0,
+  RL_TICK_WAITING = 1,
+  RL_TICK_FAILED = -1,
+} rl_tick_result_t;
 
 int rl_init(const rl_init_config_t *config);
 bool rl_is_initialized(void);
@@ -57,16 +59,7 @@ void rl_set_light_direction(float x, float y, float z);
 void rl_set_light_ambient(float ambient);
 void rl_update_to_scratch(void);
 void rl_update(void);
-int rl_start(rl_init_fn init_fn,
-             rl_tick_fn tick_fn,
-             rl_shutdown_fn shutdown_fn,
-             void *user_data);
-int rl_tick(void);
-void rl_stop(void);
-void rl_run(rl_init_fn init_fn,
-            rl_tick_fn tick_fn,
-            rl_shutdown_fn shutdown_fn,
-            void *user_data);
+rl_tick_result_t rl_tick(void);
 void rl_set_target_fps(int fps);
 float rl_get_delta_time(void);
 double rl_get_time(void);

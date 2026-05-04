@@ -77,10 +77,7 @@ LDFLAGS_WASM = \
 	"_rl_get_platform", \
 	"_rl_deinit", \
 	"_rl_update_to_scratch", \
-	"_rl_start", \
 	"_rl_tick", \
-	"_rl_run", \
-	"_rl_stop", \
 	"_rl_get_time", \
 	"_rl_get_delta_time", \
 	"_rl_window_set_title", \

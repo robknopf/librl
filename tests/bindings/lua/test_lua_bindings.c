@@ -60,6 +60,16 @@ int main(int argc, char *argv[])
     }
 
     status = luaL_dostring(L,
+        "if rl.RL_TICK_RUNNING ~= 0 or rl.RL_TICK_WAITING ~= 1 or rl.RL_TICK_FAILED ~= -1 then\n"
+        "  error('rl tick result constants missing')\n"
+        "end\n"
+        "print('OK: tick result constants')");
+    if (status != LUA_OK) {
+        fprintf(stderr, "Error testing tick constants: %s\n", lua_tostring(L, -1));
+        lua_pop(L, 1);
+    }
+
+    status = luaL_dostring(L,
         "if type(rl.is_initialized) ~= 'function' or rl.is_initialized() ~= false then\n"
         "  error('rl.is_initialized missing or incorrect before init')\n"
         "end\n"

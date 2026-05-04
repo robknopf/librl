@@ -43,10 +43,6 @@ type
   RLModuleEventEmitFn* = proc(hostUserData: pointer, eventName: cstring, payload: pointer): cint {.cdecl.}
   RLLoaderCallbackFn* = proc(path: cstring, userData: pointer) {.cdecl.}
   RLLoaderClosureCallback* = proc(path: string) {.closure.}
-  RLRunCallback*[T] = proc(ctx: var T) {.closure.}
-  RLInitFn* = proc(userData: pointer) {.cdecl.}
-  RLTickFn* = proc(userData: pointer) {.cdecl.}
-  RLShutdownFn* = proc(userData: pointer) {.cdecl.}
   RLModuleInitFn* = proc(host: ptr RLModuleHostApi, moduleState: ptr pointer): cint {.cdecl.}
   RLModuleDeinitFn* = proc(moduleState: pointer) {.cdecl.}
   RLModuleUpdateFn* = proc(moduleState: pointer, dtSeconds: cfloat): cint {.cdecl.}
@@ -83,17 +79,8 @@ type
   RLLoaderClosureTask = ref object
     onSuccess: RLLoaderClosureCallback
     onFailure: RLLoaderClosureCallback
-  RLRunBridgeBase = ref object of RootObj
-    ctxPtr: pointer
 
 var rlLoaderClosureTasks: seq[RLLoaderClosureTask] = @[]
-var rlRunBridgeActive: RLRunBridgeBase = nil
-
-type
-  RLRunBridge[T] = ref object of RLRunBridgeBase
-    initFn: RLRunCallback[T]
-    tickFn: RLRunCallback[T]
-    shutdownFn: RLRunCallback[T]
 
 var
   RL_COLOR_DEFAULT* {.importc, header: "rl_color.h".}: RLHandle
@@ -131,6 +118,9 @@ const
   RL_INIT_ERR_LOADER* = (-3).cint
   RL_INIT_ERR_ASSET_HOST* = (-4).cint
   RL_INIT_ERR_WINDOW* = (-5).cint
+  RL_TICK_RUNNING* = 0.cint
+  RL_TICK_WAITING* = 1.cint
+  RL_TICK_FAILED* = (-1).cint
   RL_CAMERA_PERSPECTIVE* = 0.cint
   RL_CAMERA_ORTHOGRAPHIC* = 1.cint
   RL_FLAG_WINDOW_RESIZABLE* = 4.RLWindowFlags
@@ -415,10 +405,7 @@ proc rl_event_off_all*(eventName: cstring): cint {.importc, cdecl, header: "rl_e
 proc rl_event_emit*(eventName: cstring, payload: pointer): cint {.importc, cdecl, header: "rl_event.h".}
 proc rl_event_listener_count*(eventName: cstring): cint {.importc, cdecl, header: "rl_event.h".}
 proc rl_update*() {.importc, cdecl, header: "rl.h".}
-proc rl_start*(initFn: RLInitFn, tickFn: RLTickFn, shutdownFn: RLShutdownFn, userData: pointer): cint {.importc, cdecl, header: "rl.h".}
 proc rl_tick*(): cint {.importc, cdecl, header: "rl.h".}
-proc rl_run_raw(initFn: RLInitFn, tickFn: RLTickFn, shutdownFn: RLShutdownFn, userData: pointer) {.importc: "rl_run", cdecl, header: "rl.h".}
-proc rl_stop*() {.importc, cdecl, header: "rl.h".}
 proc rl_get_time_raw*(): cdouble {.importc: "rl_get_time", cdecl, header: "rl.h".}
 proc rl_get_delta_time_raw*(): cfloat {.importc: "rl_get_delta_time", cdecl, header: "rl.h".}
 proc rl_window_set_title*(title: cstring) {.importc, cdecl, header: "rl_window.h".}
@@ -580,44 +567,6 @@ proc rl_sprite2d_set_transform*(
 ): bool {.importc, cdecl, header: "rl_sprite2d.h".}
 proc rl_sprite2d_draw*(sprite: RLHandle, tint: RLHandle) {.importc, cdecl, header: "rl_sprite2d.h".}
 proc rl_sprite2d_destroy*(sprite: RLHandle) {.importc, cdecl, header: "rl_sprite2d.h".}
-
-proc rl_run*(initFn: RLInitFn, tickFn: RLTickFn, shutdownFn: RLShutdownFn, userData: pointer) {.inline.} =
-  rl_run_raw(initFn, tickFn, shutdownFn, userData)
-
-proc rl_run_init_trampoline[T](userData: pointer) {.cdecl.} =
-  let bridge = cast[RLRunBridge[T]](userData)
-  if not bridge.isNil and bridge.initFn != nil:
-    bridge.initFn(cast[ptr T](bridge.ctxPtr)[])
-
-proc rl_run_tick_trampoline[T](userData: pointer) {.cdecl.} =
-  let bridge = cast[RLRunBridge[T]](userData)
-  if not bridge.isNil and bridge.tickFn != nil:
-    bridge.tickFn(cast[ptr T](bridge.ctxPtr)[])
-
-proc rl_run_shutdown_trampoline[T](userData: pointer) {.cdecl.} =
-  let bridge = cast[RLRunBridge[T]](userData)
-  if not bridge.isNil and bridge.shutdownFn != nil:
-    bridge.shutdownFn(cast[ptr T](bridge.ctxPtr)[])
-
-proc rl_run*[T](initFn: RLRunCallback[T], tickFn: RLRunCallback[T],
-                shutdownFn: RLRunCallback[T], ctx: var T) =
-  let bridge = RLRunBridge[T](
-    ctxPtr: addr ctx,
-    initFn: initFn,
-    tickFn: tickFn,
-    shutdownFn: shutdownFn
-  )
-  rlRunBridgeActive = bridge
-  try:
-    rl_run_raw(
-      rl_run_init_trampoline[T],
-      rl_run_tick_trampoline[T],
-      rl_run_shutdown_trampoline[T],
-      cast[pointer](bridge)
-    )
-  finally:
-    if rlRunBridgeActive == bridge:
-      rlRunBridgeActive = nil
 
 proc rl_get_time*(): float {.inline.} =
   rl_get_time_raw().float

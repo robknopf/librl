@@ -9,8 +9,21 @@ suite "rl bindings":
     check RL_INIT_ERR_LOADER == (-3).cint
     check RL_INIT_ERR_ASSET_HOST == (-4).cint
     check RL_INIT_ERR_WINDOW == (-5).cint
+    check RL_TICK_RUNNING == 0.cint
+    check RL_TICK_WAITING == 1.cint
+    check RL_TICK_FAILED == (-1).cint
     check RL_FLAG_WINDOW_RESIZABLE == 4.RLWindowFlags
     check RL_FLAG_MSAA_4X_HINT == 32.RLWindowFlags
+
+  test "rl_tick before init is failed":
+    check rl_is_initialized() == false
+    check rl_tick() == RL_TICK_FAILED
+
+  test "rl_tick after init":
+    check rl_init() == RL_INIT_OK
+    let t = rl_tick()
+    check t == RL_TICK_WAITING or t == RL_TICK_RUNNING
+    rl_deinit()
 
   test "init and deinit":
     check rl_is_initialized() == false

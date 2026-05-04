@@ -11,7 +11,6 @@
 #include "internal/rl_music.h"
 #include "internal/rl_sound.h"
 #include "internal/rl_scratch.h"
-#include "internal/rl_state.h"
 #include "internal/rl_sprite2d.h"
 #include "internal/rl_sprite3d.h"
 #include "internal/rl_texture.h"
@@ -20,11 +19,6 @@
 #include "rl_loader.h"
 #include <stddef.h>
 #include <string.h>
-
-#if defined(PLATFORM_WEB)
-#include <emscripten/emscripten.h>
-#endif
-
 
 bool initialized = false;
 
@@ -46,73 +40,6 @@ static void rl_init_apply_defaults(rl_init_config_t *out)
 
 RL_KEEP
 size_t rl_init_config_sizeof(void) { return sizeof(rl_init_config_t); }
-
-typedef struct rl_loop_state_t {
-    rl_init_fn init_fn;
-    rl_tick_fn tick_fn;
-    rl_shutdown_fn shutdown_fn;
-    void *user_data;
-    int armed;       /* start() returned OK; session active for tick/stop */
-    int user_inited; /* user init callback has run, or is not used */
-    int looping;
-} rl_loop_state_t;
-
-static rl_loop_state_t rl_loop_state = {0};
-
-static void rl_dispatch(void) {
-    rl_loader_tick();
-    if (!rl_loader_is_ready()) {
-        return;
-    }
-    if (!rl_loop_state.user_inited) {
-        if (rl_loop_state.init_fn != NULL) {
-            rl_loop_state.init_fn(rl_loop_state.user_data);
-        }
-        rl_loop_state.user_inited = 1;
-        return;
-    }
-    if (rl_loop_state.tick_fn != NULL) {
-        rl_loop_state.tick_fn(rl_loop_state.user_data);
-    }
-}
-
-static void rl_finish_run(void) {
-    rl_shutdown_fn shutdown_fn = rl_loop_state.shutdown_fn;
-    void *user_data = rl_loop_state.user_data;
-
-    rl_loop_state.armed = 0;
-    rl_loop_state.user_inited = 0;
-    rl_loop_state.looping = 0;
-    rl_loop_state.init_fn = NULL;
-    rl_loop_state.tick_fn = NULL;
-    rl_loop_state.shutdown_fn = NULL;
-    rl_loop_state.user_data = NULL;
-
-    if (shutdown_fn != NULL) {
-        shutdown_fn(user_data);
-    }
-}
-
-#if defined(PLATFORM_WEB)
-static void rl_web_step(void) {
-    if (!rl_loop_state.looping) {
-        emscripten_cancel_main_loop();
-        rl_stop();
-        return;
-    }
-
-    /* Do not call WindowShouldClose() here: raylib's rcore_web.c implementation
-     * always ends with emscripten_sleep(12) to yield, which requires ASYNCIFY/JSPI
-     * in the app link. On web it always returns false anyway; closing is not
-     * driven the same way as desktop GLFW. */
-    rl_dispatch();
-
-    if (!rl_loop_state.looping) {
-        emscripten_cancel_main_loop();
-        rl_stop();
-    }
-}
-#endif
 
 RL_KEEP
 int rl_init(const rl_init_config_t *config) {
@@ -226,80 +153,15 @@ void rl_update(void) {
 }
 
 RL_KEEP
-int rl_start(rl_init_fn init_fn,
-             rl_tick_fn tick_fn,
-             rl_shutdown_fn shutdown_fn,
-             void *user_data) {
-    if (rl_loop_state.armed || rl_loop_state.looping) {
-        return -1;
+rl_tick_result_t rl_tick(void) {
+    if (!initialized) {
+        return RL_TICK_FAILED;
     }
-
-    if (tick_fn == NULL) {
-        return -1;
+    rl_loader_tick();
+    if (!rl_loader_is_ready()) {
+        return RL_TICK_WAITING;
     }
-
-    rl_loop_state.init_fn = init_fn;
-    rl_loop_state.tick_fn = tick_fn;
-    rl_loop_state.shutdown_fn = shutdown_fn;
-    rl_loop_state.user_data = user_data;
-    rl_loop_state.user_inited = (init_fn == NULL) ? 1 : 0;
-    rl_loop_state.looping = 0;
-
-    /* Loader readiness and user init_fn run in rl_dispatch (tick / run loop) so
-     * the host can return between frames (e.g. web IDBFS restore). */
-    rl_loop_state.armed = 1;
-    return 0;
-}
-
-RL_KEEP
-int rl_tick(void) {
-    if (!rl_loop_state.armed || rl_loop_state.looping) {
-        return -1;
-    }
-
-    rl_dispatch();
-
-    return 0;
-}
-
-RL_KEEP
-void rl_run(rl_init_fn init_fn,
-            rl_tick_fn tick_fn,
-            rl_shutdown_fn shutdown_fn,
-            void *user_data) {
-    if (rl_start(init_fn, tick_fn, shutdown_fn, user_data) != 0) {
-        return;
-    }
-
-    rl_loop_state.looping = 1;
-
-#if defined(PLATFORM_WEB)
-    emscripten_set_main_loop(rl_web_step, 0, 1);
-#else
-    while (rl_loop_state.looping) {
-        if (WindowShouldClose()) {
-            rl_stop();
-            break;
-        }
-
-        rl_dispatch();
-    }
-    rl_stop();
-#endif
-}
-
-RL_KEEP
-void rl_stop(void) {
-    if (rl_loop_state.looping) {
-        rl_loop_state.looping = 0;
-        return;
-    }
-
-    if (!rl_loop_state.armed) {
-        return;
-    }
-
-    rl_finish_run();
+    return RL_TICK_RUNNING;
 }
 
 RL_KEEP

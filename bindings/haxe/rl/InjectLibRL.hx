@@ -16,8 +16,16 @@ package rl;
     <compilerflag value="-Wno-incompatible-function-pointer-types" />
   </files>
 
+  <!-- emscripten compile flags -->  
+  <compiler id="emscripten" exe="emcc">
+    <!-- supress some warnings that emcc has from hxcpp generated code -->
+    <cppflag value="-Wno-inconsistent-missing-override" />
+    <cppflag value="-Wno-overflow" />
+    <cppflag value="-Wno-nontrivial-memcall" />
+  </compiler>
+
   <!-- Desktop linking -->
-  <target id="haxe" unless="emscripten">
+  <target id="haxe" unless="emscripten||static_link">
     <lib name="${LIBRL_ROOT}/lib/librl.a" />
     <lib name="-lm" />
     <lib name="-lpthread" />
@@ -28,7 +36,6 @@ package rl;
     <lib name="-lz" />
     <lib name="-lssl" />
     <lib name="-lcrypto" />
-    
   </target>
 
   <!-- WASM linking -->

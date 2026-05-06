@@ -20,6 +20,7 @@ typedef enum rl_loader_queue_task_result_t {
 
 int rl_loader_set_asset_host(const char *asset_host);
 const char *rl_loader_get_asset_host(void);
+const char *rl_loader_get_cache_dir(void);
 float rl_loader_ping_asset_host(const char *asset_host);
 bool rl_loader_is_ready(void);
 rl_loader_task_t *rl_loader_restore_fs_async(void);

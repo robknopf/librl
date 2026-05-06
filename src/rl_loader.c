@@ -37,6 +37,7 @@
 static bool rl_loader_initialized = false;
 static lru_cache_t *rl_loader_memory_cache = NULL;
 static char rl_loader_asset_host[RL_LOADER_MAX_ASSET_HOST_LENGTH] = RL_LOADER_DEFAULT_ASSET_HOST;
+static char rl_loader_cache_dir[FILEIO_MAX_PATH_LENGTH * 2] = RL_LOADER_DEFAULT_MOUNT_POINT;
 static fileio_sync_op_t *rl_loader_restore_barrier = NULL;
 static bool rl_loader_restore_ready = false;
 static bool rl_loader_restore_failed = false;
@@ -835,6 +836,11 @@ float rl_loader_ping_asset_host(const char *asset_host)
     return fetch_url_ping(fetch_host, RL_LOADER_HOST_PROBE_TIMEOUT_MS);
 }
 
+const char *rl_loader_get_cache_dir(void)
+{
+    return rl_loader_cache_dir;
+}
+
 rl_loader_task_t *rl_loader_restore_fs_async(void)
 {
     rl_loader_task_t *task = NULL;
@@ -1437,6 +1443,9 @@ int rl_loader_init(const char *mount_point)
         resolved_mount = RL_LOADER_DEFAULT_MOUNT_POINT;
     }
 
+    rl_loader_cache_dir[0] = '\0';
+    (void)snprintf(rl_loader_cache_dir, sizeof(rl_loader_cache_dir), "%s", resolved_mount);
+
     if (fileio_init(resolved_mount) != 0) {
         return -1;
     }
@@ -1473,6 +1482,7 @@ void rl_loader_deinit(void)
     rl_loader_restore_ready = false;
     rl_loader_restore_failed = false;
     rl_loader_restore_started_at = 0;
+    rl_loader_cache_dir[0] = '\0';
     fileio_deinit();
     rl_loader_initialized = false;
 }

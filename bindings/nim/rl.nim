@@ -150,6 +150,7 @@ proc rl_set_asset_host*(assetHost: cstring): cint {.importc, cdecl, header: "rl.
 proc rl_get_asset_host*(): cstring {.importc, cdecl, header: "rl.h".}
 proc rl_loader_set_asset_host*(assetHost: cstring): cint {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_get_asset_host*(): cstring {.importc, cdecl, header: "rl_loader.h".}
+proc rl_loader_get_cache_dir*(): cstring {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_ping_asset_host*(assetHost: cstring): cfloat {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_restore_fs_async*(): ptr RLLoaderTask {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_create_import_task*(filename: cstring): ptr RLLoaderTask {.importc, cdecl, header: "rl_loader.h".}

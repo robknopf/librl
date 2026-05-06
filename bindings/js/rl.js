@@ -303,6 +303,9 @@ const RL = {
     clearCache: () => {
         return moduleInstance.ccall('rl_loader_clear_cache', 'number', [], []);
     },
+    getCacheDir: () => {
+        return moduleInstance.ccall('rl_loader_get_cache_dir', 'string', [], []);
+    },
     pingAssetHost: (assetHost = "") => {
         return moduleInstance.ccall(
             'rl_loader_ping_asset_host',

@@ -1,5 +1,7 @@
 package rl;
 
+import haxe.io.Bytes;
+
 #if cpp
 abstract RLLoaderTaskPtr(cpp.UInt64) from cpp.UInt64 to cpp.UInt64 {
   public static inline function invalid(): RLLoaderTaskPtr {
@@ -15,6 +17,7 @@ typedef RLLoaderCallbackFn = cpp.Callable<cpp.ConstCharStar->cpp.RawPointer<cpp.
 @:headerInclude("rl_loader.h")
 @:headerInclude("alloca.h")
 @:headerInclude("stdint.h")
+@:headerInclude("string.h")
 class RLLoader {
   @:functionCode('
     ::rl_loader_task_t *task = ::rl_loader_restore_fs_async();
@@ -68,6 +71,24 @@ class RLLoader {
   }
 
   @:functionCode('
+    ::rl_loader_read_result_t result = ::rl_loader_read_local(filename.utf8_str());
+    if (result.error != 0 || result.data == nullptr) {
+      ::rl_loader_read_result_free(&result);
+      return null();
+    }
+
+    Array<unsigned char> data = Array_obj<unsigned char>::__new((int)result.size, (int)result.size);
+    if (result.size > 0) {
+      ::memcpy(data->GetBase(), result.data, result.size);
+    }
+    ::rl_loader_read_result_free(&result);
+    return ::haxe::io::Bytes_obj::__alloc(HX_CTX_GET, (int)data->length, data);
+  ')
+  static function readLocalNative(filename: String): Bytes {
+    return null;
+  }
+
+  @:functionCode('
     ::rl_loader_free_task((::rl_loader_task_t *)(uintptr_t)task);
   ')
   static function freeTaskNative(task: RLLoaderTaskPtr): Void {}
@@ -86,6 +107,13 @@ class RLLoader {
   ')
   static function pingAssetHostNative(assetHost: String): Float {
     return -1.0;
+  }
+
+  @:functionCode('
+    return ::rl_loader_get_cache_dir();
+  ')
+  static function getCacheDirNative(): String {
+    return null;
   }
 
   public static inline function loaderRestoreFsAsync(): RLLoaderTaskPtr {
@@ -112,6 +140,10 @@ class RLLoader {
     return getTaskPathNative(task);
   }
 
+  public static inline function loaderReadLocal(filename: String): Bytes {
+    return readLocalNative(filename);
+  }
+
   public static inline function loaderFreeTask(task: RLLoaderTaskPtr): Void {
     freeTaskNative(task);
   }
@@ -128,6 +160,10 @@ class RLLoader {
 
   public static inline function loaderPingAssetHost(?assetHost: String): Float {
     return pingAssetHostNative(assetHost == null ? "" : assetHost);
+  }
+
+  public static inline function loaderGetCacheDir(): String {
+    return getCacheDirNative();
   }
 
   public static inline function loaderTick(): Void {

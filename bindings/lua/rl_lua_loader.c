@@ -126,6 +126,13 @@ static int rl_loader_get_asset_host_lua(lua_State *L)
     return 1;
 }
 
+static int rl_loader_get_cache_dir_lua(lua_State *L)
+{
+    (void)L;
+    lua_pushstring(L, rl_loader_get_cache_dir());
+    return 1;
+}
+
 static int rl_loader_ping_asset_host_lua(lua_State *L)
 {
     const char *asset_host = NULL;
@@ -332,6 +339,9 @@ void rl_register_loader_bindings(lua_State *L)
 
     lua_pushcfunction(L, rl_loader_get_asset_host_lua);
     lua_setfield(L, -2, "loader_get_asset_host");
+
+    lua_pushcfunction(L, rl_loader_get_cache_dir_lua);
+    lua_setfield(L, -2, "loader_get_cache_dir");
 
     lua_pushcfunction(L, rl_loader_ping_asset_host_lua);
     lua_setfield(L, -2, "loader_ping_asset_host");

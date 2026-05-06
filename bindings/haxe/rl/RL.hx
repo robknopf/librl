@@ -8,7 +8,6 @@
 package rl;
 
 import haxe.ds.StringMap;
-
 import rl.InjectLibRL;
 import rl.RLHandle;
 import rl.RLLoader.RLLoaderTaskPtr;
@@ -608,6 +607,17 @@ abstract RL(RLNative) from RLNative to RLNative {
     return RLNative.initConfigNative(w, h, title, flags, asset, cache);
   }
 
+  public static inline function initValues(
+    width: Int,
+    height: Int,
+    title: String,
+    flags: Int = 0,
+    assetHost: String = "",
+    loaderCacheDir: String = ""
+  ): Int {
+    return RLNative.initConfigNative(width, height, title, flags, assetHost, loaderCacheDir);
+  }
+
   public static inline function isInitialized(): Bool {
     return RLNative.isInitializedNative();
   }
@@ -652,6 +662,10 @@ abstract RL(RLNative) from RLNative to RLNative {
     return RLLoader.loaderGetTaskPath(task);
   }
 
+  public static function loaderReadLocal(filename: String): haxe.io.Bytes {
+    return RLLoader.loaderReadLocal(filename);
+  }
+
   public static function loaderFreeTask(task: RLLoaderTaskPtr): Void {
     RLLoader.loaderFreeTask(task);
   }
@@ -662,6 +676,10 @@ abstract RL(RLNative) from RLNative to RLNative {
 
   public static function loaderPingAssetHost(?assetHost: String): Float {
     return RLLoader.loaderPingAssetHost(assetHost);
+  }
+
+  public static function loaderGetCacheDir(): String {
+    return RLLoader.loaderGetCacheDir();
   }
 
   static function loaderAddTaskNative(task: RLLoaderTaskPtr, path: String,

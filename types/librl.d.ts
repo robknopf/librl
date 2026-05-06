@@ -104,6 +104,7 @@ export interface RLApi {
   deinit(): void;
   uncacheFile(filename: string): number;
   clearCache(): number;
+  getCacheDir(): string;
   pingAssetHost(assetHost?: string): number;
   restoreFS(): number;
   importAsset(filename: string): number;

@@ -245,7 +245,7 @@ const RL = {
             setI32(16, assetPtr >>> 0);
             setI32(20, cachePtr >>> 0);
 
-            initRc = moduleInstance.ccall("rl_init", "number", ["number"], [cfgPtr]) | 0;
+            initRc = (await moduleInstance.ccall("rl_init", "number", ["number"], [cfgPtr], { async: true })) | 0;
         } finally {
             if (useHeapAlloc) {
                 for (const ptr of allocatedPtrs) {
@@ -297,11 +297,17 @@ const RL = {
     getPlatform: () => {
         return moduleInstance.ccall('rl_get_platform', 'string', [], []);
     },
-    uncacheFile: (filename) => {
-        return moduleInstance.ccall('rl_loader_uncache_file', 'number', ['string'], [filename]);
+    uncacheAsset: (filename) => {
+        return moduleInstance.ccall('rl_loader_uncache_asset', 'number', ['string'], [filename]);
     },
     clearCache: () => {
         return moduleInstance.ccall('rl_loader_clear_cache', 'number', [], []);
+    },
+    loaderInit: async (mountPoint = "") => {
+        return await moduleInstance.ccall('rl_loader_init', 'number', ['string'], [mountPoint || ""], { async: true });
+    },
+    loaderDeinit: () => {
+        moduleInstance.ccall('rl_loader_deinit', null, [], []);
     },
     getCacheDir: () => {
         return moduleInstance.ccall('rl_loader_get_cache_dir', 'string', [], []);
@@ -336,12 +342,12 @@ const RL = {
     freeTask: (task) => {
         return moduleInstance.ccall('rl_loader_free_task', null, ['number'], [task]);
     },
-    addTask: (task, path) => {
+    addTask: (task) => {
         return moduleInstance.ccall(
             'rl_loader_add_task',
             'number',
-            ['number', 'string', 'number', 'number', 'number'],
-            [task, path, 0, 0, 0]
+            ['number', 'number', 'number', 'number'],
+            [task, 0, 0, 0]
         );
     },
     loaderTick: () => {
@@ -439,8 +445,8 @@ const RL = {
         };
         return group;
     },
-    isLocalFile: (filename) => {
-        return moduleInstance.ccall('rl_loader_is_local', 'number', ['string'], [filename]) !== 0;
+    isAssetCached: (filename) => {
+        return moduleInstance.ccall('rl_loader_is_asset_cached', 'number', ['string'], [filename]) !== 0;
     },
     waitForTask: async (task, pollMs = 16) => {
         let rc = 0;

@@ -148,6 +148,8 @@ proc rl_init_raw(config: ptr RLInitConfig): cint {.importc: "rl_init", cdecl, he
 proc rl_deinit*() {.importc, cdecl, header: "rl.h".}
 proc rl_set_asset_host*(assetHost: cstring): cint {.importc, cdecl, header: "rl.h".}
 proc rl_get_asset_host*(): cstring {.importc, cdecl, header: "rl.h".}
+proc rl_loader_init*(mountPoint: cstring): cint {.importc, cdecl, header: "rl_loader.h".}
+proc rl_loader_deinit*() {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_set_asset_host*(assetHost: cstring): cint {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_get_asset_host*(): cstring {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_get_cache_dir*(): cstring {.importc, cdecl, header: "rl_loader.h".}
@@ -166,24 +168,18 @@ proc rl_loader_poll_task*(task: ptr RLLoaderTask): bool {.importc, cdecl, header
 proc rl_loader_finish_task*(task: ptr RLLoaderTask): cint {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_get_task_path*(task: ptr RLLoaderTask): cstring {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_free_task*(task: ptr RLLoaderTask) {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_add_task_raw*(task: ptr RLLoaderTask, path: cstring,
+proc rl_loader_add_task_raw*(task: ptr RLLoaderTask,
                          onSuccess: RLLoaderCallbackFn, onFailure: RLLoaderCallbackFn,
                          userData: pointer): cint {.importc: "rl_loader_add_task", cdecl, header: "rl_loader.h".}
 proc rl_loader_tick*() {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_is_local*(filename: cstring): bool {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_uncache_file*(filename: cstring): cint {.importc, cdecl, header: "rl_loader.h".}
+proc rl_loader_is_asset_cached*(filename: cstring): bool {.importc, cdecl, header: "rl_loader.h".}
+proc rl_loader_uncache_asset*(filename: cstring): cint {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_clear_cache*(): cint {.importc, cdecl, header: "rl_loader.h".}
-
-proc rl_loader_add_task*(task: ptr RLLoaderTask, path: cstring,
-                         onSuccess: RLLoaderCallbackFn, onFailure: RLLoaderCallbackFn,
-                         userData: pointer): cint {.inline.} =
-  rl_loader_add_task_raw(task, path, onSuccess, onFailure, userData)
 
 proc rl_loader_add_task*(task: ptr RLLoaderTask,
                          onSuccess: RLLoaderCallbackFn, onFailure: RLLoaderCallbackFn,
                          userData: pointer): cint =
-  let path = if task.isNil: nil else: rl_loader_get_task_path(task)
-  rl_loader_add_task_raw(task, path, onSuccess, onFailure, userData)
+  rl_loader_add_task_raw(task, onSuccess, onFailure, userData)
 
 proc rl_loader_release_closure_task(task: RLLoaderClosureTask) =
   if task.isNil:
@@ -205,11 +201,11 @@ proc rl_loader_add_task_failure_trampoline(path: cstring, userData: pointer) {.c
   if not task.isNil and task.onFailure != nil:
     task.onFailure($path)
 
-proc rl_loader_add_task*(task: ptr RLLoaderTask, path: string,
+proc rl_loader_add_task*(task: ptr RLLoaderTask,
                          onSuccess: RLLoaderClosureCallback = nil,
                          onFailure: RLLoaderClosureCallback = nil): cint =
   if onSuccess.isNil and onFailure.isNil:
-    return rl_loader_add_task_raw(task, path.cstring, nil, nil, nil)
+    return rl_loader_add_task_raw(task, nil, nil, nil)
   let closureTask = RLLoaderClosureTask(
     onSuccess: onSuccess,
     onFailure: onFailure
@@ -217,19 +213,12 @@ proc rl_loader_add_task*(task: ptr RLLoaderTask, path: string,
   rlLoaderClosureTasks.add(closureTask)
   result = rl_loader_add_task_raw(
     task,
-    path.cstring,
     rl_loader_add_task_success_trampoline,
     rl_loader_add_task_failure_trampoline,
     cast[pointer](closureTask)
   )
   if result != RL_LOADER_QUEUE_TASK_OK and onFailure.isNil:
     rl_loader_release_closure_task(closureTask)
-
-proc rl_loader_add_task*(task: ptr RLLoaderTask,
-                         onSuccess: RLLoaderClosureCallback = nil,
-                         onFailure: RLLoaderClosureCallback = nil): cint =
-  let path = if task.isNil: "" else: $rl_loader_get_task_path(task)
-  rl_loader_add_task(task, path, onSuccess, onFailure)
 
 proc rl_init*(config: var RLInitConfig): cint {.inline.} =
   rl_init_raw(addr config)
@@ -240,6 +229,12 @@ proc rl_init*(): cint {.inline.} =
 proc rl_set_asset_host*(assetHost: string): cint {.inline.} =
   rl_set_asset_host(assetHost.cstring)
 
+proc rl_loader_init*(mountPoint: string): cint {.inline.} =
+  rl_loader_init(mountPoint.cstring)
+
+proc rl_loader_init*(): cint {.inline.} =
+  rl_loader_init(nil)
+
 proc rl_loader_set_asset_host*(assetHost: string): cint {.inline.} =
   rl_loader_set_asset_host(assetHost.cstring)
 
@@ -249,11 +244,11 @@ proc rl_loader_ping_asset_host*(assetHost: string): float32 {.inline.} =
 proc rl_loader_create_import_task*(filename: string): ptr RLLoaderTask {.inline.} =
   rl_loader_create_import_task(filename.cstring)
 
-proc rl_loader_is_local*(filename: string): bool {.inline.} =
-  rl_loader_is_local(filename.cstring)
+proc rl_loader_is_asset_cached*(filename: string): bool {.inline.} =
+  rl_loader_is_asset_cached(filename.cstring)
 
-proc rl_loader_uncache_file*(filename: string): cint {.inline.} =
-  rl_loader_uncache_file(filename.cstring)
+proc rl_loader_uncache_asset*(filename: string): cint {.inline.} =
+  rl_loader_uncache_asset(filename.cstring)
 
 proc loaderPingAssetHost*(assetHost = ""): float32 =
   let host = if assetHost.len == 0: nil else: assetHost.cstring

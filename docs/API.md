@@ -267,6 +267,9 @@ Notes:
 
 Main responsibilities:
 
+- Loader-only bootstrap:
+  - `rl_loader_init(mount_point)`
+  - `rl_loader_deinit()`
 - Asset-host configuration:
   - `rl_loader_set_asset_host(asset_host)`
   - `rl_loader_get_asset_host()`
@@ -275,12 +278,18 @@ Main responsibilities:
   - `rl_loader_create_import_task(filename)`
   - `rl_loader_import_assets_async(filenames, count)`
 - Async task lifecycle:
+  - `rl_loader_add_task(task, on_success, on_failure, user_data)`
   - `rl_loader_poll_task(task)`
   - `rl_loader_finish_task(task)`
+  - `rl_loader_get_task_path(task)`
   - `rl_loader_free_task(task)`
 - Local cache queries and maintenance:
-  - `rl_loader_is_local(filename)`
-  - `rl_loader_uncache_file(filename)`
+  - `rl_loader_is_asset_cached(filename)`
+
+Notes:
+
+- `rl_loader_add_task(...)` now derives the callback path from the queued task itself. Callers no longer pass a separate path string when registering a managed task.
+  - `rl_loader_uncache_asset(filename)`
   - `rl_loader_clear_cache()`
 
 Notes:

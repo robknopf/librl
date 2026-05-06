@@ -58,7 +58,7 @@ int rl_lua_fetch_to_fileio(const char *relative_path)
         return -1;
     }
 
-    if (rl_loader_is_local(relative_path)) {
+    if (rl_loader_is_asset_cached(relative_path)) {
         return 0;
     }
 
@@ -66,7 +66,7 @@ int rl_lua_fetch_to_fileio(const char *relative_path)
         rl_loader_tick();
     }
 
-    if (rl_loader_is_local(relative_path)) {
+    if (rl_loader_is_asset_cached(relative_path)) {
         return 0;
     }
 
@@ -120,14 +120,14 @@ int rl_lua_resolve_path(const char *filename, char *resolved_path, size_t resolv
 
     if (explicit_path) {
         rl_loader_normalize_path(filename, resolved_path, resolved_path_size);
-        if (rl_loader_is_local(resolved_path)) {
+        if (rl_loader_is_asset_cached(resolved_path)) {
             return 0;
         }
     }
 
     if (!explicit_path) {
         rl_loader_normalize_path(filename, resolved_path, resolved_path_size);
-        if (rl_loader_is_local(resolved_path)) {
+        if (rl_loader_is_asset_cached(resolved_path)) {
             return 0;
         }
     }
@@ -177,10 +177,10 @@ static int rl_lua_require_searcher(lua_State *L)
                         continue;
                     }
                     rl_loader_normalize_path(candidate, candidate, sizeof(candidate));
-                    if (candidate[0] != '/' && !rl_loader_is_local(candidate)) {
+                    if (candidate[0] != '/' && !rl_loader_is_asset_cached(candidate)) {
                         (void)rl_lua_fetch_to_fileio(candidate);
                     }
-                    if (rl_loader_is_local(candidate)) {
+                    if (rl_loader_is_asset_cached(candidate)) {
                         lua_pop(L, 2);
                         rc = rl_lua_load_file_chunk(L, candidate);
                         if (rc == LUA_OK) {
@@ -223,7 +223,7 @@ static int rl_lua_require_searcher(lua_State *L)
                     if (candidate[0] != '/') {
                         (void)rl_lua_fetch_to_fileio(candidate);
                     }
-                    if (rl_loader_is_local(candidate)) {
+                    if (rl_loader_is_asset_cached(candidate)) {
                         native_fetched = 1;
                     }
                 }

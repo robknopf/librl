@@ -83,7 +83,7 @@ Notes:
 - JS exposes `isInitialized()` for `rl_is_initialized()`.
 - JS exposes `getPlatform()` for `rl_get_platform()`.
 - Loader/cache helpers currently exposed in JS:
-  - `uncacheFile(filename)`
+  - `uncacheAsset(filename)`
   - `clearCache()`
 - JS binding-level TaskGroup ergonomics:
   - `createTaskGroup(onComplete?, onError?, ctx?)`
@@ -133,6 +133,8 @@ Notes:
   - `RL_FLAG_MSAA_4X_HINT`
 - Window close polling is exposed in Nim as `rl_window_close_requested()`.
 - Loader helpers in Nim:
+  - `rl_loader_init([mount_point])`
+  - `rl_loader_deinit()`
   - `loaderPingAssetHost(assetHost?)` → RTT ms, or `< 0` on failure
   - `rl_loader_restore_fs_async()`
   - `rl_loader_create_import_task(filename)`
@@ -140,8 +142,8 @@ Notes:
   - `rl_loader_poll_task(task)`
   - `rl_loader_finish_task(task)`
   - `rl_loader_free_task(task)`
-  - `rl_loader_is_local(filename)`
-  - `rl_loader_uncache_file(filename)`
+  - `rl_loader_is_asset_cached(filename)`
+  - `rl_loader_uncache_asset(filename)`
   - `rl_loader_clear_cache()`
 - Init result constants are exposed as `RL_INIT_OK` / `RL_INIT_ERR_*`.
 
@@ -195,16 +197,17 @@ Async loader sugar:
 - The binding exposes:
   - `RL.loaderPingAssetHost(assetHost?): Float` → RTT ms, or `< 0` on failure
   - `RL.loaderImportAssetAsync(path: String): RLLoaderTaskPtr`
+  - `RLLoader.loaderAddTask(task, onSuccess, onFailure, userData)` with the callback path derived from `RLLoader.loaderGetTaskPath(task)`
   - `RL.loaderPollTask(task: RLLoaderTaskPtr): Bool`
   - `RL.loaderFinishTask(task: RLLoaderTaskPtr): Int`
   - `RL.loaderCreateTaskGroup<T>(onComplete?, onError?, ctx?)`
   - `RLTaskGroup.addImportTask(path, onSuccess?, onError?)`
   - `RLTaskGroup.process()`, `RLTaskGroup.remainingTasks()`, `RLTaskGroup.failedPaths()`
-  - `RL.loaderAddTask(task, path, onSuccess, onFailure, ctx)`
+  - `RL.loaderAddTask(task, onSuccess, onFailure, ctx)`
 - `rl_run` is wrapped so Haxe passes plain lifecycle functions with a Haxe context object:
   - `RL.run(onInit, onTick, onShutdown, ctx)`
 - `rl_loader_add_task` is wrapped so Haxe loader callbacks use plain `(path, ctx)` handlers:
-  - `RL.loaderAddTask(task, path, onAssetReady, onAssetFailed, ctx)`
+  - `RL.loaderAddTask(task, onAssetReady, onAssetFailed, ctx)`
 - The example (`examples/haxe/src/Main.hx`) is the canonical reference for:
   - Using `rl_run` with `init/tick/shutdown`.
   - Non-blocking async import gating via `loadingGroup.process()`.
@@ -228,7 +231,14 @@ Role:
 Notes:
 
 - The returned userdata exposes `add_task`, `add_import_task`, `add_import_tasks`, `tick`, `process`, `failed_paths`, etc.
+- Lua exposes mouse button state constants (`rl.RL_BUTTON_UP`, `rl.RL_BUTTON_PRESSED`, `rl.RL_BUTTON_DOWN`, `rl.RL_BUTTON_RELEASED`).
+- Lua exposes handle constants `rl.RL_CAMERA3D_DEFAULT` and `rl.RL_FONT_DEFAULT`.
 - Lua exposes `rl.loader_ping_asset_host([asset_host])`, returning RTT ms or `< 0` on failure, for proactive asset-host diagnostics before importing.
+- Lua exposes `rl.loader_init([mount_point])` and `rl.loader_deinit()` for loader-only bootstrap without full `rl.init()`.
+- Lua exposes `rl.loader_is_ready()` for `rl_loader_is_ready()`.
+- Lua exposes `rl.loader_create_import_task(filename)` for `rl_loader_create_import_task()`.
+- Lua `rl.loader_add_task(task, on_success?, on_failure?, ctx?)` derives the callback path from `rl_loader_get_task_path(task)`. Loader callbacks receive `(path, ctx)`.
+- Lua exposes loader queue result constants (`rl.RL_LOADER_QUEUE_TASK_OK`, `rl.RL_LOADER_QUEUE_TASK_ERR_INVALID`, `rl.RL_LOADER_QUEUE_TASK_ERR_QUEUE_FULL`).
 - Lua exposes init result constants (`rl.RL_INIT_OK`, `rl.RL_INIT_ERR_UNKNOWN`, `rl.RL_INIT_ERR_ALREADY_INITIALIZED`, `rl.RL_INIT_ERR_LOADER`, `rl.RL_INIT_ERR_ASSET_HOST`, `rl.RL_INIT_ERR_WINDOW`).
 - Lua exposes `rl.is_initialized()` for `rl_is_initialized()`.
 - Lua exposes `rl.get_platform()` for `rl_get_platform()`.

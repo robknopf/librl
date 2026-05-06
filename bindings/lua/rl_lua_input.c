@@ -124,6 +124,18 @@ static int rl_input_get_keyboard_state_lua(lua_State *L)
 
 void rl_register_input_bindings(lua_State *L)
 {
+    lua_pushinteger(L, RL_BUTTON_UP);
+    lua_setfield(L, -2, "RL_BUTTON_UP");
+
+    lua_pushinteger(L, RL_BUTTON_PRESSED);
+    lua_setfield(L, -2, "RL_BUTTON_PRESSED");
+
+    lua_pushinteger(L, RL_BUTTON_DOWN);
+    lua_setfield(L, -2, "RL_BUTTON_DOWN");
+
+    lua_pushinteger(L, RL_BUTTON_RELEASED);
+    lua_setfield(L, -2, "RL_BUTTON_RELEASED");
+
     lua_pushcfunction(L, rl_input_poll_events_lua);
     lua_setfield(L, -2, "input_poll_events");
 

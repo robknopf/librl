@@ -89,7 +89,7 @@ int test_rl_loader_run(void)
     TEST_ASSERT(fetch_url_stub_get_call_count() == 1);
     TEST_ASSERT(strcmp(fetch_url_stub_get_last_host(), "https://example.com") == 0);
     TEST_ASSERT(strcmp(fetch_url_stub_get_last_path(), "assets/model.glb") == 0);
-    TEST_ASSERT(rl_loader_is_local("assets/model.glb") == true);
+    TEST_ASSERT(rl_loader_is_asset_cached("assets/model.glb") == true);
 
     data = test_raylib_invoke_load_file_data_callback("https://example.com/assets/model.glb?x=1#frag", &data_size);
     TEST_ASSERT(data != NULL);
@@ -137,9 +137,9 @@ int test_rl_loader_run(void)
     rl_loader_free_task(task);
     task = NULL;
     TEST_ASSERT(fetch_url_stub_get_call_count() == 5);
-    TEST_ASSERT(rl_loader_is_local("assets/scene.gltf") == true);
-    TEST_ASSERT(rl_loader_is_local("assets/mesh.bin") == true);
-    TEST_ASSERT(rl_loader_is_local("assets/tex.png") == true);
+    TEST_ASSERT(rl_loader_is_asset_cached("assets/scene.gltf") == true);
+    TEST_ASSERT(rl_loader_is_asset_cached("assets/mesh.bin") == true);
+    TEST_ASSERT(rl_loader_is_asset_cached("assets/tex.png") == true);
 
     data = test_raylib_invoke_load_file_data_callback("assets/scene.gltf", &data_size);
     TEST_ASSERT(data != NULL);
@@ -181,10 +181,10 @@ int test_rl_loader_run(void)
         task = NULL;
     }
 
-    TEST_ASSERT(rl_loader_is_local("assets/readme2.txt") == true);
-    TEST_ASSERT(rl_loader_is_local("assets/scene2.gltf") == true);
-    TEST_ASSERT(rl_loader_is_local("assets/mesh2.bin") == true);
-    TEST_ASSERT(rl_loader_is_local("assets/tex2.png") == true);
+    TEST_ASSERT(rl_loader_is_asset_cached("assets/readme2.txt") == true);
+    TEST_ASSERT(rl_loader_is_asset_cached("assets/scene2.gltf") == true);
+    TEST_ASSERT(rl_loader_is_asset_cached("assets/mesh2.bin") == true);
+    TEST_ASSERT(rl_loader_is_asset_cached("assets/tex2.png") == true);
 
     data = test_raylib_invoke_load_file_data_callback("assets/readme2.txt", &data_size);
     TEST_ASSERT(data != NULL);

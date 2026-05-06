@@ -22,10 +22,10 @@ end
 prepend_libs_cpath(this_dir())
 
 local rl = require("rl")
-rl.logger_set_level(rl.RL_LOGGER_LEVEL_WARN)
+rl.logger_set_level(rl.RL_LOGGER_LEVEL_INFO)
 
 local DEFAULT_SCRIPTS_ROOT = "assets/scripts/lua"
-local DEFAULT_SCRIPT_NAME = "simple"
+local DEFAULT_SCRIPT_NAME = "main"
 
 -- check for --help or -h
 for i = 1, #arg do
@@ -57,15 +57,34 @@ end
 
 local MAIN_SCRIPT_PATH = SCRIPTS_ROOT .. "/" .. MAIN_SCRIPT_NAME .. ".lua"
 
--- initialize the rl runtime, we use this to fetch assets and run the script.
-if rl.init({
-        window_width = 1024,
-        window_height = 1280,
-        window_title = "Hello, World! (Lua)",
-        window_flags = rl.RL_WINDOW_FLAG_MSAA_4X_HINT,
-        asset_host = "https://localhost:4444",
-    }) ~= rl.RL_INIT_OK then
-    rl.error("rl.init failed")
+
+-- for now, use libRL's time
+local now = nil--rl.get_time
+
+-- use socket for the time module, fall back to os.clock
+do
+    if not now then 
+        local ok, socket = pcall(require, "socket")
+        if ok and socket and socket.gettime then
+            print("using socket.gettime for now()")
+            now = socket.gettime
+        else
+            print("socket module unavailable, using os.clock() for now()")
+            now = os.clock
+        end
+    else
+        print("using rl.get_time")
+    end
+end
+
+-- initialize only the loader runtime so boot can fetch the entry script
+if rl.loader_init() ~= 0 then
+    rl.error("rl.loader_init failed")
+    return
+end
+
+if rl.loader_set_asset_host("https://localhost:4444") ~= 0 then
+    rl.error("rl.loader_set_asset_host failed")
     return
 end
 
@@ -75,16 +94,12 @@ if rtt < 0 then
     rl.warn("asset host is not available, will not be able to fetch assets")
 else
     rl.info("asset host is available, rtt=" .. tostring(rtt))
-
-    -- debugging, force clear the cache
-    rl.loader_clear_cache()
-    rl.info("cleared loader cache")
 end
 
-
-
+--[[
 local function await_import_asset(asset_path)
     if rl.get_platform() == "web" then
+        -- TODO: this used to be true, but we now have a jspi hook
         rl.error("blocking asset import is not supported on web: the loop must return to the browser/JS event loop so async fetch callbacks can complete. Poll loader tasks from rl.run/on_tick instead.")
         return
     end
@@ -119,7 +134,57 @@ local function await_import_asset(asset_path)
 end
 
 await_import_asset(MAIN_SCRIPT_PATH)
-await_import_asset("foo")
+
+]]--
+
+
 
 -- require the main script to kick things off.
-require(SCRIPTS_ROOT .. "/" .. MAIN_SCRIPT_NAME)
+-- treat it like a runtime
+
+
+-- debugging, force clear the cache
+-- note that we could just clear the main.lua file with rl.loader_uncache_asset(MAIN_SCRIPT_PATH)
+-- but we'll start with a clean slate during development
+rl.loader_clear_cache()
+
+rl.info("loading "..MAIN_SCRIPT_PATH)
+local runtime = require(SCRIPTS_ROOT .. "/" .. MAIN_SCRIPT_NAME)
+
+-- shutdown the loader, letting the runtime own full rl lifecycle
+
+rl.info("cleared loader cache")
+
+rl.loader_deinit()
+
+--------------------------------------------------------------
+-- act like we were hosted and simulate the lifecycle pump
+
+---@enum RTResult
+RTResult = {
+    SUCCESS = 0,
+    FAILED = -1,
+    STOPPED = 1
+}
+
+local rc = runtime.rt_boot()
+if rc ~= RTResult.SUCCESS then return end
+
+rc = runtime.rt_init(nil)
+if rc ~= RTResult.SUCCESS then return end
+
+local last_time = now()
+local current_time = last_time
+local delta_time = 0
+repeat
+    current_time = now()
+    delta_time = current_time - last_time
+    last_time = current_time
+    rc = runtime.rt_tick(delta_time)
+until rc ~= RTResult.SUCCESS
+runtime.rt_shutdown()
+
+---------------------------------------------------------------
+
+
+

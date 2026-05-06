@@ -20,6 +20,18 @@ typedef RLLoaderCallbackFn = cpp.Callable<cpp.ConstCharStar->cpp.RawPointer<cpp.
 @:headerInclude("string.h")
 class RLLoader {
   @:functionCode('
+    return ::rl_loader_init(mountPoint.length == 0 ? (const char *)0 : mountPoint.utf8_str());
+  ')
+  static function initNative(mountPoint: String): Int {
+    return 0;
+  }
+
+  @:functionCode('
+    ::rl_loader_deinit();
+  ')
+  static function deinitNative(): Void {}
+
+  @:functionCode('
     ::rl_loader_task_t *task = ::rl_loader_restore_fs_async();
     return (cpp::UInt64)(uintptr_t)task;
   ')
@@ -94,9 +106,9 @@ class RLLoader {
   static function freeTaskNative(task: RLLoaderTaskPtr): Void {}
 
   @:functionCode('
-    return ::rl_loader_add_task((::rl_loader_task_t *)(uintptr_t)task, path.utf8_str(), onSuccess, onFailure, userData);
+    return ::rl_loader_add_task((::rl_loader_task_t *)(uintptr_t)task, onSuccess, onFailure, userData);
   ')
-  static function addTaskNative(task: RLLoaderTaskPtr, path: String,
+  static function addTaskNative(task: RLLoaderTaskPtr,
     onSuccess: RLLoaderCallbackFn, onFailure: RLLoaderCallbackFn,
     userData: cpp.RawPointer<cpp.Void>): Int {
     return 0;
@@ -118,6 +130,14 @@ class RLLoader {
 
   public static inline function loaderRestoreFsAsync(): RLLoaderTaskPtr {
     return restoreFsAsyncNative();
+  }
+
+  public static inline function loaderInit(?mountPoint: String): Int {
+    return initNative(mountPoint == null ? "" : mountPoint);
+  }
+
+  public static inline function loaderDeinit(): Void {
+    deinitNative();
   }
 
   public static inline function loaderImportAssetAsync(filename: String): RLLoaderTaskPtr {
@@ -148,14 +168,14 @@ class RLLoader {
     freeTaskNative(task);
   }
 
-  public static inline function loaderIsLocal(filename: String): Bool {
-    return isLocalNative(filename);
+  public static inline function loaderIsAssetCached(filename: String): Bool {
+    return isAssetCachedNative(filename);
   }
 
-  public static inline function loaderAddTask(task: RLLoaderTaskPtr, path: String,
+  public static inline function loaderAddTask(task: RLLoaderTaskPtr,
     onSuccess: RLLoaderCallbackFn, onFailure: RLLoaderCallbackFn,
     userData: cpp.RawPointer<cpp.Void>): Int {
-    return addTaskNative(task, path, onSuccess, onFailure, userData);
+    return addTaskNative(task, onSuccess, onFailure, userData);
   }
 
   public static inline function loaderPingAssetHost(?assetHost: String): Float {
@@ -174,14 +194,14 @@ class RLLoader {
     return clearCacheNative();
   }
 
-  public static inline function loaderUncacheFile(filename: String): Int {
-    return uncacheFileNative(filename);
+  public static inline function loaderUncacheAsset(filename: String): Int {
+    return uncacheAssetNative(filename);
   }
 
   @:functionCode('
-    return ::rl_loader_is_local(filename.utf8_str());
+    return ::rl_loader_is_asset_cached(filename.utf8_str());
   ')
-  static function isLocalNative(filename: String): Bool {
+  static function isAssetCachedNative(filename: String): Bool {
     return false;
   }
 
@@ -198,9 +218,9 @@ class RLLoader {
   }
 
   @:functionCode('
-    return ::rl_loader_uncache_file(filename.utf8_str());
+    return ::rl_loader_uncache_asset(filename.utf8_str());
   ')
-  static function uncacheFileNative(filename: String): Int {
+  static function uncacheAssetNative(filename: String): Int {
     return 0;
   }
 }

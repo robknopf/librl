@@ -5,7 +5,7 @@ This directory contains **internal-only** headers used to share implementation d
 ## Why This Exists
 
 - Keep the public API surface small and stable (`include/*.h`).
-- Avoid exposing lifecycle/store internals to bindings and external consumers.
+- Avoid exposing unnecessary lifecycle/store internals to bindings and external consumers
 - Make it clear which interfaces are safe for external use vs subject to change.
 
 ## What Belongs Here

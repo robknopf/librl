@@ -22,6 +22,7 @@ typedef struct rl_lua_loader_callback_t {
     int id;
     int success_ref;
     int failure_ref;
+    int ctx_ref;
 } rl_lua_loader_callback_t;
 
 static lua_State *rl_lua_loader_state = NULL;
@@ -52,15 +53,19 @@ static void rl_lua_loader_release_callback(rl_lua_loader_callback_t *entry)
         if (entry->failure_ref != LUA_NOREF) {
             luaL_unref(rl_lua_loader_state, LUA_REGISTRYINDEX, entry->failure_ref);
         }
+        if (entry->ctx_ref != LUA_NOREF) {
+            luaL_unref(rl_lua_loader_state, LUA_REGISTRYINDEX, entry->ctx_ref);
+        }
     }
 
     entry->in_use = 0;
     entry->id = 0;
     entry->success_ref = LUA_NOREF;
     entry->failure_ref = LUA_NOREF;
+    entry->ctx_ref = LUA_NOREF;
 }
 
-static rl_lua_loader_callback_t *rl_lua_loader_allocate_callback(int success_ref, int failure_ref)
+static rl_lua_loader_callback_t *rl_lua_loader_allocate_callback(int success_ref, int failure_ref, int ctx_ref)
 {
     int i = 0;
     for (i = 0; i < RL_LUA_LOADER_MAX_CALLBACKS; i++) {
@@ -69,13 +74,14 @@ static rl_lua_loader_callback_t *rl_lua_loader_allocate_callback(int success_ref
             rl_lua_loader_callbacks[i].id = rl_lua_loader_next_id++;
             rl_lua_loader_callbacks[i].success_ref = success_ref;
             rl_lua_loader_callbacks[i].failure_ref = failure_ref;
+            rl_lua_loader_callbacks[i].ctx_ref = ctx_ref;
             return &rl_lua_loader_callbacks[i];
         }
     }
     return NULL;
 }
 
-static void rl_lua_loader_invoke(int ref, const char *path)
+static void rl_lua_loader_invoke(int ref, int ctx_ref, const char *path)
 {
     if (rl_lua_loader_state == NULL || ref == LUA_NOREF) {
         return;
@@ -83,7 +89,12 @@ static void rl_lua_loader_invoke(int ref, const char *path)
 
     lua_rawgeti(rl_lua_loader_state, LUA_REGISTRYINDEX, ref);
     lua_pushstring(rl_lua_loader_state, path ? path : "");
-    if (lua_pcall(rl_lua_loader_state, 1, 0, 0) != 0) {
+    if (ctx_ref != LUA_NOREF) {
+        lua_rawgeti(rl_lua_loader_state, LUA_REGISTRYINDEX, ctx_ref);
+    } else {
+        lua_pushnil(rl_lua_loader_state);
+    }
+    if (lua_pcall(rl_lua_loader_state, 2, 0, 0) != 0) {
         lua_pop(rl_lua_loader_state, 1);
     }
 }
@@ -96,7 +107,7 @@ static void rl_lua_loader_on_success(const char *path, void *user_data)
         return;
     }
 
-    rl_lua_loader_invoke(entry->success_ref, path);
+    rl_lua_loader_invoke(entry->success_ref, entry->ctx_ref, path);
     rl_lua_loader_release_callback(entry);
 }
 
@@ -108,7 +119,7 @@ static void rl_lua_loader_on_failure(const char *path, void *user_data)
         return;
     }
 
-    rl_lua_loader_invoke(entry->failure_ref, path);
+    rl_lua_loader_invoke(entry->failure_ref, entry->ctx_ref, path);
     rl_lua_loader_release_callback(entry);
 }
 
@@ -117,6 +128,25 @@ static int rl_loader_set_asset_host_lua(lua_State *L)
     const char *asset_host = luaL_checkstring(L, 1);
     lua_pushinteger(L, rl_loader_set_asset_host(asset_host));
     return 1;
+}
+
+static int rl_loader_init_lua(lua_State *L)
+{
+    const char *mount_point = NULL;
+
+    if (!lua_isnoneornil(L, 1)) {
+        mount_point = luaL_checkstring(L, 1);
+    }
+
+    lua_pushinteger(L, rl_loader_init(mount_point));
+    return 1;
+}
+
+static int rl_loader_deinit_lua(lua_State *L)
+{
+    (void)L;
+    rl_loader_deinit();
+    return 0;
 }
 
 static int rl_loader_get_asset_host_lua(lua_State *L)
@@ -143,6 +173,13 @@ static int rl_loader_ping_asset_host_lua(lua_State *L)
     }
     rtt_ms = (double)rl_loader_ping_asset_host(asset_host);
     lua_pushnumber(L, rtt_ms);
+    return 1;
+}
+
+static int rl_loader_is_ready_lua(lua_State *L)
+{
+    (void)L;
+    lua_pushboolean(L, rl_loader_is_ready() ? 1 : 0);
     return 1;
 }
 
@@ -228,10 +265,10 @@ static int rl_loader_get_task_path_lua(lua_State *L)
     return 1;
 }
 
-static int rl_loader_is_local_lua(lua_State *L)
+static int rl_loader_is_asset_cached_lua(lua_State *L)
 {
     const char *filename = luaL_checkstring(L, 1);
-    lua_pushboolean(L, rl_loader_is_local(filename) ? 1 : 0);
+    lua_pushboolean(L, rl_loader_is_asset_cached(filename) ? 1 : 0);
     return 1;
 }
 
@@ -266,10 +303,10 @@ static int rl_loader_normalize_path_lua(lua_State *L)
     return 1;
 }
 
-static int rl_loader_uncache_file_lua(lua_State *L)
+static int rl_loader_uncache_asset_lua(lua_State *L)
 {
     const char *filename = luaL_checkstring(L, 1);
-    lua_pushinteger(L, rl_loader_uncache_file(filename));
+    lua_pushinteger(L, rl_loader_uncache_asset(filename));
     return 1;
 }
 
@@ -283,34 +320,39 @@ static int rl_loader_clear_cache_lua(lua_State *L)
 static int rl_loader_add_task_lua(lua_State *L)
 {
     rl_loader_task_t *task = (rl_loader_task_t *)(uintptr_t)luaL_checkinteger(L, 1);
-    const char *path = luaL_checkstring(L, 2);
     int success_ref = LUA_NOREF;
     int failure_ref = LUA_NOREF;
+    int ctx_ref = LUA_NOREF;
     rl_lua_loader_callback_t *entry = NULL;
     rl_loader_queue_task_result_t rc;
+
+    if (!lua_isnoneornil(L, 2)) {
+        luaL_checktype(L, 2, LUA_TFUNCTION);
+        lua_pushvalue(L, 2);
+        success_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+    }
 
     if (!lua_isnoneornil(L, 3)) {
         luaL_checktype(L, 3, LUA_TFUNCTION);
         lua_pushvalue(L, 3);
-        success_ref = luaL_ref(L, LUA_REGISTRYINDEX);
-    }
-
-    if (!lua_isnoneornil(L, 4)) {
-        luaL_checktype(L, 4, LUA_TFUNCTION);
-        lua_pushvalue(L, 4);
         failure_ref = luaL_ref(L, LUA_REGISTRYINDEX);
     }
 
-    entry = rl_lua_loader_allocate_callback(success_ref, failure_ref);
+    if (!lua_isnoneornil(L, 4)) {
+        lua_pushvalue(L, 4);
+        ctx_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+    }
+
+    entry = rl_lua_loader_allocate_callback(success_ref, failure_ref, ctx_ref);
     if (entry == NULL) {
         if (success_ref != LUA_NOREF) luaL_unref(L, LUA_REGISTRYINDEX, success_ref);
         if (failure_ref != LUA_NOREF) luaL_unref(L, LUA_REGISTRYINDEX, failure_ref);
+        if (ctx_ref != LUA_NOREF) luaL_unref(L, LUA_REGISTRYINDEX, ctx_ref);
         lua_pushinteger(L, RL_LOADER_QUEUE_TASK_ERR_QUEUE_FULL);
         return 1;
     }
 
     rc = rl_loader_add_task(task,
-                            path,
                             success_ref == LUA_NOREF ? NULL : rl_lua_loader_on_success,
                             failure_ref == LUA_NOREF ? NULL : rl_lua_loader_on_failure,
                             (void *)(uintptr_t)entry->id);
@@ -334,6 +376,21 @@ void rl_register_loader_bindings(lua_State *L)
 {
     rl_lua_loader_state = L;
 
+    lua_pushinteger(L, RL_LOADER_QUEUE_TASK_OK);
+    lua_setfield(L, -2, "RL_LOADER_QUEUE_TASK_OK");
+
+    lua_pushinteger(L, RL_LOADER_QUEUE_TASK_ERR_INVALID);
+    lua_setfield(L, -2, "RL_LOADER_QUEUE_TASK_ERR_INVALID");
+
+    lua_pushinteger(L, RL_LOADER_QUEUE_TASK_ERR_QUEUE_FULL);
+    lua_setfield(L, -2, "RL_LOADER_QUEUE_TASK_ERR_QUEUE_FULL");
+
+    lua_pushcfunction(L, rl_loader_init_lua);
+    lua_setfield(L, -2, "loader_init");
+
+    lua_pushcfunction(L, rl_loader_deinit_lua);
+    lua_setfield(L, -2, "loader_deinit");
+
     lua_pushcfunction(L, rl_loader_set_asset_host_lua);
     lua_setfield(L, -2, "loader_set_asset_host");
 
@@ -346,8 +403,14 @@ void rl_register_loader_bindings(lua_State *L)
     lua_pushcfunction(L, rl_loader_ping_asset_host_lua);
     lua_setfield(L, -2, "loader_ping_asset_host");
 
+    lua_pushcfunction(L, rl_loader_is_ready_lua);
+    lua_setfield(L, -2, "loader_is_ready");
+
     lua_pushcfunction(L, rl_loader_restore_fs_async_lua);
     lua_setfield(L, -2, "loader_restore_fs_async");
+
+    lua_pushcfunction(L, rl_loader_create_import_task_lua);
+    lua_setfield(L, -2, "loader_create_import_task");
 
     lua_pushcfunction(L, rl_loader_create_import_task_lua);
     lua_setfield(L, -2, "loader_import_asset_async");
@@ -367,8 +430,8 @@ void rl_register_loader_bindings(lua_State *L)
     lua_pushcfunction(L, rl_loader_get_task_path_lua);
     lua_setfield(L, -2, "loader_get_task_path");
 
-    lua_pushcfunction(L, rl_loader_is_local_lua);
-    lua_setfield(L, -2, "loader_is_local");
+    lua_pushcfunction(L, rl_loader_is_asset_cached_lua);
+    lua_setfield(L, -2, "loader_is_asset_cached");
 
     lua_pushcfunction(L, rl_loader_read_local_lua);
     lua_setfield(L, -2, "loader_read_local");
@@ -376,8 +439,8 @@ void rl_register_loader_bindings(lua_State *L)
     lua_pushcfunction(L, rl_loader_normalize_path_lua);
     lua_setfield(L, -2, "loader_normalize_path");
 
-    lua_pushcfunction(L, rl_loader_uncache_file_lua);
-    lua_setfield(L, -2, "loader_uncache_file");
+    lua_pushcfunction(L, rl_loader_uncache_asset_lua);
+    lua_setfield(L, -2, "loader_uncache_asset");
 
     lua_pushcfunction(L, rl_loader_clear_cache_lua);
     lua_setfield(L, -2, "loader_clear_cache");

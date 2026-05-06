@@ -30,6 +30,9 @@ static int rl_font_get_default_lua(lua_State *L)
 
 void rl_register_font_bindings(lua_State *L)
 {
+    lua_pushinteger(L, RL_FONT_DEFAULT);
+    lua_setfield(L, -2, "RL_FONT_DEFAULT");
+
     lua_pushcfunction(L, rl_font_create_lua);
     lua_setfield(L, -2, "font_create");
 

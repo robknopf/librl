@@ -630,6 +630,14 @@ abstract RL(RLNative) from RLNative to RLNative {
     return RLLoader.loaderRestoreFsAsync();
   }
 
+  public static function loaderInit(?mountPoint: String): Int {
+    return RLLoader.loaderInit(mountPoint);
+  }
+
+  public static function loaderDeinit(): Void {
+    RLLoader.loaderDeinit();
+  }
+
   public static function loaderImportAssetAsync(filename: String): RLLoaderTaskPtr {
     return RLLoader.loaderImportAssetAsync(filename);
   }
@@ -670,8 +678,8 @@ abstract RL(RLNative) from RLNative to RLNative {
     RLLoader.loaderFreeTask(task);
   }
 
-  public static function loaderIsLocal(filename: String): Bool {
-    return RLLoader.loaderIsLocal(filename);
+  public static function loaderIsAssetCached(filename: String): Bool {
+    return RLLoader.loaderIsAssetCached(filename);
   }
 
   public static function loaderPingAssetHost(?assetHost: String): Float {
@@ -682,11 +690,11 @@ abstract RL(RLNative) from RLNative to RLNative {
     return RLLoader.loaderGetCacheDir();
   }
 
-  static function loaderAddTaskNative(task: RLLoaderTaskPtr, path: String,
+  static function loaderAddTaskNative(task: RLLoaderTaskPtr,
     onSuccess: cpp.Callable<cpp.ConstCharStar->cpp.RawPointer<cpp.Void>->Void>,
     onFailure: cpp.Callable<cpp.ConstCharStar->cpp.RawPointer<cpp.Void>->Void>,
     userData: cpp.RawPointer<cpp.Void>): Int {
-    return RLLoader.loaderAddTask(task, path, onSuccess, onFailure, userData);
+    return RLLoader.loaderAddTask(task, onSuccess, onFailure, userData);
   }
 
   public static function loaderTick(): Void {
@@ -697,8 +705,8 @@ abstract RL(RLNative) from RLNative to RLNative {
     return RLLoader.loaderClearCache();
   }
 
-  public static function loaderUncacheFile(filename: String): Int {
-    return RLLoader.loaderUncacheFile(filename);
+  public static function loaderUncacheAsset(filename: String): Int {
+    return RLLoader.loaderUncacheAsset(filename);
   }
 
   public static inline function loaderAddTask<T>(task: RLLoaderTaskPtr,
@@ -734,7 +742,6 @@ abstract RL(RLNative) from RLNative to RLNative {
     });
     var rc = loaderAddTaskNative(
       task,
-      path,
       successSpringboard,
       failureSpringboard,
       callbackUserData

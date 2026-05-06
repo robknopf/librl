@@ -67,6 +67,9 @@ LDFLAGS_WASM = \
 	--extern-post-js bindings/js/rl.js \
 	--extern-post-js bindings/js/rl_module_export.js \
 	$(WASM_COMMON_LDFLAGS) \
+	-s JSPI=1 \
+	-s JSPI_EXPORTS='["rl_loader_init","rl_init"]' \
+	-fwasm-exceptions \
 	-s INITIAL_MEMORY=67108864 \
 	-s EXPORTED_FUNCTIONS='[ \
 	"_malloc", \
@@ -193,8 +196,8 @@ LDFLAGS_WASM = \
 		"_rl_loader_free_task", \
 		"_rl_loader_add_task", \
 		"_rl_loader_tick", \
-		"_rl_loader_is_local", \
-		"_rl_loader_uncache_file", \
+		"_rl_loader_is_asset_cached", \
+		"_rl_loader_uncache_asset", \
 		"_rl_loader_clear_cache", \
 		"_rl_event_on", \
 		"_rl_event_once", \

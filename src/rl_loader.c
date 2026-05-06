@@ -1223,7 +1223,7 @@ void rl_loader_free_task(rl_loader_task_t *task)
     free(task);
 }
 
-bool rl_loader_is_local(const char *filename)
+bool rl_loader_is_asset_cached(const char *filename)
 {
     char host[RL_LOADER_MAX_ASSET_HOST_LENGTH] = {0};
     char resolved_path[FILEIO_MAX_PATH_LENGTH * 2] = {0};
@@ -1302,7 +1302,7 @@ void rl_loader_normalize_path(const char *path, char *buffer, size_t buffer_size
     path_normalize(path, buffer, buffer_size);
 }
 
-int rl_loader_uncache_file(const char *filename)
+int rl_loader_uncache_asset(const char *filename)
 {
     const char *resolved_path = rl_loader_strip_leading_slash(filename);
     int rc = 0;
@@ -1357,20 +1357,22 @@ typedef struct rl_loader_managed_task_t {
 static rl_loader_managed_task_t rl_loader_managed_tasks[RL_LOADER_MAX_MANAGED_TASKS] = {{0}};
 
 rl_loader_queue_task_result_t rl_loader_add_task(rl_loader_task_t *task,
-                                                 const char *path,
                                                  rl_loader_callback_fn on_success,
                                                  rl_loader_callback_fn on_failure,
                                                  void *user_data)
 {
     int i = 0;
     rl_loader_managed_task_t *slot = NULL;
+    const char *path = NULL;
 
     if (task == NULL) {
         if (on_failure != NULL) {
-            on_failure(path, user_data);
+            on_failure(NULL, user_data);
         }
         return RL_LOADER_QUEUE_TASK_ERR_INVALID;
     }
+
+    path = rl_loader_get_task_path(task);
 
     for (i = 0; i < RL_LOADER_MAX_MANAGED_TASKS; i++) {
         if (!rl_loader_managed_tasks[i].in_use) {

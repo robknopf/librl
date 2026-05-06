@@ -86,7 +86,7 @@ rl_handle_t rl_sound_create(const char *filename)
      * Audio still bypasses the global LoadFileData callback path in raylib,
      * so sound creation requires the file to already exist locally.
      */
-    if (!rl_loader_is_local(normalized_path)) {
+    if (!rl_loader_is_asset_cached(normalized_path)) {
         log_error("Sound is not prepared locally (%s)", normalized_path);
         return 0;
     }

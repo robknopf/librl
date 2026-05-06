@@ -18,6 +18,8 @@ typedef enum rl_loader_queue_task_result_t {
   RL_LOADER_QUEUE_TASK_ERR_QUEUE_FULL = -2,
 } rl_loader_queue_task_result_t;
 
+int rl_loader_init(const char *mount_point);
+void rl_loader_deinit(void);
 int rl_loader_set_asset_host(const char *asset_host);
 const char *rl_loader_get_asset_host(void);
 const char *rl_loader_get_cache_dir(void);
@@ -31,7 +33,7 @@ bool rl_loader_poll_task(rl_loader_task_t *task);
 int rl_loader_finish_task(rl_loader_task_t *task);
 const char *rl_loader_get_task_path(rl_loader_task_t *task);
 void rl_loader_free_task(rl_loader_task_t *task);
-bool rl_loader_is_local(const char *filename);
+bool rl_loader_is_asset_cached(const char *filename);
 
 typedef struct rl_loader_read_result_t {
   unsigned char *data;
@@ -43,11 +45,10 @@ rl_loader_read_result_t rl_loader_read_local(const char *filename);
 void rl_loader_read_result_free(rl_loader_read_result_t *result);
 
 void rl_loader_normalize_path(const char *path, char *buffer, size_t buffer_size);
-int rl_loader_uncache_file(const char *filename);
+int rl_loader_uncache_asset(const char *filename);
 int rl_loader_clear_cache(void);
 
 rl_loader_queue_task_result_t rl_loader_add_task(rl_loader_task_t *task,
-                                                 const char *path,
                                                  rl_loader_callback_fn on_success,
                                                  rl_loader_callback_fn on_failure,
                                                  void *user_data);

@@ -74,6 +74,9 @@ static int rl_camera3d_destroy_lua(lua_State *L)
 
 void rl_register_camera3d_bindings(lua_State *L)
 {
+    lua_pushinteger(L, RL_CAMERA3D_DEFAULT);
+    lua_setfield(L, -2, "RL_CAMERA3D_DEFAULT");
+
     lua_pushcfunction(L, rl_camera3d_create_lua);
     lua_setfield(L, -2, "camera3d_create");
 

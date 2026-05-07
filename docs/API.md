@@ -7,7 +7,9 @@ This document summarizes the current public C API exposed by `include/*.h`.  As 
 - Most resource APIs use `rl_handle_t` (`unsigned int`) as an opaque handle.
 - `0` is generally an invalid handle unless a subsystem documents otherwise.
 - Call `rl_init(NULL)` (or `rl_init(&config)`; see `include/rl_config.h`) before using subsystem APIs, and `rl_deinit()` at shutdown.
-  `rl_init()` returns `RL_INIT_OK` (`0`) on success or a negative `RL_INIT_ERR_*` code on failure (`RL_INIT_ERR_UNKNOWN`, `RL_INIT_ERR_ALREADY_INITIALIZED`, `RL_INIT_ERR_LOADER`, `RL_INIT_ERR_ASSET_HOST`, `RL_INIT_ERR_WINDOW`).
+  `rl_init()` is the default synchronous contract: it returns only after loader restore readiness is satisfied.
+  `rl_init_async()` preserves the polling contract: it starts runtime init and returns immediately.
+  Both return `RL_INIT_OK` (`0`) on success or a negative `RL_INIT_ERR_*` code on failure (`RL_INIT_ERR_UNKNOWN`, `RL_INIT_ERR_ALREADY_INITIALIZED`, `RL_INIT_ERR_LOADER`, `RL_INIT_ERR_ASSET_HOST`, `RL_INIT_ERR_WINDOW`).
 - Use `rl_is_initialized()` to query whether the runtime is currently initialized.
 - Use `rl_get_platform()` to query the build/runtime platform string (`"desktop"` or `"web"`).
 
@@ -269,6 +271,7 @@ Main responsibilities:
 
 - Loader-only bootstrap:
   - `rl_loader_init(mount_point)`
+  - `rl_loader_init_async(mount_point)`
   - `rl_loader_deinit()`
 - Asset-host configuration:
   - `rl_loader_set_asset_host(asset_host)`
@@ -294,6 +297,8 @@ Notes:
 
 Notes:
 
+- `rl_loader_init(...)` is the default synchronous contract. It returns only after loader restore readiness is satisfied.
+- `rl_loader_init_async(...)` preserves the polling contract. Callers must continue checking `rl_loader_is_ready()` and pumping `rl_loader_tick()`.
 - The loader no longer performs hidden blocking fetches during synchronous file reads.
 - Blocking wait helpers were removed from the public C API:
   - `rl_loader_wait_task(...)`

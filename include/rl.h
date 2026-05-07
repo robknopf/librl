@@ -47,6 +47,7 @@ typedef enum rl_tick_result_t {
 } rl_tick_result_t;
 
 int rl_init(const rl_init_config_t *config);
+int rl_init_async(const rl_init_config_t *config);
 bool rl_is_initialized(void);
 const char *rl_get_platform(void);
 void rl_deinit();

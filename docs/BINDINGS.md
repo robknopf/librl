@@ -75,14 +75,18 @@ Notes:
   - telemetry helpers:
     - `resetPickStats()`
     - `getPickStats()`
-- JS `init(opts)` calls `rl_init()` with a wasm `rl_init_config_t` built from:
+- JS `init(opts)` calls the default synchronous `rl_init()` with a wasm `rl_init_config_t` built from:
   - `windowWidth`, `windowHeight`, `windowTitle`, `windowFlags`, `assetHost`, `loaderCacheDir`
   - (plus `idealWidth` / `idealHeight` for browser resize/aspect heuristics)
   - Example: `await rl.init({ windowWidth: 800, windowHeight: 600, windowTitle: "Title", windowFlags: rl.FLAG_MSAA_4X_HINT, assetHost })`
   - Init result constants are exposed (`INIT_OK`, `INIT_ERR_UNKNOWN`, `INIT_ERR_ALREADY_INITIALIZED`, `INIT_ERR_LOADER`, `INIT_ERR_ASSET_HOST`, `INIT_ERR_WINDOW`).
+- JS also exposes `initAsync(opts)` for the polling-style `rl_init_async()` path.
 - JS exposes `isInitialized()` for `rl_is_initialized()`.
 - JS exposes `getPlatform()` for `rl_get_platform()`.
 - Loader/cache helpers currently exposed in JS:
+  - `loaderInit([mountPoint])`
+  - `loaderInitAsync([mountPoint])`
+  - `loaderIsReady()`
   - `uncacheAsset(filename)`
   - `clearCache()`
 - JS binding-level TaskGroup ergonomics:
@@ -134,6 +138,7 @@ Notes:
 - Window close polling is exposed in Nim as `rl_window_close_requested()`.
 - Loader helpers in Nim:
   - `rl_loader_init([mount_point])`
+  - `rl_loader_init_async([mount_point])`
   - `rl_loader_deinit()`
   - `loaderPingAssetHost(assetHost?)` → RTT ms, or `< 0` on failure
   - `rl_loader_restore_fs_async()`
@@ -146,6 +151,7 @@ Notes:
   - `rl_loader_uncache_asset(filename)`
   - `rl_loader_clear_cache()`
 - Init result constants are exposed as `RL_INIT_OK` / `RL_INIT_ERR_*`.
+- Nim also exposes `rl_init_async([config])`.
 
 Binding-level async loader ergonomics:
 
@@ -194,6 +200,11 @@ Notes:
 
 Async loader sugar:
 
+- The binding exposes both init contracts:
+  - `RL.init(...)`
+  - `RL.initAsync(...)`
+  - `RL.loaderInit([mountPoint])`
+  - `RL.loaderInitAsync([mountPoint])`
 - The binding exposes:
   - `RL.loaderPingAssetHost(assetHost?): Float` → RTT ms, or `< 0` on failure
   - `RL.loaderImportAssetAsync(path: String): RLLoaderTaskPtr`
@@ -235,6 +246,7 @@ Notes:
 - Lua exposes handle constants `rl.RL_CAMERA3D_DEFAULT` and `rl.RL_FONT_DEFAULT`.
 - Lua exposes `rl.loader_ping_asset_host([asset_host])`, returning RTT ms or `< 0` on failure, for proactive asset-host diagnostics before importing.
 - Lua exposes `rl.loader_init([mount_point])` and `rl.loader_deinit()` for loader-only bootstrap without full `rl.init()`.
+- Lua also exposes `rl.loader_init_async([mount_point])` and `rl.init_async([config])` for the polling-style fallback path.
 - Lua exposes `rl.loader_is_ready()` for `rl_loader_is_ready()`.
 - Lua exposes `rl.loader_create_import_task(filename)` for `rl_loader_create_import_task()`.
 - Lua `rl.loader_add_task(task, on_success?, on_failure?, ctx?)` derives the callback path from `rl_loader_get_task_path(task)`. Loader callbacks receive `(path, ctx)`.

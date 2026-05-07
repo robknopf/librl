@@ -91,7 +91,7 @@ static void on_bgm_ready(const char *path, void *user_data) {
 
 static void play_bgm(const char *path, void *user_data) {
   rl_loader_task_t *bgm_asset_task = rl_loader_create_import_task(path);
-  rl_loader_add_task(bgm_asset_task, path, on_bgm_ready, NULL, user_data);
+  rl_loader_add_task(bgm_asset_task, on_bgm_ready, NULL, user_data);
 }
 
 static void on_init(void *user_data) {

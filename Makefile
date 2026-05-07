@@ -75,6 +75,7 @@ LDFLAGS_WASM = \
 	"_malloc", \
 	"_free", \
 	"_rl_init", \
+	"_rl_init_async", \
 	"_rl_init_config_sizeof", \
 	"_rl_is_initialized", \
 	"_rl_get_platform", \
@@ -187,9 +188,13 @@ LDFLAGS_WASM = \
 		"_rl_text_measure", \
 		"_rl_text_measure_ex_to_scratch", \
 		"_rl_set_asset_host", \
+		"_rl_loader_init", \
+		"_rl_loader_init_async", \
+		"_rl_loader_deinit", \
 		"_rl_loader_restore_fs_async", \
 		"_rl_loader_create_import_task", \
 		"_rl_loader_import_assets_from_scratch_async", \
+		"_rl_loader_is_ready", \
 		"_rl_loader_poll_task", \
 		"_rl_loader_finish_task", \
 		"_rl_loader_get_task_path", \

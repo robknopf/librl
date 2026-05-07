@@ -86,7 +86,7 @@ static void on_init(void *user_data) {
   // In init:
   loader_rc =
       rl_loader_add_task(rl_loader_create_import_task(debug_font_path),
-                         debug_font_path, on_debug_font_ready, NULL, NULL);
+                         on_debug_font_ready, NULL, NULL);
   if (loader_rc != RL_LOADER_QUEUE_TASK_OK) {
     log_error("[Remote] Failed to queue debug font load (%d)", loader_rc);
   }
@@ -109,7 +109,7 @@ static void on_init(void *user_data) {
   context->overlay_font = 0;
   context->overlay_font_size = 24;
   loader_rc = rl_loader_add_task(
-      rl_loader_create_import_task(overlay_font_path), overlay_font_path,
+      rl_loader_create_import_task(overlay_font_path),
       on_overlay_font_ready, NULL, context);
   if (loader_rc != RL_LOADER_QUEUE_TASK_OK) {
     log_error("[Remote] Failed to queue overlay font load (%d)", loader_rc);

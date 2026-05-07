@@ -1,19 +1,26 @@
 import { runExample } from "./example_runner.js";
 
-function startLuaFramePump(mod) {
-  let stopped = false;
-  let frameRequestId = 0;
-  let lastFrameTime = 0;
+function callMaybeAsync(result) {
+  if (result && typeof result.then === "function") {
+    return result;
+  }
+  return Promise.resolve(result);
+}
 
-  function stopFramePump() {
+async function startRuntime(mod) {
+  let stopped = false;
+  let runtimeTickerId = 0;
+  let lastFrameTimeMs = 0;
+
+  function stopRuntimeTicker() {
     if (stopped) {
       return;
     }
 
     stopped = true;
-    if (frameRequestId) {
-      window.cancelAnimationFrame(frameRequestId);
-      frameRequestId = 0;
+    if (runtimeTickerId) {
+      window.cancelAnimationFrame(runtimeTickerId);
+      runtimeTickerId = 0;
     }
 
     try {
@@ -23,46 +30,46 @@ function startLuaFramePump(mod) {
     }
   }
 
-  window.addEventListener("beforeunload", stopFramePump, { once: true });
+  window.addEventListener("beforeunload", stopRuntimeTicker, { once: true });
 
-  async function frame(frameTime) {
+  async function tickRuntime(frameTimeMs) {
     let rc = 0;
-    const dt = lastFrameTime === 0 ? 0 : Math.max(0, (frameTime - lastFrameTime) / 1000.0);
-    lastFrameTime = frameTime;
+    const dt = lastFrameTimeMs === 0 ? 0 : Math.max(0, (frameTimeMs - lastFrameTimeMs) / 1000.0);
+    lastFrameTimeMs = frameTimeMs;
 
     if (stopped) {
       return;
     }
 
     try {
-      rc = await mod.ccall("rt_tick", "number", ["number"], [dt], { async: true });
+      rc = await callMaybeAsync(mod._rt_tick(dt));
     } catch (err) {
-      stopFramePump();
-      console.error("c-lua frame pump failed", err);
+      stopRuntimeTicker();
+      console.error(`c-lua: rt_tick(${dt}) failed: `, err);
       throw err;
     }
 
     if (rc !== 0) {
-      stopFramePump();
+      stopRuntimeTicker();
       return;
     }
 
     if (!stopped) {
-      frameRequestId = window.requestAnimationFrame(frame);
+      runtimeTickerId = window.requestAnimationFrame(tickRuntime);
     }
   }
 
-  if (mod.ccall("rt_boot", "number", [], []) !== 0) {
+  if ((await callMaybeAsync(mod._rt_boot())) !== 0) {
     throw new Error("rt_boot failed");
   }
-  if (mod.ccall("rt_init", "number", ["number"], [0]) !== 0) {
+  if ((await callMaybeAsync(mod._rt_init(0))) !== 0) {
     throw new Error("rt_init failed");
   }
 
-  frameRequestId = window.requestAnimationFrame(frame);
-  return stopFramePump;
+  runtimeTickerId = window.requestAnimationFrame(tickRuntime);
+  return stopRuntimeTicker;
 }
 
 runExample("C-Lua", "examples/c-lua/out/main.js", {
-  onModuleReady: startLuaFramePump,
+  onModuleReady: startRuntime,
 });

@@ -145,10 +145,12 @@ const
   RL_LOADER_QUEUE_TASK_ERR_INVALID* = (-1).cint
   RL_LOADER_QUEUE_TASK_ERR_QUEUE_FULL* = (-2).cint
 proc rl_init_raw(config: ptr RLInitConfig): cint {.importc: "rl_init", cdecl, header: "rl.h".}
+proc rl_init_async_raw(config: ptr RLInitConfig): cint {.importc: "rl_init_async", cdecl, header: "rl.h".}
 proc rl_deinit*() {.importc, cdecl, header: "rl.h".}
 proc rl_set_asset_host*(assetHost: cstring): cint {.importc, cdecl, header: "rl.h".}
 proc rl_get_asset_host*(): cstring {.importc, cdecl, header: "rl.h".}
 proc rl_loader_init*(mountPoint: cstring): cint {.importc, cdecl, header: "rl_loader.h".}
+proc rl_loader_init_async*(mountPoint: cstring): cint {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_deinit*() {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_set_asset_host*(assetHost: cstring): cint {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_get_asset_host*(): cstring {.importc, cdecl, header: "rl_loader.h".}
@@ -226,6 +228,12 @@ proc rl_init*(config: var RLInitConfig): cint {.inline.} =
 proc rl_init*(): cint {.inline.} =
   rl_init_raw(nil)
 
+proc rl_init_async*(config: var RLInitConfig): cint {.inline.} =
+  rl_init_async_raw(addr config)
+
+proc rl_init_async*(): cint {.inline.} =
+  rl_init_async_raw(nil)
+
 proc rl_set_asset_host*(assetHost: string): cint {.inline.} =
   rl_set_asset_host(assetHost.cstring)
 
@@ -234,6 +242,12 @@ proc rl_loader_init*(mountPoint: string): cint {.inline.} =
 
 proc rl_loader_init*(): cint {.inline.} =
   rl_loader_init(nil)
+
+proc rl_loader_init_async*(mountPoint: string): cint {.inline.} =
+  rl_loader_init_async(mountPoint.cstring)
+
+proc rl_loader_init_async*(): cint {.inline.} =
+  rl_loader_init_async(nil)
 
 proc rl_loader_set_asset_host*(assetHost: string): cint {.inline.} =
   rl_loader_set_asset_host(assetHost.cstring)

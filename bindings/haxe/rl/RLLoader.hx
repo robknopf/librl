@@ -27,6 +27,13 @@ class RLLoader {
   }
 
   @:functionCode('
+    return ::rl_loader_init_async(mountPoint.length == 0 ? (const char *)0 : mountPoint.utf8_str());
+  ')
+  static function initAsyncNative(mountPoint: String): Int {
+    return 0;
+  }
+
+  @:functionCode('
     ::rl_loader_deinit();
   ')
   static function deinitNative(): Void {}
@@ -134,6 +141,10 @@ class RLLoader {
 
   public static inline function loaderInit(?mountPoint: String): Int {
     return initNative(mountPoint == null ? "" : mountPoint);
+  }
+
+  public static inline function loaderInitAsync(?mountPoint: String): Int {
+    return initAsyncNative(mountPoint == null ? "" : mountPoint);
   }
 
   public static inline function loaderDeinit(): Void {

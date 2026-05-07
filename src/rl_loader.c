@@ -22,6 +22,10 @@
 #include "rl_scratch.h"
 #include "internal/exports.h"
 
+#ifdef EMSCRIPTEN
+#include <emscripten.h>
+#endif
+
 #define RL_LOADER_DEFAULT_MOUNT_POINT "cache"
 #ifndef RL_LOADER_DEFAULT_ASSET_HOST
 #define RL_LOADER_DEFAULT_ASSET_HOST "https://localhost:4444"
@@ -42,6 +46,26 @@ static fileio_sync_op_t *rl_loader_restore_barrier = NULL;
 static bool rl_loader_restore_ready = false;
 static bool rl_loader_restore_failed = false;
 static clock_t rl_loader_restore_started_at = 0;
+
+#ifdef EMSCRIPTEN
+EM_ASYNC_JS(int, rl_loader_wait_for_restore_js, (int timeout_ms), {
+    const start = (typeof performance !== "undefined" && performance.now)
+        ? performance.now()
+        : Date.now();
+
+    while (Module && Module.fileio_idbfs_syncing) {
+        const now = (typeof performance !== "undefined" && performance.now)
+            ? performance.now()
+            : Date.now();
+        if ((now - start) >= timeout_ms) {
+            return 1;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 16));
+    }
+
+    return 0;
+});
+#endif
 
 static void rl_loader_init_asset_host_from_env(void)
 {
@@ -283,6 +307,41 @@ static bool rl_loader_restore_barrier_poll(void)
     }
 
     return true;
+}
+
+#ifdef EMSCRIPTEN
+static void rl_loader_restore_barrier_timeout(void)
+{
+    if (rl_loader_restore_barrier != NULL) {
+        fileio_sync_op_free(rl_loader_restore_barrier);
+        rl_loader_restore_barrier = NULL;
+    }
+    rl_loader_restore_ready = true;
+    rl_loader_restore_failed = true;
+    log_warn("rl_loader: cache restore timed out after %d ms; falling back to network fetch",
+             RL_LOADER_RESTORE_TIMEOUT_MS);
+}
+#endif
+
+static int rl_loader_wait_until_ready(void)
+{
+    if (rl_loader_restore_ready || rl_loader_restore_barrier == NULL) {
+        rl_loader_restore_ready = true;
+        return 0;
+    }
+
+#ifdef EMSCRIPTEN
+    if (rl_loader_wait_for_restore_js(RL_LOADER_RESTORE_TIMEOUT_MS) != 0) {
+        rl_loader_restore_barrier_timeout();
+        return 0;
+    }
+    (void)rl_loader_restore_barrier_poll();
+    return 0;
+#else
+    while (!rl_loader_restore_barrier_poll()) {
+    }
+    return 0;
+#endif
 }
 
 static int rl_loader_prepare_single_asset(rl_loader_task_t *task)
@@ -1433,7 +1492,7 @@ void rl_loader_tick(void)
     }
 }
 
-int rl_loader_init(const char *mount_point)
+int rl_loader_init_async(const char *mount_point)
 {
     const char *resolved_mount = mount_point;
 
@@ -1466,6 +1525,17 @@ int rl_loader_init(const char *mount_point)
 
     rl_loader_initialized = true;
     return 0;
+}
+
+int rl_loader_init(const char *mount_point)
+{
+    int rc = rl_loader_init_async(mount_point);
+
+    if (rc != 0) {
+        return rc;
+    }
+
+    return rl_loader_wait_until_ready();
 }
 
 void rl_loader_deinit(void)

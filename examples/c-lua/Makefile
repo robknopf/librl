@@ -16,10 +16,9 @@ WASM_COMMON_LDFLAGS ?= \
 	-s MAX_WEBGL_VERSION=2 \
 	-s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' \
 	-s ALLOW_MEMORY_GROWTH=1 \
-	-s EXPORTED_FUNCTIONS='["_main"]'
-# The browser drives the Lua frame pump through `Module.ccall(..., { async: true })`,
-# so the exported `rl_tick` entrypoint must be wrapped by JSPI.
-WASM_SYNC_LDFLAGS ?= -s JSPI=1 -s JSPI_EXPORTS='["rl_tick"]' -fwasm-exceptions
+	-s EXPORTED_FUNCTIONS='["_main","_rt_boot","_rt_init","_rt_tick","_rt_shutdown"]'
+# The browser drives runtime boot, init, and the frame pump through JSPI-aware exports.
+WASM_SYNC_LDFLAGS ?= -s JSPI=1 -s JSPI_EXPORTS='["rt_boot","rt_init","rt_tick"]' -fwasm-exceptions
 CFLAGS_WASM ?= $(WASM_PLATFORM_CFLAGS) -fwasm-exceptions
 LDFLAGS_WASM ?= $(WASM_COMMON_LDFLAGS) $(WASM_SYNC_LDFLAGS)
 DEBUG_CFLAGS_WASM ?= -Wall -Wextra -O0 -g3 $(WASM_PLATFORM_CFLAGS)

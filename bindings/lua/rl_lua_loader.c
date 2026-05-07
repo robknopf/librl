@@ -142,6 +142,18 @@ static int rl_loader_init_lua(lua_State *L)
     return 1;
 }
 
+static int rl_loader_init_async_lua(lua_State *L)
+{
+    const char *mount_point = NULL;
+
+    if (!lua_isnoneornil(L, 1)) {
+        mount_point = luaL_checkstring(L, 1);
+    }
+
+    lua_pushinteger(L, rl_loader_init_async(mount_point));
+    return 1;
+}
+
 static int rl_loader_deinit_lua(lua_State *L)
 {
     (void)L;
@@ -387,6 +399,9 @@ void rl_register_loader_bindings(lua_State *L)
 
     lua_pushcfunction(L, rl_loader_init_lua);
     lua_setfield(L, -2, "loader_init");
+
+    lua_pushcfunction(L, rl_loader_init_async_lua);
+    lua_setfield(L, -2, "loader_init_async");
 
     lua_pushcfunction(L, rl_loader_deinit_lua);
     lua_setfield(L, -2, "loader_deinit");

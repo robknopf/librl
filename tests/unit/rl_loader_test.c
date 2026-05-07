@@ -66,7 +66,13 @@ int test_rl_loader_run(void)
     TEST_ASSERT(rl_loader_set_asset_host(custom_host) == 0);
     TEST_ASSERT(strcmp(rl_loader_get_asset_host(), custom_host) == 0);
 
-    TEST_ASSERT(rl_loader_init("cache_loader_test") == 0);
+    TEST_ASSERT(rl_loader_init_async("cache_loader_test") == 0);
+    poll_count = 0;
+    while (!rl_loader_is_ready() && poll_count < 8) {
+        rl_loader_tick();
+        poll_count++;
+    }
+    TEST_ASSERT(rl_loader_is_ready() == true);
     TEST_ASSERT(test_raylib_callback_is_set());
 
     task = rl_loader_restore_fs_async();

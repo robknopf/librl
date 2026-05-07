@@ -1,4 +1,5 @@
-#include "rl.h"
+#include "rl_loader.h"
+#include "rl_logger.h"
 
 #include <lauxlib.h>
 #include <lua.h>
@@ -15,49 +16,52 @@ static const char *ASSET_HOST = "./";
 static const char *ASSET_HOST = "https://localhost:4444";
 #endif
 
-#define EXAMPLE_WINDOW_WIDTH 1024
-#define EXAMPLE_WINDOW_HEIGHT 1280
-#define EXAMPLE_WINDOW_TITLE "librl + raylib + lua(C example)"
 #define LUA_SCRIPT_ROOT "assets/scripts/lua"
-#define LUA_ENTRY_MODULE "simple"
+#define LUA_ENTRY_MODULE "main"
 #define LUA_PACKAGE_PATH LUA_SCRIPT_ROOT "/?.lua;" LUA_SCRIPT_ROOT "/?/init.lua"
 
-typedef struct host_callback_state_t {
+typedef enum rt_result_t {
+  RT_SUCCESS = 0,
+  RT_FAILED = -1,
+  RT_STOPPED = 1,
+} rt_result_t;
+
+typedef struct runtime_refs_t {
+  int boot_ref;
   int init_ref;
   int tick_ref;
   int shutdown_ref;
-  int user_ref;
-} host_callback_state_t;
+} runtime_refs_t;
 
-typedef struct host_context_t {
-  lua_State *lua_state;
-  host_callback_state_t callbacks;
-  int callbacks_installed;
-  int lua_callback_depth;
-  int shutdown_finalize_pending;
-  int shutdown_finalized;
-  int boot_failed;
-  char boot_error[256];
-} host_context_t;
-
-static const char *g_asset_host = NULL;
-static host_context_t g_host_context = {0};
+typedef struct lua_runtime_t {
+  lua_State *state;
+  runtime_refs_t refs;
+  char error[256];
+} lua_runtime_t;
 
 int luaopen_rl(lua_State *L);
+int rt_boot(void);
+int rt_init(void *user_data);
+int rt_tick(float host_dt);
+void rt_shutdown(void);
 
-/* Registry refs for the Lua callbacks that the outer C host forwards to. */
-static void callback_state_init(host_callback_state_t *state) {
-  if (state == NULL) {
+static lua_runtime_t g_runtime_host = {
+    NULL,
+    {LUA_NOREF, LUA_NOREF, LUA_NOREF, LUA_NOREF},
+    {0},
+};
+
+static void init_runtime_refs(runtime_refs_t *refs) {
+  if (refs == NULL) {
     return;
   }
 
-  state->init_ref = LUA_NOREF;
-  state->tick_ref = LUA_NOREF;
-  state->shutdown_ref = LUA_NOREF;
-  state->user_ref = LUA_NOREF;
+  refs->boot_ref = LUA_NOREF;
+  refs->init_ref = LUA_NOREF;
+  refs->tick_ref = LUA_NOREF;
+  refs->shutdown_ref = LUA_NOREF;
 }
 
-/* Resolve the asset host for desktop runs; web uses relative assets. */
 static const char *get_asset_host(void) {
   const char *value = getenv("RL_ASSET_HOST");
   if (value != NULL && value[0] != '\0') {
@@ -66,71 +70,63 @@ static const char *get_asset_host(void) {
   return ASSET_HOST;
 }
 
-/* Record a host-visible boot error that can be rendered during early failure. */
-static void set_boot_error(host_context_t *context, const char *format, ...) {
+static void clear_runtime_error(lua_runtime_t *runtime) {
+  if (runtime == NULL) {
+    return;
+  }
+
+  runtime->error[0] = '\0';
+}
+
+static void set_runtime_error(lua_runtime_t *runtime, const char *format, ...) {
   va_list args;
 
-  if (context == NULL || format == NULL) {
+  if (runtime == NULL || format == NULL) {
     return;
   }
 
   va_start(args, format);
-  (void)vsnprintf(context->boot_error, sizeof(context->boot_error), format, args);
+  (void)vsnprintf(runtime->error, sizeof(runtime->error), format, args);
   va_end(args);
-  context->boot_failed = 1;
 }
 
-/* Draw a simple status screen while booting or when boot fails. */
-static void draw_boot_status(const char *title, const char *detail) {
-  rl_render_begin();
-  rl_render_clear_background(RL_COLOR_RAYWHITE);
-  rl_text_draw(title != NULL ? title : "Booting...", 32, 32, 32,
-               RL_COLOR_DARKGRAY);
-  rl_text_draw(detail != NULL ? detail : "", 32, 80, 20, RL_COLOR_GRAY);
-  rl_render_end();
-}
-
-/* Release any stored Lua callback refs from the registry. */
-static void clear_callback_refs(lua_State *state, host_callback_state_t *callbacks) {
-  if (state == NULL || callbacks == NULL) {
+static void clear_runtime_refs(lua_State *state, runtime_refs_t *refs) {
+  if (state == NULL || refs == NULL) {
     return;
   }
 
-  if (callbacks->init_ref != LUA_NOREF) {
-    luaL_unref(state, LUA_REGISTRYINDEX, callbacks->init_ref);
-    callbacks->init_ref = LUA_NOREF;
+  if (refs->boot_ref != LUA_NOREF) {
+    luaL_unref(state, LUA_REGISTRYINDEX, refs->boot_ref);
+    refs->boot_ref = LUA_NOREF;
   }
-  if (callbacks->tick_ref != LUA_NOREF) {
-    luaL_unref(state, LUA_REGISTRYINDEX, callbacks->tick_ref);
-    callbacks->tick_ref = LUA_NOREF;
+  if (refs->init_ref != LUA_NOREF) {
+    luaL_unref(state, LUA_REGISTRYINDEX, refs->init_ref);
+    refs->init_ref = LUA_NOREF;
   }
-  if (callbacks->shutdown_ref != LUA_NOREF) {
-    luaL_unref(state, LUA_REGISTRYINDEX, callbacks->shutdown_ref);
-    callbacks->shutdown_ref = LUA_NOREF;
+  if (refs->tick_ref != LUA_NOREF) {
+    luaL_unref(state, LUA_REGISTRYINDEX, refs->tick_ref);
+    refs->tick_ref = LUA_NOREF;
   }
-  if (callbacks->user_ref != LUA_NOREF) {
-    luaL_unref(state, LUA_REGISTRYINDEX, callbacks->user_ref);
-    callbacks->user_ref = LUA_NOREF;
+  if (refs->shutdown_ref != LUA_NOREF) {
+    luaL_unref(state, LUA_REGISTRYINDEX, refs->shutdown_ref);
+    refs->shutdown_ref = LUA_NOREF;
   }
 }
 
-/* Tear down the embedded Lua VM and librl runtime once the hosted app stops. */
-static void finalize_runtime_shutdown(host_context_t *context) {
-  if (context == NULL || context->shutdown_finalized) {
+static void free_runtime(lua_runtime_t *runtime) {
+  if (runtime == NULL) {
     return;
   }
 
-  context->shutdown_finalized = 1;
-  context->shutdown_finalize_pending = 0;
-  if (context->lua_state != NULL) {
-    clear_callback_refs(context->lua_state, &context->callbacks);
-    lua_close(context->lua_state);
-    context->lua_state = NULL;
+  if (runtime->state != NULL) {
+    clear_runtime_refs(runtime->state, &runtime->refs);
+    lua_close(runtime->state);
   }
-  rl_deinit();
+  runtime->state = NULL;
+  init_runtime_refs(&runtime->refs);
+  clear_runtime_error(runtime);
 }
 
-/* Prepend the example asset script directory to package.path. */
 static void prepend_package_path(lua_State *state, const char *prefix) {
   const char *current_path = NULL;
   char buffer[2048];
@@ -150,124 +146,40 @@ static void prepend_package_path(lua_State *state, const char *prefix) {
   lua_pop(state, 1);
 }
 
-/* Require a Lua module and leave no return value on the stack. */
-static int require_module(lua_State *state, const char *module_name) {
-  if (state == NULL || module_name == NULL) {
+static int require_module(lua_State *state, const char *module_name,
+                          char *error, size_t error_size) {
+  if (state == NULL || module_name == NULL || error == NULL ||
+      error_size == 0) {
     return -1;
   }
 
   lua_getglobal(state, "require");
   lua_pushstring(state, module_name);
   if (lua_pcall(state, 1, 1, 0) != 0) {
-    return -1;
-  }
-
-  lua_pop(state, 1);
-  return 0;
-}
-
-/* Hosted-only Lua API: register callbacks that the C springboard will invoke. */
-static int example_rl_set_callbacks(lua_State *L) {
-  host_context_t *context = NULL;
-  host_callback_state_t *callbacks = NULL;
-
-  /* `rl.set_callbacks(...)` is a C closure with the host context stored as an
-   * upvalue, not a normal Lua argument. */
-  context = (host_context_t *)lua_touserdata(L, lua_upvalueindex(1));
-  if (context == NULL) {
-    return luaL_error(L, "invalid hosted Lua context");
-  }
-
-  luaL_checktype(L, 1, LUA_TFUNCTION);
-  luaL_checktype(L, 2, LUA_TFUNCTION);
-  if (!lua_isnoneornil(L, 3)) {
-    luaL_checktype(L, 3, LUA_TFUNCTION);
-  }
-
-  callbacks = &context->callbacks;
-  clear_callback_refs(L, callbacks);
-
-  lua_pushvalue(L, 1);
-  callbacks->init_ref = luaL_ref(L, LUA_REGISTRYINDEX);
-  lua_pushvalue(L, 2);
-  callbacks->tick_ref = luaL_ref(L, LUA_REGISTRYINDEX);
-
-  if (!lua_isnoneornil(L, 3)) {
-    lua_pushvalue(L, 3);
-    callbacks->shutdown_ref = luaL_ref(L, LUA_REGISTRYINDEX);
-  } else {
-    callbacks->shutdown_ref = LUA_NOREF;
-  }
-
-  if (!lua_isnoneornil(L, 4)) {
-    lua_pushvalue(L, 4);
-    callbacks->user_ref = luaL_ref(L, LUA_REGISTRYINDEX);
-  } else {
-    callbacks->user_ref = LUA_NOREF;
-  }
-
-  context->callbacks_installed = 1;
-  return 0;
-}
-
-/* Load `rl` and inject the hosted-only helper used by embedded mode. */
-static int install_rl_helpers(host_context_t *context, char *error,
-                              size_t error_size) {
-  lua_State *state = NULL;
-
-  if (context == NULL || context->lua_state == NULL ||
-      error == NULL || error_size == 0) {
-    return -1;
-  }
-
-  state = context->lua_state;
-  if (require_module(state, "rl") != 0) {
     const char *message = lua_tostring(state, -1);
-    (void)snprintf(error, error_size, "Failed to require rl: %.220s",
-                   message != NULL ? message : "unknown error");
+    (void)snprintf(error, error_size, "Failed to load Lua runtime '%s': %.220s",
+                   module_name, message != NULL ? message : "unknown error");
     lua_pop(state, 1);
     return -1;
   }
 
-  lua_getglobal(state, "package");
-  lua_getfield(state, -1, "loaded");
-  lua_getfield(state, -1, "rl");
-  if (!lua_istable(state, -1)) {
-    lua_pop(state, 3);
-    (void)snprintf(error, error_size, "Loaded rl module is not a table");
-    return -1;
-  }
-
-  /* Inject a hosted-only helper into the `rl` table. The C function keeps a
-   * pointer to the host context as a closure upvalue so Lua can register the
-   * callbacks that the outer C lifecycle will springboard into later. */
-  lua_pushlightuserdata(state, context);
-  lua_pushcclosure(state, example_rl_set_callbacks, 1);
-  lua_setfield(state, -2, "set_callbacks");
-
-  lua_pop(state, 3);
   return 0;
 }
 
-/* Create the Lua VM used by the host and prepare it for hosted script loading. */
-static int create_lua_vm(host_context_t *context, char *error,
-                         size_t error_size) {
+static lua_State* create_lua_vm(char *error, size_t error_size) {
   lua_State *state = NULL;
 
-  if (context == NULL || error == NULL || error_size == 0) {
-    return -1;
+  if (error == NULL || error_size == 0) {
+    return NULL;
   }
 
   error[0] = '\0';
   state = luaL_newstate();
   if (state == NULL) {
     (void)snprintf(error, error_size, "Failed to create Lua state");
-    return -1;
+    return NULL;
   }
 
-  callback_state_init(&context->callbacks);
-  context->callbacks_installed = 0;
-  context->lua_state = state;
   luaL_openlibs(state);
 
   lua_getglobal(state, "package");
@@ -276,175 +188,285 @@ static int create_lua_vm(host_context_t *context, char *error,
   lua_setfield(state, -2, "rl");
   lua_pop(state, 2);
 
-  lua_pushboolean(state, 1);
-  lua_setglobal(state, "__LIBRL_HOSTED");
-
   prepend_package_path(state, LUA_PACKAGE_PATH);
+  return state;
+}
 
-  if (install_rl_helpers(context, error, error_size) != 0) {
+static int cache_runtime_function(lua_State *state, int table_index,
+                                  const char *field_name, int *ref_out,
+                                  char *error, size_t error_size) {
+  int absolute_index = table_index;
+
+  if (state == NULL || field_name == NULL || ref_out == NULL || error == NULL ||
+      error_size == 0) {
     return -1;
   }
 
+  if (absolute_index < 0) {
+    absolute_index = lua_gettop(state) + absolute_index + 1;
+  }
+
+  lua_getfield(state, absolute_index, field_name);
+  if (!lua_isfunction(state, -1)) {
+    (void)snprintf(error, error_size,
+                   "Runtime module field '%s' is not a function", field_name);
+    lua_pop(state, 1);
+    return -1;
+  }
+
+  *ref_out = luaL_ref(state, LUA_REGISTRYINDEX);
   return 0;
 }
 
-/* Invoke one registered Lua callback, deferring final shutdown until unwind. */
-static int call_lua_callback(host_context_t *context, int callback_ref,
-                             const char *callback_name) {
-  int arg_count = 0;
-  const char *message = NULL;
+static int load_runtime_module(lua_runtime_t *runtime, char *error,
+                               size_t error_size) {
+  int status = RT_FAILED;
+  const char *asset_host = NULL;
+  lua_State *state = NULL;
 
-  if (context == NULL || context->lua_state == NULL ||
-      callback_ref == LUA_NOREF) {
-    return 0;
+  if (runtime == NULL || runtime->state == NULL || error == NULL ||
+      error_size == 0) {
+    return RT_FAILED;
+  }
+  state = runtime->state;
+  if (rl_loader_init("cache") != 0) {
+    (void)snprintf(error, error_size, "rl_loader_init failed");
+    return RT_FAILED;
   }
 
-  lua_rawgeti(context->lua_state, LUA_REGISTRYINDEX, callback_ref);
-  if (context->callbacks.user_ref != LUA_NOREF) {
-    lua_rawgeti(context->lua_state, LUA_REGISTRYINDEX,
-                context->callbacks.user_ref);
-    arg_count = 1;
-  }
-
-  context->lua_callback_depth++;
-  if (lua_pcall(context->lua_state, arg_count, 0, 0) != 0) {
-    context->lua_callback_depth--;
-    message = lua_tostring(context->lua_state, -1);
-    set_boot_error(context, "%s failed: %.220s",
-                   callback_name != NULL ? callback_name : "callback",
-                   message != NULL ? message : "unknown Lua error");
-    lua_pop(context->lua_state, 1);
-    if (context->lua_callback_depth == 0 &&
-        context->shutdown_finalize_pending) {
-      finalize_runtime_shutdown(context);
+  asset_host = get_asset_host();
+  if (asset_host != NULL && asset_host[0] != '\0') {
+    if (rl_loader_set_asset_host(asset_host) != 0) {
+      (void)snprintf(error, error_size, "rl_loader_set_asset_host failed");
+      goto cleanup;
     }
-    return -1;
   }
 
-  context->lua_callback_depth--;
-  if (context->lua_callback_depth == 0 &&
-      context->shutdown_finalize_pending) {
-    finalize_runtime_shutdown(context);
+  // debugging, clear the cache first
+  rl_loader_clear_cache();
+
+  if (require_module(state, "rl", error, error_size) != 0) {
+    goto cleanup;
+  }
+  lua_pop(state, 1);
+
+  if (require_module(state, LUA_ENTRY_MODULE, error, error_size) != 0) {
+    goto cleanup;
   }
 
-  return 0;
-}
-
-/* Outer init callback: require the Lua entry module after loader readiness. */
-static void host_init(void *user_data) {
-  host_context_t *context = (host_context_t *)user_data;
-
-  if (context == NULL) {
-    return;
-  }
-
-  if (context->boot_failed) {
-    return;
-  }
-
-  if (require_module(context->lua_state, LUA_ENTRY_MODULE) != 0) {
-    const char *message = lua_tostring(context->lua_state, -1);
-    set_boot_error(context, "Failed to load Lua app '%s': %.220s",
-                   LUA_ENTRY_MODULE, message != NULL ? message : "unknown error");
-    lua_pop(context->lua_state, 1);
-    return;
-  }
-
-  if (!context->callbacks_installed) {
-    set_boot_error(context, "Hosted Lua app '%s' did not call rl.set_callbacks(...)",
+  if (!lua_istable(state, -1)) {
+    (void)snprintf(error, error_size, "Lua runtime '%s' did not return a table",
                    LUA_ENTRY_MODULE);
-    return;
+    lua_pop(state, 1);
+    goto cleanup;
   }
 
-  (void)call_lua_callback(context, context->callbacks.init_ref, "init");
+  if (cache_runtime_function(state, -1, "rt_boot", &runtime->refs.boot_ref, error,
+                             error_size) != 0 ||
+      cache_runtime_function(state, -1, "rt_init", &runtime->refs.init_ref, error,
+                             error_size) != 0 ||
+      cache_runtime_function(state, -1, "rt_tick", &runtime->refs.tick_ref, error,
+                             error_size) != 0 ||
+      cache_runtime_function(state, -1, "rt_shutdown", &runtime->refs.shutdown_ref,
+                             error, error_size) != 0) {
+    clear_runtime_refs(state, &runtime->refs);
+    lua_pop(state, 1);
+    goto cleanup;
+  }
+
+  lua_pop(state, 1);
+  status = RT_SUCCESS;
+
+cleanup:
+  rl_loader_deinit();
+  return status;
 }
 
-/* Outer tick callback: render boot errors or forward ticks into Lua. */
-static void host_tick(void *user_data) {
-  host_context_t *context = (host_context_t *)user_data;
+static int parse_runtime_result(lua_runtime_t *runtime, const char *callback_name,
+                                int arg_count) {
+  int rc = RT_SUCCESS;
+  const char *message = NULL;
+  lua_State *state = NULL;
 
-  if (context == NULL) {
-    return;
+  if (runtime == NULL || runtime->state == NULL) {
+    return RT_FAILED;
+  }
+  state = runtime->state;
+
+  if (lua_pcall(state, arg_count, 1, 0) != 0) {
+    message = lua_tostring(state, -1);
+    set_runtime_error(runtime, "%s failed: %.220s",
+                      callback_name != NULL ? callback_name : "runtime callback",
+                      message != NULL ? message : "unknown Lua error");
+    lua_pop(state, 1);
+    return RT_FAILED;
   }
 
-  if (context->boot_failed) {
-    draw_boot_status("Boot failed", context->boot_error);
-    return;
+  if (!lua_isnumber(state, -1)) {
+    set_runtime_error(runtime, "%s must return an integer result code",
+                      callback_name != NULL ? callback_name : "runtime callback");
+    lua_pop(state, 1);
+    return RT_FAILED;
   }
 
-  (void)call_lua_callback(context, context->callbacks.tick_ref, "tick");
+  rc = (int)lua_tointeger(state, -1);
+  lua_pop(state, 1);
+  return rc;
 }
 
-/* Outer shutdown callback: forward to Lua and finalize once callbacks unwind. */
-static void host_shutdown(void *user_data) {
-  host_context_t *context = (host_context_t *)user_data;
+static void call_runtime_shutdown(lua_runtime_t *runtime) {
+  const char *message = NULL;
+  lua_State *state = NULL;
 
-  if (context == NULL) {
+  if (runtime == NULL || runtime->state == NULL ||
+      runtime->refs.shutdown_ref == LUA_NOREF) {
     return;
   }
+  state = runtime->state;
 
-  context->shutdown_finalize_pending = 1;
-  if (context->callbacks.shutdown_ref != LUA_NOREF) {
-    char error_before[sizeof(context->boot_error)];
+  lua_rawgeti(state, LUA_REGISTRYINDEX, runtime->refs.shutdown_ref);
+  if (lua_pcall(state, 0, 0, 0) != 0) {
+    message = lua_tostring(state, -1);
+    rl_logger_message_source(RL_LOGGER_LEVEL_ERROR, "lua", 0, "%s",
+                             message != NULL ? message : "rt_shutdown failed");
+    lua_pop(state, 1);
+  }
+}
 
-    (void)snprintf(error_before, sizeof(error_before), "%s", context->boot_error);
-    if (call_lua_callback(context, context->callbacks.shutdown_ref, "shutdown") !=
-        0) {
-      rl_logger_message_source(RL_LOGGER_LEVEL_ERROR, "lua", 0, "%s",
-                               context->boot_error);
-      (void)snprintf(context->boot_error, sizeof(context->boot_error), "%s",
-                     error_before);
-    }
+int rt_boot(void) {
+  char error[256];
+  int rc = RT_SUCCESS;
+  lua_runtime_t *runtime = &g_runtime_host;
+  lua_State *state = NULL;
+
+  free_runtime(runtime);
+  rl_logger_set_level(RL_LOGGER_LEVEL_DEBUG);
+
+  state = create_lua_vm(error, sizeof(error));
+  if (state == NULL)  {
+    rl_logger_message_source(RL_LOGGER_LEVEL_ERROR, "lua", 0, "%s", error);
+    free_runtime(runtime);
+    return RT_FAILED;
+  }
+  runtime->state = state;
+
+  if (load_runtime_module(runtime, error, sizeof(error)) != 0) {
+    rl_logger_message_source(RL_LOGGER_LEVEL_ERROR, "lua", 0, "%s", error);
+    free_runtime(runtime);
+    return RT_FAILED;
   }
 
-  if (context->lua_callback_depth == 0 &&
-      context->shutdown_finalize_pending) {
-    finalize_runtime_shutdown(context);
+  lua_rawgeti(state, LUA_REGISTRYINDEX, runtime->refs.boot_ref);
+  rc = parse_runtime_result(runtime, "rt_boot", 0);
+  if (rc < RT_SUCCESS) {
+    rl_logger_message_source(RL_LOGGER_LEVEL_ERROR, "lua", 0, "%s",
+                             runtime->error);
+    free_runtime(runtime);
+    return rc;
   }
+
+  return rc;
+}
+
+int rt_init(void *user_data) {
+  int rc = RT_SUCCESS;
+  lua_runtime_t *runtime = &g_runtime_host;
+  lua_State *state = runtime->state;
+
+  if (state == NULL) {
+    return RT_FAILED;
+  }
+
+  lua_rawgeti(state, LUA_REGISTRYINDEX, runtime->refs.init_ref);
+  if (user_data != NULL) {
+    lua_pushlightuserdata(state, user_data);
+  } else {
+    lua_pushnil(state);
+  }
+  rc = parse_runtime_result(runtime, "rt_init", 1);
+  if (rc < RT_SUCCESS) {
+    rl_logger_message_source(RL_LOGGER_LEVEL_ERROR, "lua", 0, "%s",
+                             runtime->error);
+  }
+  return rc;
+}
+
+int rt_tick(float host_dt) {
+  lua_runtime_t *runtime = &g_runtime_host;
+  lua_State *state = runtime->state;
+
+  if (state == NULL) {
+    return RT_FAILED;
+  }
+
+  lua_rawgeti(state, LUA_REGISTRYINDEX, runtime->refs.tick_ref);
+  lua_pushnumber(state, (lua_Number)host_dt);
+  return parse_runtime_result(runtime, "rt_tick", 1);
+}
+
+void rt_shutdown(void) {
+  lua_runtime_t *runtime = &g_runtime_host;
+
+  call_runtime_shutdown(runtime);
+  free_runtime(runtime);
+}
+
+///////////////////
+// For desktop, we ARE the host
+#ifdef PLATFORM_WEB
+int main(void) {
+  // any main inits here for wasm
+  return 0;
+}
+#else
+#include <time.h>
+#include <unistd.h>
+
+static double now_seconds(void) {
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  return (double)ts.tv_sec + ((double)ts.tv_nsec / 1000000000.0);
 }
 
 int main(void) {
-  char error[256];
-  rl_init_config_t init_cfg;
+  int rc = RT_SUCCESS;
 
-  memset(&g_host_context, 0, sizeof(g_host_context));
-  callback_state_init(&g_host_context.callbacks);
-
-  g_asset_host = get_asset_host();
-  rl_logger_set_level(RL_LOGGER_LEVEL_DEBUG);
-
-  memset(&init_cfg, 0, sizeof(init_cfg));
-  init_cfg.window_width = EXAMPLE_WINDOW_WIDTH;
-  init_cfg.window_height = EXAMPLE_WINDOW_HEIGHT;
-  init_cfg.window_title = EXAMPLE_WINDOW_TITLE;
-  init_cfg.window_flags = RL_WINDOW_FLAG_MSAA_4X_HINT;
-  init_cfg.asset_host = g_asset_host;
-  if (rl_init(&init_cfg) != 0) {
-    return 1;
+  if (rt_boot() != 0) {
+    return RT_FAILED;
   }
 
-  if (create_lua_vm(&g_host_context, error, sizeof(error)) != 0) {
-    rl_logger_message_source(RL_LOGGER_LEVEL_ERROR, "lua", 0, "%s", error);
-    finalize_runtime_shutdown(&g_host_context);
-    return 1;
+  if (rt_init(NULL) != 0) {
+    rt_shutdown();
+    return RT_FAILED;
   }
 
-  rl_loader_clear_cache();
+  double last_time = now_seconds();
+  double current_time = last_time;
+  float dt_seconds = 0;
 
-#ifdef PLATFORM_WEB
-  /* On web, JS owns the frame pump and drives exported `rl_tick()` through
-   * JSPI. We only arm the outer host lifecycle here. */
-  if (rl_start(host_init, host_tick, host_shutdown, &g_host_context) != 0) {
-    finalize_runtime_shutdown(&g_host_context);
-    return 1;
-  }
-#else
-  /* On desktop, librl owns the frame loop directly through `rl_run()`. */
-  rl_run(host_init, host_tick, host_shutdown, &g_host_context);
-  if (!g_host_context.shutdown_finalized) {
-    finalize_runtime_shutdown(&g_host_context);
-  }
-#endif
+  for (;;) {
+    current_time = now_seconds();
+    dt_seconds = (float)(current_time - last_time);
+    last_time = current_time;
 
-  return 0;
+    rc = rt_tick(dt_seconds);
+    if (rc > RT_SUCCESS) {
+      fprintf(stderr, "[host] rt_tick requested stop (>0), exiting loop\n");
+      // stop set, exit
+      fprintf(stderr, "[host] calling rt_shutdown...\n");
+      rt_shutdown();
+      return rc;
+    }
+    if (rc < RT_SUCCESS) {
+      fprintf(stderr, "[host] rt_tick failed: %d\n", rc);
+      fprintf(stderr, "[host] calling rt_shutdown...\n");
+      rt_shutdown();
+      return rc;
+    }
+
+    // rt_tick succeeded, give the os a little time, then keep ticking
+    usleep(1000);
+  }
 }
+
+#endif

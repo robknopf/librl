@@ -128,7 +128,7 @@ const RL = {
             moduleInstance.ccall("rl_window_set_size", null, ["number", "number"], [newWidth, newHeight]);
         });
     },
-    init: async (opts) => {
+    _callInitWithOptions: async (opts, symbolName, asyncOptions) => {
         opts = opts || {};
         opts.env = opts.env || {};
         moduleOptions = {...opts};
@@ -245,7 +245,7 @@ const RL = {
             setI32(16, assetPtr >>> 0);
             setI32(20, cachePtr >>> 0);
 
-            initRc = (await moduleInstance.ccall("rl_init", "number", ["number"], [cfgPtr], { async: true })) | 0;
+            initRc = (await moduleInstance.ccall(symbolName, "number", ["number"], [cfgPtr], asyncOptions)) | 0;
         } finally {
             if (useHeapAlloc) {
                 for (const ptr of allocatedPtrs) {
@@ -265,6 +265,12 @@ const RL = {
             window.dispatchEvent(new Event("resize"));
         }
         return 0;
+    },
+    init: async (opts) => {
+        return await RL._callInitWithOptions(opts, "rl_init", { async: true });
+    },
+    initAsync: async (opts) => {
+        return await RL._callInitWithOptions(opts, "rl_init_async", undefined);
     },
     setAssetHost: (assetHost) => {
         if (typeof assetHost !== "string") {
@@ -306,8 +312,14 @@ const RL = {
     loaderInit: async (mountPoint = "") => {
         return await moduleInstance.ccall('rl_loader_init', 'number', ['string'], [mountPoint || ""], { async: true });
     },
+    loaderInitAsync: async (mountPoint = "") => {
+        return await moduleInstance.ccall('rl_loader_init_async', 'number', ['string'], [mountPoint || ""]);
+    },
     loaderDeinit: () => {
         moduleInstance.ccall('rl_loader_deinit', null, [], []);
+    },
+    loaderIsReady: () => {
+        return moduleInstance.ccall('rl_loader_is_ready', 'number', [], []) !== 0;
     },
     getCacheDir: () => {
         return moduleInstance.ccall('rl_loader_get_cache_dir', 'string', [], []);

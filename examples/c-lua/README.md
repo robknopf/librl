@@ -1,53 +1,52 @@
 # Embedded Lua C Example
 
 This example embeds Lua directly into a C host and runs the shared
-`assets/scripts/lua/simple.lua` app in hosted mode.
+`assets/scripts/lua/main.lua` runtime module.
 
 ## What This Example Does
 
-The C host in [main.c](/home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/c-lua/main.c) is intentionally small:
+The C host in [main.c](/home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/c-lua/main.c) is intentionally thin:
 
-- it calls `rl_init(...)`
 - it creates a Lua VM
 - it preloads the `rl` Lua bindings from `bindings/lua/*.c`
-- it injects a hosted-only `rl.set_callbacks(init, tick, shutdown, ctx)` helper
-- it starts one outer librl lifecycle with `host_init`, `host_tick`, and `host_shutdown`
+- it prepends the example script path to `package.path`
+- it requires the shared runtime module `main`
+- it caches and drives the returned `rt_boot`, `rt_init`, `rt_tick`, and `rt_shutdown` functions
 
-The Lua script in [simple.lua](/home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/www/public/assets/scripts/lua/simple.lua) then switches behavior based on host mode:
+That means the Lua runtime owns all `rl` behavior:
 
-- hosted mode (`__LIBRL_HOSTED`): call `rl.set_callbacks(...)`
-- standalone Lua mode: call `rl.init(...)` and `rl.run(...)`
+- `rl.init(...)`
+- loader use
+- per-frame `rl.tick()`
+- scene setup and teardown
+- `rl.deinit()`
 
-That means the same Lua script can run:
-
-- from this embedded C example
-- from the direct Lua example in `examples/lua`
+The outer C host is just the native/wasm equivalent of `examples/lua/boot.lua`.
 
 ## Hosted Lifecycle
 
-The outer C lifecycle exists so loader readiness still happens in the normal
-`rl_start(...)` / `rl_tick()` / `rl_run()` flow.
+The callback chain is now direct:
 
-The callback chain is:
+1. `rt_boot()` creates the Lua VM, requires `main`, and calls Lua `rt_boot()`.
+2. `rt_init()` forwards to Lua `rt_init(host_context)`.
+3. `rt_tick(dt)` forwards to Lua `rt_tick(dt)`.
+4. `rt_shutdown()` forwards to Lua `rt_shutdown()` and then closes the VM.
 
-1. `main()` creates the Lua VM and arms the outer lifecycle.
-2. `host_init()` runs after loader readiness and requires `simple.lua`.
-3. Hosted `simple.lua` calls `rl.set_callbacks(on_init, on_tick, on_shutdown, ctx)`.
-4. `host_init`, `host_tick`, and `host_shutdown` springboard into those registered Lua callbacks.
+That keeps the host/runtime contract aligned with the other runtime examples in this repo:
 
-This avoids loading the Lua app too early on web, where requiring the script
-from `main()` would block on the loader restore barrier before JS has a chance
-to yield.
+- one-time boot
+- one-time init
+- per-frame tick returning `0` / stopped / failed
+- one-time shutdown
 
 ## Desktop And Web
 
-Desktop and web share the same hosted Lua logic. The difference is only who
-drives frames:
+Desktop and web share the same runtime module. The difference is only who drives frames:
 
-- desktop: `main.c` uses `rl_run(host_init, host_tick, host_shutdown, ...)`
-- web: `main.c` uses `rl_start(...)`, and JS drives exported `rl_tick()`
+- desktop: `main.c` calls `rt_boot()`, `rt_init()`, then loops on `rt_tick()`
+- web: JS calls `rt_boot()`, `rt_init()`, then pumps `rt_tick()` with `requestAnimationFrame`
 
-On web, [c-lua_example.js](/home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/www/public/js/c-lua_example.js) pumps frames with `Module.ccall(..., { async: true })`, so the wasm build exports `rl_tick` through JSPI.
+On web, [c-lua_example.js](/home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/www/public/js/c-lua_example.js) calls `rt_boot`, `rt_init`, and `rt_tick` through JSPI-aware exports so Lua module loading and runtime init can suspend when needed.
 
 ## Build
 

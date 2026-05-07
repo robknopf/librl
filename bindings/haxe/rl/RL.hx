@@ -75,6 +75,10 @@ private extern class RLNative {
     return untyped __cpp__("::rl_init((const rl_init_config_t *)0)");
   }
 
+  static inline function initAsyncOrNullConfigNative(): Int {
+    return untyped __cpp__("::rl_init_async((const rl_init_config_t *)0)");
+  }
+
   static inline function initConfigNative(
     width: Int,
     height: Int,
@@ -85,6 +89,25 @@ private extern class RLNative {
   ): Int {
     return untyped __cpp__(
       "({int _hx_out = 0; rl_init_config_t cfg = {}; cfg.window_width = (int){0}; cfg.window_height = (int){1}; cfg.window_flags = (unsigned int){2}; cfg.window_title = (({3}).length > 0) ? ({3}).utf8_str() : (const char *)0; cfg.asset_host = (({4}).length > 0) ? ({4}).utf8_str() : (const char *)0; cfg.loader_cache_dir = (({5}).length > 0) ? ({5}).utf8_str() : (const char *)0; _hx_out = (int)::rl_init(&cfg); _hx_out;})",
+      width,
+      height,
+      flags,
+      title,
+      asset,
+      cache
+    );
+  }
+
+  static inline function initAsyncConfigNative(
+    width: Int,
+    height: Int,
+    title: String,
+    flags: Int,
+    asset: String,
+    cache: String
+  ): Int {
+    return untyped __cpp__(
+      "({int _hx_out = 0; rl_init_config_t cfg = {}; cfg.window_width = (int){0}; cfg.window_height = (int){1}; cfg.window_flags = (unsigned int){2}; cfg.window_title = (({3}).length > 0) ? ({3}).utf8_str() : (const char *)0; cfg.asset_host = (({4}).length > 0) ? ({4}).utf8_str() : (const char *)0; cfg.loader_cache_dir = (({5}).length > 0) ? ({5}).utf8_str() : (const char *)0; _hx_out = (int)::rl_init_async(&cfg); _hx_out;})",
       width,
       height,
       flags,
@@ -607,6 +630,19 @@ abstract RL(RLNative) from RLNative to RLNative {
     return RLNative.initConfigNative(w, h, title, flags, asset, cache);
   }
 
+  public static inline function initAsync(?config: RLInitConfig): Int {
+    if (config == null) {
+      return RLNative.initAsyncOrNullConfigNative();
+    }
+    var w: Int = config.windowWidth != null ? config.windowWidth : 0;
+    var h: Int = config.windowHeight != null ? config.windowHeight : 0;
+    var title: String = config.windowTitle != null ? config.windowTitle : "";
+    var flags: Int = config.windowFlags != null ? config.windowFlags : 0;
+    var asset: String = config.assetHost != null ? config.assetHost : "";
+    var cache: String = config.loaderCacheDir != null ? config.loaderCacheDir : "";
+    return RLNative.initAsyncConfigNative(w, h, title, flags, asset, cache);
+  }
+
   public static inline function initValues(
     width: Int,
     height: Int,
@@ -632,6 +668,10 @@ abstract RL(RLNative) from RLNative to RLNative {
 
   public static function loaderInit(?mountPoint: String): Int {
     return RLLoader.loaderInit(mountPoint);
+  }
+
+  public static function loaderInitAsync(?mountPoint: String): Int {
+    return RLLoader.loaderInitAsync(mountPoint);
   }
 
   public static function loaderDeinit(): Void {

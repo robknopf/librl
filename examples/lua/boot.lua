@@ -19,47 +19,47 @@ local function prepend_libs_cpath(base_dir)
     package.cpath = table.concat(entries, ";") .. ";" .. package.cpath
 end
 
+
 prepend_libs_cpath(this_dir())
-
 local rl = require("rl")
-rl.logger_set_level(rl.RL_LOGGER_LEVEL_INFO)
+rl.logger_set_level(rl.RL_LOGGER_LEVEL_DEBUG)
 
-local DEFAULT_SCRIPTS_ROOT = "assets/scripts/lua"
-local DEFAULT_SCRIPT_NAME = "main"
+local SCRIPTS_ROOT = "assets/scripts/lua"
+local RUNTIME_MODULE = "main"
+local RUNTIME_ENTRY_MODULE = "runtime_wrapper"
 
 -- check for --help or -h
 for i = 1, #arg do
     if arg[i] == "--help" or arg[i] == "-h" then
-        print("Usage: lua boot.lua [--root <script_root>] [<script_name>]")
-        print("  --root <script_root> (default: " .. DEFAULT_SCRIPTS_ROOT .. ")")
-        print("  <script_name> (default: " .. DEFAULT_SCRIPT_NAME .. ")")
+        print("Usage: lua boot.lua [--root <script_root>] [<runtime_module>]")
+        print("  --root <script_root> (default: " .. SCRIPTS_ROOT .. ")")
+        print("  <runtime_module> (default: " .. RUNTIME_MODULE .. ")")
         return
     end
 end
 
 -- get the script root from the command line arguments (--root or -r) (default: assets/scripts/lua)
-local SCRIPTS_ROOT = DEFAULT_SCRIPTS_ROOT
 for i = 1, #arg do
     if arg[i] == "--root" or arg[i] == "-r" then
-        SCRIPT_ROOT = arg[i + 1]
+        SCRIPTS_ROOT = arg[i + 1]
         break
     end
 end
+
+-- add the SCRIPTS_ROOT to the search path
+package.path = SCRIPTS_ROOT .. "/?.lua;" .. SCRIPTS_ROOT .. "/?/init.lua;" .. package.path
 
 -- get the main script name from the command line arguments (default: simple).  it should be the last argument.
-local MAIN_SCRIPT_NAME = DEFAULT_SCRIPT_NAME
 for i = 1, #arg do
     if arg[i]:sub(1, 1) ~= "-" then
-        MAIN_SCRIPT_NAME = arg[i]
+        RUNTIME_MODULE = arg[i]
         break
     end
 end
-
-local MAIN_SCRIPT_PATH = SCRIPTS_ROOT .. "/" .. MAIN_SCRIPT_NAME .. ".lua"
 
 
 -- for now, use libRL's time
-local now = nil--rl.get_time
+local now = rl.get_time
 
 -- use socket for the time module, fall back to os.clock
 do
@@ -146,32 +146,32 @@ await_import_asset(MAIN_SCRIPT_PATH)
 -- debugging, force clear the cache
 -- note that we could just clear the main.lua file with rl.loader_uncache_asset(MAIN_SCRIPT_PATH)
 -- but we'll start with a clean slate during development
+rl.info("clearing loader cache")
 rl.loader_clear_cache()
 
-rl.info("loading "..MAIN_SCRIPT_PATH)
-local runtime = require(SCRIPTS_ROOT .. "/" .. MAIN_SCRIPT_NAME)
-
--- shutdown the loader, letting the runtime own full rl lifecycle
-
-rl.info("cleared loader cache")
-
-rl.loader_deinit()
-
---------------------------------------------------------------
--- act like we were hosted and simulate the lifecycle pump
-
----@enum RTResult
-RTResult = {
-    SUCCESS = 0,
-    FAILED = -1,
-    STOPPED = 1
+---@enum ResultCode
+ResultCode = {
+    OK = 0,
+    ERROR = -1,
+    QUIT = 1
 }
 
-local rc = runtime.rt_boot()
-if rc ~= RTResult.SUCCESS then return end
+rl.info("loading "..RUNTIME_ENTRY_MODULE)
+local runtime = require(SCRIPTS_ROOT .. "/" .. RUNTIME_ENTRY_MODULE)
+
+
+--------------------------------------------------------------
+-- act like we are the host and simulate the lifecycle pump for the runtime
+
+local rc = runtime.rt_boot(RUNTIME_MODULE)
+if rc ~= ResultCode.OK then return end
+
+-- shutdown the loader, letting the runtime own full rl lifecycle
+rl.loader_deinit()
+
 
 rc = runtime.rt_init(nil)
-if rc ~= RTResult.SUCCESS then return end
+if rc ~= ResultCode.OK then return end
 
 local last_time = now()
 local current_time = last_time
@@ -181,10 +181,9 @@ repeat
     delta_time = current_time - last_time
     last_time = current_time
     rc = runtime.rt_tick(delta_time)
-until rc ~= RTResult.SUCCESS
+until rc ~= ResultCode.OK
 runtime.rt_shutdown()
 
 ---------------------------------------------------------------
-
 
 

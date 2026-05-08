@@ -17,13 +17,14 @@ static const char *ASSET_HOST = "https://localhost:4444";
 #endif
 
 #define LUA_SCRIPT_ROOT "assets/scripts/lua"
-#define LUA_ENTRY_MODULE "main"
+#define LUA_ENTRY_MODULE "runtime_wrapper"
+#define LUA_RUNTIME_MODULE "main"
 #define LUA_PACKAGE_PATH LUA_SCRIPT_ROOT "/?.lua;" LUA_SCRIPT_ROOT "/?/init.lua"
 
 typedef enum rt_result_t {
-  RT_SUCCESS = 0,
-  RT_FAILED = -1,
-  RT_STOPPED = 1,
+  RT_OK = 0,
+  RT_ERROR = -1,
+  RT_QUIT = 1,
 } rt_result_t;
 
 typedef struct runtime_refs_t {
@@ -146,6 +147,21 @@ static void prepend_package_path(lua_State *state, const char *prefix) {
   lua_pop(state, 1);
 }
 
+static void define_result_code(lua_State *state) {
+  if (state == NULL) {
+    return;
+  }
+
+  lua_newtable(state);
+  lua_pushinteger(state, RT_OK);
+  lua_setfield(state, -2, "OK");
+  lua_pushinteger(state, RT_ERROR);
+  lua_setfield(state, -2, "ERROR");
+  lua_pushinteger(state, RT_QUIT);
+  lua_setfield(state, -2, "QUIT");
+  lua_setglobal(state, "ResultCode");
+}
+
 static int require_module(lua_State *state, const char *module_name,
                           char *error, size_t error_size) {
   if (state == NULL || module_name == NULL || error == NULL ||
@@ -166,7 +182,7 @@ static int require_module(lua_State *state, const char *module_name,
   return 0;
 }
 
-static lua_State* create_lua_vm(char *error, size_t error_size) {
+static lua_State *create_lua_vm(char *error, size_t error_size) {
   lua_State *state = NULL;
 
   if (error == NULL || error_size == 0) {
@@ -181,6 +197,7 @@ static lua_State* create_lua_vm(char *error, size_t error_size) {
   }
 
   luaL_openlibs(state);
+  define_result_code(state);
 
   lua_getglobal(state, "package");
   lua_getfield(state, -1, "preload");
@@ -220,93 +237,84 @@ static int cache_runtime_function(lua_State *state, int table_index,
 
 static int load_runtime_module(lua_runtime_t *runtime, char *error,
                                size_t error_size) {
-  int status = RT_FAILED;
   const char *asset_host = NULL;
   lua_State *state = NULL;
 
   if (runtime == NULL || runtime->state == NULL || error == NULL ||
       error_size == 0) {
-    return RT_FAILED;
+    return RT_ERROR;
   }
   state = runtime->state;
-  if (rl_loader_init("cache") != 0) {
-    (void)snprintf(error, error_size, "rl_loader_init failed");
-    return RT_FAILED;
-  }
 
   asset_host = get_asset_host();
   if (asset_host != NULL && asset_host[0] != '\0') {
     if (rl_loader_set_asset_host(asset_host) != 0) {
       (void)snprintf(error, error_size, "rl_loader_set_asset_host failed");
-      goto cleanup;
+      return RT_ERROR;
     }
   }
 
-  // debugging, clear the cache first
-  rl_loader_clear_cache();
-
   if (require_module(state, "rl", error, error_size) != 0) {
-    goto cleanup;
+    return RT_ERROR;
   }
   lua_pop(state, 1);
 
   if (require_module(state, LUA_ENTRY_MODULE, error, error_size) != 0) {
-    goto cleanup;
+    return RT_ERROR;
   }
 
   if (!lua_istable(state, -1)) {
     (void)snprintf(error, error_size, "Lua runtime '%s' did not return a table",
                    LUA_ENTRY_MODULE);
     lua_pop(state, 1);
-    goto cleanup;
+    return RT_ERROR;
   }
 
-  if (cache_runtime_function(state, -1, "rt_boot", &runtime->refs.boot_ref, error,
-                             error_size) != 0 ||
-      cache_runtime_function(state, -1, "rt_init", &runtime->refs.init_ref, error,
-                             error_size) != 0 ||
-      cache_runtime_function(state, -1, "rt_tick", &runtime->refs.tick_ref, error,
-                             error_size) != 0 ||
-      cache_runtime_function(state, -1, "rt_shutdown", &runtime->refs.shutdown_ref,
-                             error, error_size) != 0) {
+  if (cache_runtime_function(state, -1, "rt_boot", &runtime->refs.boot_ref,
+                             error, error_size) != 0 ||
+      cache_runtime_function(state, -1, "rt_init", &runtime->refs.init_ref,
+                             error, error_size) != 0 ||
+      cache_runtime_function(state, -1, "rt_tick", &runtime->refs.tick_ref,
+                             error, error_size) != 0 ||
+      cache_runtime_function(state, -1, "rt_shutdown",
+                             &runtime->refs.shutdown_ref, error,
+                             error_size) != 0) {
     clear_runtime_refs(state, &runtime->refs);
     lua_pop(state, 1);
-    goto cleanup;
+    return RT_ERROR;
   }
 
   lua_pop(state, 1);
-  status = RT_SUCCESS;
-
-cleanup:
-  rl_loader_deinit();
-  return status;
+  return RT_OK;
 }
 
-static int parse_runtime_result(lua_runtime_t *runtime, const char *callback_name,
-                                int arg_count) {
-  int rc = RT_SUCCESS;
+static int parse_runtime_result(lua_runtime_t *runtime,
+                                const char *callback_name, int arg_count) {
+  int rc = RT_OK;
   const char *message = NULL;
   lua_State *state = NULL;
 
   if (runtime == NULL || runtime->state == NULL) {
-    return RT_FAILED;
+    return RT_ERROR;
   }
   state = runtime->state;
 
   if (lua_pcall(state, arg_count, 1, 0) != 0) {
     message = lua_tostring(state, -1);
     set_runtime_error(runtime, "%s failed: %.220s",
-                      callback_name != NULL ? callback_name : "runtime callback",
+                      callback_name != NULL ? callback_name
+                                            : "runtime callback",
                       message != NULL ? message : "unknown Lua error");
     lua_pop(state, 1);
-    return RT_FAILED;
+    return RT_ERROR;
   }
 
   if (!lua_isnumber(state, -1)) {
     set_runtime_error(runtime, "%s must return an integer result code",
-                      callback_name != NULL ? callback_name : "runtime callback");
+                      callback_name != NULL ? callback_name
+                                            : "runtime callback");
     lua_pop(state, 1);
-    return RT_FAILED;
+    return RT_ERROR;
   }
 
   rc = (int)lua_tointeger(state, -1);
@@ -335,7 +343,7 @@ static void call_runtime_shutdown(lua_runtime_t *runtime) {
 
 int rt_boot(void) {
   char error[256];
-  int rc = RT_SUCCESS;
+  int rc = RT_OK;
   lua_runtime_t *runtime = &g_runtime_host;
   lua_State *state = NULL;
 
@@ -343,38 +351,57 @@ int rt_boot(void) {
   rl_logger_set_level(RL_LOGGER_LEVEL_DEBUG);
 
   state = create_lua_vm(error, sizeof(error));
-  if (state == NULL)  {
+  if (state == NULL) {
     rl_logger_message_source(RL_LOGGER_LEVEL_ERROR, "lua", 0, "%s", error);
     free_runtime(runtime);
-    return RT_FAILED;
+    return RT_ERROR;
   }
   runtime->state = state;
 
-  if (load_runtime_module(runtime, error, sizeof(error)) != 0) {
+  // initialize the loader so we can cache and require() files
+  if (rl_loader_init("cache") != 0) {
+    (void)snprintf(error, sizeof(error), "rl_loader_init failed");
     rl_logger_message_source(RL_LOGGER_LEVEL_ERROR, "lua", 0, "%s", error);
     free_runtime(runtime);
-    return RT_FAILED;
+    return RT_ERROR;
   }
 
+  // debugging, clear the cache first
+  rl_loader_clear_cache();
+
+  // load the lua runtime module
+  if (load_runtime_module(runtime, error, sizeof(error)) != 0) {
+    rl_logger_message_source(RL_LOGGER_LEVEL_ERROR, "lua", 0, "%s", error);
+    rl_loader_deinit();
+    free_runtime(runtime);
+    return RT_ERROR;
+  }
+
+  // call boot on the module
   lua_rawgeti(state, LUA_REGISTRYINDEX, runtime->refs.boot_ref);
-  rc = parse_runtime_result(runtime, "rt_boot", 0);
-  if (rc < RT_SUCCESS) {
+  lua_pushstring(state, LUA_RUNTIME_MODULE);
+  rc = parse_runtime_result(runtime, "rt_boot", 1);
+  if (rc < RT_OK) {
     rl_logger_message_source(RL_LOGGER_LEVEL_ERROR, "lua", 0, "%s",
                              runtime->error);
+    rl_loader_deinit();
     free_runtime(runtime);
     return rc;
   }
 
+  // module booted, we can shut down our loader, allowing the real runtime to
+  // init cleanly
+  rl_loader_deinit();
   return rc;
 }
 
 int rt_init(void *user_data) {
-  int rc = RT_SUCCESS;
+  int rc = RT_OK;
   lua_runtime_t *runtime = &g_runtime_host;
   lua_State *state = runtime->state;
 
   if (state == NULL) {
-    return RT_FAILED;
+    return RT_ERROR;
   }
 
   lua_rawgeti(state, LUA_REGISTRYINDEX, runtime->refs.init_ref);
@@ -384,7 +411,7 @@ int rt_init(void *user_data) {
     lua_pushnil(state);
   }
   rc = parse_runtime_result(runtime, "rt_init", 1);
-  if (rc < RT_SUCCESS) {
+  if (rc < RT_OK) {
     rl_logger_message_source(RL_LOGGER_LEVEL_ERROR, "lua", 0, "%s",
                              runtime->error);
   }
@@ -396,7 +423,7 @@ int rt_tick(float host_dt) {
   lua_State *state = runtime->state;
 
   if (state == NULL) {
-    return RT_FAILED;
+    return RT_ERROR;
   }
 
   lua_rawgeti(state, LUA_REGISTRYINDEX, runtime->refs.tick_ref);
@@ -429,15 +456,15 @@ static double now_seconds(void) {
 }
 
 int main(void) {
-  int rc = RT_SUCCESS;
+  int rc = RT_OK;
 
   if (rt_boot() != 0) {
-    return RT_FAILED;
+    return RT_ERROR;
   }
 
   if (rt_init(NULL) != 0) {
     rt_shutdown();
-    return RT_FAILED;
+    return RT_ERROR;
   }
 
   double last_time = now_seconds();
@@ -450,14 +477,14 @@ int main(void) {
     last_time = current_time;
 
     rc = rt_tick(dt_seconds);
-    if (rc > RT_SUCCESS) {
+    if (rc > RT_OK) {
       fprintf(stderr, "[host] rt_tick requested stop (>0), exiting loop\n");
       // stop set, exit
       fprintf(stderr, "[host] calling rt_shutdown...\n");
       rt_shutdown();
       return rc;
     }
-    if (rc < RT_SUCCESS) {
+    if (rc < RT_OK) {
       fprintf(stderr, "[host] rt_tick failed: %d\n", rc);
       fprintf(stderr, "[host] calling rt_shutdown...\n");
       rt_shutdown();

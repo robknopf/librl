@@ -1,4 +1,5 @@
 import { runExample } from "./example_runner.js";
+import { startRuntime } from "./runtime_host.js";
 
 function buildRemoteEnv({ moduleDir, createDefaultEnv }) {
   const env = createDefaultEnv(moduleDir);
@@ -22,4 +23,7 @@ function buildRemoteEnv({ moduleDir, createDefaultEnv }) {
   return env;
 }
 
-runExample("Remote", "examples/remote/out/main.js", { buildEnv: buildRemoteEnv });
+runExample("Remote", "examples/remote/out/main.js", {
+  buildEnv: buildRemoteEnv,
+  onModuleReady: (mod) => startRuntime(mod, "remote"),
+});

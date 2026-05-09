@@ -23,6 +23,12 @@ static const char *FONT_PATH =
 static const char *BGM_PATH = "assets/music/ethernight_club.mp3";
 static const char *MESSAGE = "Hello World!";
 
+typedef enum result_code_t {
+  RESULT_OK = 0,
+  RESULT_ERROR = -1,
+  RESULT_QUIT = 1,
+} result_code_t;
+
 typedef struct app_context_t {
   rl_handle_t komika;
   rl_handle_t komika_small;
@@ -34,7 +40,14 @@ typedef struct app_context_t {
   float countdown_timer;
   float total_time;
   double last_time;
+  rl_loader_task_t *startup_tasks[3];
+  size_t startup_task_count;
+  size_t startup_tasks_remaining;
+  bool startup_tasks_failed;
+  bool startup_resources_created;
 } app_context_t;
+
+static app_context_t g_app_context = {0};
 
 static void rl_loader_import_asset_failed_cb_default(const char *path,
                                                      void *user_data) {
@@ -44,38 +57,61 @@ static void rl_loader_import_asset_failed_cb_default(const char *path,
                            path != NULL ? path : "(null)");
 }
 
-static int finish_import_tasks(rl_loader_task_t **tasks, size_t task_count) {
-  size_t remaining = 0;
+static void create_startup_resources(app_context_t *ctx) {
+  if (ctx == NULL || ctx->startup_resources_created) {
+    return;
+  }
+
+  ctx->grey_alpha_color = rl_color_create(0, 0, 0, 128);
+  ctx->komika = rl_font_create(FONT_PATH, 24);
+  ctx->komika_small = rl_font_create(FONT_PATH, 16);
+  ctx->gumshoe = rl_model_create(MODEL_PATH);
+  ctx->sprite = rl_sprite3d_create(SPRITE_PATH);
+  rl_model_set_animation(ctx->gumshoe, 1);
+  rl_model_set_animation_speed(ctx->gumshoe, 1.0f);
+  rl_model_set_animation_loop(ctx->gumshoe, true);
+  ctx->last_time = rl_get_time();
+  ctx->countdown_timer = 5.0f;
+  ctx->startup_resources_created = true;
+}
+
+static int process_startup_tasks(app_context_t *ctx) {
   size_t i = 0;
-  int failures = 0;
 
-  for (i = 0; i < task_count; i++) {
-    if (tasks[i] != NULL) {
-      remaining++;
+  if (ctx == NULL) {
+    return -1;
+  }
+  if (ctx->startup_tasks_failed) {
+    return -1;
+  }
+  if (ctx->startup_tasks_remaining == 0) {
+    create_startup_resources(ctx);
+    return 0;
+  }
+
+  for (i = 0; i < ctx->startup_task_count; i++) {
+    int rc = 0;
+    const char *path = NULL;
+    if (ctx->startup_tasks[i] == NULL ||
+        !rl_loader_poll_task(ctx->startup_tasks[i])) {
+      continue;
+    }
+    path = rl_loader_get_task_path(ctx->startup_tasks[i]);
+    rc = rl_loader_finish_task(ctx->startup_tasks[i]);
+    rl_loader_free_task(ctx->startup_tasks[i]);
+    ctx->startup_tasks[i] = NULL;
+    ctx->startup_tasks_remaining--;
+    if (rc != 0) {
+      ctx->startup_tasks_failed = true;
+      rl_loader_import_asset_failed_cb_default(path, NULL);
+      return -1;
     }
   }
 
-  while (remaining > 0) {
-    rl_loader_tick();
-    for (i = 0; i < task_count; i++) {
-      int rc = 0;
-      const char *path = NULL;
-      if (tasks[i] == NULL || !rl_loader_poll_task(tasks[i])) {
-        continue;
-      }
-      path = rl_loader_get_task_path(tasks[i]);
-      rc = rl_loader_finish_task(tasks[i]);
-      rl_loader_free_task(tasks[i]);
-      tasks[i] = NULL;
-      remaining--;
-      if (rc != 0) {
-        failures++;
-        rl_loader_import_asset_failed_cb_default(path, NULL);
-      }
-    }
+  if (ctx->startup_tasks_remaining == 0) {
+    create_startup_resources(ctx);
   }
-
-  return failures == 0 ? 0 : -1;
+  return 0;
 }
 
 static void on_bgm_ready(const char *path, void *user_data) {
@@ -94,8 +130,25 @@ static void play_bgm(const char *path, void *user_data) {
   rl_loader_add_task(bgm_asset_task, on_bgm_ready, NULL, user_data);
 }
 
-static void on_init(void *user_data) {
-  app_context_t *ctx = (app_context_t *)user_data;
+int rt_boot(void) {
+  memset(&g_app_context, 0, sizeof(g_app_context));
+  return RESULT_OK;
+}
+
+int rt_init(void *user_data) {
+  (void)user_data;
+  app_context_t *ctx = &g_app_context;
+  rl_init_config_t init_cfg;
+
+  memset(&init_cfg, 0, sizeof(init_cfg));
+  init_cfg.window_width = 1024;
+  init_cfg.window_height = 1280;
+  init_cfg.window_title = "Hello, World! (C simple)";
+  init_cfg.window_flags = RL_WINDOW_FLAG_MSAA_4X_HINT;
+  init_cfg.asset_host = ASSET_HOST;
+  if (rl_init(&init_cfg) != 0) {
+    return RESULT_ERROR;
+  }
 
   rl_set_target_fps(60);
 
@@ -120,52 +173,66 @@ static void on_init(void *user_data) {
   play_bgm(BGM_PATH, ctx);
 
   // fetch the assets we'll need
-  rl_loader_task_t *asset_import_tasks[] = {
-      rl_loader_create_import_task(FONT_PATH),
-      rl_loader_create_import_task(MODEL_PATH),
-      rl_loader_create_import_task(SPRITE_PATH)};
-      
-  const size_t asset_import_tasks_count =
-      sizeof(asset_import_tasks) / sizeof(asset_import_tasks[0]);
-
-  // wait until they all have been fetched/loaded
-  if (finish_import_tasks(asset_import_tasks, asset_import_tasks_count) != 0) {
-    rl_logger_message_source(RL_LOGGER_LEVEL_ERROR, "example", 0,
-                             "Failed to import required startup assets");
-    rl_stop();
-    return;
+  ctx->startup_tasks[0] = rl_loader_create_import_task(FONT_PATH);
+  ctx->startup_tasks[1] = rl_loader_create_import_task(MODEL_PATH);
+  ctx->startup_tasks[2] = rl_loader_create_import_task(SPRITE_PATH);
+  ctx->startup_task_count =
+      sizeof(ctx->startup_tasks) / sizeof(ctx->startup_tasks[0]);
+  ctx->startup_tasks_remaining = ctx->startup_task_count;
+  for (size_t i = 0; i < ctx->startup_task_count; i++) {
+    if (ctx->startup_tasks[i] == NULL) {
+      ctx->startup_tasks_failed = true;
+      return RESULT_ERROR;
+    }
   }
-
-  ctx->grey_alpha_color = rl_color_create(0, 0, 0, 128);
-  ctx->komika = rl_font_create(FONT_PATH, 24);
-  ctx->komika_small = rl_font_create(FONT_PATH, 16);
-  ctx->gumshoe = rl_model_create(MODEL_PATH);
-  ctx->sprite = rl_sprite3d_create(SPRITE_PATH);
-  rl_model_set_animation(ctx->gumshoe, 1);
-  rl_model_set_animation_speed(ctx->gumshoe, 1.0f);
-  rl_model_set_animation_loop(ctx->gumshoe, true);
+  ctx->startup_tasks_failed = false;
+  ctx->startup_resources_created = false;
   ctx->last_time = rl_get_time();
   ctx->countdown_timer = 5.0f;
+  return RESULT_OK;
 }
 
-static void on_tick(void *user_data) {
-  app_context_t *ctx = (app_context_t *)user_data;
+int rt_tick(float host_dt) {
+  app_context_t *ctx = &g_app_context;
+  rl_tick_result_t tick_rc = rl_tick();
+  float delta_time = host_dt;
+
+  if (tick_rc == RL_TICK_FAILED) {
+    return RESULT_ERROR;
+  }
+  if (tick_rc == RL_TICK_WAITING) {
+    return RESULT_OK;
+  }
+  if (rl_window_close_requested()) {
+    return RESULT_QUIT;
+  }
+  if (process_startup_tasks(ctx) != 0) {
+    rl_logger_message_source(RL_LOGGER_LEVEL_ERROR, "example", 0,
+                             "Failed to import required startup assets");
+    return RESULT_ERROR;
+  }
+  if (!ctx->startup_resources_created) {
+    return RESULT_OK;
+  }
 
   /*
   if (ctx->komika == 0 || ctx->komika_small == 0 || ctx->gumshoe == 0 ||
        ctx->sprite == 0 || ctx->camera == 0 || ctx->grey_alpha_color == 0) {
-     return;
+     return RESULT_OK;
    }
  */
 
-  double current_time = rl_get_time();
-  float delta_time = (float)(current_time - ctx->last_time);
+  if (delta_time <= 0.0f) {
+    double current_time = rl_get_time();
+    delta_time = (float)(current_time - ctx->last_time);
+    ctx->last_time = current_time;
+  } else {
+    ctx->last_time = rl_get_time();
+  }
   ctx->total_time += delta_time;
-  ctx->last_time = current_time;
   ctx->countdown_timer -= delta_time;
   if (ctx->countdown_timer <= 0.0f) {
-    rl_stop();
-    return;
+    return RESULT_QUIT;
   }
 
   rl_music_update_all();
@@ -211,10 +278,17 @@ static void on_tick(void *user_data) {
   rl_text_draw_fps_ex(ctx->komika_small, 10, 10, 16.0f, ctx->grey_alpha_color);
 
   rl_render_end();
+  return RESULT_OK;
 }
 
-static void on_shutdown(void *user_data) {
-  app_context_t *ctx = (app_context_t *)user_data;
+void rt_shutdown(void) {
+  app_context_t *ctx = &g_app_context;
+  for (size_t i = 0; i < ctx->startup_task_count; i++) {
+    if (ctx->startup_tasks[i] != NULL) {
+      rl_loader_free_task(ctx->startup_tasks[i]);
+      ctx->startup_tasks[i] = NULL;
+    }
+  }
 
   if (ctx->bgm != 0)
     rl_music_destroy(ctx->bgm);
@@ -233,24 +307,47 @@ static void on_shutdown(void *user_data) {
     rl_camera3d_destroy(ctx->camera);
 
   rl_deinit();
+  memset(ctx, 0, sizeof(*ctx));
+}
+
+#ifdef PLATFORM_WEB
+int main(void) {
+  return 0;
+}
+#else
+#include <time.h>
+#include <unistd.h>
+
+static double now_seconds(void) {
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  return (double)ts.tv_sec + ((double)ts.tv_nsec / 1000000000.0);
 }
 
 int main(void) {
-  app_context_t ctx = {0};
+  int rc = RESULT_OK;
+  double last_time = 0.0;
 
-  {
-    rl_init_config_t init_cfg;
-    memset(&init_cfg, 0, sizeof(init_cfg));
-    init_cfg.window_width = 1024;
-    init_cfg.window_height = 1280;
-    init_cfg.window_title = "Hello, World! (C simple)";
-    init_cfg.window_flags = RL_WINDOW_FLAG_MSAA_4X_HINT;
-    init_cfg.asset_host = ASSET_HOST;
-    if (rl_init(&init_cfg) != 0) {
-      return 1;
-    }
+  if (rt_boot() != RESULT_OK) {
+    return RESULT_ERROR;
   }
-  rl_run(on_init, on_tick, on_shutdown, &ctx);
+  if (rt_init(NULL) != RESULT_OK) {
+    rt_shutdown();
+    return RESULT_ERROR;
+  }
 
-  return 0;
+  last_time = now_seconds();
+  for (;;) {
+    double current_time = now_seconds();
+    float dt_seconds = (float)(current_time - last_time);
+    last_time = current_time;
+
+    rc = rt_tick(dt_seconds);
+    if (rc != RESULT_OK) {
+      rt_shutdown();
+      return rc;
+    }
+    usleep(1000);
+  }
 }
+#endif

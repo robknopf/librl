@@ -19,9 +19,11 @@ WASM_COMMON_LDFLAGS ?= \
 	-s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' \
 	-s ALLOW_MEMORY_GROWTH=1 \
 	-s STACK_SIZE=262144 \
-	-s STACK_OVERFLOW_CHECK=0
+	-s STACK_OVERFLOW_CHECK=0 \
+	-s EXPORTED_FUNCTIONS='["_main","_rt_boot","_rt_init","_rt_tick","_rt_shutdown"]'
 CFLAGS_WASM ?= $(WASM_PLATFORM_CFLAGS)
-LDFLAGS_WASM ?= $(WASM_COMMON_LDFLAGS)
+WASM_SYNC_LDFLAGS ?= -s JSPI=1 -s JSPI_EXPORTS='["rt_init","rt_tick"]' -fwasm-exceptions
+LDFLAGS_WASM ?= $(WASM_COMMON_LDFLAGS) $(WASM_SYNC_LDFLAGS)
 
 OUT_DIR := out
 BIN := $(OUT_DIR)/main

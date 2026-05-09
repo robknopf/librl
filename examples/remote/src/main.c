@@ -19,6 +19,12 @@ static const char *ASSET_HOST = "./";
 static const char *ASSET_HOST = "https://localhost:4444";
 #endif
 
+typedef enum result_code_t {
+  RESULT_OK = 0,
+  RESULT_ERROR = -1,
+  RESULT_QUIT = 1,
+} result_code_t;
+
 typedef struct remote_context_t {
   rl_ws_client_t *ws_client;
   rl_ws_frame_data_t current_frame;
@@ -72,13 +78,26 @@ static void on_overlay_font_ready(const char *path, void *user_data) {
   ctx->overlay_font = rl_font_create(path, ctx->overlay_font_size);
 }
 
-static void on_init(void *user_data) {
-  remote_context_t *context = (remote_context_t *)user_data;
+int rt_boot(void) {
+  memset(&g_remote_context, 0, sizeof(g_remote_context));
+  return RESULT_OK;
+}
+
+int rt_init(void *user_data) {
+  (void)user_data;
+  remote_context_t *context = &g_remote_context;
   const char *ws_url = get_remote_ws_url();
   rl_loader_queue_task_result_t loader_rc = RL_LOADER_QUEUE_TASK_OK;
+  rl_init_config_t init_cfg;
 
-  if (context == NULL) {
-    return;
+  memset(&init_cfg, 0, sizeof(init_cfg));
+  init_cfg.window_width = 1024;
+  init_cfg.window_height = 1280;
+  init_cfg.window_title = "librl Remote Client";
+  init_cfg.window_flags = RL_WINDOW_FLAG_MSAA_4X_HINT;
+  init_cfg.asset_host = ASSET_HOST;
+  if (rl_init(&init_cfg) != 0) {
+    return RESULT_ERROR;
   }
 
   rl_set_target_fps(60);
@@ -98,8 +117,7 @@ static void on_init(void *user_data) {
   context->ws_client = rl_ws_client_create(ws_url);
   if (context->ws_client == NULL) {
     log_error("[Remote] Failed to create websocket client");
-    rl_stop();
-    return;
+    return RESULT_ERROR;
   }
 
   context->has_frame = false;
@@ -114,14 +132,12 @@ static void on_init(void *user_data) {
   if (loader_rc != RL_LOADER_QUEUE_TASK_OK) {
     log_error("[Remote] Failed to queue overlay font load (%d)", loader_rc);
   }
+
+  return RESULT_OK;
 }
 
-static void on_shutdown(void *user_data) {
-  remote_context_t *context = (remote_context_t *)user_data;
-
-  if (context == NULL) {
-    return;
-  }
+void rt_shutdown(void) {
+  remote_context_t *context = &g_remote_context;
 
   log_info("[Remote] Shutting down...");
   log_debug("[Remote] Frames received: %d, rendered: %d",
@@ -138,6 +154,7 @@ static void on_shutdown(void *user_data) {
   }
 
   rl_deinit();
+  memset(context, 0, sizeof(*context));
 }
 
 static void draw_status_overlay(remote_context_t *context,
@@ -171,8 +188,9 @@ static void draw_status_overlay(remote_context_t *context,
   }
 }
 
-static void on_tick(void *user_data) {
-  remote_context_t *context = (remote_context_t *)user_data;
+int rt_tick(float host_dt) {
+  (void)host_dt;
+  remote_context_t *context = &g_remote_context;
   static rl_resource_response_t responses[RL_WS_MAX_PENDING_RESPONSES];
   static rl_pick_response_t pick_responses[RL_PROTOCOL_MAX_PICK_RESPONSES];
   int response_count = 0;
@@ -181,13 +199,20 @@ static void on_tick(void *user_data) {
   rl_mouse_state_t mouse_state = {0};
   rl_keyboard_state_t keyboard_state = {0};
   vec2_t screen_size = {0};
+  rl_tick_result_t tick_rc = rl_tick();
 
-  if (context == NULL) {
-    return;
+  if (tick_rc == RL_TICK_FAILED) {
+    return RESULT_ERROR;
+  }
+  if (tick_rc == RL_TICK_WAITING) {
+    return RESULT_OK;
+  }
+  if (rl_window_close_requested()) {
+    return RESULT_QUIT;
   }
 
   if (context->ws_client == NULL) {
-    return;
+    return RESULT_ERROR;
   }
 
   rl_ws_client_tick(context->ws_client);
@@ -269,19 +294,47 @@ static void on_tick(void *user_data) {
 
   rl_render_end();
   context->frames_rendered++;
+  return RESULT_OK;
+}
+
+#ifdef PLATFORM_WEB
+int main(void) {
+  return 0;
+}
+#else
+#include <time.h>
+#include <unistd.h>
+
+static double now_seconds(void) {
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  return (double)ts.tv_sec + ((double)ts.tv_nsec / 1000000000.0);
 }
 
 int main(void) {
-  rl_init_config_t init_cfg;
-  memset(&init_cfg, 0, sizeof(init_cfg));
-  init_cfg.window_width = 1024;
-  init_cfg.window_height = 1280;
-  init_cfg.window_title = "librl Remote Client";
-  init_cfg.window_flags = RL_WINDOW_FLAG_MSAA_4X_HINT;
-  init_cfg.asset_host = ASSET_HOST;
-  if (rl_init(&init_cfg) != 0) {
-    return 1;
+  int rc = RESULT_OK;
+  double last_time = 0.0;
+
+  if (rt_boot() != RESULT_OK) {
+    return RESULT_ERROR;
   }
-  rl_run(on_init, on_tick, on_shutdown, &g_remote_context);
-  return 0;
+  if (rt_init(NULL) != RESULT_OK) {
+    rt_shutdown();
+    return RESULT_ERROR;
+  }
+
+  last_time = now_seconds();
+  for (;;) {
+    double current_time = now_seconds();
+    float dt_seconds = (float)(current_time - last_time);
+    last_time = current_time;
+
+    rc = rt_tick(dt_seconds);
+    if (rc != RESULT_OK) {
+      rt_shutdown();
+      return rc;
+    }
+    usleep(1000);
+  }
 }
+#endif

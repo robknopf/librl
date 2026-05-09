@@ -10,8 +10,8 @@ The C host in [main.c](/home/rknopf/projects/whirlinggizmo/experiments/raylib/li
 - it creates a Lua VM
 - it preloads the `rl` Lua bindings from `bindings/lua/*.c`
 - it prepends the example script path to `package.path`
-- it requires the shared runtime module `main`
-- it caches and drives the returned `rt_boot`, `rt_init`, `rt_tick`, and `rt_shutdown` functions
+- it requires the shared `runtime_wrapper` module
+- it caches and drives the wrapper's `rt_boot`, `rt_init`, `rt_tick`, and `rt_shutdown` functions
 
 That means the Lua runtime owns all `rl` behavior:
 
@@ -27,7 +27,7 @@ The outer C host is just the native/wasm equivalent of `examples/lua/boot.lua`.
 
 The callback chain is now direct:
 
-1. `rt_boot()` creates the Lua VM, requires `main`, and calls Lua `rt_boot()`.
+1. `rt_boot()` creates the Lua VM, requires `runtime_wrapper`, and boots `main`.
 2. `rt_init()` forwards to Lua `rt_init(host_context)`.
 3. `rt_tick(dt)` forwards to Lua `rt_tick(dt)`.
 4. `rt_shutdown()` forwards to Lua `rt_shutdown()` and then closes the VM.

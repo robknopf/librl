@@ -10,6 +10,9 @@ else:
   const assetHost = "https://localhost:4444"
 
 const
+  ResultOk = 0.cint
+  ResultError = (-1).cint
+  ResultQuit = 1.cint
   fontSize = 24
   smallFontSize = 16
   modelPath = "assets/models/gumshoe/gumshoe.glb"
@@ -31,10 +34,22 @@ type
     totalTime: float
     lastTime: float
     loadingGroup: RLTaskGroup[AppContext]
+    resultCode: cint
 
-proc onInit(userData: pointer) {.cdecl.} =
-  var ctx = cast[ptr AppContext](userData)
+var gCtx: AppContext
 
+proc onInit(ctx: ptr AppContext): cint =
+  var initCfg: RLInitConfig
+  zeroMem(addr initCfg, sizeof(initCfg).csize_t)
+  initCfg.window_width = 1024
+  initCfg.window_height = 1280
+  initCfg.window_title = "Hello, World! (Nim)"
+  initCfg.window_flags = RL_FLAG_MSAA_4X_HINT.cuint
+  initCfg.asset_host = assetHost
+  if rl_init(initCfg) != 0:
+    return ResultError
+
+  # move the window over to the other monitor (desktop debugging)
   let monitorOverride = getEnv("RL_MONITOR", "")
   if monitorOverride.len > 0:
     try:
@@ -42,6 +57,7 @@ proc onInit(userData: pointer) {.cdecl.} =
     except ValueError:
       log.warn("Ignoring invalid RL_MONITOR value: " & monitorOverride)
   rl_window_set_monitor(1)
+
   rl_set_target_fps(60.cint)
   ctx.greyAlphaColor = rl_color_create(0, 0, 0, 128)
   rl_enable_lighting()
@@ -56,6 +72,7 @@ proc onInit(userData: pointer) {.cdecl.} =
   discard rl_camera3d_set_active(ctx.camera)
   ctx.lastTime = rl_get_time().float
   ctx.countdownTimer = 5.0
+  ctx.resultCode = ResultOk
 
   ctx.loadingGroup = loaderCreateTaskGroup(
     ctx,
@@ -64,7 +81,7 @@ proc onInit(userData: pointer) {.cdecl.} =
     onError = proc(group: RLTaskGroup[AppContext], loadedCtx: var AppContext) =
       log.error("asset import failed: " & group.failedPaths().join(", "))
       loadedCtx.loadingGroup = nil
-      rl_stop()
+      loadedCtx.resultCode = ResultError
   )
   ctx.loadingGroup.addImportTask(modelPath, onSuccess = proc(path: string, loadedCtx: var AppContext) =
     loadedCtx.gumshoe = rl_model_create(path.cstring)
@@ -85,33 +102,43 @@ proc onInit(userData: pointer) {.cdecl.} =
     discard rl_music_play(loadedCtx.bgm)
   )
 
+  return ResultOk
 
-proc onTick(userData: pointer) {.cdecl.} =
-  var ctx = cast[ptr AppContext](userData)
+proc onTick(ctx: ptr AppContext, hostDt: float): cint =
+  if ctx.resultCode != ResultOk:
+    return ctx.resultCode
 
   if not ctx.loadingGroup.isNil and ctx.loadingGroup.process() > 0:
-    return
+    return ResultOk
 
-  let currentTime = rl_get_time().float
-  let deltaTime = currentTime - ctx.lastTime
+  var deltaTime = hostDt
+  if deltaTime <= 0:
+    let currentTime = rl_get_time().float
+    deltaTime = currentTime - ctx.lastTime
+    ctx.lastTime = currentTime
+  else:
+    ctx.lastTime = rl_get_time().float
   ctx.totalTime += deltaTime
-  ctx.lastTime = currentTime
   ctx.countdownTimer -= deltaTime
   if ctx.countdownTimer <= 0:
-    rl_stop()
-    return
+    return ResultQuit
 
   rl_music_update_all()
 
   rl_render_begin()
   rl_render_clear_background(RL_COLOR_RAYWHITE)
   rl_render_begin_mode_3d()
-  discard rl_model_animate(ctx.gumshoe, deltaTime.cfloat)
-  discard rl_model_set_transform(ctx.gumshoe, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0,
-      1.0, 1.0)
-  rl_model_draw(ctx.gumshoe, RL_COLOR_RAYWHITE)
-  discard rl_sprite3d_set_transform(ctx.sprite, 0.0, 0.0, 0.0, 1.0)
-  rl_sprite3d_draw(ctx.sprite, RL_COLOR_RAYWHITE)
+
+  if ctx.gumshoe != 0:
+    discard rl_model_animate(ctx.gumshoe, deltaTime.cfloat)
+    discard rl_model_set_transform(ctx.gumshoe, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+        1.0, 1.0)
+    rl_model_draw(ctx.gumshoe, RL_COLOR_RAYWHITE)
+
+  if ctx.sprite != 0:
+    discard rl_sprite3d_set_transform(ctx.sprite, 0.0, 0.0, 0.0, 1.0)
+    rl_sprite3d_draw(ctx.sprite, RL_COLOR_RAYWHITE)
+
   rl_render_end_mode_3d()
 
   let screen = rl_window_get_screen_size()
@@ -136,9 +163,9 @@ proc onTick(userData: pointer) {.cdecl.} =
   rl_text_draw_fps_ex(ctx.komikaSmall, 10.cint, 10.cint, smallFontSize.cfloat,
       ctx.greyAlphaColor)
   rl_render_end()
+  return ResultOk
 
-proc onShutdown(userData: pointer) {.cdecl.} =
-  var ctx = cast[ptr AppContext](userData)
+proc onShutdown(ctx: ptr AppContext) =
   rl_disable_lighting()
   if ctx.sprite != 0: rl_sprite3d_destroy(ctx.sprite)
   if ctx.gumshoe != 0: rl_model_destroy(ctx.gumshoe)
@@ -147,16 +174,45 @@ proc onShutdown(userData: pointer) {.cdecl.} =
   if ctx.greyAlphaColor != 0: rl_color_destroy(ctx.greyAlphaColor)
   if ctx.camera != 0: rl_camera3d_destroy(ctx.camera)
   rl_deinit()
+  zeroMem(ctx, sizeof(AppContext).csize_t)
 
-when isMainModule:
-  var ctx = AppContext()
-  var initCfg: RLInitConfig
-  zeroMem(addr initCfg, sizeof(initCfg).csize_t)
-  initCfg.window_width = 1024
-  initCfg.window_height = 1280
-  initCfg.window_title = "Hello, World! (Nim)"
-  initCfg.window_flags = RL_FLAG_MSAA_4X_HINT.cuint
-  initCfg.asset_host = assetHost
-  if rl_init(initCfg) != 0:
+proc rt_boot*(): cint {.cdecl, exportc: "rt_boot", dynlib.} =
+  zeroMem(addr gCtx, sizeof(gCtx).csize_t)
+  return ResultOk
+
+proc rt_init*(userData: pointer): cint {.cdecl, exportc: "rt_init", dynlib.} =
+  discard userData
+  return onInit(addr gCtx)
+
+proc rt_tick*(hostDt: cfloat): cint {.cdecl, exportc: "rt_tick", dynlib.} =
+  let tickRc = rl_tick()
+  if tickRc == RL_TICK_FAILED:
+    return ResultError
+  if tickRc == RL_TICK_WAITING:
+    return ResultOk
+  if rl_window_close_requested():
+    return ResultQuit
+  return onTick(addr gCtx, hostDt.float)
+
+proc rt_shutdown*() {.cdecl, exportc: "rt_shutdown", dynlib.} =
+  onShutdown(addr gCtx)
+
+when isMainModule and not defined(emscripten):
+  import std/times
+  if rt_boot() != ResultOk:
     quit(1)
-  rl_run(onInit, onTick, onShutdown, addr ctx)
+  if rt_init(nil) != ResultOk:
+    rt_shutdown()
+    quit(1)
+
+  var lastTime = epochTime()
+  while true:
+    let currentTime = epochTime()
+    let deltaTime = currentTime - lastTime
+    lastTime = currentTime
+
+    let rc = rt_tick(deltaTime.cfloat)
+    if rc != ResultOk:
+      rt_shutdown()
+      quit(rc)
+    sleep(1)

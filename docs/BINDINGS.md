@@ -169,8 +169,8 @@ Files:
 
 - `bindings/haxe/rl/RL.hx`
 - `bindings/haxe/rl/RLTaskGroup.hx`
-- `examples/haxe/src/InjectLibRL.hx`
-- `examples/haxe/src/Main.hx`
+- `bindings/haxe/rl/InjectLibRL.hx`
+- `examples/haxe-simple/src/Main.hx`
 
 Role:
 
@@ -178,11 +178,11 @@ Role:
 - Uses `@:cppInclude`, `@:buildXml`, and `@:functionCode` to:
   - Include `rl.h` / `rl_loader.h`.
   - Inject link flags (`librl.a` / `librl.wasm.a`).
-  - Bridge static Haxe methods to C callbacks for `rl_run` and `rl_loader_add_task`.
+  - Bridge Haxe loader callbacks to `rl_loader_add_task`.
 
 Used by:
 
-- `examples/haxe/src/Main.hx`
+- `examples/haxe-simple/src/Main.hx`
 
 Notes:
 
@@ -194,9 +194,15 @@ Notes:
   - `RL.getPlatform()` wraps `rl_get_platform()`.
   - `RL.windowCloseRequested()` wraps `rl_window_close_requested()`.
 - WASM builds use hxcpp's emscripten toolchain with `MODULARIZE=1` and `EXPORT_ES6=1`:
-  - `examples/haxe/build.wasm.hxml`
-  - `examples/haxe/build.hxml` dispatches between the desktop and wasm build configs.
+  - `examples/haxe-simple/build.wasm.hxml`
+  - `examples/haxe-simple/build.hxml` dispatches between the desktop and wasm build configs.
   - `InjectLibRL.hx` adds the emcc linker flags and links against `librl.wasm.a`.
+- Example-specific wasm exports live in example-local `@:buildXml` classes:
+  - `examples/haxe-simple/src/ExampleWasmExports.hx`
+  - `examples/haxe-runtime/src/RuntimeWasmExports.hx`
+  - Keep app/runtime export lists out of `bindings/haxe/rl/InjectLibRL.hx`; it should stay focused on librl link/config flags.
+- `examples/haxe-simple` is the canonical direct-librl example. It is not a host/runtime ABI example.
+- `examples/haxe-runtime` is a preserved host/runtime ABI experiment. Its `rt_*` ABI helpers live inside that example, not in the librl Haxe binding.
 
 Async loader sugar:
 
@@ -215,12 +221,10 @@ Async loader sugar:
   - `RLTaskGroup.addImportTask(path, onSuccess?, onError?)`
   - `RLTaskGroup.process()`, `RLTaskGroup.remainingTasks()`, `RLTaskGroup.failedPaths()`
   - `RL.loaderAddTask(task, onSuccess, onFailure, ctx)`
-- `rl_run` is wrapped so Haxe passes plain lifecycle functions with a Haxe context object:
-  - `RL.run(onInit, onTick, onShutdown, ctx)`
 - `rl_loader_add_task` is wrapped so Haxe loader callbacks use plain `(path, ctx)` handlers:
   - `RL.loaderAddTask(task, onAssetReady, onAssetFailed, ctx)`
-- The example (`examples/haxe/src/Main.hx`) is the canonical reference for:
-  - Using `rl_run` with `init/tick/shutdown`.
+- The example (`examples/haxe-simple/src/Main.hx`) is the canonical reference for:
+  - Direct `RL.init` / frame loop / `RL.deinit` usage.
   - Non-blocking async import gating via `loadingGroup.process()`.
   - Per-task import callbacks receiving `(path, ctx)` for handle construction.
 
@@ -286,6 +290,6 @@ When public C headers change:
 3. Smoke test:
    - web (JS binding): `examples/www/?example=simple`
    - desktop Nim: `examples/nim/src/main.nim`
-   - desktop Haxe: `examples/haxe/src/Main.hx`
+   - desktop Haxe: `examples/haxe-simple/src/Main.hx`
    - wasm Nim: `npm run build:nim:wasm` + `?example=nim`
    - wasm Haxe: `npm run build:haxe:wasm` + `?example=haxe`

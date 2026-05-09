@@ -54,6 +54,11 @@ when defined(emscripten):
   switch("passL", "-s WASM=1")
   switch("passL", "-s MODULARIZE=1")
   switch("passL", "-s EXPORT_ES6=1")
+  switch("passL", "-s EXPORTED_RUNTIME_METHODS='[\"ccall\",\"cwrap\"]'")
+  switch("passL", "-s EXPORTED_FUNCTIONS='[\"_main\",\"_rt_boot\",\"_rt_init\",\"_rt_tick\",\"_rt_shutdown\"]'")
+  switch("passL", "-s JSPI=1")
+  switch("passL", "-s JSPI_EXPORTS='[\"rt_init\",\"rt_tick\"]'")
+  switch("passL", "-fwasm-exceptions")
 
   switch("passL", "-O2")
   switch("define", "release")

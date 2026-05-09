@@ -12,6 +12,8 @@
 -D analyzer-optimize
 -D no-traces
 --dce full
+--macro RuntimeCAbiMacro.registerGlobal()
+--macro include("RuntimeWasmExports")
 
 
 #-D HAXE_OUTPUT_FILE=example

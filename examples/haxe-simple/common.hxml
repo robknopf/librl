@@ -1,0 +1,14 @@
+-cp src
+-cp ../../..
+-cp ../../bindings/haxe
+
+# Set the LIBRL_ROOT environment variable to the path to the librl root directory.
+# Note that this is relative to the output directory.
+-D LIBRL_ROOT=../../../..
+
+-D analyzer-optimize
+-D no-traces
+--dce full
+--macro include("ExampleWasmExports")
+
+--main Main

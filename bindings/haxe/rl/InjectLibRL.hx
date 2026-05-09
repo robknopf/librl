@@ -65,7 +65,7 @@ package rl;
     <flag value="MODULARIZE=1" />
     <flag value="-s" />
     <flag value="EXPORT_ES6=1" />
-    <!-- browser_host.js / runner.js call Module.ccall(rt_boot|...) -->
+    <!-- Project-local examples decide which app/runtime functions to export. -->
     <flag value="-s" />
     <flag value="EXPORTED_RUNTIME_METHODS=[\'ccall\',\'cwrap\']" />
     
@@ -73,7 +73,7 @@ package rl;
     <flag value="-s" />
     <flag value="EXPORTED_FUNCTIONS=[\'_main\',\'_rt_boot\',\'_rt_init\',\'_rt_tick\',\'_rt_shutdown\']" />
     -->
-    
+
     <!-- hxcpp GC requires spill-pointers -->
     <flag value="--Wno-limited-postlink-optimizations" />
     <flag value="-s" />
@@ -97,4 +97,3 @@ package rl;
 class InjectLibRL {}
 
 @:emscripten
-

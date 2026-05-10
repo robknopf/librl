@@ -158,6 +158,7 @@ proc rl_loader_get_cache_dir*(): cstring {.importc, cdecl, header: "rl_loader.h"
 proc rl_loader_ping_asset_host*(assetHost: cstring): cfloat {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_restore_fs_async*(): ptr RLLoaderTask {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_create_import_task*(filename: cstring): ptr RLLoaderTask {.importc, cdecl, header: "rl_loader.h".}
+proc rl_loader_import_asset_sync*(filename: cstring): cint {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_import_assets_async_raw(filenames: ptr cstring, filenameCount: csize_t): ptr RLLoaderTask {.importc: "rl_loader_import_assets_async", cdecl, header: "rl_loader.h".}
 
 proc rl_loader_import_assets_async*(filenames: openArray[string]): ptr RLLoaderTask =
@@ -263,6 +264,9 @@ proc rl_loader_is_asset_cached*(filename: string): bool {.inline.} =
 
 proc rl_loader_uncache_asset*(filename: string): cint {.inline.} =
   rl_loader_uncache_asset(filename.cstring)
+
+proc rl_loader_import_asset_sync*(filename: string): cint {.inline.} =
+  rl_loader_import_asset_sync(filename.cstring)
 
 proc loaderPingAssetHost*(assetHost = ""): float32 =
   let host = if assetHost.len == 0: nil else: assetHost.cstring

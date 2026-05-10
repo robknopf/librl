@@ -950,6 +950,63 @@ static rl_loader_task_t *rl_loader_import_single_asset(const char *filename)
     return task;
 }
 
+int rl_loader_import_asset_sync(const char *filename)
+{
+    char host[RL_LOADER_MAX_ASSET_HOST_LENGTH] = {0};
+    char resolved_path[FILEIO_MAX_PATH_LENGTH * 2] = {0};
+    fetch_url_result_t result = {0};
+    int rc = 0;
+
+    if (!rl_loader_initialized) {
+        return -1;
+    }
+    if (filename == NULL || filename[0] == '\0') {
+        return -1;
+    }
+
+    /* Wait for any in-flight IDBFS restore to settle. On desktop this is a
+     * no-op; on Emscripten this uses EM_ASYNC_JS internally and yields to the
+     * JS event loop, so the caller's export chain must be listed in
+     * `-sJSPI_EXPORTS`. */
+    (void)rl_loader_wait_until_ready();
+
+    if (rl_loader_resolve_prepare_target(filename,
+                                         host,
+                                         sizeof(host),
+                                         resolved_path,
+                                         sizeof(resolved_path)) != 0) {
+        return -1;
+    }
+
+    if (fileio_exists(resolved_path)) {
+        return rl_loader_cache_local_file_if_needed(resolved_path);
+    }
+
+    if (host[0] == '\0') {
+        return -1;
+    }
+
+    rc = fetch_url_with_path_sync(host,
+                                  resolved_path,
+                                  RL_LOADER_FETCH_TIMEOUT_MS,
+                                  &result);
+    if (rc != 200 || result.data == NULL || result.size == 0) {
+        free(result.data);
+        return rc != 0 ? rc : -1;
+    }
+
+    if (fileio_write(resolved_path, result.data, result.size) != 0) {
+        free(result.data);
+        return -1;
+    }
+
+    rl_loader_cache_memory_copy_if_needed(resolved_path,
+                                          (const unsigned char *)result.data,
+                                          result.size);
+    free(result.data);
+    return 0;
+}
+
 rl_loader_task_t *rl_loader_create_import_task(const char *filename)
 {
     rl_loader_task_t *task = NULL;

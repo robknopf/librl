@@ -682,6 +682,10 @@ abstract RL(RLNative) from RLNative to RLNative {
     return RLLoader.loaderImportAssetAsync(filename);
   }
 
+  public static function loaderImportAssetSync(filename: String): Int {
+    return RLLoader.loaderImportAssetSync(filename);
+  }
+
   public static function loaderImportAssetsAsync(filenames: Array<String>): RLLoaderTaskPtr {
     return RLLoader.loaderImportAssetsAsync(filenames);
   }

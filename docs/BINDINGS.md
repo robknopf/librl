@@ -143,6 +143,7 @@ Notes:
   - `loaderPingAssetHost(assetHost?)` → RTT ms, or `< 0` on failure
   - `rl_loader_restore_fs_async()`
   - `rl_loader_create_import_task(filename)`
+  - `rl_loader_import_asset_sync(filename)` → `cint` (`0` success)
   - `rl_loader_import_assets_async(filenames, count)`
   - `rl_loader_poll_task(task)`
   - `rl_loader_finish_task(task)`
@@ -253,6 +254,7 @@ Notes:
 - Lua also exposes `rl.loader_init_async([mount_point])` and `rl.init_async([config])` for the polling-style fallback path.
 - Lua exposes `rl.loader_is_ready()` for `rl_loader_is_ready()`.
 - Lua exposes `rl.loader_create_import_task(filename)` for `rl_loader_create_import_task()`.
+- Lua exposes `rl.loader_import_asset_sync(filename)` → integer return code (`0` success); on wasm this follows the same constraints as the C API (see `rl_loader_import_asset_sync` in `rl_loader.h`).
 - Lua `rl.loader_add_task(task, on_success?, on_failure?, ctx?)` derives the callback path from `rl_loader_get_task_path(task)`. Loader callbacks receive `(path, ctx)`.
 - Lua exposes loader queue result constants (`rl.RL_LOADER_QUEUE_TASK_OK`, `rl.RL_LOADER_QUEUE_TASK_ERR_INVALID`, `rl.RL_LOADER_QUEUE_TASK_ERR_QUEUE_FULL`).
 - Lua exposes init result constants (`rl.RL_INIT_OK`, `rl.RL_INIT_ERR_UNKNOWN`, `rl.RL_INIT_ERR_ALREADY_INITIALIZED`, `rl.RL_INIT_ERR_LOADER`, `rl.RL_INIT_ERR_ASSET_HOST`, `rl.RL_INIT_ERR_WINDOW`).

@@ -55,6 +55,13 @@ class RLLoader {
   }
 
   @:functionCode('
+    return ::rl_loader_import_asset_sync(filename.utf8_str());
+  ')
+  static function importAssetSyncNative(filename: String): Int {
+    return -1;
+  }
+
+  @:functionCode('
     int n = filenames->length;
     if (n <= 0) {
       return (cpp::UInt64)0;
@@ -153,6 +160,16 @@ class RLLoader {
 
   public static inline function loaderImportAssetAsync(filename: String): RLLoaderTaskPtr {
     return importAssetAsyncNative(filename);
+  }
+
+  /**
+   * Synchronously import a single asset into the loader cache. Returns 0 on
+   * success, non-zero on failure (HTTP status when present, otherwise a
+   * negative error). On wasm this requires `-sJSPI=1` and the calling export
+   * chain to be listed in `-sJSPI_EXPORTS`.
+   */
+  public static inline function loaderImportAssetSync(filename: String): Int {
+    return importAssetSyncNative(filename);
   }
 
   public static inline function loaderImportAssetsAsync(filenames: Array<String>): RLLoaderTaskPtr {

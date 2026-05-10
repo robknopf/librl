@@ -210,6 +210,14 @@ static int rl_loader_create_import_task_lua(lua_State *L)
     return 1;
 }
 
+static int rl_loader_import_asset_sync_lua(lua_State *L)
+{
+    const char *filename = luaL_checkstring(L, 1);
+    int rc = rl_loader_import_asset_sync(filename);
+    lua_pushinteger(L, (lua_Integer)rc);
+    return 1;
+}
+
 static int rl_loader_import_assets_async_lua(lua_State *L)
 {
     size_t count = 0;
@@ -429,6 +437,9 @@ void rl_register_loader_bindings(lua_State *L)
 
     lua_pushcfunction(L, rl_loader_create_import_task_lua);
     lua_setfield(L, -2, "loader_import_asset_async");
+
+    lua_pushcfunction(L, rl_loader_import_asset_sync_lua);
+    lua_setfield(L, -2, "loader_import_asset_sync");
 
     lua_pushcfunction(L, rl_loader_import_assets_async_lua);
     lua_setfield(L, -2, "loader_import_assets_async");

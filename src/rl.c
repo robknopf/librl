@@ -5,7 +5,6 @@
 #include "internal/rl_debug.h"
 #include "internal/rl_event.h"
 #include "internal/rl_font.h"
-#include "internal/rl_loader.h"
 #include "internal/rl_logger.h"
 #include "internal/rl_model.h"
 #include "internal/rl_music.h"

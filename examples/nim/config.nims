@@ -57,7 +57,9 @@ when defined(emscripten):
   switch("passL", "-s EXPORTED_RUNTIME_METHODS='[\"ccall\",\"cwrap\"]'")
   switch("passL", "-s EXPORTED_FUNCTIONS='[\"_main\",\"_rt_boot\",\"_rt_init\",\"_rt_tick\",\"_rt_shutdown\"]'")
   switch("passL", "-s JSPI=1")
-  switch("passL", "-s JSPI_EXPORTS='[\"rt_init\",\"rt_tick\"]'")
+  # Same rt_* surface as EXPORTED_FUNCTIONS / nimrltest InjectWasmExports: any of these
+  # may transitively call JSPI suspend (rl_init, loader sync import, fetch, etc.).
+  switch("passL", "-s JSPI_EXPORTS='[\"rt_boot\",\"rt_init\",\"rt_tick\",\"rt_shutdown\"]'")
   switch("passL", "-fwasm-exceptions")
 
   switch("passL", "-O2")

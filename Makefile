@@ -60,7 +60,8 @@ endif
 CFLAGS = -Wall -Wextra -fdiagnostics-color=always -Isrc
 
 CFLAGS_WASM = \
-	$(WASM_PLATFORM_CFLAGS)
+	$(WASM_PLATFORM_CFLAGS) \
+	-fPIC
 
 LDFLAGS_WASM = \
 	--post-js bindings/js/rl_scratch.js \

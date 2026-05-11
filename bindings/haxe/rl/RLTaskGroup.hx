@@ -13,6 +13,7 @@ typedef RLTaskGroupEntry = {
   var onError:Null<RLTaskGroupTaskCallback<Dynamic>>;
 }
 
+@:keep
 class RLTaskGroup {
   var entries:Array<RLTaskGroupEntry>;
   var callbackContext:Dynamic;

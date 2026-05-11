@@ -21,6 +21,7 @@ import rl.RLTypes.RLKeyboardState;
 import rl.RLTaskGroup.RLTaskGroupCallback;
 import rl.RLTaskGroup.RLTaskGroupTaskCallback;
 
+@:keep
 @:include("rl.h")
 @:include("rl_config.h")
 private extern class RLNativeImpl {

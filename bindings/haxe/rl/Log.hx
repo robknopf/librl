@@ -1,5 +1,6 @@
 package rl;
 
+@:keep
 class Log {
 	public static inline function log(message:String):Void {
 		RL.loggerMessage(RL.LOGGER_LEVEL_INFO, message);

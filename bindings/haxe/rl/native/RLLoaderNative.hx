@@ -18,6 +18,7 @@ abstract RLLoaderTaskPtrImpl(cpp.UInt64) from cpp.UInt64 to cpp.UInt64 {
 
 typedef RLLoaderCallbackFn = cpp.Callable<cpp.ConstCharStar->cpp.RawPointer<cpp.Void>->Void>;
 
+@:keep
 @:headerInclude("rl_loader.h")
 @:headerInclude("alloca.h")
 @:headerInclude("stdint.h")

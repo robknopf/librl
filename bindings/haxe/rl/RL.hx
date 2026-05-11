@@ -34,6 +34,7 @@ abstract RLLoaderTaskPtr(Int) from Int to Int {
   }
 }
 
+@:keep
 @:native("rl.native._RLNative.RLImpl_Impl_")
 extern class RL {
   // --- Init result codes ---

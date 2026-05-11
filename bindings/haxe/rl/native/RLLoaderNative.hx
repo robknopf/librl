@@ -1,10 +1,13 @@
-package rl;
-
-import haxe.io.Bytes;
+/**
+ * hxcpp-only loader implementation.
+ * Contains RLLoaderTaskPtrImpl and the internal RLLoader class used by RLNative.hx.
+ * Never imported directly by scripts.
+ */
+package rl.native;
 
 #if cpp
-abstract RLLoaderTaskPtr(cpp.UInt64) from cpp.UInt64 to cpp.UInt64 {
-  public static inline function invalid(): RLLoaderTaskPtr {
+abstract RLLoaderTaskPtrImpl(cpp.UInt64) from cpp.UInt64 to cpp.UInt64 {
+  public static inline function invalid(): RLLoaderTaskPtrImpl {
     return cast (0 : cpp.UInt64);
   }
 
@@ -12,6 +15,7 @@ abstract RLLoaderTaskPtr(cpp.UInt64) from cpp.UInt64 to cpp.UInt64 {
     return this != (0 : cpp.UInt64);
   }
 }
+
 typedef RLLoaderCallbackFn = cpp.Callable<cpp.ConstCharStar->cpp.RawPointer<cpp.Void>->Void>;
 
 @:headerInclude("rl_loader.h")
@@ -39,19 +43,24 @@ class RLLoader {
   static function deinitNative(): Void {}
 
   @:functionCode('
+    return ::rl_loader_is_initialized();
+  ')
+  static function isInitializedNative(): Bool { return false; }
+
+  @:functionCode('
     ::rl_loader_task_t *task = ::rl_loader_restore_fs_async();
     return (cpp::UInt64)(uintptr_t)task;
   ')
-  static function restoreFsAsyncNative(): RLLoaderTaskPtr {
-    return RLLoaderTaskPtr.invalid();
+  static function restoreFsAsyncNative(): RLLoaderTaskPtrImpl {
+    return RLLoaderTaskPtrImpl.invalid();
   }
 
   @:functionCode('
     ::rl_loader_task_t *task = ::rl_loader_create_import_task(filename.utf8_str());
     return (cpp::UInt64)(uintptr_t)task;
   ')
-  static function importAssetAsyncNative(filename: String): RLLoaderTaskPtr {
-    return RLLoaderTaskPtr.invalid();
+  static function importAssetAsyncNative(filename: String): RLLoaderTaskPtrImpl {
+    return RLLoaderTaskPtrImpl.invalid();
   }
 
   @:functionCode('
@@ -71,28 +80,28 @@ class RLLoader {
     ::rl_loader_task_t *task = ::rl_loader_import_assets_async((const char *const *)ptrs, (size_t)n);
     return (cpp::UInt64)(uintptr_t)task;
   ')
-  static function importAssetsAsyncNative(filenames: Array<String>): RLLoaderTaskPtr {
-    return RLLoaderTaskPtr.invalid();
+  static function importAssetsAsyncNative(filenames: Array<String>): RLLoaderTaskPtrImpl {
+    return RLLoaderTaskPtrImpl.invalid();
   }
 
   @:functionCode('
     return ::rl_loader_poll_task((::rl_loader_task_t *)(uintptr_t)task);
   ')
-  static function pollTaskNative(task: RLLoaderTaskPtr): Bool {
+  static function pollTaskNative(task: RLLoaderTaskPtrImpl): Bool {
     return false;
   }
 
   @:functionCode('
     return ::rl_loader_finish_task((::rl_loader_task_t *)(uintptr_t)task);
   ')
-  static function finishTaskNative(task: RLLoaderTaskPtr): Int {
+  static function finishTaskNative(task: RLLoaderTaskPtrImpl): Int {
     return 0;
   }
 
   @:functionCode('
     return ::rl_loader_get_task_path((::rl_loader_task_t *)(uintptr_t)task);
   ')
-  static function getTaskPathNative(task: RLLoaderTaskPtr): String {
+  static function getTaskPathNative(task: RLLoaderTaskPtrImpl): String {
     return null;
   }
 
@@ -110,19 +119,19 @@ class RLLoader {
     ::rl_loader_read_result_free(&result);
     return ::haxe::io::Bytes_obj::__alloc(HX_CTX_GET, (int)data->length, data);
   ')
-  static function readLocalNative(filename: String): Bytes {
+  static function readLocalNative(filename: String): haxe.io.Bytes {
     return null;
   }
 
   @:functionCode('
     ::rl_loader_free_task((::rl_loader_task_t *)(uintptr_t)task);
   ')
-  static function freeTaskNative(task: RLLoaderTaskPtr): Void {}
+  static function freeTaskNative(task: RLLoaderTaskPtrImpl): Void {}
 
   @:functionCode('
     return ::rl_loader_add_task((::rl_loader_task_t *)(uintptr_t)task, onSuccess, onFailure, userData);
   ')
-  static function addTaskNative(task: RLLoaderTaskPtr,
+  static function addTaskNative(task: RLLoaderTaskPtrImpl,
     onSuccess: RLLoaderCallbackFn, onFailure: RLLoaderCallbackFn,
     userData: cpp.RawPointer<cpp.Void>): Int {
     return 0;
@@ -142,87 +151,85 @@ class RLLoader {
     return null;
   }
 
-  public static inline function loaderRestoreFsAsync(): RLLoaderTaskPtr {
+  public static function loaderRestoreFsAsync(): RLLoaderTaskPtrImpl {
     return restoreFsAsyncNative();
   }
 
-  public static inline function loaderInit(?mountPoint: String): Int {
+  public static function loaderInit(?mountPoint: String): Int {
     return initNative(mountPoint == null ? "" : mountPoint);
   }
 
-  public static inline function loaderInitAsync(?mountPoint: String): Int {
+  public static function loaderInitAsync(?mountPoint: String): Int {
     return initAsyncNative(mountPoint == null ? "" : mountPoint);
   }
 
-  public static inline function loaderDeinit(): Void {
+  public static function loaderDeinit(): Void {
     deinitNative();
   }
 
-  public static inline function loaderImportAssetAsync(filename: String): RLLoaderTaskPtr {
+  public static function loaderIsInitialized(): Bool {
+    return isInitializedNative();
+  }
+
+  public static function loaderImportAssetAsync(filename: String): RLLoaderTaskPtrImpl {
     return importAssetAsyncNative(filename);
   }
 
-  /**
-   * Synchronously import a single asset into the loader cache. Returns 0 on
-   * success, non-zero on failure (HTTP status when present, otherwise a
-   * negative error). On wasm this requires `-sJSPI=1` and the calling export
-   * chain to be listed in `-sJSPI_EXPORTS`.
-   */
-  public static inline function loaderImportAssetSync(filename: String): Int {
+  public static function loaderImportAssetSync(filename: String): Int {
     return importAssetSyncNative(filename);
   }
 
-  public static inline function loaderImportAssetsAsync(filenames: Array<String>): RLLoaderTaskPtr {
+  public static function loaderImportAssetsAsync(filenames: Array<String>): RLLoaderTaskPtrImpl {
     return cast importAssetsAsyncNative(filenames);
   }
 
-  public static inline function loaderPollTask(task: RLLoaderTaskPtr): Bool {
+  public static function loaderPollTask(task: RLLoaderTaskPtrImpl): Bool {
     return pollTaskNative(task);
   }
 
-  public static inline function loaderFinishTask(task: RLLoaderTaskPtr): Int {
+  public static function loaderFinishTask(task: RLLoaderTaskPtrImpl): Int {
     return finishTaskNative(task);
   }
 
-  public static inline function loaderGetTaskPath(task: RLLoaderTaskPtr): String {
+  public static function loaderGetTaskPath(task: RLLoaderTaskPtrImpl): String {
     return getTaskPathNative(task);
   }
 
-  public static inline function loaderReadLocal(filename: String): Bytes {
+  public static function loaderReadLocal(filename: String): haxe.io.Bytes {
     return readLocalNative(filename);
   }
 
-  public static inline function loaderFreeTask(task: RLLoaderTaskPtr): Void {
+  public static function loaderFreeTask(task: RLLoaderTaskPtrImpl): Void {
     freeTaskNative(task);
   }
 
-  public static inline function loaderIsAssetCached(filename: String): Bool {
+  public static function loaderIsAssetCached(filename: String): Bool {
     return isAssetCachedNative(filename);
   }
 
-  public static inline function loaderAddTask(task: RLLoaderTaskPtr,
+  public static function loaderAddTask(task: RLLoaderTaskPtrImpl,
     onSuccess: RLLoaderCallbackFn, onFailure: RLLoaderCallbackFn,
     userData: cpp.RawPointer<cpp.Void>): Int {
     return addTaskNative(task, onSuccess, onFailure, userData);
   }
 
-  public static inline function loaderPingAssetHost(?assetHost: String): Float {
+  public static function loaderPingAssetHost(?assetHost: String): Float {
     return pingAssetHostNative(assetHost == null ? "" : assetHost);
   }
 
-  public static inline function loaderGetCacheDir(): String {
+  public static function loaderGetCacheDir(): String {
     return getCacheDirNative();
   }
 
-  public static inline function loaderTick(): Void {
+  public static function loaderTick(): Void {
     tickNative();
   }
 
-  public static inline function loaderClearCache(): Int {
+  public static function loaderClearCache(): Int {
     return clearCacheNative();
   }
 
-  public static inline function loaderUncacheAsset(filename: String): Int {
+  public static function loaderUncacheAsset(filename: String): Int {
     return uncacheAssetNative(filename);
   }
 
@@ -252,6 +259,4 @@ class RLLoader {
     return 0;
   }
 }
-#else
-typedef RLLoaderTaskPtr = Dynamic;
 #end

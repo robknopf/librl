@@ -1,6 +1,6 @@
 package rl;
-import rl.RLLoader;
-import rl.RLLoader.RLLoaderTaskPtr;
+import rl.RL;
+import rl.RL.RLLoaderTaskPtr;
 
 typedef RLTaskGroupTaskCallback<T> = String->T->Void;
 typedef RLTaskGroupCallback<T> = RLTaskGroup->T->Void;
@@ -32,13 +32,13 @@ class RLTaskGroup {
     terminalCallbackInvoked = false;
   }
 
-  public inline function addTask<T>(task:RLLoaderTaskPtr, ?onSuccess:RLTaskGroupTaskCallback<T>, ?onError:RLTaskGroupTaskCallback<T>):Void {
+  public function addTask<T>(task:RLLoaderTaskPtr, ?onSuccess:RLTaskGroupTaskCallback<T>, ?onError:RLTaskGroupTaskCallback<T>):Void {
     if (!task.isValid()) {
       return;
     }
     entries.push({
       task: task,
-      path: RLLoader.loaderGetTaskPath(task),
+      path: RL.loaderGetTaskPath(task),
       done: false,
       rc: 1,
       onSuccess: cast onSuccess,
@@ -46,39 +46,39 @@ class RLTaskGroup {
     });
   }
 
-  public inline function addImportTask<T>(path:String, ?onSuccess:RLTaskGroupTaskCallback<T>, ?onError:RLTaskGroupTaskCallback<T>):Void {
-    addTask(RLLoader.loaderImportAssetAsync(path), onSuccess, onError);
+  public function addImportTask<T>(path:String, ?onSuccess:RLTaskGroupTaskCallback<T>, ?onError:RLTaskGroupTaskCallback<T>):Void {
+    addTask(RL.loaderImportAssetAsync(path), onSuccess, onError);
   }
 
-  public inline function addImportTasks(paths:Array<String>):Void {
+  public function addImportTasks(paths:Array<String>):Void {
     for (path in paths) {
       addImportTask(path);
     }
   }
 
-  public inline function remainingTasks():Int {
+  public function remainingTasks():Int {
     return entries.length - completedCount;
   }
 
-  public inline function isDone():Bool {
+  public function isDone():Bool {
     return remainingTasks() == 0;
   }
 
-  public inline function hasFailures():Bool {
+  public function hasFailures():Bool {
     return failedCount > 0;
   }
 
   public function tick():Bool {
-    RLLoader.loaderTick();
+    RL.loaderTick();
     for (entry in entries) {
       if (entry.done) {
         continue;
       }
-      if (!RLLoader.loaderPollTask(entry.task)) {
+      if (!RL.loaderPollTask(entry.task)) {
         continue;
       }
-      entry.rc = RLLoader.loaderFinishTask(entry.task);
-      RLLoader.loaderFreeTask(entry.task);
+      entry.rc = RL.loaderFinishTask(entry.task);
+      RL.loaderFreeTask(entry.task);
       entry.done = true;
       completedCount++;
       if (entry.rc != 0) {
@@ -94,7 +94,7 @@ class RLTaskGroup {
   }
 
   /** QoL helper: advance once and return remaining pending tasks. */
-  public inline function process():Int {
+  public function process():Int {
     tick();
     if (!terminalCallbackInvoked && remainingTasks() == 0) {
       terminalCallbackInvoked = true;

@@ -273,6 +273,7 @@ Main responsibilities:
   - `rl_loader_init(mount_point)`
   - `rl_loader_init_async(mount_point)`
   - `rl_loader_deinit()`
+  - `rl_loader_is_initialized()` — returns `true` if the loader is currently initialized
 - Asset-host configuration:
   - `rl_loader_set_asset_host(asset_host)`
   - `rl_loader_get_asset_host()`

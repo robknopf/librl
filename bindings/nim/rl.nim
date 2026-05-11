@@ -152,6 +152,7 @@ proc rl_get_asset_host*(): cstring {.importc, cdecl, header: "rl.h".}
 proc rl_loader_init*(mountPoint: cstring): cint {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_init_async*(mountPoint: cstring): cint {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_deinit*() {.importc, cdecl, header: "rl_loader.h".}
+proc rl_loader_is_initialized*(): bool {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_set_asset_host*(assetHost: cstring): cint {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_get_asset_host*(): cstring {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_get_cache_dir*(): cstring {.importc, cdecl, header: "rl_loader.h".}

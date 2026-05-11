@@ -188,6 +188,13 @@ static int rl_loader_ping_asset_host_lua(lua_State *L)
     return 1;
 }
 
+static int rl_loader_is_initialized_lua(lua_State *L)
+{
+    (void)L;
+    lua_pushboolean(L, rl_loader_is_initialized() ? 1 : 0);
+    return 1;
+}
+
 static int rl_loader_is_ready_lua(lua_State *L)
 {
     (void)L;
@@ -426,6 +433,8 @@ void rl_register_loader_bindings(lua_State *L)
     lua_pushcfunction(L, rl_loader_ping_asset_host_lua);
     lua_setfield(L, -2, "loader_ping_asset_host");
 
+    lua_pushcfunction(L, rl_loader_is_initialized_lua);
+    lua_setfield(L, -2, "loader_is_initialized");
     lua_pushcfunction(L, rl_loader_is_ready_lua);
     lua_setfield(L, -2, "loader_is_ready");
 

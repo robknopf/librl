@@ -1549,6 +1549,11 @@ void rl_loader_tick(void)
     }
 }
 
+bool rl_loader_is_initialized(void)
+{
+    return rl_loader_initialized;
+}
+
 int rl_loader_init_async(const char *mount_point)
 {
     const char *resolved_mount = mount_point;

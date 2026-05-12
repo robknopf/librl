@@ -112,16 +112,21 @@ class RLLoader {
       ::rl_loader_read_result_free(&result);
       return null();
     }
-
     Array<unsigned char> data = Array_obj<unsigned char>::__new((int)result.size, (int)result.size);
     if (result.size > 0) {
       ::memcpy(data->GetBase(), result.data, result.size);
     }
     ::rl_loader_read_result_free(&result);
-    return ::haxe::io::Bytes_obj::__alloc(HX_CTX_GET, (int)data->length, data);
+    return data;
   ')
-  static function readLocalNative(filename: String): haxe.io.Bytes {
+  static function readLocalBytesData(filename: String): haxe.io.BytesData {
     return null;
+  }
+
+  static function readLocalNative(filename: String): haxe.io.Bytes {
+    var data = readLocalBytesData(filename);
+    if (data == null) return null;
+    return haxe.io.Bytes.ofData(data);
   }
 
   @:functionCode('

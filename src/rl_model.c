@@ -653,6 +653,26 @@ bool rl_model_animate(rl_handle_t handle, float delta_seconds)
     return true;
 }
 
+bool rl_model_get_transform(rl_handle_t handle,
+                            float *position_x, float *position_y, float *position_z,
+                            float *scale_x, float *scale_y, float *scale_z,
+                            float *rotation_x, float *rotation_y, float *rotation_z)
+{
+    rl_model_instance_t *instance = rl_model_instance_get(handle);
+    if (instance == NULL)
+        return false;
+    if (position_x) *position_x = instance->position_x;
+    if (position_y) *position_y = instance->position_y;
+    if (position_z) *position_z = instance->position_z;
+    if (scale_x)    *scale_x    = instance->scale_x;
+    if (scale_y)    *scale_y    = instance->scale_y;
+    if (scale_z)    *scale_z    = instance->scale_z;
+    if (rotation_x) *rotation_x = instance->rotation_x;
+    if (rotation_y) *rotation_y = instance->rotation_y;
+    if (rotation_z) *rotation_z = instance->rotation_z;
+    return true;
+}
+
 RL_KEEP
 bool rl_model_set_transform(rl_handle_t handle,
                             float position_x, float position_y, float position_z,
@@ -713,6 +733,7 @@ bool rl_model_get_ray_collision_ex(rl_handle_t handle,
                                    Ray ray,
                                    Matrix transform,
                                    RayCollision *collision,
+                                   Matrix *resolved_model_transform,
                                    bool *broadphase_tested,
                                    bool *broadphase_rejected,
                                    bool *narrowphase_ran)
@@ -742,6 +763,7 @@ bool rl_model_get_ray_collision_ex(rl_handle_t handle,
     }
 
     model_transform = MatrixMultiply(asset->model->transform, transform);
+    if (resolved_model_transform != NULL) *resolved_model_transform = model_transform;
     if (asset->has_local_bounds) {
         RayCollision broad_hit = {0};
         if (broadphase_tested != NULL) *broadphase_tested = true;
@@ -771,7 +793,7 @@ bool rl_model_get_ray_collision_ex(rl_handle_t handle,
 
 bool rl_model_get_ray_collision(rl_handle_t handle, Ray ray, Matrix transform, RayCollision *collision)
 {
-    return rl_model_get_ray_collision_ex(handle, ray, transform, collision, NULL, NULL, NULL);
+    return rl_model_get_ray_collision_ex(handle, ray, transform, collision, NULL, NULL, NULL, NULL);
 }
 
 RL_KEEP

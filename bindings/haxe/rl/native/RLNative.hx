@@ -16,6 +16,8 @@ import rl.native.RLLoaderNative.RLLoaderTaskPtrImpl;
 import rl.native.RLLoaderNative.RLLoader;
 import rl.RLTypes.RLInitConfig;
 import rl.RLTypes.RLVec2;
+import rl.RLTypes.RLVec3;
+import rl.RLTypes.RLPickResult;
 import rl.RLTypes.RLMouseState;
 import rl.RLTypes.RLKeyboardState;
 import rl.RLTaskGroup.RLTaskGroupCallback;
@@ -483,6 +485,27 @@ private extern class RLNativeImpl {
 
   @:native("rl_input_get_keyboard_state")
   static function inputGetKeyboardStateNative(): RLKeyboardState;
+
+  @:native("rl_pick_model")
+  static function pickModel(camera: RLHandle, model: RLHandle, mouseX: Float, mouseY: Float): RLPickResult;
+
+  @:native("rl_pick_sprite3d")
+  static function pickSprite3d(camera: RLHandle, sprite3d: RLHandle, mouseX: Float, mouseY: Float): RLPickResult;
+
+  @:native("rl_pick_reset_stats")
+  static function pickResetStats(): Void;
+
+  @:native("rl_pick_get_broadphase_tests")
+  static function pickGetBroadphaseTests(): Int;
+
+  @:native("rl_pick_get_broadphase_rejects")
+  static function pickGetBroadphaseRejects(): Int;
+
+  @:native("rl_pick_get_narrowphase_tests")
+  static function pickGetNarrowphaseTests(): Int;
+
+  @:native("rl_pick_get_narrowphase_hits")
+  static function pickGetNarrowphaseHits(): Int;
 }
 
 @:include("rl_types.h")
@@ -491,6 +514,25 @@ private extern class RLNativeImpl {
 extern class RLVec2Native {
   var x: Float;
   var y: Float;
+}
+
+@:include("rl_types.h")
+@:native("vec3_t")
+@:structAccess
+extern class RLVec3Native {
+  var x: Float;
+  var y: Float;
+  var z: Float;
+}
+
+@:include("rl_pick.h")
+@:native("rl_pick_result_t")
+@:structAccess
+extern class RLPickResultNative {
+  var hit: Bool;
+  var distance: Float;
+  var point: RLVec3Native;
+  var normal: RLVec3Native;
 }
 
 @:include("rl_types.h")
@@ -818,6 +860,22 @@ abstract RLImpl(RLNativeImpl) from RLNativeImpl to RLNativeImpl {
   public static function inputGetKeyboardState(): RLKeyboardState {
     return RLKeyboardBridge.getState();
   }
+
+  public static function pickModel(camera: RLHandle, model: RLHandle, mouseX: Float, mouseY: Float): RLPickResult {
+    var n: RLPickResultNative = cast RLNativeImpl.pickModel(camera, model, mouseX, mouseY);
+    return {hit: n.hit, distance: n.distance, point: {x: n.point.x, y: n.point.y, z: n.point.z}, normal: {x: n.normal.x, y: n.normal.y, z: n.normal.z}};
+  }
+
+  public static function pickSprite3d(camera: RLHandle, sprite3d: RLHandle, mouseX: Float, mouseY: Float): RLPickResult {
+    var n: RLPickResultNative = cast RLNativeImpl.pickSprite3d(camera, sprite3d, mouseX, mouseY);
+    return {hit: n.hit, distance: n.distance, point: {x: n.point.x, y: n.point.y, z: n.point.z}, normal: {x: n.normal.x, y: n.normal.y, z: n.normal.z}};
+  }
+
+  public static function pickResetStats(): Void { RLNativeImpl.pickResetStats(); }
+  public static function pickGetBroadphaseTests(): Int { return RLNativeImpl.pickGetBroadphaseTests(); }
+  public static function pickGetBroadphaseRejects(): Int { return RLNativeImpl.pickGetBroadphaseRejects(); }
+  public static function pickGetNarrowphaseTests(): Int { return RLNativeImpl.pickGetNarrowphaseTests(); }
+  public static function pickGetNarrowphaseHits(): Int { return RLNativeImpl.pickGetNarrowphaseHits(); }
 
   public static function keyboardGetKeyState(state: RLKeyboardState, key: Int): Int {
     if (state.keys == null || key < 0 || key >= state.max_num_keys || key >= state.keys.length) {

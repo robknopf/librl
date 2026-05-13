@@ -8,6 +8,7 @@
 
 void rl_sprite3d_init(void);
 void rl_sprite3d_deinit(void);
+bool rl_sprite3d_get_transform(rl_handle_t handle, float *position_x, float *position_y, float *position_z, float *size);
 bool rl_sprite3d_get_ray_collision(rl_handle_t handle,
                                    Camera3D camera,
                                    Ray ray,

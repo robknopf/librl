@@ -41,17 +41,7 @@ static int rl_pick_model_lua(lua_State *L)
     rl_handle_t model = (rl_handle_t)luaL_checkinteger(L, 2);
     float mouse_x = (float)luaL_checknumber(L, 3);
     float mouse_y = (float)luaL_checknumber(L, 4);
-    float position_x = (float)luaL_checknumber(L, 5);
-    float position_y = (float)luaL_checknumber(L, 6);
-    float position_z = (float)luaL_checknumber(L, 7);
-    float scale = (float)luaL_checknumber(L, 8);
-    float rotation_x = (float)luaL_checknumber(L, 9);
-    float rotation_y = (float)luaL_checknumber(L, 10);
-    float rotation_z = (float)luaL_checknumber(L, 11);
-
-    rl_pick_result_t result = rl_pick_model(camera, model, mouse_x, mouse_y,
-                                            position_x, position_y, position_z,
-                                            scale, rotation_x, rotation_y, rotation_z);
+    rl_pick_result_t result = rl_pick_model(camera, model, mouse_x, mouse_y);
     rl_push_pick_result(L, result);
     return 1;
 }
@@ -62,13 +52,7 @@ static int rl_pick_sprite3d_lua(lua_State *L)
     rl_handle_t sprite3d = (rl_handle_t)luaL_checkinteger(L, 2);
     float mouse_x = (float)luaL_checknumber(L, 3);
     float mouse_y = (float)luaL_checknumber(L, 4);
-    float position_x = (float)luaL_checknumber(L, 5);
-    float position_y = (float)luaL_checknumber(L, 6);
-    float position_z = (float)luaL_checknumber(L, 7);
-    float size = (float)luaL_checknumber(L, 8);
-
-    rl_pick_result_t result = rl_pick_sprite3d(camera, sprite3d, mouse_x, mouse_y,
-                                               position_x, position_y, position_z, size);
+    rl_pick_result_t result = rl_pick_sprite3d(camera, sprite3d, mouse_x, mouse_y);
     rl_push_pick_result(L, result);
     return 1;
 }

@@ -27,44 +27,22 @@ typedef struct
 rl_pick_result_t rl_pick_model(rl_handle_t camera,
                                rl_handle_t model,
                                float mouse_x,
-                               float mouse_y,
-                               float position_x,
-                               float position_y,
-                               float position_z,
-                               float scale,
-                               float rotation_x,
-                               float rotation_y,
-                               float rotation_z);
+                               float mouse_y);
 
 bool rl_pick_model_to_scratch(rl_handle_t camera,
                               rl_handle_t model,
                               float mouse_x,
-                              float mouse_y,
-                              float position_x,
-                              float position_y,
-                              float position_z,
-                              float scale,
-                              float rotation_x,
-                              float rotation_y,
-                              float rotation_z);
+                              float mouse_y);
 
 rl_pick_result_t rl_pick_sprite3d(rl_handle_t camera,
                                   rl_handle_t sprite3d,
                                   float mouse_x,
-                                  float mouse_y,
-                                  float position_x,
-                                  float position_y,
-                                  float position_z,
-                                  float size);
+                                  float mouse_y);
 
 bool rl_pick_sprite3d_to_scratch(rl_handle_t camera,
                                  rl_handle_t sprite3d,
                                  float mouse_x,
-                                 float mouse_y,
-                                 float position_x,
-                                 float position_y,
-                                 float position_z,
-                                 float size);
+                                 float mouse_y);
 
 void rl_pick_reset_stats(void);
 int rl_pick_get_broadphase_tests(void);

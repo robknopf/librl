@@ -102,6 +102,21 @@ rl_handle_t rl_sprite3d_create_from_texture(rl_handle_t texture)
 }
 
 RL_KEEP
+bool rl_sprite3d_get_transform(rl_handle_t handle,
+                               float *position_x, float *position_y,
+                               float *position_z, float *size)
+{
+    rl_sprite3d_instance_t *sprite = rl_sprite3d_get(handle);
+    if (sprite == NULL)
+        return false;
+    if (position_x) *position_x = sprite->position_x;
+    if (position_y) *position_y = sprite->position_y;
+    if (position_z) *position_z = sprite->position_z;
+    if (size)       *size       = sprite->size;
+    return true;
+}
+
+RL_KEEP
 bool rl_sprite3d_set_transform(rl_handle_t handle,
                                float position_x, float position_y,
                                float position_z, float size)
@@ -161,6 +176,58 @@ void rl_sprite3d_destroy(rl_handle_t handle)
     rl_handle_pool_free(&rl_sprite3d_pool, handle);
 }
 
+/* Mirrors raylib DrawBillboardPro() quad construction for Y-locked billboards.
+ * Keep this in sync with raylib when vendored billboard math changes. */
+/* TODO: If hover/mousemove picking becomes hot, profile this path.
+ * Billboard quad construction is camera-dependent, so any cache must
+ * invalidate on sprite transform or camera changes. */
+static bool rl_build_billboard_quad(Camera3D camera,
+                                    Vector3 position,
+                                    Vector2 size,
+                                    Vector3 points[4],
+                                    Vector3 *right_axis,
+                                    Vector3 *up_axis)
+{
+    Vector3 up = {0.0f, 1.0f, 0.0f};
+    Vector2 origin = Vector2Scale(size, 0.5f);
+    Matrix mat_view = MatrixLookAt(camera.position, camera.target, camera.up);
+    Vector3 right = {mat_view.m0, mat_view.m4, mat_view.m8};
+    Vector3 origin3d = {0};
+
+    right = Vector3Scale(right, size.x);
+    up = Vector3Scale(up, size.y);
+
+    if (size.x < 0.0f) {
+        right = Vector3Negate(right);
+        origin.x *= -1.0f;
+    }
+    if (size.y < 0.0f) {
+        up = Vector3Negate(up);
+        origin.y *= -1.0f;
+    }
+
+    if (Vector3Length(right) <= 0.000001f || Vector3Length(up) <= 0.000001f) {
+        return false;
+    }
+
+    origin3d = Vector3Add(Vector3Scale(Vector3Normalize(right), origin.x),
+                          Vector3Scale(Vector3Normalize(up), origin.y));
+
+    points[0] = Vector3Zero();
+    points[1] = right;
+    points[2] = Vector3Add(up, right);
+    points[3] = up;
+
+    for (int i = 0; i < 4; i++) {
+        points[i] = Vector3Subtract(points[i], origin3d);
+        points[i] = Vector3Add(points[i], position);
+    }
+
+    if (right_axis != NULL) *right_axis = right;
+    if (up_axis != NULL) *up_axis = up;
+    return true;
+}
+
 bool rl_sprite3d_get_ray_collision_ex(rl_handle_t handle,
                                       Camera3D camera,
                                       Ray ray,
@@ -176,14 +243,10 @@ bool rl_sprite3d_get_ray_collision_ex(rl_handle_t handle,
     rl_sprite3d_instance_t *sprite = rl_sprite3d_get(handle);
     Texture2D *texture = NULL;
     Vector2 billboard_size = {0};
-    Vector3 up = {0.0f, 1.0f, 0.0f};
-    Vector2 origin = {0};
-    Matrix mat_view = {0};
-    Vector3 right = {0};
-    Vector3 up_scaled = {0};
-    Vector3 origin3d = {0};
     Vector3 position = {position_x, position_y, position_z};
     Vector3 points[4] = {0};
+    Vector3 right_axis = {0};
+    Vector3 up_axis = {0};
 
     if (collision == NULL) {
         return false;
@@ -215,30 +278,21 @@ bool rl_sprite3d_get_ray_collision_ex(rl_handle_t handle,
         }
     }
 
-    origin = Vector2Scale(billboard_size, 0.5f);
-
-    mat_view = MatrixLookAt(camera.position, camera.target, camera.up);
-    right = (Vector3){mat_view.m0, mat_view.m4, mat_view.m8};
-    right = Vector3Scale(right, billboard_size.x);
-    up_scaled = Vector3Scale(up, billboard_size.y);
-
-    origin3d = Vector3Add(
-        Vector3Scale(Vector3Normalize(right), origin.x),
-        Vector3Scale(Vector3Normalize(up_scaled), origin.y)
-    );
-
-    points[0] = Vector3Zero();
-    points[1] = right;
-    points[2] = Vector3Add(up_scaled, right);
-    points[3] = up_scaled;
-
-    for (int i = 0; i < 4; i++) {
-        points[i] = Vector3Subtract(points[i], origin3d);
-        points[i] = Vector3Add(points[i], position);
+    if (!rl_build_billboard_quad(camera, position, billboard_size, points, &right_axis, &up_axis)) {
+        return false;
     }
 
     if (narrowphase_ran != NULL) *narrowphase_ran = true;
     *collision = GetRayCollisionQuad(ray, points[0], points[1], points[2], points[3]);
+    if (collision->hit) {
+        Vector3 offset = Vector3Subtract(collision->point, position);
+        Vector3 right_dir = Vector3Normalize(right_axis);
+        Vector3 up_dir = Vector3Normalize(up_axis);
+        float local_x = Vector3DotProduct(offset, right_dir);
+        float local_y = Vector3DotProduct(offset, up_dir);
+        collision->point = (Vector3){local_x, local_y, 0.0f};
+        collision->normal = (Vector3){0.0f, 0.0f, (collision->normal.z < 0.0f) ? -1.0f : 1.0f};
+    }
     return true;
 }
 

@@ -83,6 +83,7 @@ Notes:
 - JS also exposes `initAsync(opts)` for the polling-style `rl_init_async()` path.
 - JS exposes `isInitialized()` for `rl_is_initialized()`.
 - JS exposes `getPlatform()` for `rl_get_platform()`.
+- JS `pickModel(camera, model, mouseX, mouseY)` and `pickSprite3D(camera, sprite3d, mouseX, mouseY)` return local-space `point` / `normal` data from `rl_pick_result_t`.
 - Loader/cache helpers currently exposed in JS:
   - `loaderInit([mountPoint])`
   - `loaderInitAsync([mountPoint])`
@@ -132,6 +133,11 @@ Notes:
 - Picking helpers available in Nim:
   - `rl_pick_model(...)`
   - `rl_pick_sprite3d(...)`
+- Nim `rl_pick_model(camera, model, mouseX, mouseY)` and `rl_pick_sprite3d(camera, sprite3d, mouseX, mouseY)` read stored instance transforms; no explicit transform args remain.
+- Picking helpers available in Haxe: `RL.pickModel(camera, model, mouseX, mouseY)` and `RL.pickSprite3d(camera, sprite3d, mouseX, mouseY)`, returning `RLPickResult` (`hit`, `distance`, `point: RLVec3`, `normal: RLVec3`). Transform is read from the stored instance. Stats helpers: `pickResetStats`, `pickGetBroadphaseTests`, `pickGetBroadphaseRejects`, `pickGetNarrowphaseTests`, `pickGetNarrowphaseHits`.
+- **`point` and `normal` in `RLPickResult` / `rl_pick_result_t` are in local (object) space, not world space:**
+  - For `pickModel`: world hit point inverse-transformed by the model's world matrix (position + rotation + scale). Origin is the model's local origin.
+  - For `pickSprite3d`: `(local_x, local_y, 0)` on the billboard surface, with normal on local `+/-Z`. `local_x` and `local_y` are signed offsets from the sprite center in world units — e.g. `(-0.5, -0.5)` is bottom-left corner, `(+0.5, +0.5)` is top-right corner for a size-1 sprite.
 - Window config flags are exposed in Nim:
   - `rl_window_init(width, height, title, flags)`
   - `RL_FLAG_MSAA_4X_HINT`

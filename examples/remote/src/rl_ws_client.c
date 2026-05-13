@@ -153,14 +153,7 @@ static void process_ws_message(rl_ws_client_t *client, const char *data, int len
           rl_pick_result_t pick = rl_pick_model(request->data.model.camera,
                                                 request->data.model.handle,
                                                 request->data.model.mouse_x,
-                                                request->data.model.mouse_y,
-                                                request->data.model.x,
-                                                request->data.model.y,
-                                                request->data.model.z,
-                                                request->data.model.scale,
-                                                request->data.model.rotation_x,
-                                                request->data.model.rotation_y,
-                                                request->data.model.rotation_z);
+                                                request->data.model.mouse_y);
           response->hit = pick.hit;
           response->distance = pick.distance;
           response->point = pick.point;
@@ -173,11 +166,7 @@ static void process_ws_message(rl_ws_client_t *client, const char *data, int len
           rl_pick_result_t pick = rl_pick_sprite3d(request->data.sprite3d.camera,
                                                    request->data.sprite3d.handle,
                                                    request->data.sprite3d.mouse_x,
-                                                   request->data.sprite3d.mouse_y,
-                                                   request->data.sprite3d.x,
-                                                   request->data.sprite3d.y,
-                                                   request->data.sprite3d.z,
-                                                   request->data.sprite3d.size);
+                                                   request->data.sprite3d.mouse_y);
           response->hit = pick.hit;
           response->distance = pick.distance;
           response->point = pick.point;

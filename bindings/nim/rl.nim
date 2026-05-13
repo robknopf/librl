@@ -515,21 +515,13 @@ proc rl_pick_model*(
   camera: RLHandle,
   model: RLHandle,
   mouseX: cfloat,
-  mouseY: cfloat,
-  positionX: cfloat,
-  positionY: cfloat,
-  positionZ: cfloat,
-  scale: cfloat
+  mouseY: cfloat
 ): RLPickResult {.importc, cdecl, header: "rl_pick.h".}
 proc rl_pick_sprite3d*(
   camera: RLHandle,
   sprite3d: RLHandle,
   mouseX: cfloat,
-  mouseY: cfloat,
-  positionX: cfloat,
-  positionY: cfloat,
-  positionZ: cfloat,
-  size: cfloat
+  mouseY: cfloat
 ): RLPickResult {.importc, cdecl, header: "rl_pick.h".}
 proc rl_pick_reset_stats*() {.importc, cdecl, header: "rl_pick.h".}
 proc rl_pick_get_broadphase_tests*(): cint {.importc, cdecl, header: "rl_pick.h".}

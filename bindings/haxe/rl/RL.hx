@@ -15,6 +15,8 @@ import rl.RLHandle;
 import rl.RLTypes;
 import rl.RLTypes.RLInitConfig;
 import rl.RLTypes.RLVec2;
+import rl.RLTypes.RLVec3;
+import rl.RLTypes.RLPickResult;
 import rl.RLTypes.RLMouseState;
 import rl.RLTypes.RLKeyboardState;
 import rl.RLTaskGroup;
@@ -239,6 +241,15 @@ extern class RL {
   public static function textureDestroy(texture: RLHandle): Void;
   public static function textureDrawEx(texture: RLHandle, x: Float, y: Float, scale: Float, rotation: Float, tint: RLHandle): Void;
   public static function textureDrawGround(texture: RLHandle, positionX: Float, positionY: Float, positionZ: Float, width: Float, length: Float, tint: RLHandle): Void;
+
+  // --- Pick ---
+  public static function pickModel(camera: RLHandle, model: RLHandle, mouseX: Float, mouseY: Float): RLPickResult;
+  public static function pickSprite3d(camera: RLHandle, sprite3d: RLHandle, mouseX: Float, mouseY: Float): RLPickResult;
+  public static function pickResetStats(): Void;
+  public static function pickGetBroadphaseTests(): Int;
+  public static function pickGetBroadphaseRejects(): Int;
+  public static function pickGetNarrowphaseTests(): Int;
+  public static function pickGetNarrowphaseHits(): Int;
 
   // --- Input ---
   public static function inputPollEvents(): Void;

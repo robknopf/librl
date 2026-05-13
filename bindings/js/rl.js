@@ -857,12 +857,12 @@ const RL = {
     destroyModel: (model) => moduleInstance.ccall(
         "rl_model_destroy", null, ["number"], [model]
     ),
-    pickModel: (camera, model, mouseX, mouseY, x = 0, y = 0, z = 0, scale = 1) => {
+    pickModel: (camera, model, mouseX, mouseY) => {
         const hit = moduleInstance.ccall(
             "rl_pick_model_to_scratch",
             "number",
-            ["number", "number", "number", "number", "number", "number", "number", "number"],
-            [camera, model, mouseX, mouseY, x, y, z, scale]
+            ["number", "number", "number", "number"],
+            [camera, model, mouseX, mouseY]
         ) !== 0;
         const point = moduleInstance.getVector3();
         const normalDistance = moduleInstance.getVector4();
@@ -877,12 +877,12 @@ const RL = {
             }
         };
     },
-    pickSprite3D: (camera, sprite3d, mouseX, mouseY, x = 0, y = 0, z = 0, size = 1) => {
+    pickSprite3D: (camera, sprite3d, mouseX, mouseY) => {
         const hit = moduleInstance.ccall(
             "rl_pick_sprite3d_to_scratch",
             "number",
-            ["number", "number", "number", "number", "number", "number", "number", "number"],
-            [camera, sprite3d, mouseX, mouseY, x, y, z, size]
+            ["number", "number", "number", "number"],
+            [camera, sprite3d, mouseX, mouseY]
         ) !== 0;
         const point = moduleInstance.getVector3();
         const normalDistance = moduleInstance.getVector4();

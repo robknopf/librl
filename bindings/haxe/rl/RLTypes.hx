@@ -14,6 +14,19 @@ typedef RLVec2 = {
   var y: Float;
 }
 
+typedef RLVec3 = {
+  var x: Float;
+  var y: Float;
+  var z: Float;
+}
+
+typedef RLPickResult = {
+  var hit: Bool;
+  var distance: Float;
+  var point: RLVec3;
+  var normal: RLVec3;
+}
+
 typedef RLMouseState = {
   var x: Int;
   var y: Int;

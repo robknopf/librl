@@ -125,14 +125,16 @@ Main responsibilities:
 
 - Model picking from screen-space mouse coordinates with camera + model handles
 - Sprite3D billboard picking from screen-space mouse coordinates with camera + sprite handles
-- Return collision details (`hit`, `distance`, world-space `point` and `normal`)
+- Return collision details (`hit`, `distance`, local-space `point` and `normal`)
 - Wasm bridge helpers for JS (`rl_pick_model_to_scratch`, `rl_pick_sprite3d_to_scratch`)
 
 Notes:
 
-- `rl_pick_model(...)` currently targets one model handle at a time.
-- `rl_pick_sprite3d(...)` targets one sprite handle at a time and uses billboard-quad collision.
-- Pick inputs still take explicit transform values and have not yet been collapsed to instance-owned state.
+- `rl_pick_model(camera, model, mouse_x, mouse_y)` — reads the model's stored transform from the instance; no explicit position/rotation/scale params needed.
+- `rl_pick_sprite3d(camera, sprite3d, mouse_x, mouse_y)` — reads the sprite's stored transform from the instance; no explicit position/size params needed.
+- `rl_pick_result_t.point` and `.normal` are returned in local/object space:
+  - model picks are transformed back through the full model world matrix used during collision
+  - sprite3d picks use billboard-local coordinates centered on the sprite, with normals on the local Z axis
 - Picking now uses broad-phase culling before narrow-phase tests:
   - models: world-space AABB ray test
   - sprite3d billboards: bounding-sphere ray test

@@ -204,23 +204,23 @@ static int rl_loader_is_ready_lua(lua_State *L)
 
 static int rl_loader_restore_fs_async_lua(lua_State *L)
 {
-    rl_loader_task_t *task = rl_loader_restore_fs_async();
-    lua_pushinteger(L, (lua_Integer)(uintptr_t)task);
+    rl_handle_t task = rl_loader_restore_fs_async();
+    lua_pushinteger(L, (lua_Integer)task);
     return 1;
 }
 
 static int rl_loader_create_import_task_lua(lua_State *L)
 {
     const char *filename = luaL_checkstring(L, 1);
-    rl_loader_task_t *task = rl_loader_create_import_task(filename);
-    lua_pushinteger(L, (lua_Integer)(uintptr_t)task);
+    rl_handle_t task = rl_loader_create_import_task(filename);
+    lua_pushinteger(L, (lua_Integer)task);
     return 1;
 }
 
-static int rl_loader_import_asset_sync_lua(lua_State *L)
+static int rl_loader_import_asset_lua(lua_State *L)
 {
     const char *filename = luaL_checkstring(L, 1);
-    int rc = rl_loader_import_asset_sync(filename);
+    int rc = rl_loader_import_asset(filename);
     lua_pushinteger(L, (lua_Integer)rc);
     return 1;
 }
@@ -230,7 +230,7 @@ static int rl_loader_import_assets_async_lua(lua_State *L)
     size_t count = 0;
     size_t i = 0;
     const char **filenames = NULL;
-    rl_loader_task_t *task = NULL;
+    rl_handle_t task = 0;
 
     luaL_checktype(L, 1, LUA_TTABLE);
     count = (size_t)lua_rawlen(L, 1);
@@ -255,34 +255,34 @@ static int rl_loader_import_assets_async_lua(lua_State *L)
     task = rl_loader_import_assets_async(filenames, count);
     free(filenames);
 
-    lua_pushinteger(L, (lua_Integer)(uintptr_t)task);
+    lua_pushinteger(L, (lua_Integer)task);
     return 1;
 }
 
 static int rl_loader_poll_task_lua(lua_State *L)
 {
-    rl_loader_task_t *task = (rl_loader_task_t *)(uintptr_t)luaL_checkinteger(L, 1);
+    rl_handle_t task = (rl_handle_t)luaL_checkinteger(L, 1);
     lua_pushboolean(L, rl_loader_poll_task(task) ? 1 : 0);
     return 1;
 }
 
 static int rl_loader_finish_task_lua(lua_State *L)
 {
-    rl_loader_task_t *task = (rl_loader_task_t *)(uintptr_t)luaL_checkinteger(L, 1);
+    rl_handle_t task = (rl_handle_t)luaL_checkinteger(L, 1);
     lua_pushinteger(L, rl_loader_finish_task(task));
     return 1;
 }
 
 static int rl_loader_free_task_lua(lua_State *L)
 {
-    rl_loader_task_t *task = (rl_loader_task_t *)(uintptr_t)luaL_checkinteger(L, 1);
+    rl_handle_t task = (rl_handle_t)luaL_checkinteger(L, 1);
     rl_loader_free_task(task);
     return 0;
 }
 
 static int rl_loader_get_task_path_lua(lua_State *L)
 {
-    rl_loader_task_t *task = (rl_loader_task_t *)(uintptr_t)luaL_checkinteger(L, 1);
+    rl_handle_t task = (rl_handle_t)luaL_checkinteger(L, 1);
     const char *path = rl_loader_get_task_path(task);
     if (path == NULL) {
         lua_pushnil(L);
@@ -346,7 +346,7 @@ static int rl_loader_clear_cache_lua(lua_State *L)
 
 static int rl_loader_add_task_lua(lua_State *L)
 {
-    rl_loader_task_t *task = (rl_loader_task_t *)(uintptr_t)luaL_checkinteger(L, 1);
+    rl_handle_t task = (rl_handle_t)luaL_checkinteger(L, 1);
     int success_ref = LUA_NOREF;
     int failure_ref = LUA_NOREF;
     int ctx_ref = LUA_NOREF;
@@ -375,6 +375,7 @@ static int rl_loader_add_task_lua(lua_State *L)
         if (success_ref != LUA_NOREF) luaL_unref(L, LUA_REGISTRYINDEX, success_ref);
         if (failure_ref != LUA_NOREF) luaL_unref(L, LUA_REGISTRYINDEX, failure_ref);
         if (ctx_ref != LUA_NOREF) luaL_unref(L, LUA_REGISTRYINDEX, ctx_ref);
+        rl_loader_free_task(task);
         lua_pushinteger(L, RL_LOADER_QUEUE_TASK_ERR_QUEUE_FULL);
         return 1;
     }
@@ -447,8 +448,8 @@ void rl_register_loader_bindings(lua_State *L)
     lua_pushcfunction(L, rl_loader_create_import_task_lua);
     lua_setfield(L, -2, "loader_import_asset_async");
 
-    lua_pushcfunction(L, rl_loader_import_asset_sync_lua);
-    lua_setfield(L, -2, "loader_import_asset_sync");
+    lua_pushcfunction(L, rl_loader_import_asset_lua);
+    lua_setfield(L, -2, "loader_import_asset");
 
     lua_pushcfunction(L, rl_loader_import_assets_async_lua);
     lua_setfield(L, -2, "loader_import_assets_async");

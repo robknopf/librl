@@ -105,7 +105,7 @@ probe_idbfs_build:
 		-I$(CORE_INC_DIR) \
 		$(CORE_WASM_ARCHIVE) \
 		$(WASM_COMMON_LDFLAGS) \
-		-s EXPORTED_FUNCTIONS='["_probe_fileio_init","_probe_fileio_restore_begin","_probe_fileio_restore_poll","_probe_fileio_restore_finish","_probe_fileio_write_text","_probe_fileio_exists","_probe_fileio_deinit"]' \
+		-s EXPORTED_FUNCTIONS='["_probe_fileio_init","_probe_fileio_restore_begin","_probe_fileio_restore_poll","_probe_fileio_restore_finish","_probe_fileio_flush_begin","_probe_fileio_flush_poll","_probe_fileio_flush_finish","_probe_fileio_write_text","_probe_fileio_exists","_probe_fileio_deinit"]' \
 		-O2
 
 probe_idbfs: probe_idbfs_build check_chrome check_probe_python

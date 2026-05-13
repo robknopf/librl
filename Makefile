@@ -69,7 +69,7 @@ LDFLAGS_WASM = \
 	--extern-post-js bindings/js/rl_module_export.js \
 	$(WASM_COMMON_LDFLAGS) \
 	-s JSPI=1 \
-	-s JSPI_EXPORTS='["rl_loader_init","rl_init"]' \
+	-s JSPI_EXPORTS='["rl_init","rl_loader_init","rl_loader_import_asset","rl_deinit","rl_loader_deinit"]' \
 	-fwasm-exceptions \
 	-s INITIAL_MEMORY=67108864 \
 	-s EXPORTED_FUNCTIONS='[ \
@@ -192,6 +192,7 @@ LDFLAGS_WASM = \
 		"_rl_loader_init", \
 		"_rl_loader_init_async", \
 		"_rl_loader_deinit", \
+		"_rl_loader_import_asset", \
 		"_rl_loader_restore_fs_async", \
 		"_rl_loader_create_import_task", \
 		"_rl_loader_import_assets_from_scratch_async", \

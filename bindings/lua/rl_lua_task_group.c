@@ -21,7 +21,7 @@
 #endif
 
 typedef struct rl_tg_entry_t {
-    rl_loader_task_t *task;
+    rl_handle_t task;
     char *path;
     int done;
     int rc;
@@ -58,7 +58,7 @@ static void rl_tg_entry_clear(lua_State *L, rl_tg_entry_t *e)
     e->on_error_ref = LUA_NOREF;
     free(e->path);
     e->path = NULL;
-    e->task = NULL;
+    e->task = 0;
     e->done = 0;
     e->rc = 0;
 }
@@ -116,7 +116,7 @@ static void call_group_ctx(lua_State *L, int fn_ref, int self_idx, int ctx_ref)
 }
 
 /* returns 0 = ok, -1 = oom (entries), -2 = oom (path) */
-static int rl_tg_append_entry(lua_State *L, rl_task_group_ud_t *g, rl_loader_task_t *task, int sref, int eref)
+static int rl_tg_append_entry(lua_State *L, rl_task_group_ud_t *g, rl_handle_t task, int sref, int eref)
 {
     const char *p;
     rl_tg_entry_t *e;
@@ -153,7 +153,7 @@ static int rl_tg_append_entry(lua_State *L, rl_task_group_ud_t *g, rl_loader_tas
 static int task_group_add_task(lua_State *L)
 {
     rl_task_group_ud_t *g = rl_tg_check(L, 1);
-    rl_loader_task_t *task;
+    rl_handle_t task;
     int sref;
     int eref;
     int rc;
@@ -161,8 +161,8 @@ static int task_group_add_task(lua_State *L)
     if (lua_gettop(L) < 2 || lua_isnoneornil(L, 2)) {
         return 0;
     }
-    task = (rl_loader_task_t *)(uintptr_t)(lua_Integer)luaL_checkinteger(L, 2);
-    if ((uintptr_t)task == 0) {
+    task = (rl_handle_t)luaL_checkinteger(L, 2);
+    if (task == 0) {
         return 0;
     }
 
@@ -189,15 +189,15 @@ static int task_group_add_task(lua_State *L)
 static int task_group_add_import_task(lua_State *L)
 {
     const char *path;
-    rl_loader_task_t *task;
+    rl_handle_t task;
     (void)rl_tg_check(L, 1);
     path = luaL_checkstring(L, 2);
     task = rl_loader_create_import_task(path);
-    if (task == NULL) {
+    if (task == 0) {
         return 0;
     }
     lua_settop(L, 4);
-    lua_pushinteger(L, (lua_Integer)(uintptr_t)task);
+    lua_pushinteger(L, (lua_Integer)task);
     lua_replace(L, 2);
     return task_group_add_task(L);
 }
@@ -213,7 +213,7 @@ static int task_group_add_import_tasks(lua_State *L)
     n = (int)lua_rawlen(L, 2);
     for (i = 1; i <= (size_t)n; i++) {
         const char *path;
-        rl_loader_task_t *task;
+        rl_handle_t task;
         int sref;
         int eref;
 
@@ -221,7 +221,7 @@ static int task_group_add_import_tasks(lua_State *L)
         path = luaL_checkstring(L, -1);
         lua_pop(L, 1);
         task = rl_loader_create_import_task(path);
-        if (task == NULL) {
+        if (task == 0) {
             continue;
         }
         sref = LUA_NOREF;
@@ -289,7 +289,7 @@ static int task_group_tick(lua_State *L)
         }
         e->rc = rl_loader_finish_task(e->task);
         rl_loader_free_task(e->task);
-        e->task = NULL;
+        e->task = 0;
         e->done = 1;
         g->completed_count++;
         if (e->rc != 0) {
@@ -372,9 +372,9 @@ static int task_group_gc(lua_State *L)
 
     for (j = 0; j < g->n; j++) {
         rl_tg_entry_t *e = &g->entries[j];
-        if (!e->done && e->task != NULL) {
+        if (!e->done && e->task != 0) {
             rl_loader_free_task(e->task);
-            e->task = NULL;
+            e->task = 0;
         }
         rl_tg_entry_clear(L, e);
     }

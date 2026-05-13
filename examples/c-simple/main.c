@@ -40,7 +40,7 @@ typedef struct app_context_t {
   float countdown_timer;
   float total_time;
   double last_time;
-  rl_loader_task_t *startup_tasks[3];
+  rl_handle_t startup_tasks[3];
   size_t startup_task_count;
   size_t startup_tasks_remaining;
   bool startup_tasks_failed;
@@ -54,11 +54,11 @@ static void rl_loader_import_asset_failed_cb_default(const char *path,
   (void)user_data;
   rl_logger_message_source(RL_LOGGER_LEVEL_WARN, "unknown", 0,
                            "Failed to load asset: %s",
-                           path != NULL ? path : "(null)");
+                           path != 0 ? path : "(null)");
 }
 
 static void create_startup_resources(app_context_t *ctx) {
-  if (ctx == NULL || ctx->startup_resources_created) {
+  if (ctx == 0 || ctx->startup_resources_created) {
     return;
   }
 
@@ -78,7 +78,7 @@ static void create_startup_resources(app_context_t *ctx) {
 static int process_startup_tasks(app_context_t *ctx) {
   size_t i = 0;
 
-  if (ctx == NULL) {
+  if (ctx == 0) {
     return -1;
   }
   if (ctx->startup_tasks_failed) {
@@ -91,15 +91,15 @@ static int process_startup_tasks(app_context_t *ctx) {
 
   for (i = 0; i < ctx->startup_task_count; i++) {
     int rc = 0;
-    const char *path = NULL;
-    if (ctx->startup_tasks[i] == NULL ||
+    const char *path = 0;
+    if (ctx->startup_tasks[i] == 0 ||
         !rl_loader_poll_task(ctx->startup_tasks[i])) {
       continue;
     }
     path = rl_loader_get_task_path(ctx->startup_tasks[i]);
     rc = rl_loader_finish_task(ctx->startup_tasks[i]);
     rl_loader_free_task(ctx->startup_tasks[i]);
-    ctx->startup_tasks[i] = NULL;
+    ctx->startup_tasks[i] = 0;
     ctx->startup_tasks_remaining--;
     if (rc != 0) {
       ctx->startup_tasks_failed = true;
@@ -126,7 +126,7 @@ static void on_bgm_ready(const char *path, void *user_data) {
 }
 
 static void play_bgm(const char *path, void *user_data) {
-  rl_loader_task_t *bgm_asset_task = rl_loader_create_import_task(path);
+  rl_handle_t bgm_asset_task = rl_loader_create_import_task(path);
   rl_loader_add_task(bgm_asset_task, on_bgm_ready, NULL, user_data);
 }
 
@@ -180,7 +180,7 @@ int rt_init(void *user_data) {
       sizeof(ctx->startup_tasks) / sizeof(ctx->startup_tasks[0]);
   ctx->startup_tasks_remaining = ctx->startup_task_count;
   for (size_t i = 0; i < ctx->startup_task_count; i++) {
-    if (ctx->startup_tasks[i] == NULL) {
+    if (ctx->startup_tasks[i] == 0) {
       ctx->startup_tasks_failed = true;
       return RESULT_ERROR;
     }
@@ -284,9 +284,9 @@ int rt_tick(float host_dt) {
 void rt_shutdown(void) {
   app_context_t *ctx = &g_app_context;
   for (size_t i = 0; i < ctx->startup_task_count; i++) {
-    if (ctx->startup_tasks[i] != NULL) {
+    if (ctx->startup_tasks[i] != 0) {
       rl_loader_free_task(ctx->startup_tasks[i]);
-      ctx->startup_tasks[i] = NULL;
+      ctx->startup_tasks[i] = 0;
     }
   }
 

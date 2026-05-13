@@ -12,7 +12,7 @@
 #include <string.h>
 
 static void tracked_slot_reset(rl_resource_handler_t *handler, int index) {
-  if (handler == NULL || index < 0 || index >= RL_RESOURCE_HANDLER_MAX_TRACKED) {
+  if (handler == 0 || index < 0 || index >= RL_RESOURCE_HANDLER_MAX_TRACKED) {
     return;
   }
 
@@ -25,7 +25,7 @@ static void tracked_slot_reset(rl_resource_handler_t *handler, int index) {
 static int find_free_tracked_slot(rl_resource_handler_t *handler) {
   int i = 0;
 
-  if (handler == NULL) {
+  if (handler == 0) {
     return -1;
   }
 
@@ -44,7 +44,7 @@ static void track_created_handle(rl_resource_handler_t *handler,
                                  rl_handle_t local_handle) {
   int index = 0;
 
-  if (handler == NULL || world_handle == 0 || local_handle == 0) {
+  if (handler == 0 || world_handle == 0 || local_handle == 0) {
     return;
   }
 
@@ -65,7 +65,7 @@ static int find_tracked_slot_by_world_handle(const rl_resource_handler_t *handle
                                              rl_handle_t world_handle) {
   int i = 0;
 
-  if (handler == NULL || world_handle == 0) {
+  if (handler == 0 || world_handle == 0) {
     return -1;
   }
 
@@ -154,13 +154,13 @@ static bool start_async_load(rl_resource_handler_t *handler, uint32_t rid,
                               rl_resource_request_type_t type,
                               const char *filename, float size) {
   rl_pending_resource_load_t *pending = find_free_pending(handler);
-  if (pending == NULL) {
+  if (pending == 0) {
     log_error("[ResourceHandler] No free pending slots");
     return false;
   }
   
   pending->loader_task = rl_loader_create_import_task(filename);
-  if (pending->loader_task == NULL) {
+  if (pending->loader_task == 0) {
     log_error("[ResourceHandler] Failed to start loader for: %s", filename);
     return false;
   }
@@ -197,7 +197,7 @@ static rl_handle_t create_handle_for_type(rl_resource_request_type_t type,
 }
 
 void rl_resource_handler_init(rl_resource_handler_t *handler) {
-  if (handler == NULL) {
+  if (handler == 0) {
     return;
   }
   memset(handler, 0, sizeof(rl_resource_handler_t));
@@ -211,8 +211,8 @@ int rl_resource_handler_process_requests(rl_resource_handler_t *handler,
   int count = 0;
   int i = 0;
   
-  if (handler == NULL || requests == NULL || request_count <= 0 ||
-      responses == NULL || max_responses <= 0) {
+  if (handler == 0 || requests == 0 || request_count <= 0 ||
+      responses == 0 || max_responses <= 0) {
     return 0;
   }
   
@@ -257,7 +257,7 @@ int rl_resource_handler_process_requests(rl_resource_handler_t *handler,
       case RL_RESOURCE_REQUEST_CREATE_SOUND:
       case RL_RESOURCE_REQUEST_CREATE_MUSIC:
       case RL_RESOURCE_REQUEST_CREATE_SPRITE3D: {
-        const char *filename = NULL;
+        const char *filename = 0;
         switch (req->type) {
           case RL_RESOURCE_REQUEST_CREATE_TEXTURE:  filename = req->data.create_texture.filename; break;
           case RL_RESOURCE_REQUEST_CREATE_MODEL:    filename = req->data.create_model.filename;   break;
@@ -266,7 +266,7 @@ int rl_resource_handler_process_requests(rl_resource_handler_t *handler,
           case RL_RESOURCE_REQUEST_CREATE_SPRITE3D: filename = req->data.create_sprite3d.filename; break;
           default: break;
         }
-        if (filename != NULL) {
+        if (filename != 0) {
           if (!start_async_load(handler, req->rid, req->handle, req->type, filename, 0.0f)) {
             responses[count].rid = req->rid;
             responses[count].handle = 0;
@@ -308,7 +308,7 @@ int rl_resource_handler_poll(rl_resource_handler_t *handler,
   int count = 0;
   int i = 0;
   
-  if (handler == NULL || responses == NULL || max_responses <= 0) {
+  if (handler == 0 || responses == 0 || max_responses <= 0) {
     return 0;
   }
   
@@ -317,7 +317,7 @@ int rl_resource_handler_poll(rl_resource_handler_t *handler,
     int rc = 0;
     rl_handle_t handle = 0;
     
-    if (!pending->in_use || pending->loader_task == NULL) {
+    if (!pending->in_use || pending->loader_task == 0) {
       continue;
     }
     
@@ -331,7 +331,7 @@ int rl_resource_handler_poll(rl_resource_handler_t *handler,
     
     rc = rl_loader_finish_task(pending->loader_task);
     rl_loader_free_task(pending->loader_task);
-    pending->loader_task = NULL;
+    pending->loader_task = 0;
     
     if (rc != 0) {
       log_error("[ResourceHandler] Loader failed for: %s", pending->filename);
@@ -363,16 +363,16 @@ int rl_resource_handler_poll(rl_resource_handler_t *handler,
 void rl_resource_handler_reset(rl_resource_handler_t *handler) {
   int i = 0;
 
-  if (handler == NULL) {
+  if (handler == 0) {
     return;
   }
 
   for (i = 0; i < RL_RESOURCE_HANDLER_MAX_PENDING; i++) {
-    if (handler->pending[i].in_use && handler->pending[i].loader_task != NULL) {
+    if (handler->pending[i].in_use && handler->pending[i].loader_task != 0) {
       rl_loader_free_task(handler->pending[i].loader_task);
     }
     handler->pending[i].in_use = false;
-    handler->pending[i].loader_task = NULL;
+    handler->pending[i].loader_task = 0;
   }
 
   for (i = RL_RESOURCE_HANDLER_MAX_TRACKED - 1; i >= 0; i--) {
@@ -399,7 +399,7 @@ void rl_resource_handler_resolve_frame_commands(
     rl_frame_command_buffer_t *frame_commands) {
   int i = 0;
 
-  if (handler == NULL || frame_commands == NULL) {
+  if (handler == 0 || frame_commands == 0) {
     return;
   }
 
@@ -470,7 +470,7 @@ void rl_resource_handler_resolve_pick_requests(
     rl_protocol_pick_requests_t *pick_requests) {
   int i = 0;
 
-  if (handler == NULL || pick_requests == NULL) {
+  if (handler == 0 || pick_requests == 0) {
     return;
   }
 

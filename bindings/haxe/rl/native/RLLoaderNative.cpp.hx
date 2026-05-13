@@ -1,20 +1,12 @@
 /**
  * hxcpp-only loader implementation.
- * Contains RLLoaderTaskPtrImpl and the internal RLLoader class used by RLNative.hx.
+ * Contains the internal RLLoader class used by RLNative.cpp.hx.
  * Never imported directly by scripts.
  */
 package rl.native;
 
 #if cpp
-abstract RLLoaderTaskPtrImpl(cpp.UInt64) from cpp.UInt64 to cpp.UInt64 {
-  public static inline function invalid(): RLLoaderTaskPtrImpl {
-    return cast (0 : cpp.UInt64);
-  }
-
-  public inline function isValid(): Bool {
-    return this != (0 : cpp.UInt64);
-  }
-}
+import rl.RLHandle;
 
 typedef RLLoaderCallbackFn = cpp.Callable<cpp.ConstCharStar->cpp.RawPointer<cpp.Void>->Void>;
 
@@ -49,60 +41,57 @@ class RLLoader {
   static function isInitializedNative(): Bool { return false; }
 
   @:functionCode('
-    ::rl_loader_task_t *task = ::rl_loader_restore_fs_async();
-    return (cpp::UInt64)(uintptr_t)task;
+    return (int)::rl_loader_restore_fs_async();
   ')
-  static function restoreFsAsyncNative(): RLLoaderTaskPtrImpl {
-    return RLLoaderTaskPtrImpl.invalid();
+  static function restoreFsAsyncNative(): RLHandle {
+    return 0;
   }
 
   @:functionCode('
-    ::rl_loader_task_t *task = ::rl_loader_create_import_task(filename.utf8_str());
-    return (cpp::UInt64)(uintptr_t)task;
+    return (int)::rl_loader_create_import_task(filename.utf8_str());
   ')
-  static function importAssetAsyncNative(filename: String): RLLoaderTaskPtrImpl {
-    return RLLoaderTaskPtrImpl.invalid();
+  static function importAssetAsyncNative(filename: String): RLHandle {
+    return 0;
   }
 
   @:functionCode('
-    return ::rl_loader_import_asset_sync(filename.utf8_str());
+    return ::rl_loader_import_asset(filename.utf8_str());
   ')
-  static function importAssetSyncNative(filename: String): Int {
+  static function importAssetNative(filename: String): Int {
     return -1;
   }
 
   @:functionCode('
     int n = filenames->length;
     if (n <= 0) {
-      return (cpp::UInt64)0;
+      return 0;
     }
     const char **ptrs = (const char **)alloca(n * sizeof(const char *));
     for (int i = 0; i < n; i++) ptrs[i] = filenames->__get(i).utf8_str();
-    ::rl_loader_task_t *task = ::rl_loader_import_assets_async((const char *const *)ptrs, (size_t)n);
-    return (cpp::UInt64)(uintptr_t)task;
+    return (int)::rl_loader_import_assets_async((const char *const *)ptrs, (size_t)n);
   ')
-  static function importAssetsAsyncNative(filenames: Array<String>): RLLoaderTaskPtrImpl {
-    return RLLoaderTaskPtrImpl.invalid();
-  }
-
-  @:functionCode('
-    return ::rl_loader_poll_task((::rl_loader_task_t *)(uintptr_t)task);
-  ')
-  static function pollTaskNative(task: RLLoaderTaskPtrImpl): Bool {
-    return false;
-  }
-
-  @:functionCode('
-    return ::rl_loader_finish_task((::rl_loader_task_t *)(uintptr_t)task);
-  ')
-  static function finishTaskNative(task: RLLoaderTaskPtrImpl): Int {
+  static function importAssetsAsyncNative(filenames: Array<String>): RLHandle {
     return 0;
   }
 
   @:functionCode('
-    return ::rl_loader_get_task_path((::rl_loader_task_t *)(uintptr_t)task);
+    return ::rl_loader_poll_task((::rl_handle_t)task);
   ')
-  static function getTaskPathNative(task: RLLoaderTaskPtrImpl): String {
+  static function pollTaskNative(task: RLHandle): Bool {
+    return false;
+  }
+
+  @:functionCode('
+    return ::rl_loader_finish_task((::rl_handle_t)task);
+  ')
+  static function finishTaskNative(task: RLHandle): Int {
+    return 0;
+  }
+
+  @:functionCode('
+    return ::rl_loader_get_task_path((::rl_handle_t)task);
+  ')
+  static function getTaskPathNative(task: RLHandle): String {
     return null;
   }
 
@@ -130,14 +119,14 @@ class RLLoader {
   }
 
   @:functionCode('
-    ::rl_loader_free_task((::rl_loader_task_t *)(uintptr_t)task);
+    ::rl_loader_free_task((::rl_handle_t)task);
   ')
-  static function freeTaskNative(task: RLLoaderTaskPtrImpl): Void {}
+  static function freeTaskNative(task: RLHandle): Void {}
 
   @:functionCode('
-    return ::rl_loader_add_task((::rl_loader_task_t *)(uintptr_t)task, onSuccess, onFailure, userData);
+    return ::rl_loader_add_task((::rl_handle_t)task, onSuccess, onFailure, userData);
   ')
-  static function addTaskNative(task: RLLoaderTaskPtrImpl,
+  static function addTaskNative(task: RLHandle,
     onSuccess: RLLoaderCallbackFn, onFailure: RLLoaderCallbackFn,
     userData: cpp.RawPointer<cpp.Void>): Int {
     return 0;
@@ -157,7 +146,7 @@ class RLLoader {
     return null;
   }
 
-  public static function loaderRestoreFsAsync(): RLLoaderTaskPtrImpl {
+  public static function loaderRestoreFsAsync(): RLHandle {
     return restoreFsAsyncNative();
   }
 
@@ -177,27 +166,27 @@ class RLLoader {
     return isInitializedNative();
   }
 
-  public static function loaderImportAssetAsync(filename: String): RLLoaderTaskPtrImpl {
+  public static function loaderImportAssetAsync(filename: String): RLHandle {
     return importAssetAsyncNative(filename);
   }
 
-  public static function loaderImportAssetSync(filename: String): Int {
-    return importAssetSyncNative(filename);
+  public static function loaderImportAsset(filename: String): Int {
+    return importAssetNative(filename);
   }
 
-  public static function loaderImportAssetsAsync(filenames: Array<String>): RLLoaderTaskPtrImpl {
+  public static function loaderImportAssetsAsync(filenames: Array<String>): RLHandle {
     return cast importAssetsAsyncNative(filenames);
   }
 
-  public static function loaderPollTask(task: RLLoaderTaskPtrImpl): Bool {
+  public static function loaderPollTask(task: RLHandle): Bool {
     return pollTaskNative(task);
   }
 
-  public static function loaderFinishTask(task: RLLoaderTaskPtrImpl): Int {
+  public static function loaderFinishTask(task: RLHandle): Int {
     return finishTaskNative(task);
   }
 
-  public static function loaderGetTaskPath(task: RLLoaderTaskPtrImpl): String {
+  public static function loaderGetTaskPath(task: RLHandle): String {
     return getTaskPathNative(task);
   }
 
@@ -205,7 +194,7 @@ class RLLoader {
     return readLocalNative(filename);
   }
 
-  public static function loaderFreeTask(task: RLLoaderTaskPtrImpl): Void {
+  public static function loaderFreeTask(task: RLHandle): Void {
     freeTaskNative(task);
   }
 
@@ -213,7 +202,7 @@ class RLLoader {
     return isAssetCachedNative(filename);
   }
 
-  public static function loaderAddTask(task: RLLoaderTaskPtrImpl,
+  public static function loaderAddTask(task: RLHandle,
     onSuccess: RLLoaderCallbackFn, onFailure: RLLoaderCallbackFn,
     userData: cpp.RawPointer<cpp.Void>): Int {
     return addTaskNative(task, onSuccess, onFailure, userData);

@@ -5,11 +5,12 @@
 #include <stddef.h>
 #include <stdlib.h>
 
+#include "rl_types.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef struct rl_loader_task rl_loader_task_t;
 typedef void (*rl_loader_callback_fn)(const char *path, void *user_data);
 
 typedef enum rl_loader_queue_task_result_t {
@@ -27,10 +28,10 @@ const char *rl_loader_get_asset_host(void);
 const char *rl_loader_get_cache_dir(void);
 float rl_loader_ping_asset_host(const char *asset_host);
 bool rl_loader_is_ready(void);
-rl_loader_task_t *rl_loader_restore_fs_async(void);
-rl_loader_task_t *rl_loader_create_import_task(const char *filename);
-rl_loader_task_t *rl_loader_import_assets_async(const char *const *filenames, size_t filename_count);
-rl_loader_task_t *rl_loader_import_assets_from_scratch_async(size_t filename_count);
+rl_handle_t rl_loader_restore_fs_async(void);
+rl_handle_t rl_loader_create_import_task(const char *filename);
+rl_handle_t rl_loader_import_assets_async(const char *const *filenames, size_t filename_count);
+rl_handle_t rl_loader_import_assets_from_scratch_async(size_t filename_count);
 
 /**
  * Synchronously import a single asset into the loader cache.
@@ -51,11 +52,11 @@ rl_loader_task_t *rl_loader_import_assets_from_scratch_async(size_t filename_cou
  * Returns 0 on success, non-zero on failure (HTTP status when the fetch
  * returned a status, otherwise a negative error).
  */
-int rl_loader_import_asset_sync(const char *filename);
-bool rl_loader_poll_task(rl_loader_task_t *task);
-int rl_loader_finish_task(rl_loader_task_t *task);
-const char *rl_loader_get_task_path(rl_loader_task_t *task);
-void rl_loader_free_task(rl_loader_task_t *task);
+int rl_loader_import_asset(const char *filename);
+bool rl_loader_poll_task(rl_handle_t task);
+int rl_loader_finish_task(rl_handle_t task);
+const char *rl_loader_get_task_path(rl_handle_t task);
+void rl_loader_free_task(rl_handle_t task);
 bool rl_loader_is_asset_cached(const char *filename);
 
 typedef struct rl_loader_read_result_t {
@@ -71,7 +72,7 @@ void rl_loader_normalize_path(const char *path, char *buffer, size_t buffer_size
 int rl_loader_uncache_asset(const char *filename);
 int rl_loader_clear_cache(void);
 
-rl_loader_queue_task_result_t rl_loader_add_task(rl_loader_task_t *task,
+rl_loader_queue_task_result_t rl_loader_add_task(rl_handle_t task,
                                                  rl_loader_callback_fn on_success,
                                                  rl_loader_callback_fn on_failure,
                                                  void *user_data);

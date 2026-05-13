@@ -79,8 +79,8 @@ if type(rl.loader_ping_asset_host) ~= "function" then
     print("FAIL: Expected rl.loader_ping_asset_host function")
     os.exit(1)
 end
-if type(rl.loader_import_asset_sync) ~= "function" then
-    print("FAIL: Expected rl.loader_import_asset_sync function")
+if type(rl.loader_import_asset) ~= "function" then
+    print("FAIL: Expected rl.loader_import_asset function")
     os.exit(1)
 end
 local g = rl.loader_create_task_group()

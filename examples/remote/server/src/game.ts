@@ -662,7 +662,6 @@ function queueAssetCreateTask(
   const task = rl_loader_create_import_task(path);
   const rc = rl_loader_add_task(
     task,
-    path,
     () => on_success(),
     (failedPath) => markResourceLoadFailed(session, failedPath),
     undefined,
@@ -717,7 +716,6 @@ function beginLoadWorldResources(world: WorldState): void {
     const task = rl_loader_create_import_task(logoPath);
     const rc = rl_loader_add_task(
       task,
-      logoPath,
       () => {
         void Promise.all([
           Texture.load(WorldResources, logoPath),
@@ -749,7 +747,6 @@ function beginLoadWorldResources(world: WorldState): void {
     const task = rl_loader_create_import_task(blobPath);
     const rc = rl_loader_add_task(
       task,
-      blobPath,
       () => {
         void Texture.load(WorldResources, blobPath)
           .then((texture) => {

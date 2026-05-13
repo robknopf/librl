@@ -166,6 +166,10 @@ In practice, this means we must audit:
 - wasm library exports
 - any bindings or runners that can trigger loader-based imports
 
+For the root librl wasm build, keep this scoped to librl entry points. Runtime
+contracts such as `rt_boot`, `rt_init`, `rt_tick`, and `rt_shutdown` belong to
+the example or host that defines them.
+
 ## Rollout Strategy
 
 Recommended order:

@@ -88,6 +88,11 @@ Notes:
   - `loaderInit([mountPoint])`
   - `loaderInitAsync([mountPoint])`
   - `loaderIsReady()`
+  - `restoreFSAsync()` → task handle for `rl_loader_restore_fs_async()`
+  - `importAsset(filename)` → Promise/integer result for `rl_loader_import_asset()`
+  - `importAssetAsync(filename)` → task handle for `rl_loader_create_import_task()`
+  - `importAssetsAsync(filenames)` → task handle via the scratch ABI and `rl_loader_import_assets_from_scratch_async()`
+  - `waitForImportAssetAsync(filename)` / `waitForImportAssetsAsync(filenames)` → Promise/integer convenience wrappers around the task-returning imports
   - `uncacheAsset(filename)`
   - `clearCache()`
 - JS binding-level TaskGroup ergonomics:
@@ -99,8 +104,7 @@ Notes:
   - `createSprite3DFromLocal(path)`
   - `createFontFromLocal(path, fontSize)`
   - `createMusicFromLocal(path)`
-- JS still carries some older wasm cache/readiness convenience helpers.
-  - Treat those as compatibility wrappers until the JS binding is fully migrated to the new async loader-op API.
+- JS task-returning loader helpers use the same naming convention as C: `_async` means the call starts work and returns a task handle. Default names such as `importAsset(...)` follow the synchronous/default contract, even though JS callers still `await` them when JSPI is involved.
 
 ## Nim Binding
 
@@ -148,10 +152,10 @@ Notes:
   - `rl_loader_deinit()`
   - `rl_loader_is_initialized()` → `bool`
   - `loaderPingAssetHost(assetHost?)` → RTT ms, or `< 0` on failure
-  - `rl_loader_restore_fs_async()`
-  - `rl_loader_create_import_task(filename)`
-  - `rl_loader_import_asset_sync(filename)` → `cint` (`0` success)
-  - `rl_loader_import_assets_async(filenames, count)`
+  - `rl_loader_restore_fs_async()` → `RLHandle`
+  - `rl_loader_create_import_task(filename)` → `RLHandle`
+  - `rl_loader_import_asset(filename)` → `cint` (`0` success)
+  - `rl_loader_import_assets_async(filenames, count)` → `RLHandle`
   - `rl_loader_poll_task(task)`
   - `rl_loader_finish_task(task)`
   - `rl_loader_free_task(task)`
@@ -175,9 +179,11 @@ Binding-level async loader ergonomics:
 
 Files:
 
-- `bindings/haxe/rl/RL.hx` — cppia/Lua-safe public API (externs + pure Haxe types). No `cpp.*`.
-- `bindings/haxe/rl/native/RLNative.hx` — hxcpp-only implementation (`#if cpp` guarded). Contains all `@:native`, `untyped __cpp__`, `@:functionCode`, and bridge classes. Never imported directly by scripts.
-- `bindings/haxe/rl/native/RLLoaderNative.hx` — hxcpp-only loader impl (`RLLoader` class + `RLLoaderTaskPtrImpl`). `RLLoaderTaskPtr` in `RL.hx` typedefs to this under `#if cpp`.
+- `bindings/haxe/rl/RL.hx` — public `rl.RL` module used by authored Haxe code.
+- `bindings/haxe/rl/native/RLNative.cpp.hx` — current hxcpp backend implementation. Contains all `@:native`, `untyped __cpp__`, `@:functionCode`, and bridge classes.
+- `bindings/haxe/rl/native/RLNative.hx` — unsupported fallback that fails compilation for targets without a backend.
+- `bindings/haxe/rl/RLHandle.hx` — shared integer handle type.
+- `bindings/haxe/rl/native/RLLoaderNative.cpp.hx` — current hxcpp-only loader impl (`RLLoader` class).
 - `bindings/haxe/rl/RLTaskGroup.hx` — pure Haxe task group helper; all methods are non-inline for cppia compatibility.
 - `bindings/haxe/rl/InjectLibRL.hx`
 - `examples/haxe-simple/src/Main.hx`
@@ -185,14 +191,49 @@ Files:
 Role:
 
 - Exposes `librl` APIs to Haxe via hxcpp externs (C++ FFI).
-- `RL.hx` is the script-facing API: safe for cppia and Lua targets (no cpp bleed).
-  - Under `#if cpp`: `typedef RL = rl.native.RLNative.RLImpl` — delegates to the native impl.
-  - Under `#else`: `extern class RL` — resolved from `export_classes.info` at cppia compile time.
-- `RLNative.hx` holds all hxcpp-specific internals and is compiled into the host binary with `-D scriptable`.
-- Uses `@:buildXml`, `@:functionCode` in `RLNative.hx` to:
+- `RL.hx` is the script-facing/public API module and must remain free of `cpp.*`, `@:native`, and `untyped __cpp__`.
+- `RLNative.cpp.hx` currently holds the hxcpp-specific backend and is compiled into the host binary with `-D scriptable`.
+- Uses `@:buildXml`, `@:functionCode` in `RLNative.cpp.hx` to:
   - Include `rl.h` / `rl_loader.h`.
   - Inject link flags (`librl.a` / `librl.wasm.a`).
   - Bridge Haxe loader callbacks to `rl_loader_add_task`.
+
+### Haxe Architecture Notes
+
+Current state:
+
+- `RL.hx` is now a real façade class with no target branches in its public method bodies.
+- `RL.hx` delegates into `rl.native.RLNative`, which resolves by target:
+  - `RLNative.cpp.hx` on `cpp`
+  - `RLNative.hx` for unsupported targets, which fails at compile time
+- There is no generic runtime fallback. New targets must add an explicit backend such as `RLNative.lua.hx`.
+
+Target-neutral direction:
+
+- `rl.RL` should be the stable public façade that authored Haxe code imports on every target.
+- `rl.RL` should own public helpers and forward calls into a backend module; it should not collapse into a `typedef` alias of an hxcpp implementation type.
+- Target-specific implementation should live under backend files selected by target, for example:
+  - `bindings/haxe/rl/native/RLNative.cpp.hx`
+  - `bindings/haxe/rl/native/RLNative.lua.hx`
+- The same pattern should be applied to loader internals:
+  - `bindings/haxe/rl/native/RLLoaderNative.cpp.hx`
+  - `bindings/haxe/rl/native/RLLoaderNative.lua.hx`
+
+Design rules for that split:
+
+- `RL.hx` stays target-neutral:
+  - no `cpp.*`
+  - no `@:native`
+  - no `untyped __cpp__`
+- `RLNative.*.hx` owns target-specific plumbing.
+- The backend contract is currently structural: each `RLNative.<target>.hx` must provide the static members called by `RL.hx`.
+- Do not use `RLNative.hx` as an implementation shim; it exists only to fail clearly for unsupported targets.
+- Authored/gameplay code should import only `rl.RL`, not `rl.native.*`.
+- Public handle types exposed from `rl.*` should be stable across targets; backend-specific representations such as `cpp.UInt64` should stay internal to the backend layer.
+
+Practical implication:
+
+- If Haxe-to-Lua support is added, the Lua backend should expose the same public `rl.RL` API through `RLNative.lua.hx`, rather than reusing hxcpp-generated implementation names.
 
 Used by:
 
@@ -228,16 +269,17 @@ Async loader sugar:
   - `RL.loaderIsInitialized(): Bool`
 - The binding exposes:
   - `RL.loaderPingAssetHost(assetHost?): Float` → RTT ms, or `< 0` on failure
-  - `RL.loaderImportAssetAsync(path: String): RLLoaderTaskPtr`
+  - `RL.loaderImportAssetAsync(path: String): RLHandle`
   - `RLLoader.loaderAddTask(task, onSuccess, onFailure, userData)` with the callback path derived from `RLLoader.loaderGetTaskPath(task)`
-  - `RL.loaderPollTask(task: RLLoaderTaskPtr): Bool`
-  - `RL.loaderFinishTask(task: RLLoaderTaskPtr): Int`
+  - `RL.loaderPollTask(task: RLHandle): Bool`
+  - `RL.loaderFinishTask(task: RLHandle): Int`
   - `RL.loaderCreateTaskGroup<T>(onComplete?, onError?, ctx?)`
   - `RLTaskGroup.addImportTask(path, onSuccess?, onError?)`
   - `RLTaskGroup.process()`, `RLTaskGroup.remainingTasks()`, `RLTaskGroup.failedPaths()`
   - `RL.loaderAddTask(task, onSuccess, onFailure, ctx)`
 - `rl_loader_add_task` is wrapped so Haxe loader callbacks use plain `(path, ctx)` handlers:
   - `RL.loaderAddTask(task, onAssetReady, onAssetFailed, ctx)`
+- `RL.loaderAddTask(...)` consumes the task handle when queueing succeeds; use task groups or callbacks rather than polling the same handle after queueing it.
 - The example (`examples/haxe-simple/src/Main.hx`) is the canonical reference for:
   - Direct `RL.init` / frame loop / `RL.deinit` usage.
   - Non-blocking async import gating via `loadingGroup.process()`.
@@ -269,7 +311,7 @@ Notes:
 - Lua exposes `rl.loader_is_ready()` for `rl_loader_is_ready()`.
 - Lua exposes `rl.loader_is_initialized()` for `rl_loader_is_initialized()`.
 - Lua exposes `rl.loader_create_import_task(filename)` for `rl_loader_create_import_task()`.
-- Lua exposes `rl.loader_import_asset_sync(filename)` → integer return code (`0` success); on wasm this follows the same constraints as the C API (see `rl_loader_import_asset_sync` in `rl_loader.h`).
+- Lua exposes `rl.loader_import_asset(filename)` → integer return code (`0` success); on wasm this follows the same constraints as the C API (see `rl_loader_import_asset` in `rl_loader.h`).
 - Lua `rl.loader_add_task(task, on_success?, on_failure?, ctx?)` derives the callback path from `rl_loader_get_task_path(task)`. Loader callbacks receive `(path, ctx)`.
 - Lua exposes loader queue result constants (`rl.RL_LOADER_QUEUE_TASK_OK`, `rl.RL_LOADER_QUEUE_TASK_ERR_INVALID`, `rl.RL_LOADER_QUEUE_TASK_ERR_QUEUE_FULL`).
 - Lua exposes init result constants (`rl.RL_INIT_OK`, `rl.RL_INIT_ERR_UNKNOWN`, `rl.RL_INIT_ERR_ALREADY_INITIALIZED`, `rl.RL_INIT_ERR_LOADER`, `rl.RL_INIT_ERR_ASSET_HOST`, `rl.RL_INIT_ERR_WINDOW`).

@@ -13,7 +13,7 @@ package;
     <flag value="-s" />
     <flag value="JSPI=1" />
     <flag value="-s" />
-    <flag value="JSPI_EXPORTS=[\'example_init\',\'example_frame\']" />
+    <flag value="JSPI_EXPORTS=[\'example_init\',\'example_frame\',\'example_shutdown\']" />
   </target>
 ')
 @:keep

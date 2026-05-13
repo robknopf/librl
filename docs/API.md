@@ -6,6 +6,7 @@ This document summarizes the current public C API exposed by `include/*.h`.  As 
 
 - Most resource APIs use `rl_handle_t` (`unsigned int`) as an opaque handle.
 - `0` is generally an invalid handle unless a subsystem documents otherwise.
+- Public API names use the default-name-as-synchronous convention. If a function may start work and return before completion, it should use an `_async` suffix and provide a handle, poll/finish flow, or explicit readiness state. Synchronous/default functions may still suspend on wasm when reached through a JSPI-exported entry point.
 - Call `rl_init(NULL)` (or `rl_init(&config)`; see `include/rl_config.h`) before using subsystem APIs, and `rl_deinit()` at shutdown.
   `rl_init()` is the default synchronous contract: it returns only after loader restore readiness is satisfied.
   `rl_init_async()` preserves the polling contract: it starts runtime init and returns immediately.
@@ -280,9 +281,11 @@ Main responsibilities:
   - `rl_loader_set_asset_host(asset_host)`
   - `rl_loader_get_asset_host()`
 - Async restore / import operations:
-  - `rl_loader_restore_fs_async()`
-  - `rl_loader_create_import_task(filename)`
-  - `rl_loader_import_assets_async(filenames, count)`
+  - `rl_loader_restore_fs_async()` → `rl_handle_t`
+  - `rl_loader_create_import_task(filename)` → `rl_handle_t`
+  - `rl_loader_import_assets_async(filenames, count)` → `rl_handle_t`
+- Synchronous asset import:
+  - `rl_loader_import_asset(filename)` → `int`
 - Async task lifecycle:
   - `rl_loader_add_task(task, on_success, on_failure, user_data)`
   - `rl_loader_poll_task(task)`
@@ -295,6 +298,10 @@ Main responsibilities:
 Notes:
 
 - `rl_loader_add_task(...)` now derives the callback path from the queued task itself. Callers no longer pass a separate path string when registering a managed task.
+- Loader tasks are public `rl_handle_t` values. The internal `rl_loader_task_t` state remains private to the loader.
+- `rl_loader_add_task(...)` consumes the task handle on success, matching the previous ownership transfer where the managed queue owned and freed the task pointer.
+- On wasm, `rl_loader_deinit()` waits for any in-flight IDBFS restore to settle, flushes IDBFS, then deinitializes file I/O. Any exported entry point that can reach `rl_loader_deinit()` / `rl_deinit()` must be listed in `JSPI_EXPORTS`.
+- On wasm, `rl_loader_import_asset(...)` uses the JSPI sync fetch path. Any exported entry point that can reach it must be listed in `JSPI_EXPORTS`.
   - `rl_loader_uncache_asset(filename)`
   - `rl_loader_clear_cache()`
 
@@ -603,7 +610,9 @@ Notes:
 
 - On wasm, `fileio_init()` mounts IDBFS and starts an async restore (`FS.syncfs(true, ...)`) through a single internal sync path.
 - `Module.fileio_idbfs_ready` is `false` from init start until restore succeeds.
-- `Module.fileio_idbfs_ready` is set back to `false` at deinit start before a best-effort async flush (`FS.syncfs(false, ...)`).
+- Direct fileio callers that need deterministic persistence before teardown should start `fileio_flush_async()` and wait for `fileio_sync_finish(...)` before `fileio_deinit()`.
+- `rl_loader_deinit()` handles that flush for librl callers, so `rl_deinit()` is the normal deterministic teardown boundary for librl applications.
+- `Module.fileio_idbfs_ready` is set back to `false` at fileio deinit.
 - A sync-overlap guard (`Module.fileio_idbfs_syncing`) prevents concurrent sync operations.
 - JS callers that need cache-first behavior should wait for readiness before first asset-backed load.
 

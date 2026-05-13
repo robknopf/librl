@@ -1,11 +1,10 @@
 package rl;
 import rl.RL;
-import rl.RL.RLLoaderTaskPtr;
 
 typedef RLTaskGroupTaskCallback<T> = String->T->Void;
 typedef RLTaskGroupCallback<T> = RLTaskGroup->T->Void;
 typedef RLTaskGroupEntry = {
-  var task:RLLoaderTaskPtr;
+  var task:RLHandle;
   var path:String;
   var done:Bool;
   var rc:Int;
@@ -33,7 +32,7 @@ class RLTaskGroup {
     terminalCallbackInvoked = false;
   }
 
-  public function addTask<T>(task:RLLoaderTaskPtr, ?onSuccess:RLTaskGroupTaskCallback<T>, ?onError:RLTaskGroupTaskCallback<T>):Void {
+  public function addTask<T>(task:RLHandle, ?onSuccess:RLTaskGroupTaskCallback<T>, ?onError:RLTaskGroupTaskCallback<T>):Void {
     if (!task.isValid()) {
       return;
     }

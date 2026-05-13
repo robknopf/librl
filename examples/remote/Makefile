@@ -22,7 +22,7 @@ WASM_COMMON_LDFLAGS ?= \
 	-s STACK_OVERFLOW_CHECK=0 \
 	-s EXPORTED_FUNCTIONS='["_main","_rt_boot","_rt_init","_rt_tick","_rt_shutdown"]'
 CFLAGS_WASM ?= $(WASM_PLATFORM_CFLAGS)
-WASM_SYNC_LDFLAGS ?= -s JSPI=1 -s JSPI_EXPORTS='["rt_init","rt_tick"]' -fwasm-exceptions
+WASM_SYNC_LDFLAGS ?= -s JSPI=1 -s JSPI_EXPORTS='["rt_init","rt_tick","rt_shutdown"]' -fwasm-exceptions
 LDFLAGS_WASM ?= $(WASM_COMMON_LDFLAGS) $(WASM_SYNC_LDFLAGS)
 
 OUT_DIR := out

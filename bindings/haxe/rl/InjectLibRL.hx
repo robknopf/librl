@@ -68,11 +68,6 @@ package rl;
     <!-- Project-local examples decide which app/runtime functions to export. -->
     <flag value="-s" />
     <flag value="EXPORTED_RUNTIME_METHODS=[\'ccall\',\'cwrap\']" />
-    
-    <!--
-    <flag value="-s" />
-    <flag value="EXPORTED_FUNCTIONS=[\'_main\',\'_rt_boot\',\'_rt_init\',\'_rt_tick\',\'_rt_shutdown\']" />
-    -->
 
     <!-- hxcpp GC requires spill-pointers -->
     <flag value="--Wno-limited-postlink-optimizations" />

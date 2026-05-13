@@ -20,7 +20,7 @@ typedef struct rl_pending_resource_load_t {
   rl_resource_request_type_t type;
   char filename[RL_RESOURCE_REQUEST_MAX_FILENAME];
   float size;
-  rl_loader_task_t *loader_task;
+  rl_handle_t loader_task;
 } rl_pending_resource_load_t;
 
 typedef struct rl_resource_handler_t {

@@ -68,7 +68,6 @@ type
   RLModuleEntry* {.importc: "rl_module_entry_t", header: "rl_module.h", bycopy.} = object
     name*: cstring
     get_api_fn*: RLModuleEntryGetApiFn
-  RLLoaderTask* {.importc: "rl_loader_task_t", header: "rl_loader.h", bycopy.} = object
   RLInitConfig* {.importc: "rl_init_config_t", header: "rl_config.h", bycopy.} = object
     window_width*: cint
     window_height*: cint
@@ -157,22 +156,24 @@ proc rl_loader_set_asset_host*(assetHost: cstring): cint {.importc, cdecl, heade
 proc rl_loader_get_asset_host*(): cstring {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_get_cache_dir*(): cstring {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_ping_asset_host*(assetHost: cstring): cfloat {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_restore_fs_async*(): ptr RLLoaderTask {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_create_import_task*(filename: cstring): ptr RLLoaderTask {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_import_asset_sync*(filename: cstring): cint {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_import_assets_async_raw(filenames: ptr cstring, filenameCount: csize_t): ptr RLLoaderTask {.importc: "rl_loader_import_assets_async", cdecl, header: "rl_loader.h".}
+proc rl_loader_restore_fs_async*(): RLHandle {.importc, cdecl, header: "rl_loader.h".}
+proc rl_loader_create_import_task*(filename: cstring): RLHandle {.importc, cdecl, header: "rl_loader.h".}
+proc rl_loader_import_asset*(filename: cstring): cint {.importc, cdecl, header: "rl_loader.h".}
+proc rl_loader_import_assets_async_raw(filenames: ptr cstring, filenameCount: csize_t): RLHandle {.importc: "rl_loader_import_assets_async", cdecl, header: "rl_loader.h".}
 
-proc rl_loader_import_assets_async*(filenames: openArray[string]): ptr RLLoaderTask =
+proc rl_loader_import_assets_async*(filenames: openArray[string]): RLHandle =
+  if filenames.len == 0:
+    return 0.RLHandle
   var cstrs = newSeq[cstring](filenames.len)
   for i, s in filenames:
     cstrs[i] = s.cstring
   return rl_loader_import_assets_async_raw(addr cstrs[0], cstrs.len.csize_t)
 
-proc rl_loader_poll_task*(task: ptr RLLoaderTask): bool {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_finish_task*(task: ptr RLLoaderTask): cint {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_get_task_path*(task: ptr RLLoaderTask): cstring {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_free_task*(task: ptr RLLoaderTask) {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_add_task_raw*(task: ptr RLLoaderTask,
+proc rl_loader_poll_task*(task: RLHandle): bool {.importc, cdecl, header: "rl_loader.h".}
+proc rl_loader_finish_task*(task: RLHandle): cint {.importc, cdecl, header: "rl_loader.h".}
+proc rl_loader_get_task_path*(task: RLHandle): cstring {.importc, cdecl, header: "rl_loader.h".}
+proc rl_loader_free_task*(task: RLHandle) {.importc, cdecl, header: "rl_loader.h".}
+proc rl_loader_add_task_raw*(task: RLHandle,
                          onSuccess: RLLoaderCallbackFn, onFailure: RLLoaderCallbackFn,
                          userData: pointer): cint {.importc: "rl_loader_add_task", cdecl, header: "rl_loader.h".}
 proc rl_loader_tick*() {.importc, cdecl, header: "rl_loader.h".}
@@ -180,7 +181,7 @@ proc rl_loader_is_asset_cached*(filename: cstring): bool {.importc, cdecl, heade
 proc rl_loader_uncache_asset*(filename: cstring): cint {.importc, cdecl, header: "rl_loader.h".}
 proc rl_loader_clear_cache*(): cint {.importc, cdecl, header: "rl_loader.h".}
 
-proc rl_loader_add_task*(task: ptr RLLoaderTask,
+proc rl_loader_add_task*(task: RLHandle,
                          onSuccess: RLLoaderCallbackFn, onFailure: RLLoaderCallbackFn,
                          userData: pointer): cint =
   rl_loader_add_task_raw(task, onSuccess, onFailure, userData)
@@ -205,7 +206,7 @@ proc rl_loader_add_task_failure_trampoline(path: cstring, userData: pointer) {.c
   if not task.isNil and task.onFailure != nil:
     task.onFailure($path)
 
-proc rl_loader_add_task*(task: ptr RLLoaderTask,
+proc rl_loader_add_task*(task: RLHandle,
                          onSuccess: RLLoaderClosureCallback = nil,
                          onFailure: RLLoaderClosureCallback = nil): cint =
   if onSuccess.isNil and onFailure.isNil:
@@ -257,7 +258,7 @@ proc rl_loader_set_asset_host*(assetHost: string): cint {.inline.} =
 proc rl_loader_ping_asset_host*(assetHost: string): float32 {.inline.} =
   rl_loader_ping_asset_host(assetHost.cstring).float32
 
-proc rl_loader_create_import_task*(filename: string): ptr RLLoaderTask {.inline.} =
+proc rl_loader_create_import_task*(filename: string): RLHandle {.inline.} =
   rl_loader_create_import_task(filename.cstring)
 
 proc rl_loader_is_asset_cached*(filename: string): bool {.inline.} =
@@ -266,8 +267,8 @@ proc rl_loader_is_asset_cached*(filename: string): bool {.inline.} =
 proc rl_loader_uncache_asset*(filename: string): cint {.inline.} =
   rl_loader_uncache_asset(filename.cstring)
 
-proc rl_loader_import_asset_sync*(filename: string): cint {.inline.} =
-  rl_loader_import_asset_sync(filename.cstring)
+proc rl_loader_import_asset*(filename: string): cint {.inline.} =
+  rl_loader_import_asset(filename.cstring)
 
 proc loaderPingAssetHost*(assetHost = ""): float32 =
   let host = if assetHost.len == 0: nil else: assetHost.cstring
@@ -277,7 +278,7 @@ type
   RLTaskGroupTaskCallback*[T] = proc(path: string, ctx: var T) {.closure.}
   RLTaskGroupCallback*[T] = proc(group: RLTaskGroup[T], ctx: var T) {.closure.}
   RLTaskGroupEntry[T] = object
-    task: ptr RLLoaderTask
+    task: RLHandle
     path: string
     done: bool
     rc: cint
@@ -308,11 +309,11 @@ proc loaderCreateTaskGroup*[T](
 
 proc addTask*[T](
   group: RLTaskGroup[T],
-  task: ptr RLLoaderTask,
+  task: RLHandle,
   onSuccess: RLTaskGroupTaskCallback[T] = nil,
   onError: RLTaskGroupTaskCallback[T] = nil
 ) =
-  if group.isNil or task.isNil:
+  if group.isNil or task == 0:
     return
   group.entries.add(RLTaskGroupEntry[T](
     task: task,

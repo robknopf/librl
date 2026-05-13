@@ -132,7 +132,21 @@ async function run() {
     final.step = 'exists';
     final.existsAfterWrite = mod.ccall('probe_fileio_exists', 'number', ['string'], [probeRelPath]) !== 0;
 
-    final.step = 'deinit-sync';
+    final.step = 'flush';
+    const flushRc = mod.ccall('probe_fileio_flush_begin', 'number', [], []);
+    if (flushRc !== 0) {
+      throw new Error('probe_fileio_flush_begin failed: ' + flushRc);
+    }
+    const flushStart = performance.now();
+    while (mod.ccall('probe_fileio_flush_poll', 'number', [], []) === 0 && (performance.now() - flushStart) < 5000) {
+      await sleep(20);
+    }
+    const flushFinishRc = mod.ccall('probe_fileio_flush_finish', 'number', [], []);
+    if (flushFinishRc !== 0) {
+      throw new Error('probe_fileio_flush_finish failed: ' + flushFinishRc);
+    }
+
+    final.step = 'deinit';
     mod.ccall('probe_fileio_deinit', null, [], []);
     final.readyAfterDeinit = !mod.fileio_idbfs_ready;
     await sleep(1200);

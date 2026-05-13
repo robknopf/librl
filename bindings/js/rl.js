@@ -332,13 +332,22 @@ const RL = {
             [assetHost || ""]
         );
     },
-    restoreFS: () => {
+    restoreFSAsync: () => {
         return moduleInstance.ccall('rl_loader_restore_fs_async', 'number', [], []);
     },
-    importAsset: (filename) => {
+    importAsset: async (filename) => {
+        return await moduleInstance.ccall(
+            'rl_loader_import_asset',
+            'number',
+            ['string'],
+            [filename],
+            { async: true }
+        );
+    },
+    importAssetAsync: (filename) => {
         return moduleInstance.ccall('rl_loader_create_import_task', 'number', ['string'], [filename]);
     },
-    importAssets: (filenames) => {
+    importAssetsAsync: (filenames) => {
         const count = moduleInstance.writeScratchStringTable(filenames);
         return moduleInstance.ccall('rl_loader_import_assets_from_scratch_async', 'number', ['number'], [count]);
     },
@@ -388,7 +397,7 @@ const RL = {
                 });
             },
             addImportTask(path, onSuccess = null, onTaskError = null) {
-                this.addTask(RL.importAsset(path), onSuccess, onTaskError);
+                this.addTask(RL.importAssetAsync(path), onSuccess, onTaskError);
             },
             addImportTasks(paths, onSuccess = null, onTaskError = null) {
                 if (!Array.isArray(paths)) {
@@ -475,14 +484,14 @@ const RL = {
         RL.freeTask(task);
         return rc;
     },
-    restore: async () => {
-        return RL.waitForTask(RL.restoreFS());
+    restoreAsync: async () => {
+        return RL.waitForTask(RL.restoreFSAsync());
     },
-    importAssetAsync: async (filename) => {
-        return RL.waitForTask(RL.importAsset(filename));
+    waitForImportAssetAsync: async (filename) => {
+        return RL.waitForTask(RL.importAssetAsync(filename));
     },
-    importAssetsAsync: async (filenames) => {
-        return RL.waitForTask(RL.importAssets(filenames));
+    waitForImportAssetsAsync: async (filenames) => {
+        return RL.waitForTask(RL.importAssetsAsync(filenames));
     },
     emitEvent: (eventName, payload = 0) => {
         return moduleInstance.ccall('rl_event_emit', 'number', ['string', 'number'], [eventName, payload]);
@@ -789,7 +798,7 @@ const RL = {
         "rl_color_destroy", null, ["number"], [color]
     ),
     createFont: async (path, fontSize) => {
-        const rc = await RL.importAssetAsync(path);
+        const rc = await RL.waitForImportAssetAsync(path);
         if (rc !== 0) throw new Error(`Failed to load font: ${path} (rc=${rc})`);
         return moduleInstance.ccall("rl_font_create", "number", ["string", "number"], [path, fontSize]);
     },
@@ -806,7 +815,7 @@ const RL = {
         "rl_set_target_fps", null, ["number"], [fps]
     ),
     createModel: async (path) => {
-        const rc = await RL.importAssetAsync(path);
+        const rc = await RL.waitForImportAssetAsync(path);
         if (rc !== 0) throw new Error(`Failed to load model: ${path} (rc=${rc})`);
         return moduleInstance.ccall("rl_model_create", "number", ["string"], [path]);
     },
@@ -909,7 +918,7 @@ const RL = {
         };
     },
     createMusic: async (path) => {
-        const rc = await RL.importAssetAsync(path);
+        const rc = await RL.waitForImportAssetAsync(path);
         if (rc !== 0) throw new Error(`Failed to load music: ${path} (rc=${rc})`);
         return moduleInstance.ccall("rl_music_create", "number", ["string"], [path]);
     },
@@ -944,7 +953,7 @@ const RL = {
         "rl_music_update_all", null, [], []
     ),
     createSound: async (path) => {
-        const rc = await RL.importAssetAsync(path);
+        const rc = await RL.waitForImportAssetAsync(path);
         if (rc !== 0) throw new Error(`Failed to load sound: ${path} (rc=${rc})`);
         return moduleInstance.ccall("rl_sound_create", "number", ["string"], [path]);
     },
@@ -976,7 +985,7 @@ const RL = {
         "rl_sound_is_playing", "number", ["number"], [sound]
     ) !== 0,
     createTexture: async (path) => {
-        const rc = await RL.importAssetAsync(path);
+        const rc = await RL.waitForImportAssetAsync(path);
         if (rc !== 0) throw new Error(`Failed to load texture: ${path} (rc=${rc})`);
         return moduleInstance.ccall("rl_texture_create", "number", ["string"], [path]);
     },
@@ -984,7 +993,7 @@ const RL = {
         "rl_texture_destroy", null, ["number"], [texture]
     ),
     createSprite3D: async (path) => {
-        const rc = await RL.importAssetAsync(path);
+        const rc = await RL.waitForImportAssetAsync(path);
         if (rc !== 0) throw new Error(`Failed to load sprite3d: ${path} (rc=${rc})`);
         return moduleInstance.ccall("rl_sprite3d_create", "number", ["string"], [path]);
     },

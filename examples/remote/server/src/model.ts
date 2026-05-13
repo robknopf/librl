@@ -38,7 +38,6 @@ export class Model {
     const task = rl_loader_create_import_task(this.path);
     const rc = rl_loader_add_task(
       task,
-      this.path,
       () => {
         set_model_resource_manager(this.resourceManager);
         void rl_model_create(this.path)

@@ -69,7 +69,7 @@ LDFLAGS_WASM = \
 	--extern-post-js bindings/js/rl_module_export.js \
 	$(WASM_COMMON_LDFLAGS) \
 	-s JSPI=1 \
-	-s JSPI_EXPORTS='["rl_init","rl_loader_init","rl_loader_import_asset","rl_deinit","rl_loader_deinit"]' \
+	-s JSPI_EXPORTS='["rl_init","rl_init_values","rl_init_values_async","rl_loader_init","rl_loader_import_asset","rl_deinit","rl_loader_deinit"]' \
 	-fwasm-exceptions \
 	-s INITIAL_MEMORY=67108864 \
 	-s EXPORTED_FUNCTIONS='[ \
@@ -77,6 +77,8 @@ LDFLAGS_WASM = \
 	"_free", \
 	"_rl_init", \
 	"_rl_init_async", \
+	"_rl_init_values", \
+	"_rl_init_values_async", \
 	"_rl_init_config_sizeof", \
 	"_rl_is_initialized", \
 	"_rl_get_platform", \
@@ -187,20 +189,24 @@ LDFLAGS_WASM = \
 	"_rl_sprite3d_draw", \
 	"_rl_sprite3d_destroy", \
 		"_rl_text_measure", \
-		"_rl_text_measure_ex_to_scratch", \
-		"_rl_set_asset_host", \
-		"_rl_loader_init", \
-		"_rl_loader_init_async", \
-		"_rl_loader_deinit", \
+			"_rl_text_measure_ex_to_scratch", \
+			"_rl_set_asset_host", \
+			"_rl_get_asset_host", \
+			"_rl_loader_init", \
+			"_rl_loader_init_async", \
+			"_rl_loader_deinit", \
 		"_rl_loader_import_asset", \
 		"_rl_loader_restore_fs_async", \
 		"_rl_loader_create_import_task", \
-		"_rl_loader_import_assets_from_scratch_async", \
-		"_rl_loader_is_ready", \
-		"_rl_loader_poll_task", \
-		"_rl_loader_finish_task", \
-		"_rl_loader_get_task_path", \
-		"_rl_loader_free_task", \
+			"_rl_loader_import_assets_from_scratch_async", \
+			"_rl_loader_is_initialized", \
+			"_rl_loader_is_ready", \
+			"_rl_loader_poll_task", \
+			"_rl_loader_finish_task", \
+			"_rl_loader_get_task_path", \
+			"_rl_loader_get_cache_dir", \
+			"_rl_loader_ping_asset_host", \
+			"_rl_loader_free_task", \
 		"_rl_loader_add_task", \
 		"_rl_loader_tick", \
 		"_rl_loader_is_asset_cached", \

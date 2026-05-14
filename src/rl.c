@@ -145,6 +145,46 @@ int rl_init(const rl_init_config_t *config) {
 }
 
 RL_KEEP
+int rl_init_values(int window_width,
+                   int window_height,
+                   const char *window_title,
+                   unsigned int window_flags,
+                   const char *asset_host,
+                   const char *loader_cache_dir) {
+    rl_init_config_t cfg;
+
+    memset(&cfg, 0, sizeof(cfg));
+    cfg.window_width = window_width;
+    cfg.window_height = window_height;
+    cfg.window_title = (window_title != NULL && window_title[0] != '\0') ? window_title : NULL;
+    cfg.window_flags = window_flags;
+    cfg.asset_host = (asset_host != NULL && asset_host[0] != '\0') ? asset_host : NULL;
+    cfg.loader_cache_dir = (loader_cache_dir != NULL && loader_cache_dir[0] != '\0') ? loader_cache_dir : NULL;
+
+    return rl_init(&cfg);
+}
+
+RL_KEEP
+int rl_init_values_async(int window_width,
+                         int window_height,
+                         const char *window_title,
+                         unsigned int window_flags,
+                         const char *asset_host,
+                         const char *loader_cache_dir) {
+    rl_init_config_t cfg;
+
+    memset(&cfg, 0, sizeof(cfg));
+    cfg.window_width = window_width;
+    cfg.window_height = window_height;
+    cfg.window_title = (window_title != NULL && window_title[0] != '\0') ? window_title : NULL;
+    cfg.window_flags = window_flags;
+    cfg.asset_host = (asset_host != NULL && asset_host[0] != '\0') ? asset_host : NULL;
+    cfg.loader_cache_dir = (loader_cache_dir != NULL && loader_cache_dir[0] != '\0') ? loader_cache_dir : NULL;
+
+    return rl_init_async(&cfg);
+}
+
+RL_KEEP
 bool rl_is_initialized(void) {
     return initialized;
 }

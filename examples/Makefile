@@ -7,6 +7,7 @@ NIM ?= nim
 	c-lua c-lua-desktop c-lua-wasm \
 	remote remote-desktop remote-wasm \
 	haxe haxe-desktop haxe-wasm \
+	haxe-js-simple \
 	nim nim-desktop nim-wasm \
 	cppia cppia-desktop cppia-script \
 	lua
@@ -40,6 +41,8 @@ haxe-desktop:
 	cd haxe && $(HAXE) build.desktop.hxml
 haxe-wasm:
 	cd haxe && $(HAXE) build.wasm.hxml
+haxe-js-simple:
+	cd haxe-js-simple && $(HAXE) build.hxml
 
 nim: nim-desktop nim-wasm
 nim-desktop:

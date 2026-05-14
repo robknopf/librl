@@ -7,9 +7,11 @@ This document summarizes the current public C API exposed by `include/*.h`.  As 
 - Most resource APIs use `rl_handle_t` (`unsigned int`) as an opaque handle.
 - `0` is generally an invalid handle unless a subsystem documents otherwise.
 - Public API names use the default-name-as-synchronous convention. If a function may start work and return before completion, it should use an `_async` suffix and provide a handle, poll/finish flow, or explicit readiness state. Synchronous/default functions may still suspend on wasm when reached through a JSPI-exported entry point.
-- Call `rl_init(NULL)` (or `rl_init(&config)`; see `include/rl_config.h`) before using subsystem APIs, and `rl_deinit()` at shutdown.
+- Call `rl_init(NULL)` (or `rl_init(&config)` / `rl_init_values(...)`; see `include/rl_config.h`) before using subsystem APIs, and `rl_deinit()` at shutdown.
   `rl_init()` is the default synchronous contract: it returns only after loader restore readiness is satisfied.
+  `rl_init_values(...)` is the flattened convenience entrypoint for bindings that do not want to marshal `rl_init_config_t` across the FFI boundary.
   `rl_init_async()` preserves the polling contract: it starts runtime init and returns immediately.
+  `rl_init_values_async(...)` is the flattened polling-style counterpart to `rl_init_async()`.
   Both return `RL_INIT_OK` (`0`) on success or a negative `RL_INIT_ERR_*` code on failure (`RL_INIT_ERR_UNKNOWN`, `RL_INIT_ERR_ALREADY_INITIALIZED`, `RL_INIT_ERR_LOADER`, `RL_INIT_ERR_ASSET_HOST`, `RL_INIT_ERR_WINDOW`).
 - Use `rl_is_initialized()` to query whether the runtime is currently initialized.
 - Use `rl_get_platform()` to query the build/runtime platform string (`"desktop"` or `"web"`).

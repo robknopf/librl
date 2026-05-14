@@ -31,13 +31,12 @@ interface sys.db.ResultSet
 class sys.db._Mysql.D
 interface sys.db.Connection
 class sys.FileSystem
-class rl.native._RLNative.RLImpl_Impl_
-class rl.native.RLNative
-class rl.native._RLNative.RLBridgeImpl
-class rl.native._RLNative.RLKeyboardBridge
-class rl.native._RLNative.RLLoaderCallbackBridge
-class rl.native._RLNative.RLLoggerBridge
-class rl.native.RLLoader
+class rl.impl.RLLoader
+class rl.impl._RLImpl.RLImpl_Impl_
+class rl.impl._RLImpl.RLBridgeImpl
+class rl.impl._RLImpl.RLKeyboardBridge
+class rl.impl._RLImpl.RLLoaderCallbackBridge
+class rl.impl._RLImpl.RLLoggerBridge
 class rl.RLKeyboardState
 class rl.RLTaskGroup
 class rl._RLHandle.RLHandle_Impl_
@@ -262,5 +261,5 @@ file rl/RL.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindi
 file rl/RLHandle.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/RLHandle.hx
 file rl/RLTaskGroup.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/RLTaskGroup.hx
 file rl/RLTypes.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/RLTypes.hx
-file rl/native/RLLoaderNative.cpp.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/cppia/rl/native/RLLoaderNative.cpp.hx
-file rl/native/RLNative.cpp.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/cppia/rl/native/RLNative.cpp.hx
+file rl/impl/RLImpl.cpp.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/cppia/rl/impl/RLImpl.cpp.hx
+file rl/impl/RLLoaderImpl.cpp.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/cppia/rl/impl/RLLoaderImpl.cpp.hx

@@ -80,7 +80,9 @@ Notes:
   - (plus `idealWidth` / `idealHeight` for browser resize/aspect heuristics)
   - Example: `await rl.init({ windowWidth: 800, windowHeight: 600, windowTitle: "Title", windowFlags: rl.FLAG_MSAA_4X_HINT, assetHost })`
   - Init result constants are exposed (`INIT_OK`, `INIT_ERR_UNKNOWN`, `INIT_ERR_ALREADY_INITIALIZED`, `INIT_ERR_LOADER`, `INIT_ERR_ASSET_HOST`, `INIT_ERR_WINDOW`).
-- JS also exposes `initAsync(opts)` for the polling-style `rl_init_async()` path.
+- JS `initValues(width, height, title, flags, assetHost, loaderCacheDir)` uses the flattened C helper `rl_init_values(...)` instead of marshaling `rl_init_config_t`.
+- JS also exposes `initAsync(opts)` for the polling-style init path, now routed through the flattened `rl_init_values_async(...)` helper.
+- JS exposes `initValuesAsync(width, height, title, flags, assetHost, loaderCacheDir)` for direct flattened polling-style init.
 - JS exposes `isInitialized()` for `rl_is_initialized()`.
 - JS exposes `getPlatform()` for `rl_get_platform()`.
 - JS `pickModel(camera, model, mouseX, mouseY)` and `pickSprite3D(camera, sprite3d, mouseX, mouseY)` return local-space `point` / `normal` data from `rl_pick_result_t`.
@@ -180,10 +182,11 @@ Binding-level async loader ergonomics:
 Files:
 
 - `bindings/haxe/rl/RL.hx` — public `rl.RL` module used by authored Haxe code.
-- `bindings/haxe/rl/native/RLNative.cpp.hx` — current hxcpp backend implementation. Contains all `@:native`, `untyped __cpp__`, `@:functionCode`, and bridge classes.
-- `bindings/haxe/rl/native/RLNative.hx` — unsupported fallback that fails compilation for targets without a backend.
+- `bindings/haxe/rl/impl/RLImpl.cpp.hx` — current hxcpp backend implementation. Contains all `@:native`, `untyped __cpp__`, `@:functionCode`, and bridge classes.
+- `bindings/haxe/rl/impl/RLImpl.js.hx` — Haxe `js` backend. It imports the generated Emscripten module (`librl.js` / `librl.wasm`) directly.
+- `bindings/haxe/rl/impl/RLImpl.hx` — unsupported fallback that fails compilation for targets without a backend.
 - `bindings/haxe/rl/RLHandle.hx` — shared integer handle type.
-- `bindings/haxe/rl/native/RLLoaderNative.cpp.hx` — current hxcpp-only loader impl (`RLLoader` class).
+- `bindings/haxe/rl/impl/RLLoaderImpl.cpp.hx` — current hxcpp-only loader impl (`RLLoader` class).
 - `bindings/haxe/rl/RLTaskGroup.hx` — pure Haxe task group helper; all methods are non-inline for cppia compatibility.
 - `bindings/haxe/rl/InjectLibRL.hx`
 - `examples/haxe-simple/src/Main.hx`
@@ -192,8 +195,8 @@ Role:
 
 - Exposes `librl` APIs to Haxe via hxcpp externs (C++ FFI).
 - `RL.hx` is the script-facing/public API module and must remain free of `cpp.*`, `@:native`, and `untyped __cpp__`.
-- `RLNative.cpp.hx` currently holds the hxcpp-specific backend and is compiled into the host binary with `-D scriptable`.
-- Uses `@:buildXml`, `@:functionCode` in `RLNative.cpp.hx` to:
+- `RLImpl.cpp.hx` currently holds the hxcpp-specific backend and is compiled into the host binary with `-D scriptable`.
+- Uses `@:buildXml`, `@:functionCode` in `RLImpl.cpp.hx` to:
   - Include `rl.h` / `rl_loader.h`.
   - Inject link flags (`librl.a` / `librl.wasm.a`).
   - Bridge Haxe loader callbacks to `rl_loader_add_task`.
@@ -203,21 +206,34 @@ Role:
 Current state:
 
 - `RL.hx` is now a real façade class with no target branches in its public method bodies.
-- `RL.hx` delegates into `rl.native.RLNative`, which resolves by target:
-  - `RLNative.cpp.hx` on `cpp`
-  - `RLNative.hx` for unsupported targets, which fails at compile time
-- There is no generic runtime fallback. New targets must add an explicit backend such as `RLNative.lua.hx`.
+- `RL.hx` delegates into `rl.impl.RLImpl`, which resolves by target:
+  - `RLImpl.cpp.hx` on `cpp`
+  - `RLImpl.js.hx` on `js`
+  - `RLImpl.hx` for unsupported targets, which fails at compile time
+- `RL.boot(?options)` is the backend bootstrap hook:
+  - On hxcpp/cppia it returns `Int` and currently succeeds immediately.
+  - On Haxe JS it returns `js.lib.Promise<Int>` so the JS backend can import/instantiate `librl.js` / `librl.wasm` before normal `RL.init(...)` calls.
+  - The current Haxe JS backend expects the generated `librl.js` JSPI build. If `WebAssembly.Suspending` / `WebAssembly.promising` are unavailable, `RL.boot()` returns an error code and leaves the backend unbooted.
+- Haxe JS returns Promises for blocking JSPI-backed calls:
+  - `RL.init(...)`, `RL.initValues(...)`, `RL.deinit()`
+  - `RL.loaderInit(...)`, `RL.loaderDeinit()`, `RL.loaderImportAsset(...)`
+  - The `*Async` task-starting APIs keep their C semantics: they return immediate status/task handles and are polled/finished through the loader task API.
+- The Haxe JS backend is separate from `bindings/js/*`; it does not use the standalone JS wrapper or scratch/SAB helper layer.
+- `RLImpl.cpp.hx` keeps the raw C extern table private as `RLExterns`; authored code never imports it directly.
+- There is no generic runtime fallback. New targets must add an explicit backend such as `RLImpl.lua.hx`.
+- `examples/haxe-js-simple` is the current compile/run smoke test for the Haxe `js` backend. It exercises `RL.boot()` and loader init/deinit; in runtimes without JSPI support, boot returns an error code without instantiating wasm.
 
 Target-neutral direction:
 
 - `rl.RL` should be the stable public façade that authored Haxe code imports on every target.
 - `rl.RL` should own public helpers and forward calls into a backend module; it should not collapse into a `typedef` alias of an hxcpp implementation type.
 - Target-specific implementation should live under backend files selected by target, for example:
-  - `bindings/haxe/rl/native/RLNative.cpp.hx`
-  - `bindings/haxe/rl/native/RLNative.lua.hx`
+  - `bindings/haxe/rl/impl/RLImpl.cpp.hx`
+  - `bindings/haxe/rl/impl/RLImpl.js.hx`
+  - `bindings/haxe/rl/impl/RLImpl.lua.hx`
 - The same pattern should be applied to loader internals:
-  - `bindings/haxe/rl/native/RLLoaderNative.cpp.hx`
-  - `bindings/haxe/rl/native/RLLoaderNative.lua.hx`
+  - `bindings/haxe/rl/impl/RLLoaderImpl.cpp.hx`
+  - `bindings/haxe/rl/impl/RLLoaderImpl.lua.hx`
 
 Design rules for that split:
 
@@ -225,15 +241,15 @@ Design rules for that split:
   - no `cpp.*`
   - no `@:native`
   - no `untyped __cpp__`
-- `RLNative.*.hx` owns target-specific plumbing.
-- The backend contract is currently structural: each `RLNative.<target>.hx` must provide the static members called by `RL.hx`.
-- Do not use `RLNative.hx` as an implementation shim; it exists only to fail clearly for unsupported targets.
-- Authored/gameplay code should import only `rl.RL`, not `rl.native.*`.
+- `RLImpl.*.hx` owns target-specific plumbing.
+- The backend contract is currently structural: each `RLImpl.<target>.hx` must provide the static members called by `RL.hx`.
+- Do not use `RLImpl.hx` as an implementation shim; it exists only to fail clearly for unsupported targets.
+- Authored/gameplay code should import only `rl.RL`, not `rl.impl.*`.
 - Public handle types exposed from `rl.*` should be stable across targets; backend-specific representations such as `cpp.UInt64` should stay internal to the backend layer.
 
 Practical implication:
 
-- If Haxe-to-Lua support is added, the Lua backend should expose the same public `rl.RL` API through `RLNative.lua.hx`, rather than reusing hxcpp-generated implementation names.
+- If Haxe-to-Lua support is added, the Lua backend should expose the same public `rl.RL` API through `RLImpl.lua.hx`, rather than reusing hxcpp-generated implementation names.
 
 Used by:
 

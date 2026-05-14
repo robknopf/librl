@@ -145,6 +145,12 @@ const
   RL_LOADER_QUEUE_TASK_ERR_QUEUE_FULL* = (-2).cint
 proc rl_init_raw(config: ptr RLInitConfig): cint {.importc: "rl_init", cdecl, header: "rl.h".}
 proc rl_init_async_raw(config: ptr RLInitConfig): cint {.importc: "rl_init_async", cdecl, header: "rl.h".}
+proc rl_init_values_raw(windowWidth: cint, windowHeight: cint, windowTitle: cstring,
+                        windowFlags: RLWindowFlags, assetHost: cstring,
+                        loaderCacheDir: cstring): cint {.importc: "rl_init_values", cdecl, header: "rl.h".}
+proc rl_init_values_async_raw(windowWidth: cint, windowHeight: cint, windowTitle: cstring,
+                              windowFlags: RLWindowFlags, assetHost: cstring,
+                              loaderCacheDir: cstring): cint {.importc: "rl_init_values_async", cdecl, header: "rl.h".}
 proc rl_deinit*() {.importc, cdecl, header: "rl.h".}
 proc rl_set_asset_host*(assetHost: cstring): cint {.importc, cdecl, header: "rl.h".}
 proc rl_get_asset_host*(): cstring {.importc, cdecl, header: "rl.h".}
@@ -236,6 +242,18 @@ proc rl_init_async*(config: var RLInitConfig): cint {.inline.} =
 
 proc rl_init_async*(): cint {.inline.} =
   rl_init_async_raw(nil)
+
+proc rl_init_values*(windowWidth, windowHeight: cint, windowTitle: string,
+                     windowFlags: RLWindowFlags = 0.RLWindowFlags,
+                     assetHost: string = "", loaderCacheDir: string = ""): cint {.inline.} =
+  rl_init_values_raw(windowWidth, windowHeight, windowTitle.cstring, windowFlags,
+                     assetHost.cstring, loaderCacheDir.cstring)
+
+proc rl_init_values_async*(windowWidth, windowHeight: cint, windowTitle: string,
+                           windowFlags: RLWindowFlags = 0.RLWindowFlags,
+                           assetHost: string = "", loaderCacheDir: string = ""): cint {.inline.} =
+  rl_init_values_async_raw(windowWidth, windowHeight, windowTitle.cstring, windowFlags,
+                           assetHost.cstring, loaderCacheDir.cstring)
 
 proc rl_set_asset_host*(assetHost: string): cint {.inline.} =
   rl_set_asset_host(assetHost.cstring)

@@ -69,7 +69,15 @@ async function waitForModuleWithTimeout(factory, env, timeoutMs = STARTUP_TIMEOU
   let timeoutId = 0;
   try {
     return await Promise.race([
-      factory(env),
+      (async () => {
+        // Handle both factory functions and plain objects
+        if (typeof factory === 'function') {
+          return await factory(env);
+        } else {
+          // Plain module object - return as-is (optionally init if needed)
+          return factory;
+        }
+      })(),
       new Promise((_, reject) => {
         timeoutId = window.setTimeout(() => {
           reject(new Error(`Timed out after ${timeoutMs}ms while loading the module`));

@@ -1,0 +1,19 @@
+-cp src
+-cp ../../bindings/haxe
+
+--main Main
+-js out/main-js-simple.js
+
+-D analyzer-optimize
+-D source-map
+-D js-es=6
+--dce no
+-lib hxasync
+--macro hxasync.AsyncMacro.makeAsyncable("")
+--macro macros.ExportCABI.apply()
+--macro macros.MakeESM.apply()
+
+--next
+--macro macros.SuppressViteImportWarning.apply("out/main-js-simple.js")
+
+--cmd echo "Build complete."

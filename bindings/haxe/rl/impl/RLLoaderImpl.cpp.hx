@@ -1,9 +1,9 @@
 /**
  * hxcpp-only loader implementation.
- * Contains the internal RLLoader class used by RLNative.cpp.hx.
+ * Contains the internal RLLoader class used by RLImpl.cpp.hx.
  * Never imported directly by scripts.
  */
-package rl.native;
+package rl.impl;
 
 #if cpp
 import rl.RLHandle;

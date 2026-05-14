@@ -48,6 +48,18 @@ typedef enum rl_tick_result_t {
 
 int rl_init(const rl_init_config_t *config);
 int rl_init_async(const rl_init_config_t *config);
+int rl_init_values(int window_width,
+                   int window_height,
+                   const char *window_title,
+                   unsigned int window_flags,
+                   const char *asset_host,
+                   const char *loader_cache_dir);
+int rl_init_values_async(int window_width,
+                         int window_height,
+                         const char *window_title,
+                         unsigned int window_flags,
+                         const char *asset_host,
+                         const char *loader_cache_dir);
 bool rl_is_initialized(void);
 const char *rl_get_platform(void);
 void rl_deinit();

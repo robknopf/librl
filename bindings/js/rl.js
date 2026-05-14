@@ -216,43 +216,60 @@ const RL = {
 
         const allocatedPtrs = [];
         let initRc = -1;
-        try {
-            if (!useHeapAlloc) {
-                stackTop = moduleInstance.stackSave();
-            }
-
-            const cfgPtr = allocTemp(cfgSize);
-            allocatedPtrs.push(cfgPtr);
-            const heapU8 = moduleInstance.HEAPU8;
-            heapU8.fill(0, cfgPtr, cfgPtr + cfgSize);
-
-            const heapI32 = moduleInstance.HEAP32;
-            const setI32 = (offset, v) => {
-                heapI32[(cfgPtr + offset) >> 2] = v | 0;
-            };
-
-            // Layout must match `rl_init_config_t` in include/rl_config.h
-            setI32(0, (moduleOptions.windowWidth || 0) | 0);
-            setI32(4, (moduleOptions.windowHeight || 0) | 0);
-
-            const titlePtr = stringToTempUtf8OrNull(moduleOptions.windowTitle);
-            const assetPtr = stringToTempUtf8OrNull(moduleOptions.assetHost);
-            const cachePtr = stringToTempUtf8OrNull(moduleOptions.loaderCacheDir);
-            allocatedPtrs.push(titlePtr, assetPtr, cachePtr);
-
-            setI32(8, titlePtr >>> 0);
-            setI32(12, (moduleOptions.windowFlags || 0) >>> 0);
-            setI32(16, assetPtr >>> 0);
-            setI32(20, cachePtr >>> 0);
-
-            initRc = (await moduleInstance.ccall(symbolName, "number", ["number"], [cfgPtr], asyncOptions)) | 0;
-        } finally {
-            if (useHeapAlloc) {
-                for (const ptr of allocatedPtrs) {
-                    freeTemp(ptr);
+        if (symbolName === "rl_init_values" || symbolName === "rl_init_values_async") {
+            initRc = (await moduleInstance.ccall(
+                symbolName,
+                "number",
+                ["number", "number", "string", "number", "string", "string"],
+                [
+                    (moduleOptions.windowWidth || 0) | 0,
+                    (moduleOptions.windowHeight || 0) | 0,
+                    moduleOptions.windowTitle ?? "",
+                    (moduleOptions.windowFlags || 0) >>> 0,
+                    moduleOptions.assetHost ?? "",
+                    moduleOptions.loaderCacheDir ?? "",
+                ],
+                asyncOptions
+            )) | 0;
+        } else {
+            try {
+                if (!useHeapAlloc) {
+                    stackTop = moduleInstance.stackSave();
                 }
-            } else if (canUseStack) {
-                moduleInstance.stackRestore(stackTop);
+
+                const cfgPtr = allocTemp(cfgSize);
+                allocatedPtrs.push(cfgPtr);
+                const heapU8 = moduleInstance.HEAPU8;
+                heapU8.fill(0, cfgPtr, cfgPtr + cfgSize);
+
+                const heapI32 = moduleInstance.HEAP32;
+                const setI32 = (offset, v) => {
+                    heapI32[(cfgPtr + offset) >> 2] = v | 0;
+                };
+
+                // Layout must match `rl_init_config_t` in include/rl_config.h
+                setI32(0, (moduleOptions.windowWidth || 0) | 0);
+                setI32(4, (moduleOptions.windowHeight || 0) | 0);
+
+                const titlePtr = stringToTempUtf8OrNull(moduleOptions.windowTitle);
+                const assetPtr = stringToTempUtf8OrNull(moduleOptions.assetHost);
+                const cachePtr = stringToTempUtf8OrNull(moduleOptions.loaderCacheDir);
+                allocatedPtrs.push(titlePtr, assetPtr, cachePtr);
+
+                setI32(8, titlePtr >>> 0);
+                setI32(12, (moduleOptions.windowFlags || 0) >>> 0);
+                setI32(16, assetPtr >>> 0);
+                setI32(20, cachePtr >>> 0);
+
+                initRc = (await moduleInstance.ccall(symbolName, "number", ["number"], [cfgPtr], asyncOptions)) | 0;
+            } finally {
+                if (useHeapAlloc) {
+                    for (const ptr of allocatedPtrs) {
+                        freeTemp(ptr);
+                    }
+                } else if (canUseStack) {
+                    moduleInstance.stackRestore(stackTop);
+                }
             }
         }
 
@@ -270,7 +287,33 @@ const RL = {
         return await RL._callInitWithOptions(opts, "rl_init", { async: true });
     },
     initAsync: async (opts) => {
-        return await RL._callInitWithOptions(opts, "rl_init_async", undefined);
+        return await RL._callInitWithOptions(opts, "rl_init_values_async", undefined);
+    },
+    initValues: async (
+        width, height, title,
+        flags = 0, assetHost = "", loaderCacheDir = ""
+    ) => {
+        return await RL._callInitWithOptions({
+            windowWidth: width,
+            windowHeight: height,
+            windowTitle: title,
+            windowFlags: flags,
+            assetHost,
+            loaderCacheDir
+        }, "rl_init_values", { async: true });
+    },
+    initValuesAsync: async (
+        width, height, title,
+        flags = 0, assetHost = "", loaderCacheDir = ""
+    ) => {
+        return await RL._callInitWithOptions({
+            windowWidth: width,
+            windowHeight: height,
+            windowTitle: title,
+            windowFlags: flags,
+            assetHost,
+            loaderCacheDir
+        }, "rl_init_values_async", undefined);
     },
     setAssetHost: (assetHost) => {
         if (typeof assetHost !== "string") {

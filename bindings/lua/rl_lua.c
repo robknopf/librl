@@ -111,6 +111,42 @@ static int rl_init_async_lua(lua_State *L)
     return 1;
 }
 
+static int rl_init_values_lua(lua_State *L)
+{
+    const int window_width = (int)luaL_optinteger(L, 1, 0);
+    const int window_height = (int)luaL_optinteger(L, 2, 0);
+    const char *window_title = lua_isstring(L, 3) ? lua_tostring(L, 3) : NULL;
+    const unsigned int window_flags = (unsigned int)luaL_optinteger(L, 4, 0);
+    const char *asset_host = lua_isstring(L, 5) ? lua_tostring(L, 5) : NULL;
+    const char *loader_cache_dir = lua_isstring(L, 6) ? lua_tostring(L, 6) : NULL;
+
+    lua_pushinteger(L, (lua_Integer)rl_init_values(window_width,
+                                                   window_height,
+                                                   window_title,
+                                                   window_flags,
+                                                   asset_host,
+                                                   loader_cache_dir));
+    return 1;
+}
+
+static int rl_init_values_async_lua(lua_State *L)
+{
+    const int window_width = (int)luaL_optinteger(L, 1, 0);
+    const int window_height = (int)luaL_optinteger(L, 2, 0);
+    const char *window_title = lua_isstring(L, 3) ? lua_tostring(L, 3) : NULL;
+    const unsigned int window_flags = (unsigned int)luaL_optinteger(L, 4, 0);
+    const char *asset_host = lua_isstring(L, 5) ? lua_tostring(L, 5) : NULL;
+    const char *loader_cache_dir = lua_isstring(L, 6) ? lua_tostring(L, 6) : NULL;
+
+    lua_pushinteger(L, (lua_Integer)rl_init_values_async(window_width,
+                                                         window_height,
+                                                         window_title,
+                                                         window_flags,
+                                                         asset_host,
+                                                         loader_cache_dir));
+    return 1;
+}
+
 static int rl_deinit_lua(lua_State *L)
 {
     (void)L;  /* Unused */
@@ -271,6 +307,8 @@ static const luaL_Reg rl_functions[] = {
     /* Core */
     {"init", rl_init_lua},
     {"init_async", rl_init_async_lua},
+    {"init_values", rl_init_values_lua},
+    {"init_values_async", rl_init_values_async_lua},
     {"deinit", rl_deinit_lua},
     {"is_initialized", rl_is_initialized_lua},
     {"get_platform", rl_get_platform_lua},

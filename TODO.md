@@ -29,6 +29,7 @@
   - if a binding intentionally does not expose an API, document that decision in `docs/BINDINGS.md`
 - Binding parity follow-up (current backlog):
   - run a full parity audit for Nim and Haxe against current public C API (same exclusions as Lua: no `rl_frame_command*`, no scratch/SAB APIs)
+  - remove scratch/ABI bindings from non-JS bindings; bindings that do not use the JS SAB scratch bridge should not expose `rl_update_to_scratch`, `*_to_scratch`, `*_from_scratch`, or other scratch-only helpers
   - add missing Nim APIs to `bindings/nim/` with idiomatic wrappers where appropriate
   - add missing Haxe APIs to `bindings/haxe/` with idiomatic lowerCamelCase surface
   - align logging ergonomics across Nim/Haxe/Lua (`log.debug/info/warn/error/...` style)

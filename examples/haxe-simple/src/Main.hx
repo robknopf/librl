@@ -8,7 +8,7 @@ import haxe.io.Path;
 #if (emscripten || PLATFORM_WEB || js)
 final ASSET_HOST:String = "./";
 #else
-final ASSET_HOST:String = "https://localhost:4444";
+final ASSET_HOST:String = "https://192.168.1.100:4444";
 #end
 
 typedef AppContext = {
@@ -52,6 +52,14 @@ class SimpleRuntime implements IRuntime {
 		// trace("onBoot");
 		var rc = @await RL.boot({
 			canvasId: "renderCanvas",
+			env: {
+				print: (msg) -> {
+					trace(msg);
+				},
+				printErr: (msg) -> {
+					trace(msg);
+				}
+			},
 
 			// site path to the js binding module, relative to this module
 			// bindingsPath: "../../../../bindings/js/rl.js"
@@ -74,16 +82,16 @@ class SimpleRuntime implements IRuntime {
 		RL.loggerSetLevel(RL.LOGGER_LEVEL_WARN);
 
 		/* 
-		// if we need to get an initial boot file (like external boot script)
-		// we can init the loader separate from the rest of librl. 
-		// that will allow us to fetch files required before init
-		// otherwise, use RL.init() for normal flow
-		var rc = @await RL.loaderInit();
-		if (rc != 0) {
-			Log.error("RL.loaderInit failed: " + rc);
-			return RT_FAILED;
-		}
-		*/
+			// if we need to get an initial boot file (like external boot script)
+			// we can init the loader separate from the rest of librl. 
+			// that will allow us to fetch files required before init
+			// otherwise, use RL.init() for normal flow
+			var rc = @await RL.loaderInit();
+			if (rc != 0) {
+				Log.error("RL.loaderInit failed: " + rc);
+				return RT_FAILED;
+			}
+		 */
 		return RT_SUCCESS;
 	}
 
@@ -110,7 +118,7 @@ class SimpleRuntime implements IRuntime {
 			windowHeight: SCREEN_HEIGHT,
 			windowTitle: SCREEN_TITLE,
 			windowFlags: SCREEN_FLAGS,
-			// assetHost: ASSET_HOST,
+			assetHost: ASSET_HOST,
 			// loaderCacheDir: LOADER_CACHE_DIR
 		});
 		if (rc != 0) {
@@ -236,7 +244,7 @@ class SimpleRuntime implements IRuntime {
 
 	@async
 	public function onShutdown():Void {
-		@await RL.loaderDeinit();
+		@await RL.deinit();
 		return;
 	}
 
@@ -332,7 +340,7 @@ class SimpleRuntime implements IRuntime {
 			RL.modelAnimate(ctx.gumshoe, deltaTimeSec);
 		}
 
-		//trace("335");
+		// trace("335");
 
 		var spriteX = 0.0;
 		var spriteY = 0.0;

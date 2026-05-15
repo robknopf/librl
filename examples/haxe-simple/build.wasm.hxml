@@ -8,4 +8,9 @@ common.hxml
 -D HXCPP_M64
 -D HXCPP_LINK_EMSCRIPTEN_EXT=.js
 
+--macro hxasync.AsyncMacro.makeAsyncable("")
+--macro macros.ExportCABI.apply()
+
+--times
+
 --cmd echo "Build (wasm) complete."

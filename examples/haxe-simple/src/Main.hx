@@ -45,7 +45,7 @@ class SimpleRuntime implements IRuntime {
 	var platformText:String = "Platform: <unknown>";
 
 	public function new() {
-		trace("SimpleRuntime::new");
+		trace("SimpleRuntime::new()");
 	}
 
 	@async public function onBoot() {
@@ -58,7 +58,7 @@ class SimpleRuntime implements IRuntime {
 
 			// absolute path to the js module (served from site root).  
 			// Note that this is the default fallback.  See wRLImpl.js.hx::boot()
-			//modulePath: "/lib/librl.js"
+			modulePath: "/lib/librl.js"
 		});
 		if (rc != 0) {
 			Log.error("RL.boot failed: " + rc);
@@ -331,6 +331,16 @@ class SimpleRuntime implements IRuntime {
 		if (ctx.gumshoe != 0) {
 			RL.modelAnimate(ctx.gumshoe, deltaTimeSec);
 		}
+
+		trace("335");
+		trace("336");
+		trace("337");
+		trace("338");
+		trace("339");
+		trace("340");
+		trace("341");
+		trace("342");
+		
 
 		var spriteX = 0.0;
 		var spriteY = 0.0;

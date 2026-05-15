@@ -1,0 +1,13 @@
+common.hxml
+
+-D genes.unchanged_no_rewrite
+--library genes
+
+-js out/genes-test/main-js-simple.js
+
+--macro hxasync.AsyncMacro.makeAsyncable("")
+--macro macros.FixGenesAsyncOutput.apply()
+
+--times
+
+--cmd echo "Build (genes) complete."

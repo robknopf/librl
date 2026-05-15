@@ -5,11 +5,16 @@
 # Note that this is relative to the output directory.
 -D LIBRL_ROOT=../../../..
 
+-lib hxasync
+
 --main Main
 
 -D analyzer-optimize
 --dce std
 
--lib hxasync
---macro hxasync.AsyncMacro.makeAsyncable("")
---macro macros.ExportCABI.apply()
+#-D source-map-content
+-D source-map
+-D js-es=6
+
+
+

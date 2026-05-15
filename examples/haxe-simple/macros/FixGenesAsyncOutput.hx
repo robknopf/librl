@@ -2,10 +2,11 @@ package macros;
 
 #if macro
 import haxe.Json;
-import haxe.crypto.Md5;
-import haxe.macro.Context;
-import haxe.macro.Expr;
+import haxe.io.Path;
 import haxe.macro.Compiler;
+import haxe.macro.Context;
+import sys.FileSystem;
+import sys.io.File;
 
 private typedef MappingSegment = {
 	var line:Int;
@@ -16,26 +17,28 @@ private typedef MappingSegment = {
 	@:optional var name:Int;
 }
 
-private typedef LineColumn = {
-	var line:Int;
-	var column:Int;
-}
-
 /**
- * Rewrites the Haxe-emitted JS bundle toward an ESM shape (`export default exports`).
+ * hxasync only post-processes `Compiler.getOutput()`, which works for the
+ * default single-file JS emitter but misses split-output generators like genes.
  *
- * **Source maps:** Haxe writes the `.map` for the pre-transform output. This macro does not
- * patch the map; doing that correctly requires a VLQ-aware merge (e.g. `source-map` on Node),
- * not `;`-row surgery. The header/footer rewrites are kept on a single line each (no extra
- * `\\n` before the bundle body) so emitted **line numbers** stay aligned with the original
- * output after the first line / last line. Use `debugger;` or a build without this step if
- * you still need exact DevTools alignment.
+ * This macro walks the generated output directory and applies hxasync's JS fixup
+ * to every emitted `.js` module so `%asyncPlaceholder%` markers are resolved.
  */
-class MakeESM {
+class FixGenesAsyncOutput {
 	static final BASE64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-	static function snapshotPath(outFile:String):String {
-		return "/tmp/librl-makeesm-" + Md5.encode(outFile) + ".preasync.js";
+	static function visitJsFiles(dir:String, callback:String->Void):Void {
+		if (!FileSystem.exists(dir) || !FileSystem.isDirectory(dir)) {
+			return;
+		}
+		for (entry in FileSystem.readDirectory(dir)) {
+			var path = Path.join([dir, entry]);
+			if (FileSystem.isDirectory(path)) {
+				visitJsFiles(path, callback);
+			} else if (Path.extension(path).toLowerCase() == "js") {
+				callback(path);
+			}
+		}
 	}
 
 	static function getDeletedGeneratedLines(source:String):Array<Int> {
@@ -48,20 +51,6 @@ class MakeESM {
 			}
 		}
 		return deleted;
-	}
-
-	static function offsetToLineColumn(content:String, offset:Int):LineColumn {
-		var line = 1;
-		var column = 0;
-		for (i in 0...offset) {
-			if (content.charCodeAt(i) == "\n".code) {
-				line++;
-				column = 0;
-			} else {
-				column++;
-			}
-		}
-		return { line: line, column: column };
 	}
 
 	static function fromBase64Char(charCode:Int):Int {
@@ -151,6 +140,7 @@ class MakeESM {
 		if (segments.length == 0) {
 			return "";
 		}
+
 		var perLine = new Map<Int, Array<MappingSegment>>();
 		var maxLine = 0;
 		for (segment in segments) {
@@ -164,6 +154,7 @@ class MakeESM {
 				maxLine = segment.line;
 			}
 		}
+
 		var lines = [];
 		var previousSource = 0;
 		var previousOriginalLine = 0;
@@ -200,49 +191,22 @@ class MakeESM {
 		return lines.join(";");
 	}
 
-	static function rewriteSourceMap(mapPath:String, headerPos:LineColumn, headerDelta:Int, footerPos:LineColumn, footerDelta:Int):Void {
-		if (!sys.FileSystem.exists(mapPath)) {
+	static function rewriteSourceMap(mapPath:String, deletedLines:Array<Int>):Void {
+		if (!FileSystem.exists(mapPath) || deletedLines.length == 0) {
 			return;
 		}
-		var map:Dynamic = Json.parse(sys.io.File.getContent(mapPath));
-		var rewritten = [];
-		for (segment in decodeMappings(map.mappings)) {
-			var generatedColumn = segment.generatedColumn;
-			if (headerDelta != 0 && segment.line == headerPos.line && generatedColumn >= headerPos.column) {
-				generatedColumn += headerDelta;
-			}
-			if (footerDelta != 0 && segment.line == footerPos.line && generatedColumn >= footerPos.column) {
-				generatedColumn += footerDelta;
-				if (generatedColumn < 0) {
-					generatedColumn = 0;
-				}
-			}
-			rewritten.push({
-				line: segment.line,
-				generatedColumn: generatedColumn,
-				source: segment.source,
-				originalLine: segment.originalLine,
-				originalColumn: segment.originalColumn,
-				name: segment.name
-			});
-		}
-		map.mappings = encodeMappings(rewritten);
-		sys.io.File.saveContent(mapPath, Json.stringify(map));
-	}
 
-	static function rewriteSourceMapForDeletedLines(mapPath:String, deletedLines:Array<Int>):Void {
-		if (!sys.FileSystem.exists(mapPath) || deletedLines.length == 0) {
-			return;
-		}
-		var map:Dynamic = Json.parse(sys.io.File.getContent(mapPath));
+		var map:Dynamic = Json.parse(File.getContent(mapPath));
 		var deletedLookup = new Map<Int, Bool>();
 		for (line in deletedLines) {
 			deletedLookup.set(line, true);
 		}
+
 		var deletedBefore = 0;
 		var nextDeletedIndex = 0;
 		var sortedDeleted = deletedLines.copy();
 		sortedDeleted.sort((a, b) -> a - b);
+
 		var rewritten = [];
 		for (segment in decodeMappings(map.mappings)) {
 			if (deletedLookup.exists(segment.line)) {
@@ -261,84 +225,29 @@ class MakeESM {
 				name: segment.name
 			});
 		}
-		map.mappings = encodeMappings(rewritten);
-		sys.io.File.saveContent(mapPath, Json.stringify(map));
-	}
 
-	public static macro function capturePreAsyncOutput() {
-		if (Context.defined("js")) {
-			Context.onAfterGenerate(() -> {
-				var outFile = Compiler.getOutput();
-				sys.io.File.saveContent(snapshotPath(outFile), sys.io.File.getContent(outFile));
-			});
-		}
-		return {expr: EConst(CString("", SingleQuotes)), pos: Context.makePosition({file: '', min: 0, max: 0})};
+		map.mappings = encodeMappings(rewritten);
+		File.saveContent(mapPath, Json.stringify(map));
 	}
 
 	public static macro function apply() {
 		if (Context.defined("js")) {
 			Context.onAfterGenerate(() -> {
-				var outFile = Compiler.getOutput();
-				var output = sys.io.File.getContent(outFile);
-				var originalOutput = output;
-				var preAsyncPath = snapshotPath(outFile);
-				var deletedLines = [];
-				if (sys.FileSystem.exists(preAsyncPath)) {
-					originalOutput = sys.io.File.getContent(preAsyncPath);
-					deletedLines = getDeletedGeneratedLines(originalOutput);
-				}
-				var currentOutput = output;
-
-				var header = "(function ($hx_exports, $global) { \"use strict\";";
-				// Same line as original opening so following lines keep the same line numbers vs .map
-				var headerNew = 'var exports = {};' + header;
-				var headerStart = output.indexOf(header);
-				if (headerStart == -1)
-					trace("ERROR: Can't generate esm because header string is not found");
-				else
-					output = output.substring(0, headerStart) + headerNew + output.substring(headerStart + header.length);
-
-				// One line so we do not add a line before EOF vs the pre-transform bundle
-				var footerNew = '})(exports); export default exports;';
-				var footerVariants = [
-					"})(typeof exports != \"undefined\" ? exports : typeof window != \"undefined\" ? window : typeof self != \"undefined\" ? self : this, {});",
-					"})(typeof exports != \"undefined\" ? exports : typeof window != \"undefined\" ? window : typeof self != \"undefined\" ? self : this, typeof window != \"undefined\" ? window : typeof global != \"undefined\" ? global : typeof self != \"undefined\" ? self : this);"
-				];
-				var footerStart = -1;
-				var footerLen = 0;
-				for (footer in footerVariants) {
-					var idx = output.lastIndexOf(footer);
-					if (idx != -1) {
-						footerStart = idx;
-						footerLen = footer.length;
-						break;
+				var outputFile = Compiler.getOutput();
+				var outputDir = Path.directory(outputFile);
+				visitJsFiles(outputDir, (path) -> {
+					var source = File.getContent(path);
+					var deletedLines = getDeletedGeneratedLines(source);
+					var fixed = hxasync.AsyncMacro.fixJSOutput(source);
+					if (fixed != source) {
+						File.saveContent(path, fixed);
+						rewriteSourceMap(path + ".map", deletedLines);
 					}
-				}
-				if (footerStart == -1)
-					trace("ERROR: Can't generate esm because footer string is not found");
-				else
-					output = output.substring(0, footerStart) + footerNew + output.substring(footerStart + footerLen);
-
-				sys.io.File.saveContent(outFile, output);
-				if (headerStart != -1 && footerStart != -1) {
-					if (deletedLines.length > 0) {
-						rewriteSourceMapForDeletedLines(outFile + ".map", deletedLines);
-					}
-					rewriteSourceMap(
-						outFile + ".map",
-						offsetToLineColumn(currentOutput, headerStart),
-						headerNew.length - header.length,
-						offsetToLineColumn(currentOutput, footerStart),
-						footerNew.length - footerLen
-					);
-				}
-				if (sys.FileSystem.exists(preAsyncPath)) {
-					sys.FileSystem.deleteFile(preAsyncPath);
-				}
+				});
 			});
 		}
 
-		return {expr: EConst(CString("", SingleQuotes)), pos: Context.makePosition({file: '', min: 0, max: 0})};
+		return macro null;
 	}
 }
 #end

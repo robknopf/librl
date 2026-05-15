@@ -77,7 +77,8 @@ export default defineConfig({
         const libRoot = path.resolve(__dirname, "lib");
 
         // Ensure files outside `root` that are imported via aliases (e.g. /lib/*)
-        // are watched for HMR/full-reload updates.
+        // or the custom /examples/* mount are watched for HMR/full-reload updates.
+        server.watcher.add(path.join(examplesRoot, "**/*"));
         server.watcher.add(path.join(libRoot, "**/*"));
 
         server.middlewares.use((req, _res, next) => {

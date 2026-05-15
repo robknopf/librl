@@ -56,6 +56,6 @@ async function startHaxeSimple(mod) {
   return stop;
 }
 
-runExample("Haxe", "examples/haxe-simple/out/wasm/Main.js", {
+runExample("Haxe Simple", "examples/haxe-simple/out/wasm/Main.js", {
   onModuleReady: startHaxeSimple,
 });

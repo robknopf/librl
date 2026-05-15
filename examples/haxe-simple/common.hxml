@@ -9,6 +9,13 @@
 -D analyzer-optimize
 -D no-traces
 --dce full
+
+-lib hxasync # for js async/await
+-lib hxasync
+--macro hxasync.AsyncMacro.makeAsyncable("")
+#--macro macros.ExportCABI.apply()
+#--macro macros.MakeESM.apply()
+
 --macro include("ExampleWasmExports")
 
 --main Main

@@ -8,7 +8,7 @@ import haxe.io.Path;
 #if (emscripten || PLATFORM_WEB || js)
 final ASSET_HOST:String = "./";
 #else
-final ASSET_HOST:String = "https://192.168.1.100:4444";
+final ASSET_HOST:String = "https://localhost:4444";
 #end
 
 typedef AppContext = {

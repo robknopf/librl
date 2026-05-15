@@ -237,6 +237,9 @@ proc rl_init*(config: var RLInitConfig): cint {.inline.} =
 proc rl_init*(): cint {.inline.} =
   rl_init_raw(nil)
 
+proc rl_boot*(): cint {.inline.} =
+  RL_INIT_OK
+
 proc rl_init_async*(config: var RLInitConfig): cint {.inline.} =
   rl_init_async_raw(addr config)
 

@@ -75,6 +75,9 @@ Notes:
   - telemetry helpers:
     - `resetPickStats()`
     - `getPickStats()`
+- JS `boot(opts)` instantiates the Emscripten module and prepares the scratch/color helpers without calling `rl_init(...)`.
+  - This is useful when callers need the loader-only/bootstrap path first, for example `boot() -> loaderInit() -> init()`.
+  - `init(...)` and `initAsync(...)` reuse the booted module instance when one already exists.
 - JS `init(opts)` calls the default synchronous `rl_init()` with a wasm `rl_init_config_t` built from:
   - `windowWidth`, `windowHeight`, `windowTitle`, `windowFlags`, `assetHost`, `loaderCacheDir`
   - (plus `idealWidth` / `idealHeight` for browser resize/aspect heuristics)
@@ -148,6 +151,7 @@ Notes:
   - `rl_window_init(width, height, title, flags)`
   - `RL_FLAG_MSAA_4X_HINT`
 - Window close polling is exposed in Nim as `rl_window_close_requested()`.
+- Nim exposes `rl_boot()`, which currently returns `RL_INIT_OK` without additional work. This keeps the binding lifecycle aligned with JS/Haxe callers that may use `boot() -> loader_init() -> init()`.
 - Loader helpers in Nim:
   - `rl_loader_init([mount_point])`
   - `rl_loader_init_async([mount_point])`
@@ -321,6 +325,7 @@ Notes:
 - The returned userdata exposes `add_task`, `add_import_task`, `add_import_tasks`, `tick`, `process`, `failed_paths`, etc.
 - Lua exposes mouse button state constants (`rl.RL_BUTTON_UP`, `rl.RL_BUTTON_PRESSED`, `rl.RL_BUTTON_DOWN`, `rl.RL_BUTTON_RELEASED`).
 - Lua exposes handle constants `rl.RL_CAMERA3D_DEFAULT` and `rl.RL_FONT_DEFAULT`.
+- Lua exposes `rl.boot()`, which currently returns `rl.RL_INIT_OK` without additional work. This keeps the binding lifecycle aligned with JS/Haxe callers that may use `boot() -> loader_init() -> init()`.
 - Lua exposes `rl.loader_ping_asset_host([asset_host])`, returning RTT ms or `< 0` on failure, for proactive asset-host diagnostics before importing.
 - Lua exposes `rl.loader_init([mount_point])` and `rl.loader_deinit()` for loader-only bootstrap without full `rl.init()`.
 - Lua also exposes `rl.loader_init_async([mount_point])` and `rl.init_async([config])` for the polling-style fallback path.

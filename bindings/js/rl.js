@@ -128,11 +128,17 @@ const RL = {
             moduleInstance.ccall("rl_window_set_size", null, ["number", "number"], [newWidth, newHeight]);
         });
     },
-    _callInitWithOptions: async (opts, symbolName, asyncOptions) => {
+    _prepareModuleOptions: (opts) => {
         opts = opts || {};
         opts.env = opts.env || {};
-        moduleOptions = {...opts};
-        moduleOptions.env = {...opts.env};
+        moduleOptions = {
+            ...moduleOptions,
+            ...opts,
+        };
+        moduleOptions.env = {
+            ...(moduleOptions.env || {}),
+            ...opts.env,
+        };
 
         if (moduleOptions.idealWidth == null) {
             moduleOptions.idealWidth = moduleOptions.windowWidth;
@@ -162,13 +168,26 @@ const RL = {
                 }
             }();
         }
+        return moduleOptions;
+    },
+    _ensureModuleInstance: async (opts) => {
+        RL._prepareModuleOptions(opts);
 
-        // create an instance of the module
+        if (moduleInstance) {
+            return moduleInstance;
+        }
+
         moduleInstance = await Module(moduleOptions.env);
-
         RL._patchColorConstants();
-
         moduleInstance.initScratchArea();
+        return moduleInstance;
+    },
+    boot: async (opts = {}) => {
+        await RL._ensureModuleInstance(opts);
+        return 0;
+    },
+    _callInitWithOptions: async (opts, symbolName, asyncOptions) => {
+        await RL._ensureModuleInstance(opts);
 
         const cfgSize = moduleInstance.ccall("rl_init_config_sizeof", "number", [], []) >>> 0;
         if (!cfgSize) {

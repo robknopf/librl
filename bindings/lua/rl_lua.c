@@ -147,6 +147,13 @@ static int rl_init_values_async_lua(lua_State *L)
     return 1;
 }
 
+static int rl_boot_lua(lua_State *L)
+{
+    (void)L;  /* Unused */
+    lua_pushinteger(L, (lua_Integer)RL_INIT_OK);
+    return 1;
+}
+
 static int rl_deinit_lua(lua_State *L)
 {
     (void)L;  /* Unused */
@@ -305,6 +312,7 @@ static int rl_tick_lua(lua_State *L)
 
 static const luaL_Reg rl_functions[] = {
     /* Core */
+    {"boot", rl_boot_lua},
     {"init", rl_init_lua},
     {"init_async", rl_init_async_lua},
     {"init_values", rl_init_values_lua},

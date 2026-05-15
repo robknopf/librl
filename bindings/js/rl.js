@@ -540,6 +540,12 @@ const RL = {
         return moduleInstance.ccall('rl_loader_restore_fs_async', 'number', [], []);
     },
     importAsset: async (filename) => {
+        if (typeof filename === "string" && /\.gltf(?:[?#].*)?$/i.test(filename)) {
+            console.warn(
+                `[librl] importAsset("${filename}") does not currently follow .gltf dependencies. ` +
+                `Use importAssetAsync()/waitForImportAssetAsync() or a task group instead.`
+            );
+        }
         return await moduleInstance.ccall(
             'rl_loader_import_asset',
             'number',

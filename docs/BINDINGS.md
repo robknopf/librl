@@ -99,6 +99,7 @@ Notes:
   - `loaderIsReady()`
   - `restoreFSAsync()` → task handle for `rl_loader_restore_fs_async()`
   - `importAsset(filename)` → Promise/integer result for `rl_loader_import_asset()`
+    - JS warns when `filename` ends in `.gltf`, because this synchronous/JSPI path does not currently follow `.gltf` dependencies.
   - `importAssetAsync(filename)` → task handle for `rl_loader_create_import_task()`
   - `importAssetsAsync(filenames)` → task handle via the scratch ABI and `rl_loader_import_assets_from_scratch_async()`
   - `waitForImportAssetAsync(filename)` / `waitForImportAssetsAsync(filenames)` → Promise/integer convenience wrappers around the task-returning imports

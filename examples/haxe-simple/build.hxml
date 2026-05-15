@@ -1,7 +1,7 @@
 build.js.hxml
 
---next 
-build.genes.hxml
+#--next 
+#build.genes.hxml
 
 --next
 build.wasm.hxml

@@ -44,8 +44,39 @@ const RL = {
         });
         idsToDelete.forEach((id) => RL._forgetListenerById(id));
     },
+    _escapeLoggerFormat: (message) => String(message ?? "").replaceAll("%", "%%"),
     _clearRunCallbacks: () => {
         /* Reserved for symmetry with deinit; run/start/stop removed from librl. */
+    },
+    _ensureOutputElement: () => {
+        let output = document.getElementById("output");
+        if (!output) {
+            output = document.createElement("textarea");
+            output.id = "output";
+            output.style.width = "100%";
+            output.style.height = "100px";
+            document.body.appendChild(output);
+        }
+        return output;
+    },
+    _makeOutputLogger: (useErrorConsole = false) => {
+        const output = RL._ensureOutputElement();
+        return function (...args) {
+            let line = args[0] ?? "";
+            if (args.length > 1) {
+                line = Array.prototype.slice.call(args).join(" ");
+            }
+            line = String(line);
+            if (useErrorConsole) {
+                console.error(line);
+            } else {
+                console.log(line);
+            }
+            if (output) {
+                output.value += line + "\n";
+                output.scrollTop = output.scrollHeight;
+            }
+        };
     },
     _waitForIdbfsReady: async (timeoutMs = 2000) => {
         const start = performance.now();
@@ -159,21 +190,10 @@ const RL = {
             moduleOptions.env.canvas = document.getElementById(canvasId);
         }
         if (!moduleOptions.env.print) {
-            var output = document.getElementById('output');
-            if (!output) {
-                const output = document.createElement("textarea");
-                output.id = "output";
-                output.style.width = "100%";
-                output.style.height = "100px";
-                document.body.appendChild(output);
-            }
-
-            moduleOptions.env.print = function () {
-                var e = document.getElementById("output");
-                return e && (e.value = ""), function (n) {
-                    arguments.length > 1 && (n = Array.prototype.slice.call(arguments).join(" ")), console.log(n), e && (e.value += n + "\n", e.scrollTop = e.scrollHeight)
-                }
-            }();
+            moduleOptions.env.print = RL._makeOutputLogger(false);
+        }
+        if (!moduleOptions.env.printErr) {
+            moduleOptions.env.printErr = RL._makeOutputLogger(true);
         }
         return moduleOptions;
     },
@@ -1387,6 +1407,9 @@ const RL = {
     ),
     destroySprite2D: (sprite) => moduleInstance.ccall(
         "rl_sprite2d_destroy", null, ["number"], [sprite]
+    ),
+    loggerMessage: (level, message) => moduleInstance.ccall(
+        "rl_logger_message", null, ["number", "string"], [level, RL._escapeLoggerFormat(message)]
     ),
     loggerSetLevel: (level) => moduleInstance.ccall(
         "rl_logger_set_level", null, ["number"], [level]

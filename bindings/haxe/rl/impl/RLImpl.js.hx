@@ -700,7 +700,10 @@ class RLImpl {
 	}
 
 	public static function loggerMessage(level:Int, message:String):Void {
-		js.Syntax.code("console.log({0})", message);
+		if (binding != null)
+			binding.loggerMessage(level, message);
+		else
+			js.Syntax.code("console.log({0})", message);
 	}
 
 	public static function loggerSetLevel(level:Int):Void {

@@ -49,14 +49,14 @@ class SimpleRuntime implements IRuntime {
 	}
 
 	@async public function onBoot() {
-		trace("onBoot");
+		// trace("onBoot");
 		var rc = @await RL.boot({
 			canvasId: "renderCanvas",
 
 			// site path relative the js module, relative to this module
-			//modulePath: "../../../../lib/librl.js"
+			// modulePath: "../../../../lib/librl.js"
 
-			// absolute path to the js module (served from site root).  
+			// absolute path to the js module (served from site root).
 			// Note that this is the default fallback.  See wRLImpl.js.hx::boot()
 			modulePath: "/lib/librl.js"
 		});
@@ -64,18 +64,27 @@ class SimpleRuntime implements IRuntime {
 			Log.error("RL.boot failed: " + rc);
 			return RT_FAILED;
 		}
+
+		// supress any boot messages unless they are warning+
+		RL.loggerSetLevel(RL.LOGGER_LEVEL_WARN);
+
+		/* 
+		// if we need to get an initial boot file (like external boot script)
+		// we can init the loader separate from the rest of librl. 
+		// that will allow us to fetch files required before init
+		// otherwise, use RL.init() for normal flow
 		var rc = @await RL.loaderInit();
 		if (rc != 0) {
 			Log.error("RL.loaderInit failed: " + rc);
 			return RT_FAILED;
 		}
+		*/
 		return RT_SUCCESS;
 	}
 
 	@async public function onInit():Int {
-		trace("onInit");
-
-		trace("Main: onInit");
+		// trace("onInit");
+		Log.warn("here");
 		ctx = {
 			elapsed: 0.0,
 			countdownTimer: 30.0,
@@ -92,7 +101,6 @@ class SimpleRuntime implements IRuntime {
 			greyAlphaColor: 0,
 		};
 
-		RL.loggerSetLevel(RL.LOGGER_LEVEL_INFO);
 		var rc = @await RL.init({
 			windowWidth: SCREEN_WIDTH,
 			windowHeight: SCREEN_HEIGHT,
@@ -102,7 +110,7 @@ class SimpleRuntime implements IRuntime {
 			// loaderCacheDir: LOADER_CACHE_DIR
 		});
 		if (rc != 0) {
-			trace("Main: onInit failed with error: " + rc);
+			Log.error("Main: onInit failed with error: " + rc);
 			return RT_FAILED;
 		}
 
@@ -146,28 +154,26 @@ class SimpleRuntime implements IRuntime {
 		var remainingText = 'Remaining: ${formatFixed(ctx.countdownTimer, 2)}';
 		var elapsedText = 'Elapsed: ${formatFixed(ctx.totalTime, 2)}';
 
-		
-			// var pickResult = RL.pickSprite3d(ctx.camera, ctx.sprite, mouse.x, mouse.y);
-			msg = "Nothing picked";
+		// var pickResult = RL.pickSprite3d(ctx.camera, ctx.sprite, mouse.x, mouse.y);
+		msg = "Nothing picked";
 
-			var pickResult:RLPickResult;
+		var pickResult:RLPickResult;
 
-			if (ctx.gumshoe != 0) {
-				pickResult = RL.pickModel(ctx.camera, ctx.gumshoe, mouse.x, mouse.y);
-				if (pickResult.hit) {
-					trace('Model pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y);
-					msg = 'Model pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y;
-				}
+		if (ctx.gumshoe != 0) {
+			pickResult = RL.pickModel(ctx.camera, ctx.gumshoe, mouse.x, mouse.y);
+			if (pickResult.hit) {
+				trace('Model pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y);
+				msg = 'Model pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y;
 			}
+		}
 
-			if (ctx.sprite != 0) {
-				pickResult = RL.pickSprite3d(ctx.camera, ctx.sprite, mouse.x, mouse.y);
-				if (pickResult.hit) {
-					trace('Sprite pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y);
-					msg = 'Sprite pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y;
-				}
+		if (ctx.sprite != 0) {
+			pickResult = RL.pickSprite3d(ctx.camera, ctx.sprite, mouse.x, mouse.y);
+			if (pickResult.hit) {
+				trace('Sprite pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y);
+				msg = 'Sprite pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y;
 			}
-		 
+		}
 
 		RL.renderBegin();
 		RL.renderClearBackground(ctx.backgroundColor);
@@ -262,28 +268,19 @@ class SimpleRuntime implements IRuntime {
 
 	// helper to combine creating an import task and adding it to the loader queue
 	private function importAssetAsync(path:String, ?onSuccess:String->Dynamic->Void, ?onFailure:String->Dynamic->Void, ?userData:Dynamic):Int {
-		trace("importAssetAsync: " + path);
 		var task = RL.loaderImportAssetAsync(path);
 		if (RL.loaderTaskIsValid(task)) {
-			trace('RL.loaderTaskIsValid(${path}): OK');
 			RL.loaderAddTask(task, (path, userData) -> {
-				trace(path);
-				trace(userData);
-				trace('RL.loaderAddTask(${path}): OK');
 				if (onSuccess != null) {
-					trace('calling onSuccess(${path}, ${userData})');
 					onSuccess(path, userData);
 				}
 			}, (path, userData) -> {
-				trace('RL.loaderAddTask(${path}): ERROR');
 				if (onFailure != null) {
 					onFailure(path, userData);
 				}
 			}, userData);
-			trace('RL.loaderAddTask(${path}): OK');
 			return 0;
 		} else {
-			trace('RL.loaderTaskIsValid(${path}): ERROR');
 			if (onFailure != null) {
 				onFailure(path, userData);
 			}
@@ -293,7 +290,6 @@ class SimpleRuntime implements IRuntime {
 
 	private function queueAssets():Void {
 		importAssetAsync(BGM_PATH, (path, userData) -> {
-			trace("importAssetAsync: BGM: " + path);
 			ctx.bgm = RL.musicCreate(path);
 			RL.musicSetLoop(ctx.bgm, true);
 			RL.musicPlay(ctx.bgm);
@@ -332,15 +328,7 @@ class SimpleRuntime implements IRuntime {
 			RL.modelAnimate(ctx.gumshoe, deltaTimeSec);
 		}
 
-		trace("335");
-		trace("336");
-		trace("337");
-		trace("338");
-		trace("339");
-		trace("340");
-		trace("341");
-		trace("342");
-		
+		//trace("335");
 
 		var spriteX = 0.0;
 		var spriteY = 0.0;
@@ -421,7 +409,7 @@ class Main {
 			RL.update();
 			var rc = RL.tick();
 			if (rc == RL.TICK_FAILED) {
-				trace("Main: RL.tick failed with error: " + rc);
+				Log.error("Main: RL.tick failed with error: " + rc);
 				return RT_FAILED;
 			}
 			if (rc == RL.TICK_WAITING) {
@@ -435,7 +423,7 @@ class Main {
 			}
 			return RT_SUCCESS;
 		} catch (e:Dynamic) {
-			trace("Main: rt_tick failed with error: " + e);
+			Log.error("Main: rt_tick failed with exception: " + e);
 			return RT_FAILED;
 		}
 	}

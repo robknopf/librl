@@ -213,6 +213,7 @@ LDFLAGS_WASM = \
 		"_rl_loader_add_task", \
 		"_rl_loader_tick", \
 		"_rl_loader_is_asset_cached", \
+		"_rl_logger_message", \
 		"_rl_logger_set_level", \
 		"_rl_loader_uncache_asset", \
 		"_rl_loader_clear_cache", \

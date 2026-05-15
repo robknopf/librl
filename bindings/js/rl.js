@@ -382,6 +382,8 @@ const RL = {
         }
         return bytes;
     },
+
+    /* unused for now
     _installWebResizeHandler: (opts) => {
         if (typeof window === "undefined" || !window.addEventListener) {
             return;
@@ -408,6 +410,7 @@ const RL = {
             moduleInstance.ccall("rl_window_set_size", null, ["number", "number"], [newWidth, newHeight]);
         });
     },
+    */
     _getModulePath: (opts) => {
         const modulePath = opts?.modulePath ?? moduleOptions.modulePath;
         if (modulePath) {
@@ -614,10 +617,12 @@ const RL = {
             return initRc;
         }
 
+     /*
         RL._installWebResizeHandler(initOptions);
         if (typeof window !== "undefined" && window.dispatchEvent) {
             window.dispatchEvent(new Event("resize"));
         }
+            */
         return 0;
     },
     _callInitWithOptionsImmediate: (opts, symbolName) => {
@@ -793,7 +798,7 @@ const RL = {
             moduleInstance.removeFunction(RL._eventDispatchPtr);
             RL._eventDispatchPtr = 0;
         }
-        moduleInstance.ccall('rl_deinit', null, [], []);
+        moduleInstance.ccall('rl_deinit', null, [], [], { async: true });
     },
     isInitialized: () => {
         return moduleInstance.ccall('rl_is_initialized', 'number', [], []) !== 0;
@@ -814,7 +819,7 @@ const RL = {
         return moduleInstance.ccall('rl_loader_init_async', 'number', ['string'], [mountPoint || ""]);
     },
     loaderDeinit: () => {
-        moduleInstance.ccall('rl_loader_deinit', null, [], []);
+        moduleInstance.ccall('rl_loader_deinit', null, [], [], { async: true });
     },
     loaderIsInitialized: () => {
         return moduleInstance.ccall('rl_loader_is_initialized', 'number', [], []) !== 0;

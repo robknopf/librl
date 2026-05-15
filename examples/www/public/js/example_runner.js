@@ -4,6 +4,11 @@ const STARTUP_TIMEOUT_MS = 15000;
 const IDEAL_WIDTH = 1024;
 const IDEAL_HEIGHT = 1280;
 
+/** Per-example runtime shutdown (_rt_shutdown, etc.). */
+let cleanup = null;
+/** Restores console.log / console.error after installConsoleToOutput(). */
+let restoreConsole = null;
+
 function getPageBase() {
   return new URL(".", window.location.href);
 }
@@ -31,31 +36,23 @@ function createDefaultEnv(moduleDir) {
   const env = {};
   env.canvas = document.getElementById("renderCanvas");
 
-  const outputLog = createOutputLog();
-
-  env.print = function (...args) {
-    const line = args.length > 1 ? args.join(" ") : String(args[0] ?? "");
-    console.log(line);
-    outputLog(line);
+  env.print = (...args) => {
+    console.log(...args);
   };
-
-  env.printErr = function (...args) {
-    const line = args.length > 1 ? args.join(" ") : String(args[0] ?? "");
-    console.error(line);
-    outputLog(line);
+  env.printErr = (...args) => {
+    console.error(...args);
   };
 
   let lastStatus = null;
   env.setStatus = function (status) {
     if (!status || status === lastStatus) return;
     lastStatus = status;
-    outputLog(`[wasm] ${status}`);
+    console.log(`[wasm] ${status}`);
   };
 
   env.onAbort = function (what) {
     const message = what ? String(what) : "startup aborted";
-    console.error(message);
-    outputLog(`[wasm] ${message}`);
+    console.error(`[wasm] ${message}`);
   };
 
   env.locateFile = function (path) {
@@ -65,18 +62,54 @@ function createDefaultEnv(moduleDir) {
   return env;
 }
 
+/** Hijack console.log and console.error to send to the output log. */
+function installConsoleToOutput() {
+  const consoleLogFn = console.log;
+  const consoleErrorFn = console.error;
+  const outputLog = createOutputLog();
+
+  console.log = (...args) => {
+    consoleLogFn(...args);
+    outputLog(...args);
+  };
+  console.error = (...args) => {
+    consoleErrorFn(...args);
+    outputLog(...args);
+  };
+
+  restoreConsole = () => {
+    console.log = consoleLogFn;
+    console.error = consoleErrorFn;
+  };
+
+  window.addEventListener(
+    "beforeunload",
+    () => {
+      void teardown();
+    },
+    { once: true },
+  );
+}
+
+async function teardown() {
+  try {
+    await cleanup?.();
+  } finally {
+    restoreConsole?.();
+    restoreConsole = null;
+    cleanup = null;
+  }
+}
+
 async function waitForModuleWithTimeout(factory, env, timeoutMs = STARTUP_TIMEOUT_MS) {
   let timeoutId = 0;
   try {
     return await Promise.race([
       (async () => {
-        // Handle both factory functions and plain objects
-        if (typeof factory === 'function') {
+        if (typeof factory === "function") {
           return await factory(env);
-        } else {
-          // Plain module object - return as-is (optionally init if needed)
-          return factory;
         }
+        return factory;
       })(),
       new Promise((_, reject) => {
         timeoutId = window.setTimeout(() => {
@@ -125,11 +158,13 @@ export async function runExample(displayName, modulePath, options = {}) {
   const pageBase = getPageBase();
   const moduleUrl = new URL(modulePath, pageBase).href;
   const moduleDir = new URL("./", moduleUrl);
-  let cleanup = null;
+
+  await teardown();
 
   try {
     const canvas = document.getElementById("renderCanvas");
     const factory = await loadModuleFactory(moduleUrl);
+    installConsoleToOutput();
     const env = buildEnv ? buildEnv({ moduleDir, createDefaultEnv }) : createDefaultEnv(moduleDir);
     const mod = await waitForModuleWithTimeout(factory, env);
 
@@ -139,12 +174,8 @@ export async function runExample(displayName, modulePath, options = {}) {
     }
     applyLetterboxCanvasStyle(canvas, IDEAL_WIDTH, IDEAL_HEIGHT);
   } catch (e) {
-    console.error(e);
-    if (typeof cleanup === "function") {
-      cleanup();
-    }
-    const outputLog = createOutputLog();
     const message = e instanceof Error ? e.message : String(e);
-    outputLog(`[wasm] startup failed: ${message}`);
+    console.error(`[wasm] startup failed: ${message}`);
+    await teardown();
   }
 }

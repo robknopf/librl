@@ -52,6 +52,7 @@ class SimpleRuntime implements IRuntime {
 		// trace("onBoot");
 		var rc = @await RL.boot({
 			canvasId: "renderCanvas",
+			/*
 			env: {
 				print: (msg) -> {
 					trace(msg);
@@ -60,6 +61,7 @@ class SimpleRuntime implements IRuntime {
 					trace(msg);
 				}
 			},
+			*/
 
 			// site path to the js binding module, relative to this module
 			// bindingsPath: "../../../../bindings/js/rl.js"

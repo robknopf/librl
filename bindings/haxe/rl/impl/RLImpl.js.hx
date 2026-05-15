@@ -121,33 +121,33 @@ class RLImpl {
 	private static function setColorConstants():Void {
 		if (binding == null)
 			return;
-		COLOR_DEFAULT = cast Reflect.field(binding, "COLOR_DEFAULT");
-		COLOR_LIGHTGRAY = cast Reflect.field(binding, "COLOR_LIGHTGRAY");
-		COLOR_GRAY = cast Reflect.field(binding, "COLOR_GRAY");
-		COLOR_YELLOW = cast Reflect.field(binding, "COLOR_YELLOW");
-		COLOR_GOLD = cast Reflect.field(binding, "COLOR_GOLD");
-		COLOR_ORANGE = cast Reflect.field(binding, "COLOR_ORANGE");
-		COLOR_PINK = cast Reflect.field(binding, "COLOR_PINK");
-		COLOR_RED = cast Reflect.field(binding, "COLOR_RED");
-		COLOR_MAROON = cast Reflect.field(binding, "COLOR_MAROON");
-		COLOR_GREEN = cast Reflect.field(binding, "COLOR_GREEN");
-		COLOR_LIME = cast Reflect.field(binding, "COLOR_LIME");
-		COLOR_DARKGREEN = cast Reflect.field(binding, "COLOR_DARKGREEN");
-		COLOR_SKYBLUE = cast Reflect.field(binding, "COLOR_SKYBLUE");
-		COLOR_BLUE = cast Reflect.field(binding, "COLOR_BLUE");
-		COLOR_DARKBLUE = cast Reflect.field(binding, "COLOR_DARKBLUE");
-		COLOR_PURPLE = cast Reflect.field(binding, "COLOR_PURPLE");
-		COLOR_VIOLET = cast Reflect.field(binding, "COLOR_VIOLET");
-		COLOR_DARKPURPLE = cast Reflect.field(binding, "COLOR_DARKPURPLE");
-		COLOR_BEIGE = cast Reflect.field(binding, "COLOR_BEIGE");
-		COLOR_BROWN = cast Reflect.field(binding, "COLOR_BROWN");
-		COLOR_DARKBROWN = cast Reflect.field(binding, "COLOR_DARKBROWN");
-		COLOR_DARKGRAY = cast Reflect.field(binding, "COLOR_DARKGRAY");
-		COLOR_WHITE = cast Reflect.field(binding, "COLOR_WHITE");
-		COLOR_BLANK = cast Reflect.field(binding, "COLOR_BLANK");
-		COLOR_MAGENTA = cast Reflect.field(binding, "COLOR_MAGENTA");
-		COLOR_RAYWHITE = cast Reflect.field(binding, "COLOR_RAYWHITE");
-		COLOR_BLACK = cast Reflect.field(binding, "COLOR_BLACK");
+		COLOR_DEFAULT = cast js.Syntax.code("{0}.COLOR_DEFAULT", binding);
+		COLOR_LIGHTGRAY = cast js.Syntax.code("{0}.COLOR_LIGHTGRAY", binding);
+		COLOR_GRAY = cast js.Syntax.code("{0}.COLOR_GRAY", binding);
+		COLOR_YELLOW = cast js.Syntax.code("{0}.COLOR_YELLOW", binding);
+		COLOR_GOLD = cast js.Syntax.code("{0}.COLOR_GOLD", binding);
+		COLOR_ORANGE = cast js.Syntax.code("{0}.COLOR_ORANGE", binding);
+		COLOR_PINK = cast js.Syntax.code("{0}.COLOR_PINK", binding);
+		COLOR_RED = cast js.Syntax.code("{0}.COLOR_RED", binding);
+		COLOR_MAROON = cast js.Syntax.code("{0}.COLOR_MAROON", binding);
+		COLOR_GREEN = cast js.Syntax.code("{0}.COLOR_GREEN", binding);
+		COLOR_LIME = cast js.Syntax.code("{0}.COLOR_LIME", binding);
+		COLOR_DARKGREEN = cast js.Syntax.code("{0}.COLOR_DARKGREEN", binding);
+		COLOR_SKYBLUE = cast js.Syntax.code("{0}.COLOR_SKYBLUE", binding);
+		COLOR_BLUE = cast js.Syntax.code("{0}.COLOR_BLUE", binding);
+		COLOR_DARKBLUE = cast js.Syntax.code("{0}.COLOR_DARKBLUE", binding);
+		COLOR_PURPLE = cast js.Syntax.code("{0}.COLOR_PURPLE", binding);
+		COLOR_VIOLET = cast js.Syntax.code("{0}.COLOR_VIOLET", binding);
+		COLOR_DARKPURPLE = cast js.Syntax.code("{0}.COLOR_DARKPURPLE", binding);
+		COLOR_BEIGE = cast js.Syntax.code("{0}.COLOR_BEIGE", binding);
+		COLOR_BROWN = cast js.Syntax.code("{0}.COLOR_BROWN", binding);
+		COLOR_DARKBROWN = cast js.Syntax.code("{0}.COLOR_DARKBROWN", binding);
+		COLOR_DARKGRAY = cast js.Syntax.code("{0}.COLOR_DARKGRAY", binding);
+		COLOR_WHITE = cast js.Syntax.code("{0}.COLOR_WHITE", binding);
+		COLOR_BLANK = cast js.Syntax.code("{0}.COLOR_BLANK", binding);
+		COLOR_MAGENTA = cast js.Syntax.code("{0}.COLOR_MAGENTA", binding);
+		COLOR_RAYWHITE = cast js.Syntax.code("{0}.COLOR_RAYWHITE", binding);
+		COLOR_BLACK = cast js.Syntax.code("{0}.COLOR_BLACK", binding);
 	}
 
 	public static function init(?config:RLInitConfig):Promise<Int> {
@@ -183,6 +183,8 @@ class RLImpl {
 			return Promise.resolve(null);
 		}
 		binding.deinit();
+		binding = null;
+		bootPromise = null;
 		return Promise.resolve(null);
 	}
 
@@ -736,17 +738,6 @@ class RLImpl {
 		return cast js.Syntax.code("typeof WebAssembly !== 'undefined' &&
        typeof WebAssembly.Suspending === 'function' &&
        typeof WebAssembly.promising === 'function'");
-	}
-
-	static function optionObject(options:Dynamic, name:String):Dynamic {
-		if (options == null) {
-			return {};
-		}
-		var value = Reflect.field(options, name);
-		if (value == null) {
-			return {};
-		}
-		return value;
 	}
 
 	private static function normalizeInitConfig(?config:RLInitConfig):{

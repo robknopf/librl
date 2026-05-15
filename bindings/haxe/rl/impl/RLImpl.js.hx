@@ -94,7 +94,7 @@ class RLImpl {
 			return Promise.resolve(INIT_ERR_UNKNOWN);
 		}
 
-		var modulePath = optionString(options, "modulePath", "../../../lib/librl.js");
+		var modulePath = optionString(options, "modulePath", "/lib/librl.js");
 
 		bootPromise = cast js.Syntax.code("(async () => {
         try {

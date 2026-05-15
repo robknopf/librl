@@ -1,312 +1,491 @@
-package;
-
-import rl.Log;
 import rl.RL;
+import rl.Log;
 import rl.RLHandle;
+import rl.RLTypes.RLPickResult;
+import InjectWasmExports;
+import haxe.io.Path;
 
-#if cpp
-@:cppFileCode('
-#include "Main.h"
-
-#ifdef __EMSCRIPTEN__
-#include <emscripten/emscripten.h>
-#define EXAMPLE_EXPORT EMSCRIPTEN_KEEPALIVE
+#if (emscripten || PLATFORM_WEB || js)
+final ASSET_HOST:String = "./";
 #else
-#define EXAMPLE_EXPORT extern "C" HXCPP_EXTERN_CLASS_ATTRIBUTES
-#endif
-
-extern "C" {
-EXAMPLE_EXPORT int example_init(void) {
-	return Main_obj::exampleInit();
-}
-
-EXAMPLE_EXPORT int example_frame(float dt) {
-	return Main_obj::exampleFrame(dt);
-}
-
-EXAMPLE_EXPORT void example_shutdown(void) {
-	Main_obj::exampleShutdown();
-}
-}
-')
+final ASSET_HOST:String = "https://localhost:4444";
 #end
-class Main {
-	#if emscripten
-	// Pulls in example-local wasm export/linker flags without putting them in the librl binding.
-	@:keep static final wasmExportsClass = ExampleWasmExports;
-	#end
 
-	static inline final RESULT_OK:Int = 0;
-	static inline final RESULT_ERROR:Int = -1;
-	static inline final RESULT_QUIT:Int = 1;
+typedef AppContext = {
+	var elapsed:Float;
+	var countdownTimer:Float;
+	var totalTime:Float;
+	var debugFont:RLHandle;
+	var komikaFont:RLHandle;
+	var sprite:RLHandle;
+	var camera:RLHandle;
+	var bgm:RLHandle;
+	var greyAlphaColor:RLHandle;
+	var gumshoe:RLHandle;
+	var reloadCount:Int;
+	var spriteYOffset:Float;
+	var backgroundColor:RLHandle;
+}
 
-	static inline final SCREEN_WIDTH:Int = 1024;
-	static inline final SCREEN_HEIGHT:Int = 1280;
-	static inline final MONO_FONT_SIZE:Int = 24;
-	static inline final SMALL_FONT_SIZE:Int = 16;
-	static inline final MODEL_PATH:String = "assets/models/gumshoe/gumshoe.glb";
-	static inline final SPRITE_PATH:String = "assets/sprites/logo/wg-logo-bw-alpha.png";
-	static inline final MONO_FONT_PATH:String = "assets/fonts/JetBrainsMono/JetBrainsMono-Regular.ttf";
-	static inline final SMALL_FONT_PATH:String = "assets/fonts/Komika/KOMIKAH_.ttf";
-	static inline final BGM_PATH:String = "assets/music/ethernight_club.mp3";
+class SimpleRuntime implements IRuntime {
+	final SCREEN_TITLE:String = "haxe-simple (Haxe runtime)";
+	final SCREEN_FLAGS:Int = RL.FLAG_MSAA_4X_HINT;
+	final SCREEN_WIDTH:Int = 1024;
+	final SCREEN_HEIGHT:Int = 1280;
+	final DEBUG_FONT_SIZE:Int = 18;
+	final DEBUG_FONT_PATH:String = "assets/fonts/JetBrainsMono/JetBrainsMono-Regular.ttf";
+	final KOMIKA_FONT_SIZE:Int = 24;
+	final KOMIKA_FONT_PATH:String = "assets/fonts/Komika/KOMIKAH_.ttf";
+	final BGM_PATH:String = "assets/music/ethernight_club.mp3";
+	final MODEL_PATH:String = "assets/models/gumshoe/gumshoe.glb";
+	final SPRITE_PATH:String = "assets/sprites/logo/wg-logo-bw-alpha.png";
 
-	#if (emscripten || PLATFORM_WEB)
-	static final ASSET_HOST:String = "./";
-	#else
-	static final ASSET_HOST:String = "https://localhost:4444";
-	#end
+	var ctx:AppContext;
+	var msg:String = "Hello from Haxe Simple Main !";
+	var platformText:String = "Platform: <unknown>";
 
-	static var initialized:Bool = false;
-	static var loadingGroup:rl.RLTaskGroup = null;
-	static var monoFont:RLHandle = 0;
-	static var smallFont:RLHandle = 0;
-	static var model:RLHandle = 0;
-	static var sprite:RLHandle = 0;
-	static var bgm:RLHandle = 0;
-	static var camera:RLHandle = 0;
-	static var bgColor:RLHandle = 0;
-	static var fpsColor:RLHandle = 0;
-	static var countdownTimer:Float = 5.0;
-	static var totalTime:Float = 0.0;
-	static var lastTime:Float = 0.0;
-	static var loadFailed:Bool = false;
-	static var loadingMessage:String = "Loading...";
-	static var spriteAnchor = {x:0, y:4, z:0};
-
-	@:keep public static function exampleInit():Int {
-		if (initialized) {
-			return RESULT_OK;
-		}
-
-		var rc = RL.init({
-			windowWidth: SCREEN_WIDTH,
-			windowHeight: SCREEN_HEIGHT,
-			windowTitle: "Hello, World! (Haxe simple)",
-			windowFlags: RL.FLAG_MSAA_4X_HINT,
-			assetHost: ASSET_HOST,
-		});
-		if (rc != 0) {
-			Log.error("RL.init failed: " + rc);
-			return RESULT_ERROR;
-		}
-
-		initialized = true;
-		RL.loaderClearCache();
-		RL.setTargetFps(60);
-
-		setupScene();
-		queueAssets();
-		drawLoadingFrame();
-		return RESULT_OK;
+	public function new() {
+		trace("SimpleRuntime::new");
 	}
 
-	static function setupScene():Void {
-		bgColor = RL.colorCreate(245, 245, 245, 255);
-		fpsColor = RL.colorCreate(0, 121, 241, 255);
-		camera = RL.camera3dCreate(12.0, 12.0, 12.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 45.0, RL.CAMERA_PERSPECTIVE);
+	@async public function onBoot() {
+		trace("onBoot");
+		var rc = @await RL.boot({
+			canvasId: "renderCanvas",
+
+			// site path relative the js module, relative to this module
+			//modulePath: "../../../../lib/librl.js"
+
+			// absolute path to the js module (served from site root).  
+			// Note that this is the default fallback.  See wRLImpl.js.hx::boot()
+			//modulePath: "/lib/librl.js"
+		});
+		if (rc != 0) {
+			Log.error("RL.boot failed: " + rc);
+			return RT_FAILED;
+		}
+		var rc = @await RL.loaderInit();
+		if (rc != 0) {
+			Log.error("RL.loaderInit failed: " + rc);
+			return RT_FAILED;
+		}
+		return RT_SUCCESS;
+	}
+
+	@async public function onInit():Int {
+		trace("onInit");
+
+		trace("Main: onInit");
+		ctx = {
+			elapsed: 0.0,
+			countdownTimer: 30.0,
+			totalTime: 0.0,
+			debugFont: 0,
+			komikaFont: 0,
+			sprite: 0,
+			camera: 0,
+			bgm: 0,
+			gumshoe: 0,
+			reloadCount: 0,
+			spriteYOffset: 3.0,
+			backgroundColor: 0,
+			greyAlphaColor: 0,
+		};
+
+		RL.loggerSetLevel(RL.LOGGER_LEVEL_INFO);
+		var rc = @await RL.init({
+			windowWidth: SCREEN_WIDTH,
+			windowHeight: SCREEN_HEIGHT,
+			windowTitle: SCREEN_TITLE,
+			windowFlags: SCREEN_FLAGS,
+			// assetHost: ASSET_HOST,
+			// loaderCacheDir: LOADER_CACHE_DIR
+		});
+		if (rc != 0) {
+			trace("Main: onInit failed with error: " + rc);
+			return RT_FAILED;
+		}
+
+		RL.loaderClearCache();
+
+		// Setup lighting and camera
 		RL.enableLighting();
 		RL.setLightDirection(-0.6, -1.0, -0.5);
 		RL.setLightAmbient(0.25);
-		RL.camera3dSetActive(camera);
+		ctx.camera = RL.camera3dCreate(12.0, 12.0, 12.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 45.0, RL.CAMERA_PERSPECTIVE);
+		RL.camera3dSetActive(ctx.camera);
+		ctx.greyAlphaColor = RL.colorCreate(0, 0, 0, 128);
+		ctx.backgroundColor = RL.colorCreate(245, 245, 245, 255);
 
-		lastTime = RL.getTime();
-		countdownTimer = 5.0;
-		totalTime = 0.0;
-		loadFailed = false;
+		queueAssets();
+
+		platformText = getPlatformText();
+
+		// clear the screen
+		RL.renderBegin();
+		RL.renderClearBackground(ctx.backgroundColor);
+		RL.renderEnd();
+
+		return RT_SUCCESS;
 	}
 
-	static function queueAssets():Void {
-		// Music is independent of the startup gate. It can begin playing as soon as it is cached.
-		var musicTask = RL.loaderImportAssetAsync(BGM_PATH);
-		if (RL.loaderTaskIsValid(musicTask)) {
-			RL.loaderAddTask(musicTask, (path, _) -> {
-				bgm = RL.musicCreate(path);
-				RL.musicSetLoop(bgm, true);
-				RL.musicPlay(bgm);
-			}, null, null);
+	public function onTick(deltaTimeSec:Float):Int {
+		// trace("Main: onTick called with deltaTimeMS: " + deltaTimeMS);
+		ctx.elapsed = ctx.elapsed + deltaTimeSec;
+		ctx.countdownTimer -= deltaTimeSec;
+		if (ctx.countdownTimer <= 0) {
+			// return RT_STOPPED;
 		}
 
-		// These assets are required before the main scene is useful, so group them and wait
-		// in exampleFrame(). The callbacks run when each import finishes and create handles
-		// from the cached local paths.
-		loadingGroup = RL.loaderCreateTaskGroup(
-			(_, _) -> {
-				loadingGroup = null;
-			},
-			(group, _) -> {
-				var errorMessage = "asset import failed: " + group.failedPaths().join(", ");
-				Log.error(errorMessage);
-				loadingGroup = null;
-				loadingMessage = errorMessage;
-				loadFailed = true;
+		animateFrame(deltaTimeSec);
 
+		RL.musicUpdateAll();
+
+		var mouse = RL.inputGetMouseState();
+		var mouseText = 'Mouse: (${mouse.x}, ${mouse.y}) w:${mouse.wheel} b:[${mouse.left}, ${mouse.right}, ${mouse.middle}]';
+		var remainingText = 'Remaining: ${formatFixed(ctx.countdownTimer, 2)}';
+		var elapsedText = 'Elapsed: ${formatFixed(ctx.totalTime, 2)}';
+
+		
+			// var pickResult = RL.pickSprite3d(ctx.camera, ctx.sprite, mouse.x, mouse.y);
+			msg = "Nothing picked";
+
+			var pickResult:RLPickResult;
+
+			if (ctx.gumshoe != 0) {
+				pickResult = RL.pickModel(ctx.camera, ctx.gumshoe, mouse.x, mouse.y);
+				if (pickResult.hit) {
+					trace('Model pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y);
+					msg = 'Model pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y;
+				}
 			}
-		);
-		loadingGroup.addImportTask(MODEL_PATH, (path, _) -> {
-			model = RL.modelCreate(path);
-			RL.modelSetAnimation(model, 1);
-			RL.modelSetAnimationSpeed(model, 1.0);
-			RL.modelSetAnimationLoop(model, true);
-			RL.modelSetTransform(model, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
-		});
-		loadingGroup.addImportTask(SPRITE_PATH, (path, _) -> {
-			sprite = RL.sprite3dCreate(path);
-			RL.sprite3dSetTransform(sprite, spriteAnchor.x, spriteAnchor.y, spriteAnchor.z, 1.0);
-		});
-		loadingGroup.addImportTask(MONO_FONT_PATH, (path, _) -> {
-			monoFont = RL.fontCreate(path, MONO_FONT_SIZE);
-		});
-		loadingGroup.addImportTask(SMALL_FONT_PATH, (path, _) -> {
-			smallFont = RL.fontCreate(path, SMALL_FONT_SIZE);
-		});
-	}
 
-	public static function animateFrame(dt:Float) {
-		if (model != 0 ){
-			RL.modelAnimate(model, dt);
-		}
-
-		if (sprite != 0) {
-			RL.sprite3dSetTransform(sprite, spriteAnchor.x, spriteAnchor.y + Math.sin(totalTime * 2.0) * 0.25, spriteAnchor.z, 1.0);
-		}
-
-	}
-
-	@:keep public static function exampleFrame(hostDt:Float):Int {
-		if (!initialized) {
-			return RESULT_ERROR;
-		}
-
-		// `RL.tick()` advances librl's internal loader/barrier work. While it reports WAITING,
-		// the app should not run frame logic yet.
-		var tickRc = RL.tick();
-		if (tickRc == RL.TICK_FAILED) {
-			return RESULT_ERROR;
-		}
-		if (tickRc == RL.TICK_WAITING) {
-			return RESULT_OK;
-		}
-		if (RL.windowCloseRequested()) {
-			return RESULT_QUIT;
-		}
-
-		// Keep drawing a minimal frame while the required scene assets are still importing.
-		if (loadFailed || (loadingGroup != null && loadingGroup.process() > 0)) {
-			drawLoadingFrame();
-			return RESULT_OK;
-		}
-
-		var dt = hostDt;
-		if (dt <= 0) {
-			var now = RL.getTime();
-			dt = now - lastTime;
-			lastTime = now;
-		} else {
-			lastTime = RL.getTime();
-		}
-
-		totalTime += dt;
-		countdownTimer -= dt;
-		if (countdownTimer <= 0) {
-			return RESULT_QUIT;
-		}
-
-		animateFrame(dt);
-
-		RL.musicUpdateAll();
-		RL.renderBegin();
-		RL.renderClearBackground(bgColor);
-		RL.renderBeginMode3D();
-		//if (model != 0) {
-			RL.modelDraw(model, RL.COLOR_WHITE);
-		//}
-		//if (sprite != 0) {
-			RL.sprite3dDraw(sprite, RL.COLOR_WHITE);
-		//}
-		RL.renderEndMode3D();
-		drawOverlay();
-		RL.renderEnd();
-		return RESULT_OK;
-	}
-
-	static function drawLoadingFrame():Void {
-		// Music is loaded outside the startup group, so keep its stream pumped even
-		// while the visual scene is still waiting on required assets.
-		RL.musicUpdateAll();
+			if (ctx.sprite != 0) {
+				pickResult = RL.pickSprite3d(ctx.camera, ctx.sprite, mouse.x, mouse.y);
+				if (pickResult.hit) {
+					trace('Sprite pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y);
+					msg = 'Sprite pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y;
+				}
+			}
+		 
 
 		RL.renderBegin();
-		RL.renderClearBackground(bgColor != 0 ? bgColor : RL.COLOR_RAYWHITE);
-		RL.textDraw(loadingMessage, 20, 20, 24, RL.COLOR_DARKGRAY);
-		RL.renderEnd();
-	}
+		RL.renderClearBackground(ctx.backgroundColor);
 
-	static function drawOverlay():Void {
+		// 3D render
+		RL.renderBeginMode3d();
+		if (ctx.gumshoe != 0) {
+			RL.modelDraw(ctx.gumshoe, RL.COLOR_RAYWHITE);
+		}
+		if (ctx.sprite != 0) {
+			RL.sprite3dDraw(ctx.sprite, RL.COLOR_RAYWHITE);
+		}
+		RL.renderEndMode3d();
+
+		// 2D UI overlay
 		var screen = RL.windowGetScreenSize();
-		var message = "Hello, World!";
-		if (monoFont != 0) {
-			var size = RL.textMeasureEx(monoFont, message, MONO_FONT_SIZE, 0);
-			RL.textDrawEx(monoFont, message, Std.int((screen.x - size.x) / 2), Std.int((screen.y - size.y) / 2), MONO_FONT_SIZE, 1.0, RL.COLOR_BLUE);
+		if (ctx.komikaFont != 0) {
+			var textSize = RL.textMeasureEx(ctx.komikaFont, msg, KOMIKA_FONT_SIZE, 1.0);
+			var textX = Std.int((screen.x - textSize.x) / 2);
+			var textY = Std.int((screen.y - textSize.y) / 2);
+			RL.textDrawEx(ctx.komikaFont, msg, textX, textY, KOMIKA_FONT_SIZE, 1.0, RL.COLOR_BLUE);
 		} else {
-			RL.textDraw(message, 20, 20, 24, RL.COLOR_BLUE);
+			var textWidth = RL.textMeasure(msg, KOMIKA_FONT_SIZE);
+			var textX = Std.int((screen.x - textWidth) / 2);
+			var textY = Std.int((screen.y - KOMIKA_FONT_SIZE) / 2);
+			RL.textDraw(msg, textX, textY, KOMIKA_FONT_SIZE, RL.COLOR_BLUE);
+		}
+		if (ctx.debugFont != 0) {
+			RL.textDrawEx(ctx.debugFont, remainingText, 10, 36, DEBUG_FONT_SIZE, 1.0, RL.COLOR_BLACK);
+			RL.textDrawEx(ctx.debugFont, elapsedText, 10, 56, DEBUG_FONT_SIZE, 1.0, RL.COLOR_BLACK);
+			RL.textDrawEx(ctx.debugFont, mouseText, 10, 76, DEBUG_FONT_SIZE, 1.0, RL.COLOR_BLACK);
+			RL.textDrawEx(ctx.debugFont, 'Reloads: ${ctx.reloadCount}', 10, 96, DEBUG_FONT_SIZE, 1.0, RL.COLOR_BLACK);
+		} else {
+			RL.textDraw(remainingText, 10, 36, DEBUG_FONT_SIZE, RL.COLOR_BLACK);
+			RL.textDraw(elapsedText, 10, 56, DEBUG_FONT_SIZE, RL.COLOR_BLACK);
+			RL.textDraw(mouseText, 10, 76, DEBUG_FONT_SIZE, RL.COLOR_BLACK);
+			RL.textDraw('Reloads: ${ctx.reloadCount}', 10, 96, DEBUG_FONT_SIZE, RL.COLOR_BLACK);
 		}
 
-		var remaining = "Remaining: " + (Math.floor(countdownTimer * 100.0) / 100.0);
-		var elapsed = "Elapsed: " + (Math.floor(totalTime * 100.0) / 100.0);
-		if (smallFont != 0) {
-			RL.textDrawEx(smallFont, remaining, 10, 36, SMALL_FONT_SIZE, 1.0, RL.COLOR_BLACK);
-			RL.textDrawEx(smallFont, elapsed, 10, 56, SMALL_FONT_SIZE, 1.0, RL.COLOR_BLACK);
-			RL.textDrawFpsEx(smallFont, 10, 10, SMALL_FONT_SIZE, fpsColor);
+		if (ctx.debugFont != 0) {
+			RL.textDrawEx(ctx.debugFont, platformText, 10, 116, DEBUG_FONT_SIZE, 1.0, RL.COLOR_BLACK);
 		} else {
-			RL.textDraw(remaining, 10, 36, 16, RL.COLOR_BLACK);
-			RL.textDraw(elapsed, 10, 56, 16, RL.COLOR_BLACK);
+			RL.textDraw(platformText, 10, 116, DEBUG_FONT_SIZE, RL.COLOR_BLACK);
+		}
+
+		if (ctx.debugFont != 0) {
+			RL.textDrawFpsEx(ctx.debugFont, 10, 10, DEBUG_FONT_SIZE, ctx.greyAlphaColor);
+		} else {
 			RL.textDrawFps(10, 10);
 		}
+
+		RL.renderEnd();
+
+		return RT_SUCCESS;
 	}
 
-	@:keep public static function exampleShutdown():Void {
-		if (!initialized) {
-			return;
-		}
-		RL.disableLighting();
-		RL.deinit();
-		initialized = false;
-		loadingGroup = null;
-		monoFont = 0;
-		smallFont = 0;
-		model = 0;
-		sprite = 0;
-		bgm = 0;
-		camera = 0;
-		bgColor = 0;
-		fpsColor = 0;
-	}
-
-	static function main():Void {
-		RL.loggerSetLevel(RL.LOGGER_LEVEL_DEBUG);
-
-		#if (emscripten || PLATFORM_WEB)
+	@async
+	public function onShutdown():Void {
+		@await RL.loaderDeinit();
 		return;
+	}
+
+	private function joinPath(pathComponents:haxe.Rest<String>):String {
+		return Path.normalize(Path.join(pathComponents.toArray()));
+	}
+
+	private function getPlatformText():String {
+		#if sys
+		return "Platform: " + Sys.systemName();
 		#else
-		if (exampleInit() != RESULT_OK) {
-			Sys.exit(1);
+		return "Platform: " + RL.getPlatform();
+		#end
+	}
+
+	private function formatFixed(value:Float, digits:Int):String {
+		var scale = Math.pow(10, digits);
+		var rounded = Math.round(value * scale) / scale;
+		var text = Std.string(rounded);
+		var dot = text.indexOf(".");
+		if (digits <= 0) {
+			return dot >= 0 ? text.substr(0, dot) : text;
+		}
+		if (dot < 0) {
+			return text + "." + StringTools.rpad("", "0", digits);
+		}
+		var decimals = text.length - dot - 1;
+		if (decimals < digits) {
+			return text + StringTools.rpad("", "0", digits - decimals);
+		}
+		return text;
+	}
+
+	// helper to combine creating an import task and adding it to the loader queue
+	private function importAssetAsync(path:String, ?onSuccess:String->Dynamic->Void, ?onFailure:String->Dynamic->Void, ?userData:Dynamic):Int {
+		trace("importAssetAsync: " + path);
+		var task = RL.loaderImportAssetAsync(path);
+		if (RL.loaderTaskIsValid(task)) {
+			trace('RL.loaderTaskIsValid(${path}): OK');
+			RL.loaderAddTask(task, (path, userData) -> {
+				trace(path);
+				trace(userData);
+				trace('RL.loaderAddTask(${path}): OK');
+				if (onSuccess != null) {
+					trace('calling onSuccess(${path}, ${userData})');
+					onSuccess(path, userData);
+				}
+			}, (path, userData) -> {
+				trace('RL.loaderAddTask(${path}): ERROR');
+				if (onFailure != null) {
+					onFailure(path, userData);
+				}
+			}, userData);
+			trace('RL.loaderAddTask(${path}): OK');
+			return 0;
+		} else {
+			trace('RL.loaderTaskIsValid(${path}): ERROR');
+			if (onFailure != null) {
+				onFailure(path, userData);
+			}
+			return -1;
+		}
+	}
+
+	private function queueAssets():Void {
+		importAssetAsync(BGM_PATH, (path, userData) -> {
+			trace("importAssetAsync: BGM: " + path);
+			ctx.bgm = RL.musicCreate(path);
+			RL.musicSetLoop(ctx.bgm, true);
+			RL.musicPlay(ctx.bgm);
+		}, (path, userData) -> {
+			Log.error("Failed to import BGM: " + path);
+		});
+		importAssetAsync(MODEL_PATH, (path, userData) -> {
+			ctx.gumshoe = RL.modelCreate(path);
+			RL.modelSetAnimation(ctx.gumshoe, 1);
+			RL.modelSetAnimationSpeed(ctx.gumshoe, 1.0);
+			RL.modelSetAnimationLoop(ctx.gumshoe, true);
+			RL.modelSetTransform(ctx.gumshoe, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+		}, (path, userData) -> {
+			Log.error("Failed to import MODEL: " + path);
+		});
+		importAssetAsync(SPRITE_PATH, (path, userData) -> {
+			ctx.sprite = RL.sprite3dCreate(path);
+			RL.sprite3dSetTransform(ctx.sprite, 0, 0, ctx.spriteYOffset, 1.0);
+		}, (path, userData) -> {
+			Log.error("Failed to import SPRITE: " + path);
+		});
+		importAssetAsync(DEBUG_FONT_PATH, (path, userData) -> {
+			ctx.debugFont = RL.fontCreate(path, DEBUG_FONT_SIZE);
+		}, (path, userData) -> {
+			Log.error("Failed to import DEBUG FONT: " + path);
+		});
+		importAssetAsync(KOMIKA_FONT_PATH, (path, userData) -> {
+			ctx.komikaFont = RL.fontCreate(path, KOMIKA_FONT_SIZE);
+		}, (path, userData) -> {
+			Log.error("Failed to import KOMIKA FONT: " + path);
+		});
+	}
+
+	private function animateFrame(deltaTimeSec:Float):Void {
+		if (ctx.gumshoe != 0) {
+			RL.modelAnimate(ctx.gumshoe, deltaTimeSec);
 		}
 
+		var spriteX = 0.0;
+		var spriteY = 0.0;
+		var spriteZ = 0.0;
+
+		// bob the sprite up and down
+		var bobSpeed = 1.0;
+		var bobHeight = 1.5;
+		if (ctx.sprite != 0) {
+			var y = Math.sin(ctx.elapsed * bobSpeed) * bobHeight;
+			spriteY = y + ctx.spriteYOffset;
+		}
+
+		// move the sprite in a circle
+		/*
+			var rotationSpeed = 1.0;
+			var rotationRadius = 2.0;
+			if (ctx.sprite != 0) {
+				spriteX = Math.cos(ctx.elapsed * rotationSpeed) * rotationRadius;
+				spriteZ = Math.sin(ctx.elapsed * rotationSpeed) * rotationRadius;
+			}
+		 */
+
+		if (ctx.sprite != 0) {
+			RL.sprite3dSetTransform(ctx.sprite, spriteX, spriteY, spriteZ, 1.0);
+		}
+	}
+}
+
+///////////  Runtime ABI, called by host  ///////////
+
+typedef Runtime = SimpleRuntime;
+/*
+	enum abstract RTResult(Int) from Int to Int {
+	var RT_SUCCESS = 0;
+	var RT_FAILED = -1;
+	var RT_STOPPED = 1;
+	}
+ */
+final RT_SUCCESS = 0;
+final RT_FAILED = -1;
+final RT_STOPPED = 1;
+
+interface IRuntime {
+	function onBoot():Int;
+	function onInit():Int;
+	function onTick(deltaTimeSec:Float):Int;
+	function onShutdown():Void;
+}
+
+@:expose
+@async
+class Main {
+	private static var _instance:IRuntime = null;
+
+	@:expose("_rt_boot")
+	@:exportc.entry
+	@async static function rt_boot():Int {
+		if (_instance == null) {
+			_instance = new Runtime();
+		}
+		return @await _instance.onBoot();
+	}
+
+	@:expose("_rt_init")
+	@:exportc
+	@async static function rt_init(_hostData:Dynamic):Int {
+		if (_instance != null) {
+			return @await _instance.onInit();
+		}
+		return RT_FAILED;
+	}
+
+	@:expose("_rt_tick")
+	@:exportc
+	static function rt_tick(dt:Float):Int {
+		try {
+			RL.update();
+			var rc = RL.tick();
+			if (rc == RL.TICK_FAILED) {
+				trace("Main: RL.tick failed with error: " + rc);
+				return RT_FAILED;
+			}
+			if (rc == RL.TICK_WAITING) {
+				return RT_SUCCESS;
+			}
+			if (RL.windowCloseRequested()) {
+				return RT_STOPPED;
+			}
+			if (_instance != null) {
+				return _instance.onTick(dt);
+			}
+			return RT_SUCCESS;
+		} catch (e:Dynamic) {
+			trace("Main: rt_tick failed with error: " + e);
+			return RT_FAILED;
+		}
+	}
+
+	@:expose("_rt_shutdown")
+	@:exportc.exit
+	@async static function rt_shutdown():Void {
+		if (_instance != null) {
+			_instance.onShutdown();
+			_instance = null;
+		}
+
+		return;
+	}
+
+	public static function main() {
+		if (_instance == null) {
+			_instance = new Runtime();
+		}
+
+		// fake a host
+		// @await startLocalHost();
+		return;
+	}
+
+	// local host for when we are debugging without an actual host
+	@async static function startLocalHost() {
+		// fake a local host
+		var rc = @await rt_boot();
+		if (rc != RT_SUCCESS) {
+			trace("Main: rt_boot failed with error: " + rc);
+			return rc;
+		}
+
+		rc = @await rt_init(null);
+		if (rc != RT_SUCCESS) {
+			trace("Main: rt_init failed with error: " + rc);
+			return rc;
+		}
+
+		final targetFrameRate = 60;
+		final frameDelayMs = Std.int(1000 / targetFrameRate);
+		var frameTimer = new haxe.Timer(frameDelayMs);
 		var lastFrameTime = haxe.Timer.stamp();
-		while (true) {
+		frameTimer.run = () -> {
 			var now = haxe.Timer.stamp();
 			var dt = now - lastFrameTime;
 			lastFrameTime = now;
-			var rc = exampleFrame(dt);
-			if (rc > 0) {
-				break;
+			var rc = rt_tick(dt);
+			if (rc > RT_SUCCESS) {
+				trace("Main: rt_tick returned RT_STOPPED");
+				frameTimer.stop();
+				rt_shutdown();
 			}
-			if (rc < 0) {
-				exampleShutdown();
-				Sys.exit(1);
+			if (rc < RT_SUCCESS) {
+				trace("Main: rt_tick failed with error: " + rc);
+				frameTimer.stop();
+				rt_shutdown();
 			}
-			Sys.sleep(0.001);
 		}
-		exampleShutdown();
-		#end
+		return RT_SUCCESS;
 	}
 }

@@ -7,7 +7,7 @@ function callMaybeAsync(result) {
   return Promise.resolve(result);
 }
 
-async function startHaxeSimple(mod) {
+async function startHaxeWasmSimple(mod) {
   let stopped = false;
   let frameId = 0;
   let lastFrameTimeMs = 0;
@@ -22,22 +22,22 @@ async function startHaxeSimple(mod) {
       frameId = 0;
     }
     try {
-      mod.ccall("example_shutdown", null, [], []);
+      mod.ccall("_rt_shutdown", null, [], []);
     } catch (err) {
-      console.error("haxe-simple: example_shutdown failed", err);
+      console.error("haxe-wasm-simple: rt_shutdown failed", err);
     }
   }
 
-  async function frame(frameTimeMs) {
+  async function tick(frameTimeMs) {
     const dt = lastFrameTimeMs === 0 ? 0 : Math.max(0, (frameTimeMs - lastFrameTimeMs) / 1000.0);
     lastFrameTimeMs = frameTimeMs;
     if (stopped) {
       return;
     }
 
-    const rc = await callMaybeAsync(mod._example_frame(dt));
+    const rc = await callMaybeAsync(mod._rt_tick(dt));
     if (rc < 0) {
-      console.error(`haxe-simple: example_frame failed with ${rc}`);
+      console.error(`haxe-wasm-simple: rt_tick failed with ${rc}`);
       stop();
       return;
     }
@@ -45,17 +45,17 @@ async function startHaxeSimple(mod) {
       stop();
       return;
     }
-    frameId = window.requestAnimationFrame(frame);
+    frameId = window.requestAnimationFrame(tick);
   }
 
   window.addEventListener("beforeunload", stop, { once: true });
-  if ((await callMaybeAsync(mod._example_init())) !== 0) {
-    throw new Error("haxe-simple: example_init failed");
+  if ((await callMaybeAsync(mod._rt_init())) !== 0) {
+    throw new Error("haxe-wasm-simple: rt_init failed");
   }
-  frameId = window.requestAnimationFrame(frame);
+  frameId = window.requestAnimationFrame(tick);
   return stop;
 }
 
-runExample("Haxe Simple", "examples/haxe-simple/out/wasm/Main.js", {
-  onModuleReady: startHaxeSimple,
+runExample("Haxe Simple (wasm)", "examples/haxe-simple/out/wasm/Main.js", {
+  onModuleReady: startHaxeWasmSimple,
 });

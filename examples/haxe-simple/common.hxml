@@ -1,21 +1,15 @@
 -cp src
--cp ../../..
 -cp ../../bindings/haxe
 
 # Set the LIBRL_ROOT environment variable to the path to the librl root directory.
 # Note that this is relative to the output directory.
 -D LIBRL_ROOT=../../../..
 
--D analyzer-optimize
--D no-traces
---dce full
+--main Main
 
--lib hxasync # for js async/await
+-D analyzer-optimize
+--dce std
+
 -lib hxasync
 --macro hxasync.AsyncMacro.makeAsyncable("")
-#--macro macros.ExportCABI.apply()
-#--macro macros.MakeESM.apply()
-
---macro include("ExampleWasmExports")
-
---main Main
+--macro macros.ExportCABI.apply()

@@ -1,0 +1,12 @@
+common.hxml
+
+-js out/js/main-js-simple.js
+
+-D source-map
+-D js-es=6
+
+--macro macros.MakeESM.apply()
+--next
+--macro macros.SuppressViteImportWarning.apply("out/js/main-js-simple.js")
+
+--cmd echo "Build (js) complete."

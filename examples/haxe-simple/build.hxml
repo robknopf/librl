@@ -1,4 +1,4 @@
-build.desktop.hxml
+build.js.hxml
 
 --next
 build.wasm.hxml

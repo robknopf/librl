@@ -1,0 +1,2 @@
+--cmd rm -rf out
+--cmd rm -rf cache

@@ -108,11 +108,9 @@ Notes:
   - `createTaskGroup(onComplete?, onError?, ctx?)`
   - `addTask`, `addImportTask`, `addImportTasks`
   - `tick()`, `process()`, `remainingTasks()`, `failedPaths()`
-- JS local-create helpers for staged imports:
-  - `createModelFromLocal(path)`
-  - `createSprite3DFromLocal(path)`
-  - `createFontFromLocal(path, fontSize)`
-  - `createMusicFromLocal(path)`
+- JS `create*` helpers now match the other bindings: they create resources from paths that are already available in librl's local filesystem/cache.
+  - Call `importAsset(...)`, `waitForImportAssetAsync(...)`, task groups, or another loader flow first when the asset is not local yet.
+  - This applies to `createFont`, `createModel`, `createMusic`, `createSound`, `createTexture`, `createSprite3D`, and `createSprite2D`.
 - JS task-returning loader helpers use the same naming convention as C: `_async` means the call starts work and returns a task handle. Default names such as `importAsset(...)` follow the synchronous/default contract, even though JS callers still `await` them when JSPI is involved.
 
 ## Nim Binding

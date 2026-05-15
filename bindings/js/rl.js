@@ -1040,12 +1040,7 @@ const RL = {
     destroyColor: (color) => moduleInstance.ccall(
         "rl_color_destroy", null, ["number"], [color]
     ),
-    createFont: async (path, fontSize) => {
-        const rc = await RL.waitForImportAssetAsync(path);
-        if (rc !== 0) throw new Error(`Failed to load font: ${path} (rc=${rc})`);
-        return moduleInstance.ccall("rl_font_create", "number", ["string", "number"], [path, fontSize]);
-    },
-    createFontFromLocal: (path, fontSize) => moduleInstance.ccall(
+    createFont: (path, fontSize) => moduleInstance.ccall(
         "rl_font_create", "number", ["string", "number"], [path, fontSize]
     ),
     destroyFont: (font) => moduleInstance.ccall(
@@ -1057,12 +1052,7 @@ const RL = {
     setTargetFPS: (fps) => moduleInstance.ccall(
         "rl_set_target_fps", null, ["number"], [fps]
     ),
-    createModel: async (path) => {
-        const rc = await RL.waitForImportAssetAsync(path);
-        if (rc !== 0) throw new Error(`Failed to load model: ${path} (rc=${rc})`);
-        return moduleInstance.ccall("rl_model_create", "number", ["string"], [path]);
-    },
-    createModelFromLocal: (path) => moduleInstance.ccall(
+    createModel: (path) => moduleInstance.ccall(
         "rl_model_create", "number", ["string"], [path]
     ),
     modelSetTransform: (
@@ -1160,12 +1150,7 @@ const RL = {
             narrowphaseHits: moduleInstance.ccall("rl_pick_get_narrowphase_hits", "number", [], [])
         };
     },
-    createMusic: async (path) => {
-        const rc = await RL.waitForImportAssetAsync(path);
-        if (rc !== 0) throw new Error(`Failed to load music: ${path} (rc=${rc})`);
-        return moduleInstance.ccall("rl_music_create", "number", ["string"], [path]);
-    },
-    createMusicFromLocal: (path) => moduleInstance.ccall(
+    createMusic: (path) => moduleInstance.ccall(
         "rl_music_create", "number", ["string"], [path]
     ),
     destroyMusic: (music) => moduleInstance.ccall(
@@ -1195,12 +1180,7 @@ const RL = {
     updateAllMusic: () => moduleInstance.ccall(
         "rl_music_update_all", null, [], []
     ),
-    createSound: async (path) => {
-        const rc = await RL.waitForImportAssetAsync(path);
-        if (rc !== 0) throw new Error(`Failed to load sound: ${path} (rc=${rc})`);
-        return moduleInstance.ccall("rl_sound_create", "number", ["string"], [path]);
-    },
-    createSoundFromLocal: (path) => moduleInstance.ccall(
+    createSound: (path) => moduleInstance.ccall(
         "rl_sound_create", "number", ["string"], [path]
     ),
     destroySound: (sound) => moduleInstance.ccall(
@@ -1230,23 +1210,13 @@ const RL = {
     isSoundPlaying: (sound) => moduleInstance.ccall(
         "rl_sound_is_playing", "number", ["number"], [sound]
     ) !== 0,
-    createTexture: async (path) => {
-        const rc = await RL.waitForImportAssetAsync(path);
-        if (rc !== 0) throw new Error(`Failed to load texture: ${path} (rc=${rc})`);
-        return moduleInstance.ccall("rl_texture_create", "number", ["string"], [path]);
-    },
-    createTextureFromLocal: (path) => moduleInstance.ccall(
+    createTexture: (path) => moduleInstance.ccall(
         "rl_texture_create", "number", ["string"], [path]
     ),
     destroyTexture: (texture) => moduleInstance.ccall(
         "rl_texture_destroy", null, ["number"], [texture]
     ),
-    createSprite3D: async (path) => {
-        const rc = await RL.waitForImportAssetAsync(path);
-        if (rc !== 0) throw new Error(`Failed to load sprite3d: ${path} (rc=${rc})`);
-        return moduleInstance.ccall("rl_sprite3d_create", "number", ["string"], [path]);
-    },
-    createSprite3DFromLocal: (path) => moduleInstance.ccall(
+    createSprite3D: (path) => moduleInstance.ccall(
         "rl_sprite3d_create", "number", ["string"], [path]
     ),
     createSprite3DFromTexture: (texture) => moduleInstance.ccall(
@@ -1261,7 +1231,7 @@ const RL = {
     destroySprite3D: (sprite) => moduleInstance.ccall(
         "rl_sprite3d_destroy", null, ["number"], [sprite]
     ),
-    createSprite2DFromLocal: (path) => moduleInstance.ccall(
+    createSprite2D: (path) => moduleInstance.ccall(
         "rl_sprite2d_create", "number", ["string"], [path]
     ),
     createSprite2DFromTexture: (texture) => moduleInstance.ccall(

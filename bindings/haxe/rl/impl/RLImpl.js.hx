@@ -238,7 +238,7 @@ class RLImpl {
 	}
 
 	public static function fontCreate(filename:String, fontSize:Int):RLHandle
-		return binding == null ? 0 : cast binding.createFontFromLocal(filename, fontSize);
+		return binding == null ? 0 : cast binding.createFont(filename, fontSize);
 
 	public static function fontDestroy(font:RLHandle):Void {
 		if (binding != null)
@@ -280,7 +280,7 @@ class RLImpl {
 	}
 
 	public static function musicCreate(filename:String):RLHandle
-		return binding == null ? 0 : cast binding.createMusicFromLocal(filename);
+		return binding == null ? 0 : cast binding.createMusic(filename);
 
 	public static function musicDestroy(music:RLHandle):Void {
 		if (binding != null)
@@ -314,7 +314,7 @@ class RLImpl {
 	}
 
 	public static function soundCreate(filename:String):RLHandle
-		return binding == null ? 0 : cast binding.createSoundFromLocal(filename);
+		return binding == null ? 0 : cast binding.createSound(filename);
 
 	public static function soundDestroy(sound:RLHandle):Void {
 		if (binding != null)
@@ -464,7 +464,7 @@ class RLImpl {
 	}
 
 	public static function modelCreate(filename:String):RLHandle
-		return binding == null ? 0 : cast binding.createModelFromLocal(filename);
+		return binding == null ? 0 : cast binding.createModel(filename);
 
 	public static function modelSetTransform(model:RLHandle, positionX:Float, positionY:Float, positionZ:Float, rotationX:Float, rotationY:Float,
 			rotationZ:Float, scaleX:Float, scaleY:Float, scaleZ:Float):Bool
@@ -493,7 +493,7 @@ class RLImpl {
 	}
 
 	public static function sprite3dCreate(filename:String):RLHandle
-		return binding == null ? 0 : cast binding.createSprite3DFromLocal(filename);
+		return binding == null ? 0 : cast binding.createSprite3D(filename);
 
 	public static function sprite3dSetTransform(sprite:RLHandle, positionX:Float, positionY:Float, positionZ:Float, size:Float):Bool
 		return binding != null && cast binding.sprite3DSetTransform(sprite, positionX, positionY, positionZ, size);
@@ -509,7 +509,7 @@ class RLImpl {
 	}
 
 	public static function sprite2dCreate(filename:String):RLHandle
-		return binding == null ? 0 : cast binding.createSprite2DFromLocal(filename);
+		return binding == null ? 0 : cast binding.createSprite2D(filename);
 
 	public static function sprite2dCreateFromTexture(texture:RLHandle):RLHandle
 		return binding == null ? 0 : cast binding.createSprite2DFromTexture(texture);
@@ -528,7 +528,7 @@ class RLImpl {
 	}
 
 	public static function textureCreate(filename:String):RLHandle
-		return binding == null ? 0 : cast binding.createTextureFromLocal(filename);
+		return binding == null ? 0 : cast binding.createTexture(filename);
 
 	public static function textureDestroy(texture:RLHandle):Void {
 		if (binding != null)

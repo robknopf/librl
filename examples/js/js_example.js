@@ -58,20 +58,20 @@ import { rl } from "../../lib/librl.js";
       {}
     );
     loadingGroup.addImportTask(modelPath, (path) => {
-      gumshoe = rl.createModelFromLocal(path);
+      gumshoe = rl.createModel(path);
       rl.modelSetAnimation(gumshoe, 1);
       rl.modelSetAnimationSpeed(gumshoe, 1.0);
       rl.modelSetAnimationLoop(gumshoe, true);
     });
     loadingGroup.addImportTask(spritePath, (path) => {
-      sprite = rl.createSprite3DFromLocal(path);
+      sprite = rl.createSprite3D(path);
     });
     loadingGroup.addImportTask(fontPath, (path) => {
-      komika = rl.createFontFromLocal(path, fontSize);
-      komikaSmall = rl.createFontFromLocal(path, smallFontSize);
+      komika = rl.createFont(path, fontSize);
+      komikaSmall = rl.createFont(path, smallFontSize);
     });
     loadingGroup.addImportTask(bgmPath, (path) => {
-      bgm = rl.createMusicFromLocal(path);
+      bgm = rl.createMusic(path);
       rl.setMusicLoop(bgm, true);
       rl.playMusic(bgm);
     });

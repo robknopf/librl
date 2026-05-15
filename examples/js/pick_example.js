@@ -29,10 +29,18 @@ import { rl } from "../../lib/librl.js";
     const spritePos = { x: 5.0, y: 0.0, z: 0.0 };
     const spriteSize = 1.0;
 
-    const komika = await rl.createFont("assets/fonts/Komika/KOMIKAH_.ttf", fontSize);
-    const komikaSmall = await rl.createFont("assets/fonts/Komika/KOMIKAH_.ttf", smallFontSize);
-    const gumshoe = await rl.createModel(modelPath);
-    const sprite = await rl.createSprite3D(spritePath);
+    const fontPath = "assets/fonts/Komika/KOMIKAH_.ttf";
+    let rc = await rl.importAsset(fontPath);
+    if (rc !== 0) throw new Error(`Failed to import asset: ${fontPath} (rc=${rc})`);
+    rc = await rl.importAsset(modelPath);
+    if (rc !== 0) throw new Error(`Failed to import asset: ${modelPath} (rc=${rc})`);
+    rc = await rl.importAsset(spritePath);
+    if (rc !== 0) throw new Error(`Failed to import asset: ${spritePath} (rc=${rc})`);
+
+    const komika = rl.createFont(fontPath, fontSize);
+    const komikaSmall = rl.createFont(fontPath, smallFontSize);
+    const gumshoe = rl.createModel(modelPath);
+    const sprite = rl.createSprite3D(spritePath);
     const camera = rl.createCamera3D(
       12.0, 12.0, 12.0,
       0.0, 1.0, 0.0,

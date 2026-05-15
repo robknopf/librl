@@ -3,9 +3,14 @@ import { rl } from "../../lib/librl.js";
 (async function () {
   try {
     const assetHost = new URL(".", window.location.href).href.replace(/\/$/, "");
-    const initRc = await rl.init({
+    const bootRc = await rl.boot({
       idealWidth: 1024,
       idealHeight: 1280,
+    });
+    if (bootRc !== 0) {
+      throw new Error(`rl.boot failed: ${bootRc}`);
+    }
+    const initRc = await rl.init({
       windowWidth: 800,
       windowHeight: 600,
       windowTitle: "Hello, World! (Web)",

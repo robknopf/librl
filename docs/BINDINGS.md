@@ -77,21 +77,25 @@ Notes:
     - `getPickStats()`
 - JS `boot(opts)` instantiates the Emscripten module and prepares the scratch/color helpers without calling `rl_init(...)`.
   - This is useful when callers need the loader-only/bootstrap path first, for example `boot() -> loaderInit() -> init()`.
+  - `boot(...)` is the canonical place for module/browser options such as `env`, `canvasId`, `wasmPath`, and presentation hints like `idealWidth` / `idealHeight`.
   - `init(...)` and `initAsync(...)` reuse the booted module instance when one already exists.
 - JS `init(opts)` calls the default synchronous `rl_init()` with a wasm `rl_init_config_t` built from:
   - `windowWidth`, `windowHeight`, `windowTitle`, `windowFlags`, `assetHost`, `loaderCacheDir`
-  - (plus `idealWidth` / `idealHeight` for browser resize/aspect heuristics)
   - Example: `await rl.init({ windowWidth: 800, windowHeight: 600, windowTitle: "Title", windowFlags: rl.FLAG_MSAA_4X_HINT, assetHost })`
   - Init result constants are exposed (`INIT_OK`, `INIT_ERR_UNKNOWN`, `INIT_ERR_ALREADY_INITIALIZED`, `INIT_ERR_LOADER`, `INIT_ERR_ASSET_HOST`, `INIT_ERR_WINDOW`).
 - JS `initValues(width, height, title, flags, assetHost, loaderCacheDir)` uses the flattened C helper `rl_init_values(...)` instead of marshaling `rl_init_config_t`.
 - JS also exposes `initAsync(opts)` for the polling-style init path, now routed through the flattened `rl_init_values_async(...)` helper.
 - JS exposes `initValuesAsync(width, height, title, flags, assetHost, loaderCacheDir)` for direct flattened polling-style init.
+- In JS, polling-style `*Async` entrypoints keep the same immediate-return contract as the other bindings:
+  - `initAsync(...)`, `initValuesAsync(...)`, and `loaderInitAsync(...)` return plain integer status codes.
+  - task-style loader APIs like `restoreFSAsync()` / `importAssetAsync()` / `importAssetsAsync()` return task handles immediately.
 - JS exposes `isInitialized()` for `rl_is_initialized()`.
 - JS exposes `getPlatform()` for `rl_get_platform()`.
 - JS `pickModel(camera, model, mouseX, mouseY)` and `pickSprite3D(camera, sprite3d, mouseX, mouseY)` return local-space `point` / `normal` data from `rl_pick_result_t`.
 - Loader/cache helpers currently exposed in JS:
   - `loaderInit([mountPoint])`
   - `loaderInitAsync([mountPoint])`
+  - `loaderDeinit()`
   - `loaderIsReady()`
   - `restoreFSAsync()` → task handle for `rl_loader_restore_fs_async()`
   - `importAsset(filename)` → Promise/integer result for `rl_loader_import_asset()`
@@ -187,7 +191,7 @@ Files:
 
 - `bindings/haxe/rl/RL.hx` — public `rl.RL` module used by authored Haxe code.
 - `bindings/haxe/rl/impl/RLImpl.cpp.hx` — current hxcpp backend implementation. Contains all `@:native`, `untyped __cpp__`, `@:functionCode`, and bridge classes.
-- `bindings/haxe/rl/impl/RLImpl.js.hx` — Haxe `js` backend. It imports the generated Emscripten module (`librl.js` / `librl.wasm`) directly.
+- `bindings/haxe/rl/impl/RLImpl.js.hx` — Haxe `js` backend. It is a thin adapter over the standalone JS binding exported from `librl.js`.
 - `bindings/haxe/rl/impl/RLImpl.hx` — unsupported fallback that fails compilation for targets without a backend.
 - `bindings/haxe/rl/RLHandle.hx` — shared integer handle type.
 - `bindings/haxe/rl/impl/RLLoaderImpl.cpp.hx` — current hxcpp-only loader impl (`RLLoader` class).
@@ -216,13 +220,14 @@ Current state:
   - `RLImpl.hx` for unsupported targets, which fails at compile time
 - `RL.boot(?options)` is the backend bootstrap hook:
   - On hxcpp/cppia it returns `Int` and currently succeeds immediately.
-  - On Haxe JS it returns `js.lib.Promise<Int>` so the JS backend can import/instantiate `librl.js` / `librl.wasm` before normal `RL.init(...)` calls.
+  - On Haxe JS it returns `js.lib.Promise<Int>` so the JS backend can import the JS binding layer and instantiate `librl.js` / `librl.wasm` before normal `RL.init(...)` calls.
   - The current Haxe JS backend expects the generated `librl.js` JSPI build. If `WebAssembly.Suspending` / `WebAssembly.promising` are unavailable, `RL.boot()` returns an error code and leaves the backend unbooted.
 - Haxe JS returns Promises for blocking JSPI-backed calls:
   - `RL.init(...)`, `RL.initValues(...)`, `RL.deinit()`
   - `RL.loaderInit(...)`, `RL.loaderDeinit()`, `RL.loaderImportAsset(...)`
   - The `*Async` task-starting APIs keep their C semantics: they return immediate status/task handles and are polled/finished through the loader task API.
-- The Haxe JS backend is separate from `bindings/js/*`; it does not use the standalone JS wrapper or scratch/SAB helper layer.
+- The Haxe JS backend now reuses `bindings/js/*` exclusively. `RLImpl.js.hx` no longer calls the wasm exports directly; all browser-side behavior flows through the JS binding layer.
+- On Haxe JS, `RL.update()` forwards to the JS binding's scratch refresh path. Call it in the tick/frame loop before reading scratch-backed state such as mouse or keyboard snapshots.
 - `RLImpl.cpp.hx` keeps the raw C extern table private as `RLExterns`; authored code never imports it directly.
 - There is no generic runtime fallback. New targets must add an explicit backend such as `RLImpl.lua.hx`.
 - `examples/haxe-js-simple` is the current compile/run smoke test for the Haxe `js` backend. It exercises `RL.boot()` and loader init/deinit; in runtimes without JSPI support, boot returns an error code without instantiating wasm.

@@ -140,16 +140,23 @@ const RL = {
             ...opts.env,
         };
 
-        if (moduleOptions.idealWidth == null) {
+        if (moduleOptions.idealWidth == null && moduleOptions.windowWidth != null) {
             moduleOptions.idealWidth = moduleOptions.windowWidth;
         }
-        if (moduleOptions.idealHeight == null) {
+        if (moduleOptions.idealHeight == null && moduleOptions.windowHeight != null) {
             moduleOptions.idealHeight = moduleOptions.windowHeight;
+        }
+
+        if (moduleOptions.wasmPath && !moduleOptions.env.locateFile) {
+            moduleOptions.env.locateFile = function (path, prefix) {
+                return path === "librl.wasm" ? moduleOptions.wasmPath : prefix + path;
+            };
         }
 
         // set up env for the Module
         if (!moduleOptions.env.canvas) {
-            moduleOptions.env.canvas = document.getElementById('renderCanvas');
+            const canvasId = moduleOptions.canvasId || "renderCanvas";
+            moduleOptions.env.canvas = document.getElementById(canvasId);
         }
         if (!moduleOptions.env.print) {
             var output = document.getElementById('output');
@@ -170,6 +177,19 @@ const RL = {
         }
         return moduleOptions;
     },
+    _prepareInitOptions: (opts) => {
+        opts = opts || {};
+        return {
+            windowWidth: opts.windowWidth ?? moduleOptions.windowWidth ?? 0,
+            windowHeight: opts.windowHeight ?? moduleOptions.windowHeight ?? 0,
+            windowTitle: opts.windowTitle ?? moduleOptions.windowTitle ?? "",
+            windowFlags: opts.windowFlags ?? moduleOptions.windowFlags ?? 0,
+            assetHost: opts.assetHost ?? moduleOptions.assetHost ?? "",
+            loaderCacheDir: opts.loaderCacheDir ?? moduleOptions.loaderCacheDir ?? "",
+            idealWidth: moduleOptions.idealWidth ?? opts.windowWidth ?? 1024,
+            idealHeight: moduleOptions.idealHeight ?? opts.windowHeight ?? 1280,
+        };
+    },
     _ensureModuleInstance: async (opts) => {
         RL._prepareModuleOptions(opts);
 
@@ -186,8 +206,9 @@ const RL = {
         await RL._ensureModuleInstance(opts);
         return 0;
     },
-    _callInitWithOptions: async (opts, symbolName, asyncOptions) => {
-        await RL._ensureModuleInstance(opts);
+    _callInitWithOptionsAsync: async (opts, symbolName, asyncOptions) => {
+        await RL._ensureModuleInstance();
+        const initOptions = RL._prepareInitOptions(opts);
 
         const cfgSize = moduleInstance.ccall("rl_init_config_sizeof", "number", [], []) >>> 0;
         if (!cfgSize) {
@@ -241,12 +262,12 @@ const RL = {
                 "number",
                 ["number", "number", "string", "number", "string", "string"],
                 [
-                    (moduleOptions.windowWidth || 0) | 0,
-                    (moduleOptions.windowHeight || 0) | 0,
-                    moduleOptions.windowTitle ?? "",
-                    (moduleOptions.windowFlags || 0) >>> 0,
-                    moduleOptions.assetHost ?? "",
-                    moduleOptions.loaderCacheDir ?? "",
+                    (initOptions.windowWidth || 0) | 0,
+                    (initOptions.windowHeight || 0) | 0,
+                    initOptions.windowTitle ?? "",
+                    (initOptions.windowFlags || 0) >>> 0,
+                    initOptions.assetHost ?? "",
+                    initOptions.loaderCacheDir ?? "",
                 ],
                 asyncOptions
             )) | 0;
@@ -267,16 +288,16 @@ const RL = {
                 };
 
                 // Layout must match `rl_init_config_t` in include/rl_config.h
-                setI32(0, (moduleOptions.windowWidth || 0) | 0);
-                setI32(4, (moduleOptions.windowHeight || 0) | 0);
+                setI32(0, (initOptions.windowWidth || 0) | 0);
+                setI32(4, (initOptions.windowHeight || 0) | 0);
 
-                const titlePtr = stringToTempUtf8OrNull(moduleOptions.windowTitle);
-                const assetPtr = stringToTempUtf8OrNull(moduleOptions.assetHost);
-                const cachePtr = stringToTempUtf8OrNull(moduleOptions.loaderCacheDir);
+                const titlePtr = stringToTempUtf8OrNull(initOptions.windowTitle);
+                const assetPtr = stringToTempUtf8OrNull(initOptions.assetHost);
+                const cachePtr = stringToTempUtf8OrNull(initOptions.loaderCacheDir);
                 allocatedPtrs.push(titlePtr, assetPtr, cachePtr);
 
                 setI32(8, titlePtr >>> 0);
-                setI32(12, (moduleOptions.windowFlags || 0) >>> 0);
+                setI32(12, (initOptions.windowFlags || 0) >>> 0);
                 setI32(16, assetPtr >>> 0);
                 setI32(20, cachePtr >>> 0);
 
@@ -296,23 +317,141 @@ const RL = {
             return initRc;
         }
 
-        RL._installWebResizeHandler(moduleOptions);
+        RL._installWebResizeHandler(initOptions);
+        if (typeof window !== "undefined" && window.dispatchEvent) {
+            window.dispatchEvent(new Event("resize"));
+        }
+        return 0;
+    },
+    _callInitWithOptionsImmediate: (opts, symbolName) => {
+        const initOptions = RL._prepareInitOptions(opts);
+
+        if (!moduleInstance) {
+            throw new Error("Module must be booted before calling polling-style init APIs");
+        }
+
+        let initRc = -1;
+        if (symbolName === "rl_init_values_async") {
+            initRc = moduleInstance.ccall(
+                symbolName,
+                "number",
+                ["number", "number", "string", "number", "string", "string"],
+                [
+                    (initOptions.windowWidth || 0) | 0,
+                    (initOptions.windowHeight || 0) | 0,
+                    initOptions.windowTitle ?? "",
+                    (initOptions.windowFlags || 0) >>> 0,
+                    initOptions.assetHost ?? "",
+                    initOptions.loaderCacheDir ?? "",
+                ]
+            ) | 0;
+        } else {
+            const cfgSize = moduleInstance.ccall("rl_init_config_sizeof", "number", [], []) >>> 0;
+            if (!cfgSize) {
+                throw new Error("rl_init_config_sizeof returned 0");
+            }
+
+            const heapMalloc = moduleInstance && (moduleInstance._malloc || moduleInstance.malloc);
+            const useHeapAlloc = typeof heapMalloc === "function";
+            const canUseStack =
+                moduleInstance &&
+                typeof moduleInstance.stackSave === "function" &&
+                typeof moduleInstance.stackAlloc === "function" &&
+                typeof moduleInstance.stackRestore === "function";
+            if (!useHeapAlloc && !canUseStack) {
+                throw new Error("init config allocation unavailable (need malloc or stackAlloc)");
+            }
+
+            let stackTop = 0;
+            const allocTemp = (size) => {
+                if (useHeapAlloc) {
+                    return RL._mallocOrThrow(size);
+                }
+                return moduleInstance.stackAlloc(size) >>> 0;
+            };
+            const freeTemp = (ptr) => {
+                if (useHeapAlloc) {
+                    RL._freeIfPossible(ptr);
+                }
+            };
+            const stringToTempUtf8OrNull = (s) => {
+                if (s == null) {
+                    return 0;
+                }
+                if (typeof s !== "string") {
+                    s = String(s);
+                }
+                const len = (moduleInstance.lengthBytesUTF8 ? moduleInstance.lengthBytesUTF8(s) : (s.length * 4 + 1)) + 1;
+                const ptr = allocTemp(len);
+                if (moduleInstance.stringToUTF8) {
+                    moduleInstance.stringToUTF8(s, ptr, len);
+                    return ptr >>> 0;
+                }
+                throw new Error("stringToUTF8 not available; cannot encode JS strings to wasm memory");
+            };
+
+            const allocatedPtrs = [];
+            try {
+                if (!useHeapAlloc) {
+                    stackTop = moduleInstance.stackSave();
+                }
+
+                const cfgPtr = allocTemp(cfgSize);
+                allocatedPtrs.push(cfgPtr);
+                const heapU8 = moduleInstance.HEAPU8;
+                heapU8.fill(0, cfgPtr, cfgPtr + cfgSize);
+
+                const heapI32 = moduleInstance.HEAP32;
+                const setI32 = (offset, v) => {
+                    heapI32[(cfgPtr + offset) >> 2] = v | 0;
+                };
+
+                setI32(0, (initOptions.windowWidth || 0) | 0);
+                setI32(4, (initOptions.windowHeight || 0) | 0);
+
+                const titlePtr = stringToTempUtf8OrNull(initOptions.windowTitle);
+                const assetPtr = stringToTempUtf8OrNull(initOptions.assetHost);
+                const cachePtr = stringToTempUtf8OrNull(initOptions.loaderCacheDir);
+                allocatedPtrs.push(titlePtr, assetPtr, cachePtr);
+
+                setI32(8, titlePtr >>> 0);
+                setI32(12, (initOptions.windowFlags || 0) >>> 0);
+                setI32(16, assetPtr >>> 0);
+                setI32(20, cachePtr >>> 0);
+
+                initRc = moduleInstance.ccall(symbolName, "number", ["number"], [cfgPtr]) | 0;
+            } finally {
+                if (useHeapAlloc) {
+                    for (const ptr of allocatedPtrs) {
+                        freeTemp(ptr);
+                    }
+                } else if (canUseStack) {
+                    moduleInstance.stackRestore(stackTop);
+                }
+            }
+        }
+
+        if (initRc !== 0) {
+            return initRc;
+        }
+
+        RL._installWebResizeHandler(initOptions);
         if (typeof window !== "undefined" && window.dispatchEvent) {
             window.dispatchEvent(new Event("resize"));
         }
         return 0;
     },
     init: async (opts) => {
-        return await RL._callInitWithOptions(opts, "rl_init", { async: true });
+        return await RL._callInitWithOptionsAsync(opts, "rl_init", { async: true });
     },
-    initAsync: async (opts) => {
-        return await RL._callInitWithOptions(opts, "rl_init_values_async", undefined);
+    initAsync: (opts) => {
+        return RL._callInitWithOptionsImmediate(opts, "rl_init_values_async");
     },
     initValues: async (
         width, height, title,
         flags = 0, assetHost = "", loaderCacheDir = ""
     ) => {
-        return await RL._callInitWithOptions({
+        return await RL._callInitWithOptionsAsync({
             windowWidth: width,
             windowHeight: height,
             windowTitle: title,
@@ -321,18 +460,18 @@ const RL = {
             loaderCacheDir
         }, "rl_init_values", { async: true });
     },
-    initValuesAsync: async (
+    initValuesAsync: (
         width, height, title,
         flags = 0, assetHost = "", loaderCacheDir = ""
     ) => {
-        return await RL._callInitWithOptions({
+        return RL._callInitWithOptionsImmediate({
             windowWidth: width,
             windowHeight: height,
             windowTitle: title,
             windowFlags: flags,
             assetHost,
             loaderCacheDir
-        }, "rl_init_values_async", undefined);
+        }, "rl_init_values_async");
     },
     setAssetHost: (assetHost) => {
         if (typeof assetHost !== "string") {
@@ -374,11 +513,14 @@ const RL = {
     loaderInit: async (mountPoint = "") => {
         return await moduleInstance.ccall('rl_loader_init', 'number', ['string'], [mountPoint || ""], { async: true });
     },
-    loaderInitAsync: async (mountPoint = "") => {
-        return await moduleInstance.ccall('rl_loader_init_async', 'number', ['string'], [mountPoint || ""]);
+    loaderInitAsync: (mountPoint = "") => {
+        return moduleInstance.ccall('rl_loader_init_async', 'number', ['string'], [mountPoint || ""]);
     },
     loaderDeinit: () => {
         moduleInstance.ccall('rl_loader_deinit', null, [], []);
+    },
+    loaderIsInitialized: () => {
+        return moduleInstance.ccall('rl_loader_is_initialized', 'number', [], []) !== 0;
     },
     loaderIsReady: () => {
         return moduleInstance.ccall('rl_loader_is_ready', 'number', [], []) !== 0;
@@ -663,6 +805,24 @@ const RL = {
     isWindowCloseRequested: () => {
         return !!moduleInstance.ccall('rl_window_close_requested', 'number', [], []);
     },
+    getMonitorCount: () => {
+        return moduleInstance.ccall('rl_window_get_monitor_count', 'number', [], []);
+    },
+    setWindowTitle: (title) => {
+        return moduleInstance.ccall('rl_window_set_title', null, ['string'], [title]);
+    },
+    getCurrentMonitor: () => {
+        return moduleInstance.ccall('rl_window_get_current_monitor', 'number', [], []);
+    },
+    setWindowMonitor: (monitor) => {
+        return moduleInstance.ccall('rl_window_set_monitor', null, ['number'], [monitor]);
+    },
+    getMonitorWidth: (monitor) => {
+        return moduleInstance.ccall('rl_window_get_monitor_width', 'number', ['number'], [monitor]);
+    },
+    getMonitorHeight: (monitor) => {
+        return moduleInstance.ccall('rl_window_get_monitor_height', 'number', ['number'], [monitor]);
+    },
     setWindowPosition: (x, y) => {
         return moduleInstance.ccall('rl_window_set_position', null, ['number', 'number'], [x, y]);
     },
@@ -672,6 +832,12 @@ const RL = {
     endDrawing: () => {
         return moduleInstance.ccall('rl_render_end', null, [], []);
     },
+    beginMode2D: (camera) => {
+        return moduleInstance.ccall('rl_render_begin_mode_2d', null, ['number'], [camera]);
+    },
+    endMode2D: () => {
+        return moduleInstance.ccall('rl_render_end_mode_2d', null, [], []);
+    },
     beginMode3D: () => {
         return moduleInstance.ccall('rl_render_begin_mode_3d', null, [], []);
     },
@@ -680,6 +846,9 @@ const RL = {
     },
     tick: () => {
         return moduleInstance.ccall('rl_tick', 'number', [], []);
+    },
+    getDeltaTime: () => {
+        return moduleInstance.ccall('rl_get_delta_time', 'number', [], []);
     },
     createCamera3D: (
         positionX, positionY, positionZ,
@@ -761,8 +930,20 @@ const RL = {
     drawTextureEx: (texture, x, y, scale, rotation, tint) => {
         return moduleInstance.ccall('rl_texture_draw_ex', null, ['number', 'number', 'number', 'number', 'number', 'number'], [texture, x, y, scale, rotation, tint]);
     },
+    drawTextureGround: (texture, positionX, positionY, positionZ, width, length, tint) => {
+        return moduleInstance.ccall('rl_texture_draw_ground', null, ['number', 'number', 'number', 'number', 'number', 'number', 'number'], [texture, positionX, positionY, positionZ, width, length, tint]);
+    },
     measureText: (text, fontSize) => {
         return moduleInstance.ccall('rl_text_measure', 'number', ['string', 'number'], [text, fontSize]);
+    },
+    pollInputEvents: () => {
+        return moduleInstance.ccall('rl_input_poll_events', null, [], []);
+    },
+    getMouseWheel: () => {
+        return moduleInstance.ccall('rl_input_get_mouse_wheel', 'number', [], []);
+    },
+    getMouseButton: (button) => {
+        return moduleInstance.ccall('rl_input_get_mouse_button', 'number', ['number'], [button]);
     },
 
     // Begin Scratch-backed wrappers
@@ -1019,6 +1200,9 @@ const RL = {
         if (rc !== 0) throw new Error(`Failed to load sound: ${path} (rc=${rc})`);
         return moduleInstance.ccall("rl_sound_create", "number", ["string"], [path]);
     },
+    createSoundFromLocal: (path) => moduleInstance.ccall(
+        "rl_sound_create", "number", ["string"], [path]
+    ),
     destroySound: (sound) => moduleInstance.ccall(
         "rl_sound_destroy", null, ["number"], [sound]
     ),
@@ -1051,6 +1235,9 @@ const RL = {
         if (rc !== 0) throw new Error(`Failed to load texture: ${path} (rc=${rc})`);
         return moduleInstance.ccall("rl_texture_create", "number", ["string"], [path]);
     },
+    createTextureFromLocal: (path) => moduleInstance.ccall(
+        "rl_texture_create", "number", ["string"], [path]
+    ),
     destroyTexture: (texture) => moduleInstance.ccall(
         "rl_texture_destroy", null, ["number"], [texture]
     ),
@@ -1073,6 +1260,24 @@ const RL = {
     ),
     destroySprite3D: (sprite) => moduleInstance.ccall(
         "rl_sprite3d_destroy", null, ["number"], [sprite]
+    ),
+    createSprite2DFromLocal: (path) => moduleInstance.ccall(
+        "rl_sprite2d_create", "number", ["string"], [path]
+    ),
+    createSprite2DFromTexture: (texture) => moduleInstance.ccall(
+        "rl_sprite2d_create_from_texture", "number", ["number"], [texture]
+    ),
+    sprite2DSetTransform: (sprite, x, y, scale, rotation) => moduleInstance.ccall(
+        "rl_sprite2d_set_transform", "number", ["number", "number", "number", "number", "number"], [sprite, x, y, scale, rotation]
+    ) !== 0,
+    drawSprite2D: (sprite, tint) => moduleInstance.ccall(
+        "rl_sprite2d_draw", null, ["number", "number"], [sprite, tint]
+    ),
+    destroySprite2D: (sprite) => moduleInstance.ccall(
+        "rl_sprite2d_destroy", null, ["number"], [sprite]
+    ),
+    loggerSetLevel: (level) => moduleInstance.ccall(
+        "rl_logger_set_level", null, ["number"], [level]
     ),
 
 }

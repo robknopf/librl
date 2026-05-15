@@ -1,3 +1,4 @@
+/*
 import { runExample } from "./example_runner.js";
 
 function callMaybeAsync(result) {
@@ -12,7 +13,7 @@ async function startHaxeWasmSimple(mod) {
   let frameId = 0;
   let lastFrameTimeMs = 0;
 
-  function stop() {
+  async function stop() {
     if (stopped) {
       return;
     }
@@ -22,7 +23,9 @@ async function startHaxeWasmSimple(mod) {
       frameId = 0;
     }
     try {
-      mod.ccall("_rt_shutdown", null, [], []);
+      await callMaybeAsync(mod._rt_shutdown());
+
+      //mod.ccall("_rt_shutdown", null, [], []);
     } catch (err) {
       console.error("haxe-wasm-simple: rt_shutdown failed", err);
     }
@@ -58,4 +61,13 @@ async function startHaxeWasmSimple(mod) {
 
 runExample("Haxe Simple (wasm)", "examples/haxe-simple/out/wasm/Main.js", {
   onModuleReady: startHaxeWasmSimple,
+});
+*/
+
+import { runExample } from "./example_runner.js";
+import { startRuntime } from "./runtime_host.js";
+
+
+runExample("Haxe Simple (js)", "examples/haxe-simple/out/wasm/Main.js", {
+  onModuleReady: (mod) => startRuntime(mod, "haxe-wasm-simple"),
 });

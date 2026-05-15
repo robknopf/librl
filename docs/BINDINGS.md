@@ -71,7 +71,7 @@ Notes:
 - Window close polling is exposed as `isWindowCloseRequested()`.
 - Picking helpers available in JS:
   - `pickModel(...)`
-  - `pickSprite3D(...)`
+  - `pickSprite3d(...)`
   - telemetry helpers:
     - `resetPickStats()`
     - `getPickStats()`
@@ -91,7 +91,7 @@ Notes:
   - task-style loader APIs like `restoreFSAsync()` / `importAssetAsync()` / `importAssetsAsync()` return task handles immediately.
 - JS exposes `isInitialized()` for `rl_is_initialized()`.
 - JS exposes `getPlatform()` for `rl_get_platform()`.
-- JS `pickModel(camera, model, mouseX, mouseY)` and `pickSprite3D(camera, sprite3d, mouseX, mouseY)` return local-space `point` / `normal` data from `rl_pick_result_t`.
+- JS `pickModel(camera, model, mouseX, mouseY)` and `pickSprite3d(camera, sprite3d, mouseX, mouseY)` return local-space `point` / `normal` data from `rl_pick_result_t`.
 - Loader/cache helpers currently exposed in JS:
   - `loaderInit([mountPoint])`
   - `loaderInitAsync([mountPoint])`
@@ -103,15 +103,17 @@ Notes:
   - `importAssetAsync(filename)` → task handle for `rl_loader_create_import_task()`
   - `importAssetsAsync(filenames)` → task handle via the scratch ABI and `rl_loader_import_assets_from_scratch_async()`
   - `waitForImportAssetAsync(filename)` / `waitForImportAssetsAsync(filenames)` → Promise/integer convenience wrappers around the task-returning imports
+  - `readLocal(filename)` → `rl_loader_read_local` (copy into a `Uint8Array`) or `null` on error / missing data pointer
   - `uncacheAsset(filename)`
   - `clearCache()`
 - JS binding-level TaskGroup ergonomics:
   - `createTaskGroup(onComplete?, onError?, ctx?)`
   - `addTask`, `addImportTask`, `addImportTasks`
   - `tick()`, `process()`, `remainingTasks()`, `failedPaths()`
+- JS `addTask(task, onSuccess?, onFailure?, ctx?)` now mirrors the Haxe/cpp callback contract by installing local JS springboard callbacks around `rl_loader_add_task(...)`.
 - JS `create*` helpers now match the other bindings: they create resources from paths that are already available in librl's local filesystem/cache.
   - Call `importAsset(...)`, `waitForImportAssetAsync(...)`, task groups, or another loader flow first when the asset is not local yet.
-  - This applies to `createFont`, `createModel`, `createMusic`, `createSound`, `createTexture`, `createSprite3D`, and `createSprite2D`.
+  - This applies to `createFont`, `createModel`, `createMusic`, `createSound`, `createTexture`, `createSprite3d`, and `createSprite2D`.
 - JS task-returning loader helpers use the same naming convention as C: `_async` means the call starts work and returns a task handle. Default names such as `importAsset(...)` follow the synchronous/default contract, even though JS callers still `await` them when JSPI is involved.
 
 ## Nim Binding

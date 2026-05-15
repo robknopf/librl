@@ -570,16 +570,152 @@ const RL = {
     getTaskPath: (task) => {
         return moduleInstance.ccall('rl_loader_get_task_path', 'string', ['number'], [task]);
     },
+
+/*
+    // js native read, using the FS.  We are using the librl version, 
+    // but keep this around for reference
+
+    readLocal: (filename) => {
+        const fs = moduleInstance && moduleInstance.FS;
+        let data = null;
+        if (!fs || typeof fs.readFile !== "function") {
+            return null;
+        }
+        try {
+            data = fs.readFile(filename);
+        } catch (_err) {
+            return null;
+        }
+        return data instanceof Uint8Array ? data : new Uint8Array(data);
+    },
+*/
+
+    readLocal: (filename) => {
+        if (!moduleInstance) {
+            return null;
+        }
+        const readFn = moduleInstance._rl_loader_read_local;
+        const freeResultFn = moduleInstance._rl_loader_read_result_free;
+        const stackSave = moduleInstance.stackSave;
+        const stackRestore = moduleInstance.stackRestore;
+        const stackAlloc = moduleInstance.stackAlloc;
+        const heapU32 = moduleInstance.HEAPU32;
+        const heapI32 = moduleInstance.HEAP32;
+        const heapU8 = moduleInstance.HEAPU8;
+        if (
+            typeof readFn !== "function" ||
+            typeof freeResultFn !== "function" ||
+            typeof stackSave !== "function" ||
+            typeof stackRestore !== "function" ||
+            typeof stackAlloc !== "function" ||
+            !heapU32 ||
+            !heapI32 ||
+            !heapU8
+        ) {
+            return null;
+        }
+        const name = filename == null ? "" : String(filename);
+        const prevSp = stackSave();
+        try {
+            const resultPtr = stackAlloc(12) >>> 0;
+            const pathPtr = RL._stringToNewUtf8OrNull(name);
+            if (!pathPtr && name.length > 0) {
+                return null;
+            }
+            try {
+                readFn(resultPtr >>> 0, pathPtr >>> 0);
+            } finally {
+                RL._freeIfPossible(pathPtr);
+            }
+            const dataPtr = heapU32[resultPtr >>> 2] >>> 0;
+            const size = heapU32[(resultPtr + 4) >>> 2] >>> 0;
+            const err = heapI32[(resultPtr + 8) >>> 2] | 0;
+            if (err !== 0 || !dataPtr) {
+                freeResultFn(resultPtr);
+                return null;
+            }
+            const out = new Uint8Array(size);
+            if (size > 0) {
+                out.set(heapU8.subarray(dataPtr, dataPtr + size));
+            }
+            freeResultFn(resultPtr);
+            return out;
+        } finally {
+            stackRestore(prevSp);
+        }
+    },
+  
+
+
     freeTask: (task) => {
         return moduleInstance.ccall('rl_loader_free_task', null, ['number'], [task]);
     },
-    addTask: (task) => {
-        return moduleInstance.ccall(
-            'rl_loader_add_task',
-            'number',
-            ['number', 'number', 'number', 'number'],
-            [task, 0, 0, 0]
-        );
+    addTask: (task, onSuccess = null, onFailure = null, ctx = null) => {
+        let successPtr = 0;
+        let failurePtr = 0;
+        let cleanedUp = false;
+        const cleanup = () => {
+            if (cleanedUp || !moduleInstance) {
+                return;
+            }
+            cleanedUp = true;
+            if (successPtr) {
+                moduleInstance.removeFunction(successPtr);
+                successPtr = 0;
+            }
+            if (failurePtr) {
+                moduleInstance.removeFunction(failurePtr);
+                failurePtr = 0;
+            }
+        };
+        const decodePath = (pathPtr) => {
+            if (!pathPtr) {
+                return "";
+            }
+            if (typeof moduleInstance.UTF8ToString === "function") {
+                return moduleInstance.UTF8ToString(pathPtr >>> 0);
+            }
+            console.error("UTF8ToString runtime method is unavailable; cannot decode loader callback path");
+            return "";
+        };
+
+        // Mirror the cpp binding's rl_loader_add_task behavior with local JS
+        // springboards. The closures capture the provided callbacks/context, so
+        // we do not need a separate userdata registry on the JS side.
+        successPtr = moduleInstance.addFunction((pathPtr, _userData) => {
+            try {
+                if (typeof onSuccess === "function") {
+                    onSuccess(decodePath(pathPtr), ctx);
+                }
+            } finally {
+                cleanup();
+            }
+        }, "vii");
+        failurePtr = moduleInstance.addFunction((pathPtr, _userData) => {
+            try {
+                if (typeof onFailure === "function") {
+                    onFailure(decodePath(pathPtr), ctx);
+                }
+            } finally {
+                cleanup();
+            }
+        }, "vii");
+
+        try {
+            const rc = moduleInstance.ccall(
+                'rl_loader_add_task',
+                'number',
+                ['number', 'number', 'number', 'number'],
+                [task, successPtr, failurePtr, 0]
+            );
+            if ((rc | 0) !== 0) {
+                cleanup();
+            }
+            return rc;
+        } catch (err) {
+            cleanup();
+            throw err;
+        }
     },
     loaderTick: () => {
         moduleInstance.ccall('rl_loader_tick', null, [], []);
@@ -844,10 +980,10 @@ const RL = {
     endMode2D: () => {
         return moduleInstance.ccall('rl_render_end_mode_2d', null, [], []);
     },
-    beginMode3D: () => {
+    beginMode3d: () => {
         return moduleInstance.ccall('rl_render_begin_mode_3d', null, [], []);
     },
-    endMode3D: () => {
+    endMode3d: () => {
         return moduleInstance.ccall('rl_render_end_mode_3d', null, [], []);
     },
     tick: () => {
@@ -856,7 +992,7 @@ const RL = {
     getDeltaTime: () => {
         return moduleInstance.ccall('rl_get_delta_time', 'number', [], []);
     },
-    createCamera3D: (
+    createCamera3d: (
         positionX, positionY, positionZ,
         targetX, targetY, targetZ,
         upX, upY, upZ,
@@ -869,10 +1005,10 @@ const RL = {
             [positionX, positionY, positionZ, targetX, targetY, targetZ, upX, upY, upZ, fovy, projection]
         );
     },
-    getDefaultCamera3D: () => {
+    getDefaultCamera3d: () => {
         return moduleInstance.ccall('rl_camera3d_get_default', 'number', [], []);
     },
-    setCamera3D: (
+    setCamera3d: (
         camera,
         positionX, positionY, positionZ,
         targetX, targetY, targetZ,
@@ -886,13 +1022,13 @@ const RL = {
             [camera, positionX, positionY, positionZ, targetX, targetY, targetZ, upX, upY, upZ, fovy, projection]
         ) !== 0;
     },
-    setActiveCamera3D: (camera) => {
+    setActiveCamera3d: (camera) => {
         return moduleInstance.ccall('rl_camera3d_set_active', 'number', ['number'], [camera]) !== 0;
     },
-    getActiveCamera3D: () => {
+    getActiveCamera3d: () => {
         return moduleInstance.ccall('rl_camera3d_get_active', 'number', [], []);
     },
-    destroyCamera3D: (camera) => {
+    destroyCamera3d: (camera) => {
         return moduleInstance.ccall('rl_camera3d_destroy', null, ['number'], [camera]);
     },
     enableLighting: () => {
@@ -1024,21 +1160,21 @@ const RL = {
             RL["COLOR_" + name] = value;
         }
     },
-        INIT_OK: 0,
-        INIT_ERR_UNKNOWN: -1,
-        INIT_ERR_ALREADY_INITIALIZED: -2,
-        INIT_ERR_LOADER: -3,
-        INIT_ERR_ASSET_HOST: -4,
-        INIT_ERR_WINDOW: -5,
-        CAMERA_PERSPECTIVE: 0,
-        CAMERA_ORTHOGRAPHIC: 1,
-        FLAG_MSAA_4X_HINT: 32,
-        FLAG_WINDOW_RESIZABLE: 4,
-        BUTTON_UP: 0,
-        BUTTON_PRESSED: 1,
-        BUTTON_DOWN: 2,
-        BUTTON_RELEASED: 3,
-   // },
+    INIT_OK: 0,
+    INIT_ERR_UNKNOWN: -1,
+    INIT_ERR_ALREADY_INITIALIZED: -2,
+    INIT_ERR_LOADER: -3,
+    INIT_ERR_ASSET_HOST: -4,
+    INIT_ERR_WINDOW: -5,
+    CAMERA_PERSPECTIVE: 0,
+    CAMERA_ORTHOGRAPHIC: 1,
+    FLAG_MSAA_4X_HINT: 32,
+    FLAG_WINDOW_RESIZABLE: 4,
+    BUTTON_UP: 0,
+    BUTTON_PRESSED: 1,
+    BUTTON_DOWN: 2,
+    BUTTON_RELEASED: 3,
+    // },
 
     createColor: (r, g, b, a) => moduleInstance.ccall(
         "rl_color_create", "number", ["number", "number", "number", "number"], [r, g, b, a]
@@ -1125,7 +1261,7 @@ const RL = {
             }
         };
     },
-    pickSprite3D: (camera, sprite3d, mouseX, mouseY) => {
+    pickSprite3d: (camera, sprite3d, mouseX, mouseY) => {
         const hit = moduleInstance.ccall(
             "rl_pick_sprite3d_to_scratch",
             "number",
@@ -1222,19 +1358,19 @@ const RL = {
     destroyTexture: (texture) => moduleInstance.ccall(
         "rl_texture_destroy", null, ["number"], [texture]
     ),
-    createSprite3D: (path) => moduleInstance.ccall(
+    createSprite3d: (path) => moduleInstance.ccall(
         "rl_sprite3d_create", "number", ["string"], [path]
     ),
-    createSprite3DFromTexture: (texture) => moduleInstance.ccall(
+    createSprite3dFromTexture: (texture) => moduleInstance.ccall(
         "rl_sprite3d_create_from_texture", "number", ["number"], [texture]
     ),
-    sprite3DSetTransform: (sprite, positionX, positionY, positionZ, size) => moduleInstance.ccall(
+    sprite3dSetTransform: (sprite, positionX, positionY, positionZ, size) => moduleInstance.ccall(
         "rl_sprite3d_set_transform", "number", ["number", "number", "number", "number", "number"], [sprite, positionX, positionY, positionZ, size]
     ) !== 0,
-    drawSprite3D: (sprite, tint) => moduleInstance.ccall(
+    drawSprite3d: (sprite, tint) => moduleInstance.ccall(
         "rl_sprite3d_draw", null, ["number", "number"], [sprite, tint]
     ),
-    destroySprite3D: (sprite) => moduleInstance.ccall(
+    destroySprite3d: (sprite) => moduleInstance.ccall(
         "rl_sprite3d_destroy", null, ["number"], [sprite]
     ),
     createSprite2D: (path) => moduleInstance.ccall(

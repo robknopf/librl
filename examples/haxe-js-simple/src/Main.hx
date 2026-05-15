@@ -1,4 +1,8 @@
 import rl.RL;
+import rl.Log;
+import rl.RLHandle;
+import rl.RLTypes.RLPickResult;
+import haxe.io.Path;
 
 #if (emscripten || PLATFORM_WEB || js)
 final ASSET_HOST:String = "./";
@@ -6,40 +10,38 @@ final ASSET_HOST:String = "./";
 final ASSET_HOST:String = "https://localhost:4444";
 #end
 
-/*
-	class Main {
-	  static function main(): Void {
-	#if js
-	RL.boot().then(function(code) {
-	  run(code);
-	  if (code != RL.INIT_OK) {
-		return null;
-	  }
-	  return RL.loaderInit().then(function(loaderCode) {
-		trace("loader_init=" + loaderCode);
-		trace("loader_initialized=" + RL.loaderIsInitialized());
-		return RL.loaderDeinit();
-	  });
-	});
-	#else
-	run(RL.boot());
-	#end
-	  }
+typedef AppContext = {
+	var elapsed:Float;
+	var countdownTimer:Float;
+	var totalTime:Float;
+	var debugFont:RLHandle;
+	var komikaFont:RLHandle;
+	var sprite:RLHandle;
+	var camera:RLHandle;
+	var bgm:RLHandle;
+	var greyAlphaColor:RLHandle;
+	var gumshoe:RLHandle;
+	var reloadCount:Int;
+	var spriteYOffset:Float;
+	var backgroundColor:RLHandle;
+}
 
-	  static function run(bootCode: Int): Void {
-	trace("librl haxe-js backend");
-	trace("boot=" + bootCode);
-	trace("platform=" + RL.getPlatform());
-	trace("tick_running=" + RL.TICK_RUNNING);
-	trace("init_ok=" + RL.INIT_OK);
-	  }
-	}
- */
 class SimpleRuntime implements IRuntime {
+	final SCREEN_TITLE:String = "haxe-simple (Haxe runtime)";
+	final SCREEN_FLAGS:Int = RL.FLAG_MSAA_4X_HINT;
 	final SCREEN_WIDTH:Int = 1024;
 	final SCREEN_HEIGHT:Int = 1280;
-	final SCREEN_TITLE:String = "nimrltest (Haxe runtime)";
-	final SCREEN_FLAGS:Int = RL.FLAG_MSAA_4X_HINT;
+	final DEBUG_FONT_SIZE:Int = 18;
+	final DEBUG_FONT_PATH:String = "assets/fonts/JetBrainsMono/JetBrainsMono-Regular.ttf";
+	final KOMIKA_FONT_SIZE:Int = 24;
+	final KOMIKA_FONT_PATH:String = "assets/fonts/Komika/KOMIKAH_.ttf";
+	final BGM_PATH:String = "assets/music/ethernight_club.mp3";
+	final MODEL_PATH:String = "assets/models/gumshoe/gumshoe.glb";
+	final SPRITE_PATH:String = "assets/sprites/logo/wg-logo-bw-alpha.png";
+
+	var ctx:AppContext;
+	var msg:String = "Hello from Haxe Simple Main !";
+	var platformText:String = "Platform: <unknown>";
 
 	public function new() {
 		trace("SimpleRuntime::new");
@@ -47,43 +49,167 @@ class SimpleRuntime implements IRuntime {
 
 	@async public function onBoot() {
 		trace("onBoot");
-		@await RL.boot({canvasId:"renderCanvas"});
-		@await RL.loaderInit();
+		var rc = @await RL.boot({canvasId: "renderCanvas"});
+		if (rc != 0) {
+			Log.error("RL.boot failed: " + rc);
+			return RT_FAILED;
+		}
+		var rc = @await RL.loaderInit();
+		if (rc != 0) {
+			Log.error("RL.loaderInit failed: " + rc);
+			return RT_FAILED;
+		}
 		return RT_SUCCESS;
 	}
 
 	@async public function onInit():Int {
 		trace("onInit");
+
+		trace("Main: onInit");
+		ctx = {
+			elapsed: 0.0,
+			countdownTimer: 30.0,
+			totalTime: 0.0,
+			debugFont: 0,
+			komikaFont: 0,
+			sprite: 0,
+			camera: 0,
+			bgm: 0,
+			gumshoe: 0,
+			reloadCount: 0,
+			spriteYOffset: 3.0,
+			backgroundColor: 0,
+			greyAlphaColor: 0,
+		};
+
+		RL.loggerSetLevel(RL.LOGGER_LEVEL_INFO);
 		var rc = @await RL.init({
 			windowWidth: SCREEN_WIDTH,
 			windowHeight: SCREEN_HEIGHT,
 			windowTitle: SCREEN_TITLE,
 			windowFlags: SCREEN_FLAGS,
+			// assetHost: ASSET_HOST,
+			// loaderCacheDir: LOADER_CACHE_DIR
 		});
-		trace("onInit: rc=" + rc);
 		if (rc != 0) {
+			trace("Main: onInit failed with error: " + rc);
 			return RT_FAILED;
 		}
 
 		RL.loaderClearCache();
-		RL.setTargetFps(60);
-		//setupScene();
-		//createLoadingGroup();
-		var bgColor = RL.colorCreate(245, 245, 245, 255);
+
+		// Setup lighting and camera
+		RL.enableLighting();
+		RL.setLightDirection(-0.6, -1.0, -0.5);
+		RL.setLightAmbient(0.25);
+		ctx.camera = RL.camera3dCreate(12.0, 12.0, 12.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 45.0, RL.CAMERA_PERSPECTIVE);
+		RL.camera3dSetActive(ctx.camera);
+		ctx.greyAlphaColor = RL.colorCreate(0, 0, 0, 128);
+		ctx.backgroundColor = RL.colorCreate(245, 245, 245, 255);
+
+		queueAssets();
+
+		platformText = getPlatformText();
+
+		// clear the screen
 		RL.renderBegin();
-		RL.renderClearBackground(bgColor);
+		RL.renderClearBackground(ctx.backgroundColor);
 		RL.renderEnd();
-		RL.colorDestroy(bgColor);
 
 		return RT_SUCCESS;
 	}
 
-	public function onTick(deltaTime:Float):Int {
-		//var bgColor = RL.colorCreate(245, 245, 245, 255);
+	public function onTick(deltaTimeSec:Float):Int {
+		// trace("Main: onTick called with deltaTimeMS: " + deltaTimeMS);
+		ctx.elapsed = ctx.elapsed + deltaTimeSec;
+		ctx.countdownTimer -= deltaTimeSec;
+		if (ctx.countdownTimer <= 0) {
+			// return RT_STOPPED;
+		}
+
+		animateFrame(deltaTimeSec);
+
+		RL.musicUpdateAll();
+
+		var mouse = RL.inputGetMouseState();
+		var mouseText = 'Mouse: (${mouse.x}, ${mouse.y}) w:${mouse.wheel} b:[${mouse.left}, ${mouse.right}, ${mouse.middle}]';
+		var remainingText = 'Remaining: ${formatFixed(ctx.countdownTimer, 2)}';
+		var elapsedText = 'Elapsed: ${formatFixed(ctx.totalTime, 2)}';
+
+		
+			// var pickResult = RL.pickSprite3d(ctx.camera, ctx.sprite, mouse.x, mouse.y);
+			msg = "Nothing picked";
+
+			var pickResult:RLPickResult;
+
+			if (ctx.gumshoe != 0) {
+				pickResult = RL.pickModel(ctx.camera, ctx.gumshoe, mouse.x, mouse.y);
+				if (pickResult.hit) {
+					trace('Model pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y);
+					msg = 'Model pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y;
+				}
+			}
+
+			if (ctx.sprite != 0) {
+				pickResult = RL.pickSprite3d(ctx.camera, ctx.sprite, mouse.x, mouse.y);
+				if (pickResult.hit) {
+					trace('Sprite pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y);
+					msg = 'Sprite pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y;
+				}
+			}
+		 
+
 		RL.renderBegin();
-		RL.renderClearBackground(RL.COLOR_BLUE);
+		RL.renderClearBackground(ctx.backgroundColor);
+
+		// 3D render
+		RL.renderBeginMode3d();
+		if (ctx.gumshoe != 0) {
+			RL.modelDraw(ctx.gumshoe, RL.COLOR_RAYWHITE);
+		}
+		if (ctx.sprite != 0) {
+			RL.sprite3dDraw(ctx.sprite, RL.COLOR_RAYWHITE);
+		}
+		RL.renderEndMode3d();
+
+		// 2D UI overlay
+		var screen = RL.windowGetScreenSize();
+		if (ctx.komikaFont != 0) {
+			var textSize = RL.textMeasureEx(ctx.komikaFont, msg, KOMIKA_FONT_SIZE, 1.0);
+			var textX = Std.int((screen.x - textSize.x) / 2);
+			var textY = Std.int((screen.y - textSize.y) / 2);
+			RL.textDrawEx(ctx.komikaFont, msg, textX, textY, KOMIKA_FONT_SIZE, 1.0, RL.COLOR_BLUE);
+		} else {
+			var textWidth = RL.textMeasure(msg, KOMIKA_FONT_SIZE);
+			var textX = Std.int((screen.x - textWidth) / 2);
+			var textY = Std.int((screen.y - KOMIKA_FONT_SIZE) / 2);
+			RL.textDraw(msg, textX, textY, KOMIKA_FONT_SIZE, RL.COLOR_BLUE);
+		}
+		if (ctx.debugFont != 0) {
+			RL.textDrawEx(ctx.debugFont, remainingText, 10, 36, DEBUG_FONT_SIZE, 1.0, RL.COLOR_BLACK);
+			RL.textDrawEx(ctx.debugFont, elapsedText, 10, 56, DEBUG_FONT_SIZE, 1.0, RL.COLOR_BLACK);
+			RL.textDrawEx(ctx.debugFont, mouseText, 10, 76, DEBUG_FONT_SIZE, 1.0, RL.COLOR_BLACK);
+			RL.textDrawEx(ctx.debugFont, 'Reloads: ${ctx.reloadCount}', 10, 96, DEBUG_FONT_SIZE, 1.0, RL.COLOR_BLACK);
+		} else {
+			RL.textDraw(remainingText, 10, 36, DEBUG_FONT_SIZE, RL.COLOR_BLACK);
+			RL.textDraw(elapsedText, 10, 56, DEBUG_FONT_SIZE, RL.COLOR_BLACK);
+			RL.textDraw(mouseText, 10, 76, DEBUG_FONT_SIZE, RL.COLOR_BLACK);
+			RL.textDraw('Reloads: ${ctx.reloadCount}', 10, 96, DEBUG_FONT_SIZE, RL.COLOR_BLACK);
+		}
+
+		if (ctx.debugFont != 0) {
+			RL.textDrawEx(ctx.debugFont, platformText, 10, 116, DEBUG_FONT_SIZE, 1.0, RL.COLOR_BLACK);
+		} else {
+			RL.textDraw(platformText, 10, 116, DEBUG_FONT_SIZE, RL.COLOR_BLACK);
+		}
+
+		if (ctx.debugFont != 0) {
+			RL.textDrawFpsEx(ctx.debugFont, 10, 10, DEBUG_FONT_SIZE, ctx.greyAlphaColor);
+		} else {
+			RL.textDrawFps(10, 10);
+		}
+
 		RL.renderEnd();
-		//RL.colorDestroy(bgColor);
 
 		return RT_SUCCESS;
 	}
@@ -93,42 +219,135 @@ class SimpleRuntime implements IRuntime {
 		@await RL.loaderDeinit();
 		return;
 	}
-	/*
-		  @async public function onInit():RTResult {
-		var err = @await RL.init({
-				windowWidth: SCREEN_WIDTH,
-				windowHeight: SCREEN_HEIGHT,
-				windowTitle: SCREEN_TITLE,
-				windowFlags: SCREEN_FLAGS,
-				//assetHost: ASSET_HOST,
-				// loaderCacheDir: LOADER_CACHE_DIR
-			});
-			if (err != 0) {
-				trace("Main: onInit failed with error: " + err);
-				return RT_FAILED;
+
+	private function joinPath(pathComponents:haxe.Rest<String>):String {
+		return Path.normalize(Path.join(pathComponents.toArray()));
+	}
+
+	private function getPlatformText():String {
+		#if sys
+		return "Platform: " + Sys.systemName();
+		#else
+		return "Platform: " + RL.getPlatform();
+		#end
+	}
+
+	private function formatFixed(value:Float, digits:Int):String {
+		var scale = Math.pow(10, digits);
+		var rounded = Math.round(value * scale) / scale;
+		var text = Std.string(rounded);
+		var dot = text.indexOf(".");
+		if (digits <= 0) {
+			return dot >= 0 ? text.substr(0, dot) : text;
+		}
+		if (dot < 0) {
+			return text + "." + StringTools.rpad("", "0", digits);
+		}
+		var decimals = text.length - dot - 1;
+		if (decimals < digits) {
+			return text + StringTools.rpad("", "0", digits - decimals);
+		}
+		return text;
+	}
+
+	// helper to combine creating an import task and adding it to the loader queue
+	private function importAssetAsync(path:String, ?onSuccess:String->Dynamic->Void, ?onFailure:String->Dynamic->Void, ?userData:Dynamic):Int {
+		trace("importAssetAsync: " + path);
+		var task = RL.loaderImportAssetAsync(path);
+		if (RL.loaderTaskIsValid(task)) {
+			trace('RL.loaderTaskIsValid(${path}): OK');
+			RL.loaderAddTask(task, (path, userData) -> {
+				trace(path);
+				trace(userData);
+				trace('RL.loaderAddTask(${path}): OK');
+				if (onSuccess != null) {
+					trace('calling onSuccess(${path}, ${userData})');
+					onSuccess(path, userData);
+				}
+			}, (path, userData) -> {
+				trace('RL.loaderAddTask(${path}): ERROR');
+				if (onFailure != null) {
+					onFailure(path, userData);
+				}
+			}, userData);
+			trace('RL.loaderAddTask(${path}): OK');
+			return 0;
+		} else {
+			trace('RL.loaderTaskIsValid(${path}): ERROR');
+			if (onFailure != null) {
+				onFailure(path, userData);
 			}
+			return -1;
+		}
+	}
 
-			RL.loaderClearCache();
+	private function queueAssets():Void {
+		importAssetAsync(BGM_PATH, (path, userData) -> {
+			trace("importAssetAsync: BGM: " + path);
+			ctx.bgm = RL.musicCreate(path);
+			RL.musicSetLoop(ctx.bgm, true);
+			RL.musicPlay(ctx.bgm);
+		}, (path, userData) -> {
+			Log.error("Failed to import BGM: " + path);
+		});
+		importAssetAsync(MODEL_PATH, (path, userData) -> {
+			ctx.gumshoe = RL.modelCreate(path);
+			RL.modelSetAnimation(ctx.gumshoe, 1);
+			RL.modelSetAnimationSpeed(ctx.gumshoe, 1.0);
+			RL.modelSetAnimationLoop(ctx.gumshoe, true);
+			RL.modelSetTransform(ctx.gumshoe, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+		}, (path, userData) -> {
+			Log.error("Failed to import MODEL: " + path);
+		});
+		importAssetAsync(SPRITE_PATH, (path, userData) -> {
+			ctx.sprite = RL.sprite3dCreate(path);
+			RL.sprite3dSetTransform(ctx.sprite, 0, 0, ctx.spriteYOffset, 1.0);
+		}, (path, userData) -> {
+			Log.error("Failed to import SPRITE: " + path);
+		});
+		importAssetAsync(DEBUG_FONT_PATH, (path, userData) -> {
+			ctx.debugFont = RL.fontCreate(path, DEBUG_FONT_SIZE);
+		}, (path, userData) -> {
+			Log.error("Failed to import DEBUG FONT: " + path);
+		});
+		importAssetAsync(KOMIKA_FONT_PATH, (path, userData) -> {
+			ctx.komikaFont = RL.fontCreate(path, KOMIKA_FONT_SIZE);
+		}, (path, userData) -> {
+			Log.error("Failed to import KOMIKA FONT: " + path);
+		});
+	}
 
-			// clear the screen
-			RL.renderBegin();
-			RL.renderClearBackground(RL.COLOR_RAYWHITE);
-			RL.renderEnd();
-		return RT_SUCCESS;
-		  }
+	private function animateFrame(deltaTimeSec:Float):Void {
+		if (ctx.gumshoe != 0) {
+			RL.modelAnimate(ctx.gumshoe, deltaTimeSec);
+		}
 
-		  public function onTick(deltaTime:Float):RTResult {
-		RL.renderBegin();
-			RL.renderClearBackground(RL.COLOR_RAYWHITE);
-			RL.renderEnd();
-		return RT_SUCCESS;
-		  }
-		  
-		  public function onShutdown():Void {
-		RL.deinit();
-		return;
-		  }
-	 */
+		var spriteX = 0.0;
+		var spriteY = 0.0;
+		var spriteZ = 0.0;
+
+		// bob the sprite up and down
+		var bobSpeed = 1.0;
+		var bobHeight = 1.5;
+		if (ctx.sprite != 0) {
+			var y = Math.sin(ctx.elapsed * bobSpeed) * bobHeight;
+			spriteY = y + ctx.spriteYOffset;
+		}
+
+		// move the sprite in a circle
+		/*
+			var rotationSpeed = 1.0;
+			var rotationRadius = 2.0;
+			if (ctx.sprite != 0) {
+				spriteX = Math.cos(ctx.elapsed * rotationSpeed) * rotationRadius;
+				spriteZ = Math.sin(ctx.elapsed * rotationSpeed) * rotationRadius;
+			}
+		 */
+
+		if (ctx.sprite != 0) {
+			RL.sprite3dSetTransform(ctx.sprite, spriteX, spriteY, spriteZ, 1.0);
+		}
+	}
 }
 
 ///////////  Runtime ABI, called by host  ///////////
@@ -179,6 +398,7 @@ class Main {
 	@:exportc
 	static function rt_tick(dt:Float):Int {
 		try {
+			RL.update();
 			var rc = RL.tick();
 			if (rc == RL.TICK_FAILED) {
 				trace("Main: RL.tick failed with error: " + rc);
@@ -221,6 +441,7 @@ class Main {
 		return;
 	}
 
+	// local host for when we are debugging without an actual host
 	@async static function startLocalHost() {
 		// fake a local host
 		var rc = @await rt_boot();

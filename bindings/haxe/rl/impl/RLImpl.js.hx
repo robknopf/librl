@@ -393,14 +393,14 @@ class RLImpl {
 			binding.endMode2D();
 	}
 
-	public static function renderBeginMode3D():Void {
+	public static function renderBeginMode3d():Void {
 		if (binding != null)
-			binding.beginMode3D();
+			binding.beginMode3d();
 	}
 
-	public static function renderEndMode3D():Void {
+	public static function renderEndMode3d():Void {
 		if (binding != null)
-			binding.endMode3D();
+			binding.endMode3d();
 	}
 
 	public static function windowCloseRequested():Bool
@@ -449,18 +449,18 @@ class RLImpl {
 
 	public static function camera3dCreate(positionX:Float, positionY:Float, positionZ:Float, targetX:Float, targetY:Float, targetZ:Float, upX:Float,
 			upY:Float, upZ:Float, fovy:Float, projection:Int):RLHandle
-		return binding == null ? 0 : cast binding.createCamera3D(positionX, positionY, positionZ, targetX, targetY, targetZ, upX, upY, upZ, fovy, projection);
+		return binding == null ? 0 : cast binding.createCamera3d(positionX, positionY, positionZ, targetX, targetY, targetZ, upX, upY, upZ, fovy, projection);
 
 	public static function camera3dSet(camera:RLHandle, positionX:Float, positionY:Float, positionZ:Float, targetX:Float, targetY:Float, targetZ:Float,
 			upX:Float, upY:Float, upZ:Float, fovy:Float, projection:Int):Bool
-		return binding != null && cast binding.setCamera3D(camera, positionX, positionY, positionZ, targetX, targetY, targetZ, upX, upY, upZ, fovy, projection);
+		return binding != null && cast binding.setCamera3d(camera, positionX, positionY, positionZ, targetX, targetY, targetZ, upX, upY, upZ, fovy, projection);
 
 	public static function camera3dSetActive(camera:RLHandle):Bool
-		return binding != null && cast binding.setActiveCamera3D(camera);
+		return binding != null && cast binding.setActiveCamera3d(camera);
 
 	public static function camera3dDestroy(camera:RLHandle):Void {
 		if (binding != null)
-			binding.destroyCamera3D(camera);
+			binding.destroyCamera3d(camera);
 	}
 
 	public static function modelCreate(filename:String):RLHandle
@@ -493,19 +493,19 @@ class RLImpl {
 	}
 
 	public static function sprite3dCreate(filename:String):RLHandle
-		return binding == null ? 0 : cast binding.createSprite3D(filename);
+		return binding == null ? 0 : cast binding.createSprite3d(filename);
 
 	public static function sprite3dSetTransform(sprite:RLHandle, positionX:Float, positionY:Float, positionZ:Float, size:Float):Bool
-		return binding != null && cast binding.sprite3DSetTransform(sprite, positionX, positionY, positionZ, size);
+		return binding != null && cast binding.sprite3dSetTransform(sprite, positionX, positionY, positionZ, size);
 
 	public static function sprite3dDraw(sprite:RLHandle, tint:RLHandle):Void {
 		if (binding != null)
-			binding.drawSprite3D(sprite, tint);
+			binding.drawSprite3d(sprite, tint);
 	}
 
 	public static function sprite3dDestroy(sprite:RLHandle):Void {
 		if (binding != null)
-			binding.destroySprite3D(sprite);
+			binding.destroySprite3d(sprite);
 	}
 
 	public static function sprite2dCreate(filename:String):RLHandle
@@ -570,7 +570,7 @@ class RLImpl {
 		return binding == null ? pickResult() : toPickResult(binding.pickModel(camera, model, mouseX, mouseY));
 
 	public static function pickSprite3d(camera:RLHandle, sprite3d:RLHandle, mouseX:Float, mouseY:Float):RLPickResult
-		return binding == null ? pickResult() : toPickResult(binding.pickSprite3D(camera, sprite3d, mouseX, mouseY));
+		return binding == null ? pickResult() : toPickResult(binding.pickSprite3d(camera, sprite3d, mouseX, mouseY));
 
 	public static function pickResetStats():Void {
 		if (binding != null)
@@ -649,8 +649,12 @@ class RLImpl {
 		return binding == null ? "" : cast binding.getTaskPath(task);
 	}
 
-	public static function loaderReadLocal(filename:String):Bytes
-		return unimplementedHaxeJsBackend();
+	public static function loaderReadLocal(filename:String):Bytes {
+		if (binding == null)
+			return null;
+		var d = binding.readLocal(filename);
+		return d == null ? null : Bytes.ofData(cast d);
+	}
 
 	public static function loaderFreeTask(task:RLHandle):Void {
 		if (binding != null)
@@ -680,7 +684,7 @@ class RLImpl {
 		return task != 0;
 
 	public static function loaderAddTask<T>(task:RLHandle, onSuccess:String->T->Void, onFailure:String->T->Void, ctx:T):Int
-		return unimplementedHaxeJsBackend();
+		return binding == null ? LOADER_QUEUE_TASK_ERR_INVALID : cast binding.addTask(task, onSuccess, onFailure, ctx);
 
 	public static function loaderTick():Void {
 		if (binding != null)

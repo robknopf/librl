@@ -306,10 +306,10 @@ private extern class RLExterns {
   static function renderEndMode2D(): Void;
 
   @:native("rl_render_begin_mode_3d")
-  static function renderBeginMode3D(): Void;
+  static function renderBeginMode3d(): Void;
 
   @:native("rl_render_end_mode_3d")
-  static function renderEndMode3D(): Void;
+  static function renderEndMode3d(): Void;
 
   @:native("rl_window_set_title")
   static function windowSetTitle(title: String): Void;
@@ -776,8 +776,8 @@ abstract RLImpl(RLExterns) {
   public static function renderClearBackground(color: RLHandle): Void { RLExterns.renderClearBackground(color); }
   public static function renderBeginMode2D(camera: RLHandle): Void { RLExterns.renderBeginMode2D(camera); }
   public static function renderEndMode2D(): Void { RLExterns.renderEndMode2D(); }
-  public static function renderBeginMode3D(): Void { RLExterns.renderBeginMode3D(); }
-  public static function renderEndMode3D(): Void { RLExterns.renderEndMode3D(); }
+  public static function renderBeginMode3d(): Void { RLExterns.renderBeginMode3d(); }
+  public static function renderEndMode3d(): Void { RLExterns.renderEndMode3d(); }
   public static function windowSetTitle(title: String): Void { RLExterns.windowSetTitle(title); }
   public static function windowSetSize(width: Int, height: Int): Void { RLExterns.windowSetSize(width, height); }
   public static function windowCloseRequested(): Bool { return RLExterns.windowCloseRequested(); }

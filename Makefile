@@ -28,8 +28,9 @@ WASM_COMMON_LDFLAGS ?= \
 	-s MODULARIZE=1 \
 	-s MIN_WEBGL_VERSION=2 \
 	-s MAX_WEBGL_VERSION=2 \
-	-s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "addFunction", "removeFunction", "stackSave", "stackAlloc", "stackRestore", "lengthBytesUTF8", "stringToUTF8", "stringToNewUTF8"]' \
-	-s ALLOW_MEMORY_GROWTH=1
+		-s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "addFunction", "removeFunction", "stackSave", "stackAlloc", "stackRestore", "lengthBytesUTF8", "stringToUTF8", "stringToNewUTF8", "UTF8ToString"]' \
+	-s ALLOW_MEMORY_GROWTH=1 \
+	-s ALLOW_TABLE_GROWTH=1
 
 # destination directories and names
 LIBRL_ROOT ?= .
@@ -206,6 +207,8 @@ LDFLAGS_WASM = \
 			"_rl_loader_get_task_path", \
 			"_rl_loader_get_cache_dir", \
 			"_rl_loader_ping_asset_host", \
+			"_rl_loader_read_local", \
+			"_rl_loader_read_result_free", \
 			"_rl_loader_free_task", \
 		"_rl_loader_add_task", \
 		"_rl_loader_tick", \

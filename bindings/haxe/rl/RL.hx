@@ -20,7 +20,6 @@ import rl.RLTypes.RLMouseState;
 import rl.RLTypes.RLKeyboardState;
 import rl.RLTaskGroup;
 import rl.RLTaskGroup.RLTaskGroupCallback;
-import rl.RLTaskGroup.RLTaskGroupTaskCallback;
 
 /*
 #if js
@@ -518,15 +517,15 @@ class RL {
 
   }
 
-  public static function renderBeginMode3D(): Void {
+  public static function renderBeginMode3d(): Void {
 
-    rl.impl.RLImpl.renderBeginMode3D();
+    rl.impl.RLImpl.renderBeginMode3d();
 
   }
 
-  public static function renderEndMode3D(): Void {
+  public static function renderEndMode3d(): Void {
 
-    rl.impl.RLImpl.renderEndMode3D();
+    rl.impl.RLImpl.renderEndMode3d();
 
   }
 

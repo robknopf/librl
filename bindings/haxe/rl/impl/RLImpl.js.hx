@@ -268,23 +268,41 @@ class RLImpl {
 	}
 
 	public static function fontCreate(filename:String, fontSize:Int):RLHandle
-		return 0;
+		return module == null ? 0 : cast js.Syntax.code("{0}.ccall('rl_font_create', 'number', ['string', 'number'], [{1}, {2}])", module, filename, fontSize);
 
-	public static function fontDestroy(font:RLHandle):Void {}
+	public static function fontDestroy(font:RLHandle):Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_font_destroy', null, ['number'], [{1}])", module, font);
+	}
 
-	public static function textDraw(text:String, x:Int, y:Int, fontSize:Int, color:RLHandle):Void {}
+	public static function textDraw(text:String, x:Int, y:Int, fontSize:Int, color:RLHandle):Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_text_draw', null, ['string', 'number', 'number', 'number', 'number'], [{1}, {2}, {3}, {4}, {5}])", module,
+				text, x, y, fontSize, color);
+	}
 
 	public static function textMeasure(text:String, fontSize:Int):Int
-		return 0;
+		return module == null ? 0 : cast js.Syntax.code("{0}.ccall('rl_text_measure', 'number', ['string', 'number'], [{1}, {2}])", module, text, fontSize);
 
-	public static function textDrawFps(x:Int, y:Int):Void {}
+	public static function textDrawFps(x:Int, y:Int):Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_text_draw_fps', null, ['number', 'number'], [{1}, {2}])", module, x, y);
+	}
 
-	public static function textDrawEx(font:RLHandle, text:String, x:Int, y:Int, fontSize:Float, spacing:Float, color:RLHandle):Void {}
+	public static function textDrawEx(font:RLHandle, text:String, x:Int, y:Int, fontSize:Float, spacing:Float, color:RLHandle):Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_text_draw_ex', null, ['number', 'string', 'number', 'number', 'number', 'number', 'number'], [{1}, {2}, {3}, {4}, {5}, {6}, {7}])",
+				module, font, text, x, y, fontSize, spacing, color);
+	}
 
 	public static function textMeasureEx(font:RLHandle, text:String, fontSize:Float, spacing:Float):RLVec2
-		return vec2();
+		return unimplementedHaxeJsBackend();
 
-	public static function textDrawFpsEx(font:RLHandle, x:Int, y:Int, fontSize:Float, color:RLHandle):Void {}
+	public static function textDrawFpsEx(font:RLHandle, x:Int, y:Int, fontSize:Float, color:RLHandle):Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_text_draw_fps_ex', null, ['number', 'number', 'number', 'number', 'number'], [{1}, {2}, {3}, {4}, {5}])",
+				module, font, x, y, fontSize, color);
+	}
 
 	public static function setAssetHost(assetHost:String):Int {
 		return module == null ? -1 : cast js.Syntax.code("{0}.ccall('rl_set_asset_host', 'number', ['string'], [{1}])", module, assetHost);
@@ -295,72 +313,98 @@ class RLImpl {
 	}
 
 	public static function musicCreate(filename:String):RLHandle
-		return 0;
+		return module == null ? 0 : cast js.Syntax.code("{0}.ccall('rl_music_create', 'number', ['string'], [{1}])", module, filename);
 
-	public static function musicDestroy(music:RLHandle):Void {}
+	public static function musicDestroy(music:RLHandle):Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_music_destroy', null, ['number'], [{1}])", module, music);
+	}
 
 	public static function musicPlay(music:RLHandle):Bool
-		return false;
+		return module != null && cast js.Syntax.code("{0}.ccall('rl_music_play', 'number', ['number'], [{1}]) !== 0", module, music);
 
 	public static function musicPause(music:RLHandle):Bool
-		return false;
+		return module != null && cast js.Syntax.code("{0}.ccall('rl_music_pause', 'number', ['number'], [{1}]) !== 0", module, music);
 
 	public static function musicStop(music:RLHandle):Bool
-		return false;
+		return module != null && cast js.Syntax.code("{0}.ccall('rl_music_stop', 'number', ['number'], [{1}]) !== 0", module, music);
 
 	public static function musicSetLoop(music:RLHandle, shouldLoop:Bool):Bool
-		return false;
+		return module != null && cast js.Syntax.code("{0}.ccall('rl_music_set_loop', 'number', ['number', 'number'], [{1}, {2}]) !== 0", module, music,
+			shouldLoop ? 1 : 0);
 
 	public static function musicSetVolume(music:RLHandle, volume:Float):Bool
-		return false;
+		return module != null && cast js.Syntax.code("{0}.ccall('rl_music_set_volume', 'number', ['number', 'number'], [{1}, {2}]) !== 0", module, music,
+			volume);
 
 	public static function musicIsPlaying(music:RLHandle):Bool
-		return false;
+		return module != null && cast js.Syntax.code("{0}.ccall('rl_music_is_playing', 'number', ['number'], [{1}]) !== 0", module, music);
 
 	public static function musicUpdate(music:RLHandle):Bool
-		return false;
+		return module != null && cast js.Syntax.code("{0}.ccall('rl_music_update', 'number', ['number'], [{1}]) !== 0", module, music);
 
-	public static function musicUpdateAll():Void {}
+	public static function musicUpdateAll():Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_music_update_all', null, [], [])", module);
+	}
 
 	public static function soundCreate(filename:String):RLHandle
-		return 0;
+		return module == null ? 0 : cast js.Syntax.code("{0}.ccall('rl_sound_create', 'number', ['string'], [{1}])", module, filename);
 
-	public static function soundDestroy(sound:RLHandle):Void {}
+	public static function soundDestroy(sound:RLHandle):Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_sound_destroy', null, ['number'], [{1}])", module, sound);
+	}
 
 	public static function soundPlay(sound:RLHandle):Bool
-		return false;
+		return module != null && cast js.Syntax.code("{0}.ccall('rl_sound_play', 'number', ['number'], [{1}]) !== 0", module, sound);
 
 	public static function soundPause(sound:RLHandle):Bool
-		return false;
+		return module != null && cast js.Syntax.code("{0}.ccall('rl_sound_pause', 'number', ['number'], [{1}]) !== 0", module, sound);
 
 	public static function soundResume(sound:RLHandle):Bool
-		return false;
+		return module != null && cast js.Syntax.code("{0}.ccall('rl_sound_resume', 'number', ['number'], [{1}]) !== 0", module, sound);
 
 	public static function soundStop(sound:RLHandle):Bool
-		return false;
+		return module != null && cast js.Syntax.code("{0}.ccall('rl_sound_stop', 'number', ['number'], [{1}]) !== 0", module, sound);
 
 	public static function soundSetVolume(sound:RLHandle, volume:Float):Bool
-		return false;
+		return module != null && cast js.Syntax.code("{0}.ccall('rl_sound_set_volume', 'number', ['number', 'number'], [{1}, {2}]) !== 0", module, sound,
+			volume);
 
 	public static function soundSetPitch(sound:RLHandle, pitch:Float):Bool
-		return false;
+		return module != null && cast js.Syntax.code("{0}.ccall('rl_sound_set_pitch', 'number', ['number', 'number'], [{1}, {2}]) !== 0", module, sound,
+			pitch);
 
 	public static function soundSetPan(sound:RLHandle, pan:Float):Bool
-		return false;
+		return module != null && cast js.Syntax.code("{0}.ccall('rl_sound_set_pan', 'number', ['number', 'number'], [{1}, {2}]) !== 0", module, sound,
+			pan);
 
 	public static function soundIsPlaying(sound:RLHandle):Bool
-		return false;
+		return module != null && cast js.Syntax.code("{0}.ccall('rl_sound_is_playing', 'number', ['number'], [{1}]) !== 0", module, sound);
 
-	public static function enableLighting():Void {}
+	public static function enableLighting():Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_enable_lighting', null, [], [])", module);
+	}
 
-	public static function disableLighting():Void {}
+	public static function disableLighting():Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_disable_lighting', null, [], [])", module);
+	}
 
 	public static function isLightingEnabled():Int
-		return 0;
+		return module == null ? 0 : cast js.Syntax.code("{0}.ccall('rl_is_lighting_enabled', 'number', [], [])", module);
 
-	public static function setLightDirection(x:Float, y:Float, z:Float):Void {}
+	public static function setLightDirection(x:Float, y:Float, z:Float):Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_set_light_direction', null, ['number', 'number', 'number'], [{1}, {2}, {3}])", module, x, y, z);
+	}
 
-	public static function setLightAmbient(ambient:Float):Void {}
+	public static function setLightAmbient(ambient:Float):Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_set_light_ambient', null, ['number'], [{1}])", module, ambient);
+	}
 
 	public static function renderBegin():Void {
 		if (module != null)
@@ -377,158 +421,222 @@ class RLImpl {
 			js.Syntax.code("{0}.ccall('rl_render_clear_background', null, ['number'], [{1}])", module, color);
 	}
 
-	public static function renderBeginMode2D(camera:RLHandle):Void {}
+	public static function renderBeginMode2D(camera:RLHandle):Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_render_begin_mode_2d', null, ['number'], [{1}])", module, camera);
+	}
 
-	public static function renderEndMode2D():Void {}
+	public static function renderEndMode2D():Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_render_end_mode_2d', null, [], [])", module);
+	}
 
-	public static function renderBeginMode3D():Void {}
+	public static function renderBeginMode3D():Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_render_begin_mode_3d', null, [], [])", module);
+	}
 
-	public static function renderEndMode3D():Void {}
+	public static function renderEndMode3D():Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_render_end_mode_3d', null, [], [])", module);
+	}
 
 	public static function windowCloseRequested():Bool
-		return false;
+		return module != null && cast js.Syntax.code("{0}.ccall('rl_window_close_requested', 'number', [], []) !== 0", module);
 
 	public static function windowGetScreenSize():RLVec2
-		return vec2();
+		return unimplementedHaxeJsBackend();
 
 	public static function windowGetMonitorCount():Int
-		return 0;
+		return module == null ? 0 : cast js.Syntax.code("{0}.ccall('rl_window_get_monitor_count', 'number', [], [])", module);
 
-	public static function windowSetTitle(title:String):Void {}
+	public static function windowSetTitle(title:String):Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_window_set_title', null, ['string'], [{1}])", module, title);
+	}
 
-	public static function windowSetSize(width:Int, height:Int):Void {}
+	public static function windowSetSize(width:Int, height:Int):Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_window_set_size', null, ['number', 'number'], [{1}, {2}])", module, width, height);
+	}
 
 	public static function windowGetCurrentMonitor():Int
-		return 0;
+		return module == null ? 0 : cast js.Syntax.code("{0}.ccall('rl_window_get_current_monitor', 'number', [], [])", module);
 
-	public static function windowSetMonitor(monitor:Int):Void {}
+	public static function windowSetMonitor(monitor:Int):Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_window_set_monitor', null, ['number'], [{1}])", module, monitor);
+	}
 
 	public static function windowGetMonitorWidth(monitor:Int):Int
-		return 0;
+		return module == null ? 0 : cast js.Syntax.code("{0}.ccall('rl_window_get_monitor_width', 'number', ['number'], [{1}])", module, monitor);
 
 	public static function windowGetMonitorHeight(monitor:Int):Int
-		return 0;
+		return module == null ? 0 : cast js.Syntax.code("{0}.ccall('rl_window_get_monitor_height', 'number', ['number'], [{1}])", module, monitor);
 
 	public static function windowGetMonitorPosition(monitor:Int):RLVec2
-		return vec2();
+		return unimplementedHaxeJsBackend();
 
 	public static function windowGetPosition():RLVec2
-		return vec2();
+		return unimplementedHaxeJsBackend();
 
-	public static function windowSetPosition(x:Int, y:Int):Void {}
+	public static function windowSetPosition(x:Int, y:Int):Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_window_set_position', null, ['number', 'number'], [{1}, {2}])", module, x, y);
+	}
 
 	public static function camera3dCreate(positionX:Float, positionY:Float, positionZ:Float, targetX:Float, targetY:Float, targetZ:Float, upX:Float,
 			upY:Float, upZ:Float, fovy:Float, projection:Int):RLHandle
-		return 0;
+		return module == null ? 0 : cast js.Syntax.code("{0}.ccall('rl_camera3d_create', 'number', ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'], [{1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}])",
+			module, positionX, positionY, positionZ, targetX, targetY, targetZ, upX, upY, upZ, fovy, projection);
 
 	public static function camera3dSet(camera:RLHandle, positionX:Float, positionY:Float, positionZ:Float, targetX:Float, targetY:Float, targetZ:Float,
 			upX:Float, upY:Float, upZ:Float, fovy:Float, projection:Int):Bool
-		return false;
+		return module != null && cast js.Syntax.code("{0}.ccall('rl_camera3d_set', 'number', ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'], [{1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}]) !== 0",
+			module, camera, positionX, positionY, positionZ, targetX, targetY, targetZ, upX, upY, upZ, fovy, projection);
 
 	public static function camera3dSetActive(camera:RLHandle):Bool
-		return false;
+		return module != null && cast js.Syntax.code("{0}.ccall('rl_camera3d_set_active', 'number', ['number'], [{1}]) !== 0", module, camera);
 
-	public static function camera3dDestroy(camera:RLHandle):Void {}
+	public static function camera3dDestroy(camera:RLHandle):Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_camera3d_destroy', null, ['number'], [{1}])", module, camera);
+	}
 
 	public static function modelCreate(filename:String):RLHandle
-		return 0;
+		return module == null ? 0 : cast js.Syntax.code("{0}.ccall('rl_model_create', 'number', ['string'], [{1}])", module, filename);
 
 	public static function modelSetTransform(model:RLHandle, positionX:Float, positionY:Float, positionZ:Float, rotationX:Float, rotationY:Float,
 			rotationZ:Float, scaleX:Float, scaleY:Float, scaleZ:Float):Bool
-		return false;
+		return module != null && cast js.Syntax.code("{0}.ccall('rl_model_set_transform', 'number', ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'], [{1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}]) !== 0",
+			module, model, positionX, positionY, positionZ, rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ);
 
-	public static function modelDraw(model:RLHandle, tint:RLHandle):Void {}
+	public static function modelDraw(model:RLHandle, tint:RLHandle):Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_model_draw', null, ['number', 'number'], [{1}, {2}])", module, model, tint);
+	}
 
 	public static function modelSetAnimation(model:RLHandle, animationIndex:Int):Bool
-		return false;
+		return module != null && cast js.Syntax.code("{0}.ccall('rl_model_set_animation', 'number', ['number', 'number'], [{1}, {2}]) !== 0", module,
+			model, animationIndex);
 
 	public static function modelSetAnimationSpeed(model:RLHandle, speed:Float):Bool
-		return false;
+		return module != null && cast js.Syntax.code("{0}.ccall('rl_model_set_animation_speed', 'number', ['number', 'number'], [{1}, {2}]) !== 0", module,
+			model, speed);
 
 	public static function modelSetAnimationLoop(model:RLHandle, shouldLoop:Bool):Bool
-		return false;
+		return module != null && cast js.Syntax.code("{0}.ccall('rl_model_set_animation_loop', 'number', ['number', 'number'], [{1}, {2}]) !== 0", module,
+			model, shouldLoop ? 1 : 0);
 
 	public static function modelAnimate(model:RLHandle, deltaSeconds:Float):Bool
-		return false;
+		return module != null && cast js.Syntax.code("{0}.ccall('rl_model_animate', 'number', ['number', 'number'], [{1}, {2}]) !== 0", module, model,
+			deltaSeconds);
 
-	public static function modelDestroy(model:RLHandle):Void {}
+	public static function modelDestroy(model:RLHandle):Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_model_destroy', null, ['number'], [{1}])", module, model);
+	}
 
 	public static function sprite3dCreate(filename:String):RLHandle
-		return 0;
+		return module == null ? 0 : cast js.Syntax.code("{0}.ccall('rl_sprite3d_create', 'number', ['string'], [{1}])", module, filename);
 
 	public static function sprite3dSetTransform(sprite:RLHandle, positionX:Float, positionY:Float, positionZ:Float, size:Float):Bool
-		return false;
+		return module != null && cast js.Syntax.code("{0}.ccall('rl_sprite3d_set_transform', 'number', ['number', 'number', 'number', 'number', 'number'], [{1}, {2}, {3}, {4}, {5}]) !== 0",
+			module, sprite, positionX, positionY, positionZ, size);
 
-	public static function sprite3dDraw(sprite:RLHandle, tint:RLHandle):Void {}
+	public static function sprite3dDraw(sprite:RLHandle, tint:RLHandle):Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_sprite3d_draw', null, ['number', 'number'], [{1}, {2}])", module, sprite, tint);
+	}
 
-	public static function sprite3dDestroy(sprite:RLHandle):Void {}
+	public static function sprite3dDestroy(sprite:RLHandle):Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_sprite3d_destroy', null, ['number'], [{1}])", module, sprite);
+	}
 
 	public static function sprite2dCreate(filename:String):RLHandle
-		return 0;
+		return module == null ? 0 : cast js.Syntax.code("{0}.ccall('rl_sprite2d_create', 'number', ['string'], [{1}])", module, filename);
 
 	public static function sprite2dCreateFromTexture(texture:RLHandle):RLHandle
-		return 0;
+		return module == null ? 0 : cast js.Syntax.code("{0}.ccall('rl_sprite2d_create_from_texture', 'number', ['number'], [{1}])", module, texture);
 
 	public static function sprite2dSetTransform(sprite:RLHandle, x:Float, y:Float, scale:Float, rotation:Float):Bool
-		return false;
+		return module != null && cast js.Syntax.code("{0}.ccall('rl_sprite2d_set_transform', 'number', ['number', 'number', 'number', 'number', 'number'], [{1}, {2}, {3}, {4}, {5}]) !== 0",
+			module, sprite, x, y, scale, rotation);
 
-	public static function sprite2dDraw(sprite:RLHandle, tint:RLHandle):Void {}
+	public static function sprite2dDraw(sprite:RLHandle, tint:RLHandle):Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_sprite2d_draw', null, ['number', 'number'], [{1}, {2}])", module, sprite, tint);
+	}
 
-	public static function sprite2dDestroy(sprite:RLHandle):Void {}
+	public static function sprite2dDestroy(sprite:RLHandle):Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_sprite2d_destroy', null, ['number'], [{1}])", module, sprite);
+	}
 
 	public static function textureCreate(filename:String):RLHandle
-		return 0;
+		return module == null ? 0 : cast js.Syntax.code("{0}.ccall('rl_texture_create', 'number', ['string'], [{1}])", module, filename);
 
-	public static function textureDestroy(texture:RLHandle):Void {}
+	public static function textureDestroy(texture:RLHandle):Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_texture_destroy', null, ['number'], [{1}])", module, texture);
+	}
 
-	public static function textureDrawEx(texture:RLHandle, x:Float, y:Float, scale:Float, rotation:Float, tint:RLHandle):Void {}
+	public static function textureDrawEx(texture:RLHandle, x:Float, y:Float, scale:Float, rotation:Float, tint:RLHandle):Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_texture_draw_ex', null, ['number', 'number', 'number', 'number', 'number', 'number'], [{1}, {2}, {3}, {4}, {5}, {6}])",
+				module, texture, x, y, scale, rotation, tint);
+	}
 
 	public static function textureDrawGround(texture:RLHandle, positionX:Float, positionY:Float, positionZ:Float, width:Float, length:Float,
-		tint:RLHandle):Void {}
+		tint:RLHandle):Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_texture_draw_ground', null, ['number', 'number', 'number', 'number', 'number', 'number', 'number'], [{1}, {2}, {3}, {4}, {5}, {6}, {7}])",
+				module, texture, positionX, positionY, positionZ, width, length, tint);
+	}
 
-	public static function inputPollEvents():Void {}
+	public static function inputPollEvents():Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_input_poll_events', null, [], [])", module);
+	}
 
 	public static function inputGetMousePosition():RLVec2
-		return vec2();
+		return unimplementedHaxeJsBackend();
 
 	public static function inputGetMouseWheel():Int
-		return 0;
+		return module == null ? 0 : cast js.Syntax.code("{0}.ccall('rl_input_get_mouse_wheel', 'number', [], [])", module);
 
 	public static function inputGetMouseButton(button:Int):Int
-		return 0;
+		return module == null ? 0 : cast js.Syntax.code("{0}.ccall('rl_input_get_mouse_button', 'number', ['number'], [{1}])", module, button);
 
 	public static function inputGetMouseState():RLMouseState
-		return {
-			x: 0,
-			y: 0,
-			wheel: 0,
-			left: 0,
-			right: 0,
-			middle: 0
-		};
+		return unimplementedHaxeJsBackend();
 
 	public static function inputGetKeyboardState():RLKeyboardState
-		return new RLKeyboardState();
+		return unimplementedHaxeJsBackend();
 
 	public static function pickModel(camera:RLHandle, model:RLHandle, mouseX:Float, mouseY:Float):RLPickResult
-		return pickResult();
+		return unimplementedHaxeJsBackend();
 
 	public static function pickSprite3d(camera:RLHandle, sprite3d:RLHandle, mouseX:Float, mouseY:Float):RLPickResult
-		return pickResult();
+		return unimplementedHaxeJsBackend();
 
-	public static function pickResetStats():Void {}
+	public static function pickResetStats():Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_pick_reset_stats', null, [], [])", module);
+	}
 
 	public static function pickGetBroadphaseTests():Int
-		return 0;
+		return module == null ? 0 : cast js.Syntax.code("{0}.ccall('rl_pick_get_broadphase_tests', 'number', [], [])", module);
 
 	public static function pickGetBroadphaseRejects():Int
-		return 0;
+		return module == null ? 0 : cast js.Syntax.code("{0}.ccall('rl_pick_get_broadphase_rejects', 'number', [], [])", module);
 
 	public static function pickGetNarrowphaseTests():Int
-		return 0;
+		return module == null ? 0 : cast js.Syntax.code("{0}.ccall('rl_pick_get_narrowphase_tests', 'number', [], [])", module);
 
 	public static function pickGetNarrowphaseHits():Int
-		return 0;
+		return module == null ? 0 : cast js.Syntax.code("{0}.ccall('rl_pick_get_narrowphase_hits', 'number', [], [])", module);
 
   @async
 	public static function loaderInit(?mountPoint:String):Promise<Int> {
@@ -575,7 +683,7 @@ class RLImpl {
 	}
 
 	public static function loaderImportAssetsAsync(filenames:Array<String>):RLHandle
-		return 0;
+		return unimplementedHaxeJsBackend();
 
 	public static function loaderPollTask(task:RLHandle):Bool {
 		return module != null && cast js.Syntax.code("{0}.ccall('rl_loader_poll_task', 'number', ['number'], [{1}]) !== 0", module, task);
@@ -590,7 +698,7 @@ class RLImpl {
 	}
 
 	public static function loaderReadLocal(filename:String):Bytes
-		return Bytes.alloc(0);
+		return unimplementedHaxeJsBackend();
 
 	public static function loaderFreeTask(task:RLHandle):Void {
 		if (module != null)
@@ -621,7 +729,7 @@ class RLImpl {
 		return task != 0;
 
 	public static function loaderAddTask<T>(task:RLHandle, onSuccess:String->T->Void, onFailure:String->T->Void, ctx:T):Int
-		return LOADER_QUEUE_TASK_ERR_INVALID;
+		return unimplementedHaxeJsBackend();
 
 	public static function loaderTick():Void {
 		if (module != null)
@@ -640,10 +748,17 @@ class RLImpl {
 		js.Syntax.code("console.log({0})", message);
 	}
 
-	public static function loggerSetLevel(level:Int):Void {}
+	public static function loggerSetLevel(level:Int):Void {
+		if (module != null)
+			js.Syntax.code("{0}.ccall('rl_logger_set_level', null, ['number'], [{1}])", module, level);
+	}
 
 	static inline function vec2():RLVec2 {
 		return {x: 0.0, y: 0.0};
+	}
+
+	static inline function unimplementedHaxeJsBackend<T>():T {
+		throw "Unimplemented in Haxe JS backend, requires struct returns or scratch-bridge support from librl";
 	}
 
 	static function optionString(options:Dynamic, name:String, fallback:Null<String>):Null<String> {

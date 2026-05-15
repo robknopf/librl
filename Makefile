@@ -65,9 +65,6 @@ CFLAGS_WASM = \
 	-fPIC
 
 LDFLAGS_WASM = \
-	--post-js bindings/js/rl_scratch.js \
-	--extern-post-js bindings/js/rl.js \
-	--extern-post-js bindings/js/rl_module_export.js \
 	$(WASM_COMMON_LDFLAGS) \
 	-s JSPI=1 \
 	-s JSPI_EXPORTS='["rl_init","rl_init_values","rl_init_values_async","rl_loader_init","rl_loader_import_asset","rl_deinit","rl_loader_deinit"]' \
@@ -84,15 +81,14 @@ LDFLAGS_WASM = \
 	"_rl_is_initialized", \
 	"_rl_get_platform", \
 	"_rl_deinit", \
-	"_rl_update_to_scratch", \
+	"_rl_scratch_refresh", \
 	"_rl_tick", \
 	"_rl_get_time", \
 	"_rl_get_delta_time", \
 	"_rl_window_set_title", \
 	"_rl_window_set_size", \
 	"_rl_window_close_requested", \
-	"_rl_scratch_get", \
-	"_rl_scratch_update", \
+	"_rl_scratch_get_base", \
 	"_rl_scratch_get_offsets", \
 	"_rl_window_get_monitor_position_to_scratch", \
 	"_rl_window_get_monitor_width", \

@@ -1,4 +1,4 @@
-import { rl } from "../../lib/librl.js";
+import { rl } from "../../bindings/js/rl.js";
 
 (async function () {
   try {
@@ -78,7 +78,7 @@ import { rl } from "../../lib/librl.js";
       const dt = now - lastTime;
       lastTime = now;
 
-      rl.update();
+      rl.refreshScratch();
       const mouse = rl.getMouseState();
       if (mouse.left === rl.BUTTON_PRESSED) {
         const modelPick = rl.pickModel(camera, gumshoe, mouse.x, mouse.y, 0, 0, 0, 1);

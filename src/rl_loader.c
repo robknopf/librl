@@ -1196,7 +1196,7 @@ static rl_loader_task_t *rl_loader_import_assets_from_scratch_async_ptr(size_t f
         return NULL;
     }
 
-    scratch = (rl_scratch_t *)(uintptr_t)rl_scratch_get();
+    scratch = (rl_scratch_t *)(uintptr_t)rl_scratch_get_base();
     if (scratch == NULL) {
         return NULL;
     }

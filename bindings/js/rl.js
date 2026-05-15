@@ -1,6 +1,10 @@
-// appended to emscripten build with --extern-post-js bindings/js/rl.js
 var moduleInstance;
+var moduleFactoryPromise = null;
+var moduleFactoryPath = "";
 var moduleOptions = {};
+var scratchAreaPtr = 0;
+var scratchAreaBytePtr = 0;
+var scratchAreaOffsets = {};
 
 const RL = {
     _eventDispatchPtr: 0,
@@ -44,38 +48,283 @@ const RL = {
         });
         idsToDelete.forEach((id) => RL._forgetListenerById(id));
     },
-    _escapeLoggerFormat: (message) => String(message ?? "").replaceAll("%", "%%"),
     _clearRunCallbacks: () => {
         /* Reserved for symmetry with deinit; run/start/stop removed from librl. */
     },
-    _ensureOutputElement: () => {
-        let output = document.getElementById("output");
-        if (!output) {
-            output = document.createElement("textarea");
-            output.id = "output";
-            output.style.width = "100%";
-            output.style.height = "100px";
-            document.body.appendChild(output);
+    _installScratchHelpers: () => {
+        const Module = moduleInstance;
+        if (!Module) {
+            return;
         }
-        return output;
-    },
-    _makeOutputLogger: (useErrorConsole = false) => {
-        const output = RL._ensureOutputElement();
-        return function (...args) {
-            let line = args[0] ?? "";
-            if (args.length > 1) {
-                line = Array.prototype.slice.call(args).join(" ");
+
+        Module.initScratchArea = () => {
+            const HEAP32 = Module.HEAP32;
+            scratchAreaBytePtr = Module.ccall("rl_scratch_get_base", "number", [], []);
+            scratchAreaPtr = scratchAreaBytePtr >> 2;
+            const scratchAreaOffsetsPtr = Module.ccall("rl_scratch_get_offsets", "number", [], []) >> 2;
+
+            scratchAreaOffsets = {
+                vector2: HEAP32[scratchAreaOffsetsPtr],
+                vector3: HEAP32[scratchAreaOffsetsPtr + 1],
+                vector4: HEAP32[scratchAreaOffsetsPtr + 2],
+                matrix: HEAP32[scratchAreaOffsetsPtr + 3],
+                quaternion: HEAP32[scratchAreaOffsetsPtr + 4],
+                color: HEAP32[scratchAreaOffsetsPtr + 5],
+                rectangle: HEAP32[scratchAreaOffsetsPtr + 6],
+                mouse: {
+                    x: HEAP32[scratchAreaOffsetsPtr + 7],
+                    y: HEAP32[scratchAreaOffsetsPtr + 8],
+                    wheel: HEAP32[scratchAreaOffsetsPtr + 9],
+                    buttons: HEAP32[scratchAreaOffsetsPtr + 10],
+                },
+                keyboard: {
+                    max_num_keys: HEAP32[scratchAreaOffsetsPtr + 11],
+                    keys: HEAP32[scratchAreaOffsetsPtr + 12],
+                    pressed_key: HEAP32[scratchAreaOffsetsPtr + 13],
+                    pressed_char: HEAP32[scratchAreaOffsetsPtr + 14],
+                    num_pressed_keys: HEAP32[scratchAreaOffsetsPtr + 15],
+                    pressed_keys: HEAP32[scratchAreaOffsetsPtr + 16],
+                    num_pressed_chars: HEAP32[scratchAreaOffsetsPtr + 17],
+                    pressed_chars: HEAP32[scratchAreaOffsetsPtr + 18],
+                },
+                gamepads: {
+                    max_num_gamepads: HEAP32[scratchAreaOffsetsPtr + 19],
+                    gamepad: HEAP32[scratchAreaOffsetsPtr + 20],
+                    id: HEAP32[scratchAreaOffsetsPtr + 21],
+                    axis: HEAP32[scratchAreaOffsetsPtr + 22],
+                    buttons: HEAP32[scratchAreaOffsetsPtr + 23],
+                    stride: HEAP32[scratchAreaOffsetsPtr + 24] >> 2,
+                },
+                touchpoints: {
+                    count: HEAP32[scratchAreaOffsetsPtr + 25],
+                    touchpoint: HEAP32[scratchAreaOffsetsPtr + 26],
+                    id: HEAP32[scratchAreaOffsetsPtr + 27],
+                    x: HEAP32[scratchAreaOffsetsPtr + 28],
+                    y: HEAP32[scratchAreaOffsetsPtr + 29],
+                    stride: HEAP32[scratchAreaOffsetsPtr + 30] >> 2,
+                },
+                stringTable: {
+                    offsets: HEAP32[scratchAreaOffsetsPtr + 31],
+                    bytes: HEAP32[scratchAreaOffsetsPtr + 32],
+                    maxEntries: HEAP32[scratchAreaOffsetsPtr + 33],
+                    maxBytes: HEAP32[scratchAreaOffsetsPtr + 34],
+                },
+            };
+        };
+
+        Module.getVector2 = () => {
+            const HEAPF32 = Module.HEAPF32;
+            return {
+                x: HEAPF32[scratchAreaPtr + (scratchAreaOffsets.vector2 >> 2)],
+                y: HEAPF32[scratchAreaPtr + (scratchAreaOffsets.vector2 >> 2) + 1],
+            };
+        };
+
+        Module.getVector3 = () => {
+            const HEAPF32 = Module.HEAPF32;
+            return {
+                x: HEAPF32[scratchAreaPtr + (scratchAreaOffsets.vector3 >> 2)],
+                y: HEAPF32[scratchAreaPtr + (scratchAreaOffsets.vector3 >> 2) + 1],
+                z: HEAPF32[scratchAreaPtr + (scratchAreaOffsets.vector3 >> 2) + 2],
+            };
+        };
+
+        Module.getVector4 = () => {
+            const HEAPF32 = Module.HEAPF32;
+            return {
+                x: HEAPF32[scratchAreaPtr + (scratchAreaOffsets.vector4 >> 2)],
+                y: HEAPF32[scratchAreaPtr + (scratchAreaOffsets.vector4 >> 2) + 1],
+                z: HEAPF32[scratchAreaPtr + (scratchAreaOffsets.vector4 >> 2) + 2],
+                w: HEAPF32[scratchAreaPtr + (scratchAreaOffsets.vector4 >> 2) + 3],
+            };
+        };
+
+        Module.getMatrix = () => {
+            const HEAPF32 = Module.HEAPF32;
+            const matrixOffset = scratchAreaPtr + (scratchAreaOffsets.matrix >> 2);
+            return HEAPF32.subarray(matrixOffset, matrixOffset + 16);
+        };
+
+        Module.getQuaternion = () => {
+            const HEAPF32 = Module.HEAPF32;
+            return {
+                x: HEAPF32[scratchAreaPtr + (scratchAreaOffsets.quaternion >> 2)],
+                y: HEAPF32[scratchAreaPtr + (scratchAreaOffsets.quaternion >> 2) + 1],
+                z: HEAPF32[scratchAreaPtr + (scratchAreaOffsets.quaternion >> 2) + 2],
+                w: HEAPF32[scratchAreaPtr + (scratchAreaOffsets.quaternion >> 2) + 3],
+            };
+        };
+
+        Module.getColor = () => {
+            const HEAP32 = Module.HEAP32;
+            return {
+                r: HEAP32[scratchAreaPtr + (scratchAreaOffsets.color >> 2)],
+                g: HEAP32[scratchAreaPtr + (scratchAreaOffsets.color >> 2) + 1],
+                b: HEAP32[scratchAreaPtr + (scratchAreaOffsets.color >> 2) + 2],
+                a: HEAP32[scratchAreaPtr + (scratchAreaOffsets.color >> 2) + 3],
+            };
+        };
+
+        Module.getRectangle = () => {
+            const HEAP32 = Module.HEAP32;
+            return {
+                x: HEAP32[scratchAreaPtr + (scratchAreaOffsets.rectangle >> 2)],
+                y: HEAP32[scratchAreaPtr + (scratchAreaOffsets.rectangle >> 2) + 1],
+                width: HEAP32[scratchAreaPtr + (scratchAreaOffsets.rectangle >> 2) + 2],
+                height: HEAP32[scratchAreaPtr + (scratchAreaOffsets.rectangle >> 2) + 3],
+            };
+        };
+
+        Module.getMouseState = () => {
+            const HEAP32 = Module.HEAP32;
+            return {
+                x: HEAP32[scratchAreaPtr + (scratchAreaOffsets.mouse.x >> 2)],
+                y: HEAP32[scratchAreaPtr + (scratchAreaOffsets.mouse.y >> 2)],
+                wheel: HEAP32[scratchAreaPtr + (scratchAreaOffsets.mouse.wheel >> 2)],
+                buttons: HEAP32.subarray(
+                    scratchAreaPtr + (scratchAreaOffsets.mouse.buttons >> 2),
+                    scratchAreaPtr + (scratchAreaOffsets.mouse.buttons >> 2) + 3
+                ),
+            };
+        };
+
+        Module.getKeyboard = () => {
+            const HEAP32 = Module.HEAP32;
+            return {
+                max_num_keys: HEAP32[scratchAreaPtr + (scratchAreaOffsets.keyboard.max_num_keys >> 2)],
+                keys: HEAP32.subarray(
+                    scratchAreaPtr + (scratchAreaOffsets.keyboard.keys >> 2),
+                    scratchAreaPtr + (scratchAreaOffsets.keyboard.keys >> 2) +
+                    HEAP32[scratchAreaPtr + (scratchAreaOffsets.keyboard.max_num_keys >> 2)]
+                ),
+                pressed_key: HEAP32[scratchAreaPtr + (scratchAreaOffsets.keyboard.pressed_key >> 2)],
+                pressed_char: HEAP32[scratchAreaPtr + (scratchAreaOffsets.keyboard.pressed_char >> 2)],
+                num_pressed_keys: HEAP32[scratchAreaPtr + (scratchAreaOffsets.keyboard.num_pressed_keys >> 2)],
+                pressed_keys: HEAP32.subarray(
+                    scratchAreaPtr + (scratchAreaOffsets.keyboard.pressed_keys >> 2),
+                    scratchAreaPtr + (scratchAreaOffsets.keyboard.pressed_keys >> 2) +
+                    HEAP32[scratchAreaPtr + (scratchAreaOffsets.keyboard.num_pressed_keys >> 2)]
+                ),
+                num_pressed_chars: HEAP32[scratchAreaPtr + (scratchAreaOffsets.keyboard.num_pressed_chars >> 2)],
+                pressed_chars: HEAP32.subarray(
+                    scratchAreaPtr + (scratchAreaOffsets.keyboard.pressed_chars >> 2),
+                    scratchAreaPtr + (scratchAreaOffsets.keyboard.pressed_chars >> 2) +
+                    HEAP32[scratchAreaPtr + (scratchAreaOffsets.keyboard.num_pressed_chars >> 2)]
+                ),
+            };
+        };
+
+        Module.getGamepads = () => {
+            const HEAP32 = Module.HEAP32;
+            const HEAPF32 = Module.HEAPF32;
+            const maxGamepads = HEAP32[scratchAreaPtr + (scratchAreaOffsets.gamepads.max_num_gamepads >> 2)];
+            const stride = scratchAreaOffsets.gamepads.stride;
+            const baseOffset = scratchAreaPtr + (scratchAreaOffsets.gamepads.gamepad >> 2);
+            const gamepads = [];
+            for (let i = 0; i < maxGamepads; i++) {
+                const gamepadOffset = baseOffset + i * stride;
+                gamepads.push({
+                    id: HEAP32[gamepadOffset + (scratchAreaOffsets.gamepads.id >> 2)],
+                    axis: HEAPF32.subarray(
+                        gamepadOffset + (scratchAreaOffsets.gamepads.axis >> 2),
+                        gamepadOffset + (scratchAreaOffsets.gamepads.axis >> 2) + 4
+                    ),
+                    buttons: HEAP32.subarray(
+                        gamepadOffset + (scratchAreaOffsets.gamepads.buttons >> 2),
+                        gamepadOffset + (scratchAreaOffsets.gamepads.buttons >> 2) + 16
+                    ),
+                });
             }
-            line = String(line);
-            if (useErrorConsole) {
-                console.error(line);
-            } else {
-                console.log(line);
+            return gamepads;
+        };
+
+        Module.getGamepad = (id) => {
+            const HEAP32 = Module.HEAP32;
+            const HEAPF32 = Module.HEAPF32;
+            const maxGamepads = HEAP32[scratchAreaPtr + (scratchAreaOffsets.gamepads.max_num_gamepads >> 2)];
+            const stride = scratchAreaOffsets.gamepads.stride;
+            const baseOffset = scratchAreaPtr + (scratchAreaOffsets.gamepads.gamepad >> 2);
+            for (let i = 0; i < maxGamepads; i++) {
+                const gamepadOffset = baseOffset + i * stride;
+                if (HEAP32[gamepadOffset + (scratchAreaOffsets.gamepads.id >> 2)] === id) {
+                    return {
+                        id: HEAP32[gamepadOffset + (scratchAreaOffsets.gamepads.id >> 2)],
+                        axis: HEAPF32.subarray(
+                            gamepadOffset + (scratchAreaOffsets.gamepads.axis >> 2),
+                            gamepadOffset + (scratchAreaOffsets.gamepads.axis >> 2) + 4
+                        ),
+                        buttons: HEAP32.subarray(
+                            gamepadOffset + (scratchAreaOffsets.gamepads.buttons >> 2),
+                            gamepadOffset + (scratchAreaOffsets.gamepads.buttons >> 2) + 16
+                        ),
+                    };
+                }
             }
-            if (output) {
-                output.value += line + "\n";
-                output.scrollTop = output.scrollHeight;
+            return null;
+        };
+
+        Module.getTouchpoints = () => {
+            const HEAP32 = Module.HEAP32;
+            const HEAPF32 = Module.HEAPF32;
+            const count = HEAP32[scratchAreaPtr + (scratchAreaOffsets.touchpoints.count >> 2)];
+            const stride = scratchAreaOffsets.touchpoints.stride;
+            const baseOffset = scratchAreaPtr + (scratchAreaOffsets.touchpoints.touchpoint >> 2);
+            const touchpoints = [];
+            for (let i = 0; i < count; i++) {
+                const touchOffset = baseOffset + i * stride;
+                touchpoints.push({
+                    id: HEAP32[touchOffset + (scratchAreaOffsets.touchpoints.id >> 2)],
+                    x: HEAPF32[touchOffset + (scratchAreaOffsets.touchpoints.x >> 2)],
+                    y: HEAPF32[touchOffset + (scratchAreaOffsets.touchpoints.y >> 2)],
+                });
             }
+            return touchpoints;
+        };
+
+        Module.getTouchpoint = (id) => {
+            const HEAP32 = Module.HEAP32;
+            const HEAPF32 = Module.HEAPF32;
+            const count = HEAP32[scratchAreaPtr + (scratchAreaOffsets.touchpoints.count >> 2)];
+            const stride = scratchAreaOffsets.touchpoints.stride;
+            const baseOffset = scratchAreaPtr + (scratchAreaOffsets.touchpoints.touchpoint >> 2);
+            for (let i = 0; i < count; i++) {
+                const touchOffset = baseOffset + i * stride;
+                if (HEAP32[touchOffset + (scratchAreaOffsets.touchpoints.id >> 2)] === id) {
+                    return {
+                        id: HEAP32[touchOffset + (scratchAreaOffsets.touchpoints.id >> 2)],
+                        x: HEAPF32[touchOffset + (scratchAreaOffsets.touchpoints.x >> 2)],
+                        y: HEAPF32[touchOffset + (scratchAreaOffsets.touchpoints.y >> 2)],
+                    };
+                }
+            }
+            return null;
+        };
+
+        Module.writeScratchStringTable = (strings) => {
+            const HEAPU32 = Module.HEAPU32;
+            const values = Array.isArray(strings) ? strings : [];
+            const maxEntries = scratchAreaOffsets.stringTable.maxEntries;
+            const maxBytes = scratchAreaOffsets.stringTable.maxBytes;
+            const offsetsIndex = scratchAreaPtr + (scratchAreaOffsets.stringTable.offsets >> 2);
+            const bytesIndex = scratchAreaBytePtr + scratchAreaOffsets.stringTable.bytes;
+            let byteOffset = 0;
+
+            if (values.length > maxEntries) {
+                throw new Error(`scratch string table overflow: ${values.length} > ${maxEntries}`);
+            }
+
+            for (let i = 0; i < values.length; i++) {
+                const text = String(values[i] ?? "");
+                const encodedLength = Module.lengthBytesUTF8(text) + 1;
+                if (byteOffset + encodedLength > maxBytes) {
+                    throw new Error(`scratch string bytes overflow at index ${i}`);
+                }
+                HEAPU32[offsetsIndex + i] = byteOffset >>> 0;
+                Module.stringToUTF8(text, bytesIndex + byteOffset, encodedLength);
+                byteOffset += encodedLength;
+            }
+
+            return values.length;
         };
     },
     _waitForIdbfsReady: async (timeoutMs = 2000) => {
@@ -159,6 +408,28 @@ const RL = {
             moduleInstance.ccall("rl_window_set_size", null, ["number", "number"], [newWidth, newHeight]);
         });
     },
+    _getModulePath: (opts) => {
+        const modulePath = opts?.modulePath ?? moduleOptions.modulePath;
+        if (modulePath) {
+            return String(modulePath);
+        }
+        return new URL("../../lib/librl.js", import.meta.url).href;
+    },
+    _loadModuleFactory: async (opts) => {
+        const modulePath = RL._getModulePath(opts);
+        if (!moduleFactoryPromise || moduleFactoryPath !== modulePath) {
+            moduleFactoryPath = modulePath;
+            moduleFactoryPromise = import(/* @vite-ignore */ modulePath).then((mod) => {
+                const factory = mod?.default;
+                if (typeof factory !== "function") {
+                    throw new Error(`raw runtime module missing default factory export: ${modulePath}`);
+                }
+                return factory;
+            });
+        }
+        return await moduleFactoryPromise;
+    },
+
     _prepareModuleOptions: (opts) => {
         opts = opts || {};
         opts.env = opts.env || {};
@@ -190,10 +461,14 @@ const RL = {
             moduleOptions.env.canvas = document.getElementById(canvasId);
         }
         if (!moduleOptions.env.print) {
-            moduleOptions.env.print = RL._makeOutputLogger(false);
+            moduleOptions.env.print = (...args) => {
+                console.log(...args);
+            };
         }
         if (!moduleOptions.env.printErr) {
-            moduleOptions.env.printErr = RL._makeOutputLogger(true);
+            moduleOptions.env.printErr = (...args) => {
+                console.error(...args);
+            };
         }
         return moduleOptions;
     },
@@ -217,7 +492,9 @@ const RL = {
             return moduleInstance;
         }
 
-        moduleInstance = await Module(moduleOptions.env);
+        const moduleFactory = await RL._loadModuleFactory(opts);
+        moduleInstance = await moduleFactory(moduleOptions.env);
+        RL._installScratchHelpers();
         RL._patchColorConstants();
         moduleInstance.initScratchArea();
         return moduleInstance;
@@ -502,8 +779,8 @@ const RL = {
     getAssetHost: () => {
         return moduleInstance.ccall('rl_get_asset_host', 'string', [], []);
     },
-    update: () => {
-        moduleInstance.ccall('rl_update_to_scratch', null, [], []);
+    refreshScratch: () => {
+        moduleInstance.ccall('rl_scratch_refresh', null, [], []);
     },
     getTime: () => {
         return moduleInstance.ccall('rl_get_time', 'number', [], []);
@@ -1409,10 +1686,13 @@ const RL = {
         "rl_sprite2d_destroy", null, ["number"], [sprite]
     ),
     loggerMessage: (level, message) => moduleInstance.ccall(
-        "rl_logger_message", null, ["number", "string"], [level, RL._escapeLoggerFormat(message)]
+        "rl_logger_message", null, ["number", "string"], [level, String(message ?? "").replaceAll("%", "%%")]
     ),
     loggerSetLevel: (level) => moduleInstance.ccall(
         "rl_logger_set_level", null, ["number"], [level]
     ),
 
-}
+};
+
+export const rl = RL;
+export default RL;

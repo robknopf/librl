@@ -149,7 +149,7 @@ void rl_scratch_set_gamepad_button(int id, int button, int state)
 
 // Return the struct pointer as an uintptr, otherwise emscripten tries to convert it to a BigInt
 RL_KEEP
-uintptr_t rl_scratch_get()
+uintptr_t rl_scratch_get_base()
 {
     return (uintptr_t)&rl_scratch;
 }
@@ -175,7 +175,7 @@ void rl_scratch_deinit()
 }
 
 RL_KEEP
-void rl_scratch_update()
+void rl_scratch_refresh()
 {
 #ifdef HEADLESS
     rl_scratch.mouse.x = 0;

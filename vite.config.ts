@@ -57,6 +57,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "/examples": path.resolve(__dirname, "examples"),
+      "/bindings": path.resolve(__dirname, "bindings"),
       "/lib": path.resolve(__dirname, "lib"),
     },
   },
@@ -72,16 +73,17 @@ export default defineConfig({
     {
       name: "examples-mount",
       configureServer(server) {
-        const mountPrefix = "/examples/";
         const examplesRoot = path.resolve(__dirname, "examples");
+        const bindingsRoot = path.resolve(__dirname, "bindings");
         const libRoot = path.resolve(__dirname, "lib");
 
-        // Ensure files outside `root` that are imported via aliases (e.g. /lib/*)
-        // or the custom /examples/* mount are watched for HMR/full-reload updates.
+        // Ensure files outside `root` that are imported via aliases or custom mounts
+        // are watched for HMR/full-reload updates.
         server.watcher.add(path.join(examplesRoot, "**/*"));
+        server.watcher.add(path.join(bindingsRoot, "**/*"));
         server.watcher.add(path.join(libRoot, "**/*"));
 
-        server.middlewares.use((req, _res, next) => {
+        const mountExternalDir = (mountPrefix: string, dirRoot: string) => (req, _res, next) => {
           const reqUrl = req.url || "";
           const [cleanUrl, query = ""] = reqUrl.split("?");
           if (!cleanUrl.startsWith(mountPrefix)) {
@@ -92,13 +94,13 @@ export default defineConfig({
           const relativePath = decodeURIComponent(
             cleanUrl.slice(mountPrefix.length),
           );
-          const fullPath = path.resolve(examplesRoot, relativePath);
+          const fullPath = path.resolve(dirRoot, relativePath);
 
-          // Prevent path traversal outside the examples directory.
+          // Prevent path traversal outside the mounted directory.
           if (
             !(
-              fullPath === examplesRoot ||
-              fullPath.startsWith(examplesRoot + path.sep)
+              fullPath === dirRoot ||
+              fullPath.startsWith(dirRoot + path.sep)
             )
           ) {
             return;
@@ -106,7 +108,10 @@ export default defineConfig({
 
           req.url = `/@fs/${fullPath.replace(/\\/g, "/")}${query ? `?${query}` : ""}`;
           next();
-        });
+        };
+
+        server.middlewares.use(mountExternalDir("/examples/", examplesRoot));
+        server.middlewares.use(mountExternalDir("/bindings/", bindingsRoot));
       },
     },
   ],

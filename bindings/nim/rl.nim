@@ -441,7 +441,7 @@ proc rl_event_off*(eventName: cstring, listener: RLEventListenerFn, userData: po
 proc rl_event_off_all*(eventName: cstring): cint {.importc, cdecl, header: "rl_event.h".}
 proc rl_event_emit*(eventName: cstring, payload: pointer): cint {.importc, cdecl, header: "rl_event.h".}
 proc rl_event_listener_count*(eventName: cstring): cint {.importc, cdecl, header: "rl_event.h".}
-proc rl_update*() {.importc, cdecl, header: "rl.h".}
+proc rl_scratch_refresh*() {.importc, cdecl, header: "rl.h".}
 proc rl_tick*(): cint {.importc, cdecl, header: "rl.h".}
 proc rl_get_time_raw*(): cdouble {.importc: "rl_get_time", cdecl, header: "rl.h".}
 proc rl_get_delta_time_raw*(): cfloat {.importc: "rl_get_delta_time", cdecl, header: "rl.h".}

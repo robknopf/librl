@@ -53,12 +53,17 @@ class SimpleRuntime implements IRuntime {
 		var rc = @await RL.boot({
 			canvasId: "renderCanvas",
 
-			// site path relative the js module, relative to this module
-			// modulePath: "../../../../lib/librl.js"
+			// site path to the js binding module, relative to this module
+			// bindingsPath: "../../../../bindings/js/rl.js"
 
-			// absolute path to the js module (served from site root).
+			// absolute path to the js binding module (served from site root).
 			// Note that this is the default fallback.  See wRLImpl.js.hx::boot()
-			modulePath: "/lib/librl.js"
+			bindingsPath: "/bindings/js/rl.js",
+
+			// optional override for the raw emscripten runtime module that the
+			// js binding boots internally. Defaults to ../../lib/librl.js relative
+			// to bindings/js/rl.js.
+			// modulePath: "/lib/librl.js"
 		});
 		if (rc != 0) {
 			Log.error("RL.boot failed: " + rc);
@@ -84,7 +89,6 @@ class SimpleRuntime implements IRuntime {
 
 	@async public function onInit():Int {
 		// trace("onInit");
-		Log.warn("here");
 		ctx = {
 			elapsed: 0.0,
 			countdownTimer: 30.0,
@@ -406,7 +410,7 @@ class Main {
 	@:exportc
 	static function rt_tick(dt:Float):Int {
 		try {
-			RL.update();
+			RL.scratchRefresh();
 			var rc = RL.tick();
 			if (rc == RL.TICK_FAILED) {
 				Log.error("Main: RL.tick failed with error: " + rc);

@@ -229,15 +229,9 @@ class RL {
 
   }
 
-  public static function update(): Void {
+  public static function scratchRefresh(): Void {
 
-    rl.impl.RLImpl.update();
-
-  }
-
-  public static function updateToScratch(): Void {
-
-    rl.impl.RLImpl.updateToScratch();
+    rl.impl.RLImpl.scratchRefresh();
 
   }
 

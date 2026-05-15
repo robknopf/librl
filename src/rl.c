@@ -235,15 +235,6 @@ const char *rl_get_asset_host(void) {
 }
 
 RL_KEEP
-void rl_update_to_scratch() {
-    rl_scratch_update();
-}
-
-void rl_update(void) {
-    // Intentionally a no-op for API parity on non-wasm hosts.
-}
-
-RL_KEEP
 rl_tick_result_t rl_tick(void) {
     if (!initialized) {
         return RL_TICK_FAILED;

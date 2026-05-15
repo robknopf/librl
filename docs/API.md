@@ -642,23 +642,22 @@ Main responsibilities:
 - Shared memory struct for high-frequency data exchange with host runtimes:
   - vectors, matrices, quaternions, colors, rectangles
   - mouse/keyboard/gamepad/touch state
-- Direct pointer access (`rl_scratch_get`)
+- Direct pointer access (`rl_scratch_get_base`)
 - Layout metadata (`rl_scratch_get_offsets`) for JS/wasm interop
-- Set/get helpers and update/clear functions
+- Set/get helpers and refresh/clear functions
 
 Wasm/JS boundary conventions:
 
 - Scratch bridge entrypoints follow explicit naming:
-  - `*_to_scratch`: write computed data into scratch (for JS to read through `rl_scratch.js`).
+  - `*_to_scratch`: write computed data into scratch (for JS to read through the JS binding layer).
   - `*_from_scratch`: read host-provided scratch data (where applicable).
 - JS bindings keep scratch abstracted:
   - `bindings/js/rl.js` exposes high-level methods.
-  - Scratch-backed methods are grouped and implemented through bridge calls + `rl_scratch.js` reads.
-- `rl_update()` exists for cross-platform API parity and is currently a no-op.
-- Wasm scratch refresh is explicit via `rl_update_to_scratch()`.
+  - Scratch-backed methods are grouped and implemented through bridge calls + reads in `bindings/js/rl.js`.
+- Scratch refresh is explicit via `rl_scratch_refresh()`.
 - Most vec-return helpers used by JS follow this bridge pattern:
   - C computes native value return (`vec2_t`, etc.)
   - wasm bridge writes to scratch (`*_to_scratch`)
-  - JS wrapper reads from `rl_scratch.js`
+  - JS wrapper reads from `bindings/js/rl.js`
 
 ---

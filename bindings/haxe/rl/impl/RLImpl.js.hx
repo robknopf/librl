@@ -16,7 +16,7 @@ import rl.RLTypes.RLVec2;
  * Minimal JS-target backend for the target-neutral `rl.RL` facade.
  *
  * This backend boots through the standalone JS binding layer exported from
- * `librl.js`, then reuses the wrapper's scratch-backed helpers for APIs that
+ * `bindings/js/rl.js`, then reuses the wrapper's scratch-backed helpers for APIs that
  * return structs to JS.
  */
 @:build(hxasync.AsyncMacro.build())
@@ -94,13 +94,13 @@ class RLImpl {
 			return Promise.resolve(INIT_ERR_UNKNOWN);
 		}
 
-		var modulePath = optionString(options, "modulePath", "/lib/librl.js");
+		var bindingsPath = optionString(options, "bindingsPath", "/bindings/js/rl.js");
 
 		bootPromise = cast js.Syntax.code("(async () => {
         try {
           const lib = await import( /* @vite-ignore */ {0});
           const rl = lib.rl;
-          if (!rl || typeof rl.boot !== 'function') throw new Error('librl.js missing named rl export');
+          if (!rl || typeof rl.boot !== 'function') throw new Error('bindings/js/rl.js missing named rl export');
           {1} = rl;
           const rc = await rl.boot({2});
           return rc | 0;
@@ -110,7 +110,7 @@ class RLImpl {
           {3} = null;
           return {4};
         }
-      })()", modulePath, binding, options, bootPromise, INIT_ERR_UNKNOWN);
+      })()", bindingsPath, binding, options, bootPromise, INIT_ERR_UNKNOWN);
 		var rc:Int = cast js.Syntax.code("await {0}", bootPromise);
 		if (rc == INIT_OK && binding != null) {
 			setColorConstants();
@@ -199,14 +199,9 @@ class RLImpl {
 		return cast binding.getPlatform();
 	}
 
-	public static function update():Void {
+	public static function scratchRefresh():Void {
 		if (binding != null)
-			binding.update();
-	}
-
-	public static function updateToScratch():Void {
-		if (binding != null)
-			binding.update();
+			binding.refreshScratch();
 	}
 
 	public static function tick():Int {

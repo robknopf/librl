@@ -151,7 +151,7 @@ void rl_scratch_set_gamepad_button(int id, int button, int state);
 void rl_scratch_set_touchpoint(int index, int x, int y, int id);
 
 // Return the Pointer as an Integer, otherwise emscripten tries to convert it to a BigInt
-uintptr_t rl_scratch_get();
+uintptr_t rl_scratch_get_base();
 
 vec2_t rl_scratch_get_vector2();
 vec3_t rl_scratch_get_vector3();
@@ -168,7 +168,7 @@ rl_touchpoints_t rl_scratch_get_touchpoints();
 rl_touchpoint_t rl_scratch_get_touchpoint(int id);
 
 void rl_scratch_clear();
-void rl_scratch_update();
+void rl_scratch_refresh();
 
 const rl_scratch_offsets_t *rl_scratch_get_offsets(void);
 

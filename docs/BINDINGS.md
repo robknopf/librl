@@ -32,16 +32,15 @@ Native bindings do not define frame command structs — they are an implementati
 Files:
 
 - `bindings/js/rl.js`
-- `bindings/js/rl_scratch.js`
-- `bindings/js/rl_module_export.js`
 
 Role:
 
-- Wraps the Emscripten `Module` and exposes a higher-level `RL` object.
+- `lib/librl.js` + `lib/librl.wasm` are the raw Emscripten runtime artifacts.
+- `bindings/js/rl.js` is the standalone JS binding wrapper that imports `lib/librl.js` and exposes the higher-level `RL` object.
 - Calls C exports via `ccall`.
 - Initializes and reads the scratch area bridge for vectors/input state.
-- Provides browser-oriented runtime setup helpers (`canvas`, output wiring, resize handling).
-- Exposes a single per-frame update entrypoint (`RL.update()`) that maps to `rl_update_to_scratch()` for wasm input snapshot refresh.
+- Provides browser-oriented runtime setup helpers (`canvas`, resize handling, module boot/init flow).
+- Exposes explicit scratch refresh helpers for wasm input snapshot refresh (`refreshScratch()` in JS, `scratchRefresh()` in Haxe, `scratch_refresh` in Lua).
 
 Scratch design goals:
 
@@ -50,7 +49,7 @@ Scratch design goals:
   - `*_from_scratch`: C reads host-provided data from scratch memory (used where needed).
 - Keep JS-facing APIs abstracted from scratch internals:
   - JS wrappers expose normal methods (`getWindowPosition()`, `measureTextEx()`, etc.).
-  - Internally, wrappers may call a `*_to_scratch` bridge and then read via `rl_scratch.js`.
+  - Internally, wrappers may call a `*_to_scratch` bridge and then read via `bindings/js/rl.js`.
 - Reduce boundary overhead:
   - For vec/struct-like return values, one wasm call + one scratch read is preferred over many scalar calls.
 
@@ -77,7 +76,8 @@ Notes:
     - `getPickStats()`
 - JS `boot(opts)` instantiates the Emscripten module and prepares the scratch/color helpers without calling `rl_init(...)`.
   - This is useful when callers need the loader-only/bootstrap path first, for example `boot() -> loaderInit() -> init()`.
-  - `boot(...)` is the canonical place for module/browser options such as `env`, `canvasId`, `wasmPath`, and presentation hints like `idealWidth` / `idealHeight`.
+  - `boot(...)` is the canonical place for module/browser options such as `env`, `canvasId`, `modulePath`, `wasmPath`, and presentation hints like `idealWidth` / `idealHeight`.
+  - `modulePath` selects the raw Emscripten JS runtime module (`lib/librl.js` by default, resolved relative to `bindings/js/rl.js`).
   - `init(...)` and `initAsync(...)` reuse the booted module instance when one already exists.
 - JS `init(opts)` calls the default synchronous `rl_init()` with a wasm `rl_init_config_t` built from:
   - `windowWidth`, `windowHeight`, `windowTitle`, `windowFlags`, `assetHost`, `loaderCacheDir`
@@ -192,7 +192,7 @@ Files:
 
 - `bindings/haxe/rl/RL.hx` — public `rl.RL` module used by authored Haxe code.
 - `bindings/haxe/rl/impl/RLImpl.cpp.hx` — current hxcpp backend implementation. Contains all `@:native`, `untyped __cpp__`, `@:functionCode`, and bridge classes.
-- `bindings/haxe/rl/impl/RLImpl.js.hx` — Haxe `js` backend. It is a thin adapter over the standalone JS binding exported from `librl.js`.
+- `bindings/haxe/rl/impl/RLImpl.js.hx` — Haxe `js` backend. It is a thin adapter over the standalone JS binding exported from `bindings/js/rl.js`.
 - `bindings/haxe/rl/impl/RLImpl.hx` — unsupported fallback that fails compilation for targets without a backend.
 - `bindings/haxe/rl/RLHandle.hx` — shared integer handle type.
 - `bindings/haxe/rl/impl/RLLoaderImpl.cpp.hx` — current hxcpp-only loader impl (`RLLoader` class).
@@ -221,14 +221,15 @@ Current state:
   - `RLImpl.hx` for unsupported targets, which fails at compile time
 - `RL.boot(?options)` is the backend bootstrap hook:
   - On hxcpp/cppia it returns `Int` and currently succeeds immediately.
-  - On Haxe JS it returns `js.lib.Promise<Int>` so the JS backend can import the JS binding layer and instantiate `librl.js` / `librl.wasm` before normal `RL.init(...)` calls.
-  - The current Haxe JS backend expects the generated `librl.js` JSPI build. If `WebAssembly.Suspending` / `WebAssembly.promising` are unavailable, `RL.boot()` returns an error code and leaves the backend unbooted.
+  - On Haxe JS it returns `js.lib.Promise<Int>` so the JS backend can import `bindings/js/rl.js`, which then instantiates `lib/librl.js` / `lib/librl.wasm` before normal `RL.init(...)` calls.
+  - The current Haxe JS backend expects the generated raw `lib/librl.js` JSPI build plus the standalone wrapper in `bindings/js/rl.js`. If `WebAssembly.Suspending` / `WebAssembly.promising` are unavailable, `RL.boot()` returns an error code and leaves the backend unbooted.
+  - Haxe JS uses `bindingsPath` to locate `bindings/js/rl.js`; once loaded, the JS binding itself uses `modulePath` and `wasmPath` to locate the raw Emscripten artifacts.
 - Haxe JS returns Promises for blocking JSPI-backed calls:
   - `RL.init(...)`, `RL.initValues(...)`, `RL.deinit()`
   - `RL.loaderInit(...)`, `RL.loaderDeinit()`, `RL.loaderImportAsset(...)`
   - The `*Async` task-starting APIs keep their C semantics: they return immediate status/task handles and are polled/finished through the loader task API.
 - The Haxe JS backend now reuses `bindings/js/*` exclusively. `RLImpl.js.hx` no longer calls the wasm exports directly; all browser-side behavior flows through the JS binding layer.
-- On Haxe JS, `RL.update()` forwards to the JS binding's scratch refresh path. Call it in the tick/frame loop before reading scratch-backed state such as mouse or keyboard snapshots.
+- On Haxe JS, `RL.scratchRefresh()` forwards to the JS binding's scratch refresh path. Call it in the tick/frame loop before reading scratch-backed state such as mouse or keyboard snapshots.
 - `RLImpl.cpp.hx` keeps the raw C extern table private as `RLExterns`; authored code never imports it directly.
 - There is no generic runtime fallback. New targets must add an explicit backend such as `RLImpl.lua.hx`.
 - `examples/haxe-js-simple` is the current compile/run smoke test for the Haxe `js` backend. It exercises `RL.boot()` and loader init/deinit; in runtimes without JSPI support, boot returns an error code without instantiating wasm.

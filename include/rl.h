@@ -70,8 +70,6 @@ void rl_disable_lighting();
 int rl_is_lighting_enabled();
 void rl_set_light_direction(float x, float y, float z);
 void rl_set_light_ambient(float ambient);
-void rl_update_to_scratch(void);
-void rl_update(void);
 rl_tick_result_t rl_tick(void);
 void rl_set_target_fps(int fps);
 float rl_get_delta_time(void);

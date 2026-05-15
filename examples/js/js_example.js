@@ -1,4 +1,4 @@
-import { rl } from "../../lib/librl.js";
+import { rl } from "../../bindings/js/rl.js";
 
 (async function () {
   try {
@@ -111,7 +111,7 @@ import { rl } from "../../lib/librl.js";
         return;
       }
 
-      rl.update();
+      rl.refreshScratch();
       rl.updateAllMusic();
       const message = "Hello World!";
       const mouse = rl.getMouseState();

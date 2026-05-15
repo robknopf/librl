@@ -80,11 +80,8 @@ private extern class RLExterns {
     return untyped __cpp__("::String(::rl_get_platform())");
   }
 
-  @:native("rl_update")
-  static function update(): Void;
-
-  @:native("rl_update_to_scratch")
-  static function updateToScratch(): Void;
+  @:native("rl_scratch_refresh")
+  static function scratchRefresh(): Void;
 
   @:native("rl_tick")
   static function tick(): Int;
@@ -725,8 +722,7 @@ abstract RLImpl(RLExterns) {
   // --- Forwarded methods ---
   public static function boot(?options: Dynamic): Int { return INIT_OK; }
   public static function deinit(): Void { RLExterns.deinit(); }
-  public static function update(): Void { RLExterns.update(); }
-  public static function updateToScratch(): Void { RLExterns.updateToScratch(); }
+  public static function scratchRefresh(): Void { RLExterns.scratchRefresh(); }
   public static function tick(): Int { return RLExterns.tick(); }
   public static function getDeltaTime(): Float { return RLExterns.getDeltaTime(); }
   public static function getTime(): Float { return RLExterns.getTime(); }

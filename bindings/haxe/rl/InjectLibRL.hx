@@ -91,4 +91,3 @@ package rl;
 @:keep
 class InjectLibRL {}
 
-@:emscripten

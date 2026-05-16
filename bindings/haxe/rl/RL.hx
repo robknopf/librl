@@ -32,7 +32,6 @@ import rl.RLTaskGroup.RLTaskGroupCallback;
 	typedef RLVoidResult = Void;
 	#end
  */
-@:build(hxasync.AsyncMacro.build())
 class RL {
 	public static var INIT_OK(get, never):Int;
 

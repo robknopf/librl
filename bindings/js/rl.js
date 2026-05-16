@@ -790,7 +790,7 @@ const RL = {
     getTime: () => {
         return moduleInstance.ccall('rl_get_time', 'number', [], []);
     },
-    deinit: () => {
+    deinit: async () => {
         RL._eventListenersById.clear();
         RL._eventListenerIdsByCallback = new WeakMap();
         RL._clearRunCallbacks();
@@ -818,7 +818,7 @@ const RL = {
     loaderInitAsync: (mountPoint = "") => {
         return moduleInstance.ccall('rl_loader_init_async', 'number', ['string'], [mountPoint || ""]);
     },
-    loaderDeinit: () => {
+    loaderDeinit: async () => {
         moduleInstance.ccall('rl_loader_deinit', null, [], [], { async: true });
     },
     loaderIsInitialized: () => {
@@ -947,7 +947,10 @@ const RL = {
         }
     },
   
-
+    taskIsValid: (task) => {
+        //return moduleInstance.ccall('rl_loader_task_is_valid', 'number', ['number'], [task]) !== 0;
+        return task !== 0;
+    },
 
     freeTask: (task) => {
         return moduleInstance.ccall('rl_loader_free_task', null, ['number'], [task]);

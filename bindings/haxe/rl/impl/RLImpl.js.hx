@@ -19,7 +19,6 @@ import rl.RLTypes.RLVec2;
  * `bindings/js/rl.js`, then reuses the wrapper's scratch-backed helpers for APIs that
  * return structs to JS.
  */
-@:build(hxasync.AsyncMacro.build())
 class RLImpl {
 	static var binding:Dynamic = null;
 	static var bootPromise:Promise<Int> = null;

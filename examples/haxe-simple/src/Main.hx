@@ -169,7 +169,7 @@ class SimpleRuntime implements IRuntime {
 		var elapsedText = 'Elapsed: ${formatFixed(ctx.totalTime, 2)}';
 
 		// var pickResult = RL.pickSprite3d(ctx.camera, ctx.sprite, mouse.x, mouse.y);
-		msg = "Nothing picked";
+		msg = "Nothing picked!";
 
 		var pickResult:RLPickResult;
 

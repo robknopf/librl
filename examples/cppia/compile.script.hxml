@@ -1,0 +1,9 @@
+#-cp .
+#-cp /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe
+#-D dll_import=../../../../export_classes.info
+
+# usage:  haxe compile.script.hxml <script class>
+# example: haxe compile.script.hxml MainScript
+
+--run tools.CompileScript
+

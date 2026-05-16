@@ -6,8 +6,7 @@ NIM ?= nim
 	c-simple c-simple-desktop c-simple-wasm \
 	c-lua c-lua-desktop c-lua-wasm \
 	remote remote-desktop remote-wasm \
-	haxe haxe-desktop haxe-wasm \
-	haxe-js-simple \
+	haxe haxe-js-simple haxe-wasm-simple haxe-desktop \
 	nim nim-desktop nim-wasm \
 	cppia cppia-desktop cppia-script \
 	lua
@@ -16,7 +15,7 @@ all: desktop wasm
 
 desktop: c-simple-desktop c-lua-desktop remote-desktop haxe-desktop nim-desktop cppia-desktop lua
 
-wasm: c-simple-wasm c-lua-wasm remote-wasm haxe-wasm nim-wasm
+wasm: c-simple-wasm c-lua-wasm remote-wasm haxe-wasm-simple nim-wasm
 
 c-simple: c-simple-desktop c-simple-wasm
 c-simple-desktop:
@@ -36,13 +35,14 @@ remote-desktop:
 remote-wasm:
 	$(MAKE) -C remote wasm
 
-haxe: haxe-desktop haxe-wasm
+haxe: haxe-js-simple haxe-wasm-simple #haxe-desktop haxe-wasm
 haxe-desktop:
-	cd haxe && $(HAXE) build.desktop.hxml
-haxe-wasm:
-	cd haxe && $(HAXE) build.wasm.hxml
+#	cd haxe && $(HAXE) build.desktop.hxml
+	echo "haxe-desktop is not supported yet"
+haxe-wasm-simple:
+	cd haxe-simple && $(HAXE) build.wasm.hxml
 haxe-js-simple:
-	cd haxe-js-simple && $(HAXE) build.hxml
+	cd haxe-simple && $(HAXE) build.js.hxml
 
 nim: nim-desktop nim-wasm
 nim-desktop:

@@ -1,0 +1,20 @@
+{
+    "name": "librl-remote-server",
+    "version": "0.1.0",
+    "type": "module",
+    "scripts": {
+      "dev": "bun run --parallel server",
+      "probe:ws": "curl -sS -i --max-time 3 -H 'Connection: Upgrade' -H 'Upgrade: websocket' -H 'Sec-WebSocket-Version: 13' -H 'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==' http://127.0.0.1:9001/ws | head -20",
+      "server":"bun run --watch src/server.ts",
+      "start": "bun run src/server.ts",
+      "typecheck": "tsc --noEmit",
+      "typecheck:watch": "tsc --noEmit --watch"
+    },
+    "dependencies": {
+      "@types/bun": "latest"
+    },
+    "devDependencies": {
+      "typescript": "^5.9.3"
+    }
+  }
+  

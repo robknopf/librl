@@ -34,18 +34,21 @@ import { rl } from "../../bindings/js/rl.js";
     let bgm = 0;
     let gumshoe = 0;
     let sprite = 0;
-    const camera = rl.createCamera3D(
+    const camera = rl.createCamera3d(
       12.0, 12.0, 12.0,
       0.0, 1.0, 0.0,
       0.0, 1.0, 0.0,
       45.0, rl.CAMERA_PERSPECTIVE
     );
 
-    rl.setActiveCamera3D(camera);
+    rl.setActiveCamera3d(camera);
 
     rl.enableLighting();
     rl.setLightDirection(-0.6, -1.0, -0.5);
     rl.setLightAmbient(0.25);
+
+    // using a task group to load assets asynchronously
+    /*
     let loadingGroup = rl.createTaskGroup(
       () => {
         loadingGroup = null;
@@ -64,7 +67,7 @@ import { rl } from "../../bindings/js/rl.js";
       rl.modelSetAnimationLoop(gumshoe, true);
     });
     loadingGroup.addImportTask(spritePath, (path) => {
-      sprite = rl.createSprite3D(path);
+      sprite = rl.createSprite3d(path);
     });
     loadingGroup.addImportTask(fontPath, (path) => {
       komika = rl.createFont(path, fontSize);
@@ -75,30 +78,70 @@ import { rl } from "../../bindings/js/rl.js";
       rl.setMusicLoop(bgm, true);
       rl.playMusic(bgm);
     });
+    */
 
-    let countdownTimer = 5.0;
+    // helper to import assets tasks
+    const importAssetTask = (path, onSuccess, onError) => {
+      const task = rl.importAssetAsync(path);
+      if (rl.taskIsValid(task)) {
+        rl.addTask(task, onSuccess, onError);
+      } else {
+        onError?.call(null, `invalid task: ${path}`);
+      }
+    };
+
+    importAssetTask(modelPath, (path) => {
+      gumshoe = rl.createModel(path);
+      rl.modelSetAnimation(gumshoe, 1);
+      rl.modelSetAnimationSpeed(gumshoe, 1.0);
+      rl.modelSetAnimationLoop(gumshoe, true);
+    }, (path, error) => {
+      console.error(`asset import failed: ${path}: ${error}`);
+    });
+    importAssetTask(spritePath, (path) => {
+      sprite = rl.createSprite3d(path);
+    }, (path, error) => {
+      console.error(`asset import failed: ${path}: ${error}`);
+    });
+    importAssetTask(fontPath, (path) => {
+      komika = rl.createFont(path, fontSize);
+      komikaSmall = rl.createFont(path, smallFontSize);
+    }, (path, error) => {
+      console.error(`asset import failed: ${path}: ${error}`);
+    });
+    importAssetTask(bgmPath, (path) => {
+      bgm = rl.createMusic(path);
+      rl.setMusicLoop(bgm, true);
+      rl.playMusic(bgm);
+    }, (path, error) => {
+      console.error(`asset import failed: ${path}: ${error}`);
+    });
+
+    let countdownTimer = 10.0;
     let totalTime = 0.0;
     let lastTime = rl.getTime();
     let animationFrameId = 0;
-    let cleanedUp = false;
-    const cleanup = () => {
-      if (cleanedUp) return;
-      cleanedUp = true;
+
+    let shutdownFn = async () => {
       if (animationFrameId) {
         window.cancelAnimationFrame(animationFrameId);
+        animationFrameId = 0;
       }
-      rl.disableLighting();
+      //rl.disableLighting();
       // Resources are automatically destroyed with rl.deinit()
       //  rl.destroyModel(gumshoe);
-      //  rl.destroySprite3D(sprite);
+      //  rl.destroySprite3d(sprite);
       //  rl.destroyFont(komika);
       //    rl.destroyFont(komikaSmall);
       //  rl.destroyColor(greyAlphaColor);
       //  rl.destroyMusic(bgm);
-      rl.deinit();
+      if (shutdownFn) {
+        await rl.deinit();
+        shutdownFn = null;
+      }
     };
 
-    window.addEventListener("beforeunload", cleanup);
+    window.addEventListener("beforeunload", shutdownFn);
 
     const mainLoop = () => {
       const currentTime = rl.getTime();
@@ -107,31 +150,36 @@ import { rl } from "../../bindings/js/rl.js";
       totalTime += deltaTime;
       countdownTimer -= deltaTime;
       if (countdownTimer <= 0) {
-        cleanup();
+        shutdownFn?.call().then(() => {
+          animationFrameId = 0;
+        });
         return;
       }
 
+      rl.tick();
+      // tell RL to write the current state to the scratch area
       rl.refreshScratch();
+
       rl.updateAllMusic();
       const message = "Hello World!";
       const mouse = rl.getMouseState();
       rl.beginDrawing();
       rl.clearBackground(rl.COLOR_RAYWHITE);
-      rl.beginMode3D();
-      if (loadingGroup && loadingGroup.process() > 0) {
-        rl.endMode3D();
-        rl.endDrawing();
-        animationFrameId = window.requestAnimationFrame(mainLoop);
-        return;
-      }
+      rl.beginMode3d();
+     // if (loadingGroup && loadingGroup.process() > 0) {
+     //   rl.endMode3d();
+     //   rl.endDrawing();
+     //   animationFrameId = window.requestAnimationFrame(mainLoop);
+     //   return;
+     // }
       if (gumshoe) {
         rl.modelAnimate(gumshoe, deltaTime);
         rl.drawModel(gumshoe, rl.COLOR_WHITE);
       }
       if (sprite) {
-        rl.drawSprite3D(sprite, rl.COLOR_WHITE);
+        rl.drawSprite3d(sprite, rl.COLOR_WHITE);
       }
-      rl.endMode3D();
+      rl.endMode3d();
 
       const w = rl.getScreenWidth();
       const h = rl.getScreenHeight();

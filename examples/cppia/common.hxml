@@ -4,12 +4,26 @@
 
 -D scriptable
 
+-lib hxasync
+
+
 # Set the LIBRL_ROOT environment variable to the path to the librl root directory
 # Note that this is a relative path to the output directory.
 -D LIBRL_ROOT=../../../..
-
+-D WGUTILS_ROOT=../../../../deps/wgutils
 #-D analyzer-optimize
 #-D no-traces
 #--dce full
 
---main Main
+--macro macros.RuntimeCAbiMacro.registerGlobal()
+# ensure that rl.RL is available to scripts, in case the host didn't import them
+--macro include('rl', true)
+
+# dce will strip unused code from the host, making scripts unable to use them
+# keep will ensure that dce doesn't strip them
+# see https://api.haxe.org/haxe/macro/Compiler.html#include
+
+--macro keep('StringTools')
+--macro keep('rl')
+
+--main ScriptableMain

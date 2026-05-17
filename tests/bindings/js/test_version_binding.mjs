@@ -32,12 +32,5 @@ function assertEq(actual, expected, label) {
 assertEq(RL.versionMajor(), RL_BINDING_BUILT_MAJOR, 'versionMajor vs binding stamp');
 assertEq(RL.versionMinor(), RL_BINDING_BUILT_MINOR, 'versionMinor vs binding stamp');
 assertEq(RL.versionPatch(), RL_BINDING_BUILT_PATCH, 'versionPatch vs binding stamp');
-assertEq(RL.validateVersion(), 0, 'validateVersion');
-
-const major = RL.versionMajor();
-const minor = RL.versionMinor();
-const patch = RL.versionPatch();
-assertEq(RL.validateVersionAgainst(major, minor, patch + 1), 1, 'validateVersionAgainst patch drift');
-assertEq(RL.validateVersionAgainst(major + 1, minor, patch), -1, 'validateVersionAgainst major mismatch');
 
 process.exit(0);

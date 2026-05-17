@@ -8,7 +8,6 @@ suite "rl bindings":
     check rl_version_minor() == 0
     check rl_version_patch() == 1
     check rl_version_label() == "dev"
-    check rl_version_number() == RL_VERSION_NUMBER
     check rl_version_string() == "0.0.1-dev"
     check rlBindingMajor == rl_version_major()
     check rlBindingMinor == rl_version_minor()

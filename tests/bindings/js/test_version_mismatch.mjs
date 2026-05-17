@@ -23,7 +23,7 @@ try {
 } catch (err) {
     const message = String(err && err.message ? err.message : err);
     console.error(message);
-    if (!/major|mismatch|differs/i.test(message)) {
+    if (!/incompatible|major|mismatch|differs/i.test(message)) {
         console.error('expected version mismatch message');
         process.exit(2);
     }

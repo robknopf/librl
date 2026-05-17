@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-# Patch binding stamp to 9.8.7 and expect rl.boot() to fail on major mismatch.
+# Tests _compareVersion() return codes via boot():
+#   -1 (major mismatch)  → boot() throws
+#   -2 (minor mismatch)  → boot() throws
+#    1 (patch drift)     → boot() succeeds (valid, noted)
 set -euo pipefail
 
 ROOT="${1:-$(cd "$(dirname "$0")/../../.." && pwd)}"
@@ -26,39 +29,69 @@ restore() {
   cp "${backup}" "${GEN}"
 }
 trap restore EXIT
-
 cp "${GEN}" "${backup}"
 
-cat >"${GEN}" <<'EOF'
+write_gen() {
+  local major="$1" minor="$2" patch="$3"
+  cat >"${GEN}" <<EOF
 /* GENERATED — DO NOT EDIT (test override) */
-export const RL_BINDING_BUILT_MAJOR = 9;
-export const RL_BINDING_BUILT_MINOR = 8;
-export const RL_BINDING_BUILT_PATCH = 7;
-export const RL_BINDING_BUILT_VERSION_STRING = "9.8.7";
+export const RL_BINDING_BUILT_MAJOR = ${major};
+export const RL_BINDING_BUILT_MINOR = ${minor};
+export const RL_BINDING_BUILT_PATCH = ${patch};
+export const RL_BINDING_BUILT_VERSION_STRING = "${major}.${minor}.${patch}";
 EOF
+}
 
-set +e
-err_file="$(mktemp)"
-"${NODE}" "${SCRIPT_DIR}/test_version_mismatch.mjs" 2>"${err_file}"
-rc=$?
-set -e
+expect_throw() {
+  local label="$1"
+  local err_file
+  err_file="$(mktemp)"
+  set +e
+  "${NODE}" "${SCRIPT_DIR}/test_version_mismatch.mjs" 2>"${err_file}"
+  rc=$?
+  set -e
 
-# test_version_mismatch.mjs exits 1 on expected failure, 0 if boot succeeded, 2 if wrong message
-if [ "${rc}" -eq 0 ]; then
-  echo "test_version_mismatch: expected rl.boot() to fail" >&2
-  cat "${err_file}" >&2
-  exit 1
-fi
+  if [ "${rc}" -eq 0 ]; then
+    echo "FAIL ${label}: expected boot() to throw" >&2
+    cat "${err_file}" >&2
+    exit 1
+  fi
+  if [ "${rc}" -eq 2 ]; then
+    echo "FAIL ${label}: wrong error message" >&2
+    cat "${err_file}" >&2
+    exit 1
+  fi
+  echo "OK: ${label} — boot() threw as expected"
+}
 
-if [ "${rc}" -eq 2 ]; then
-  cat "${err_file}" >&2
-  exit 1
-fi
+expect_success() {
+  local label="$1"
+  local librl_js="${ROOT}/lib/librl.js"
+  set +e
+  "${NODE}" --input-type=module 2>/dev/null <<EOJS
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+const { rl: RL } = await import('file://${ROOT}/bindings/js/rl.js?drift=' + Date.now());
+await RL.boot({ modulePath: '${librl_js}', env: { locateFile: p => path.join('${ROOT}/lib', p) } });
+process.exit(0);
+EOJS
+  rc=$?
+  set -e
+  if [ "${rc}" -ne 0 ]; then
+    echo "FAIL ${label}: expected boot() to succeed on patch drift" >&2
+    exit 1
+  fi
+  echo "OK: ${label} — boot() succeeded (patch drift is non-fatal)"
+}
 
-if ! grep -qi 'major' "${err_file}"; then
-  echo "test_version_mismatch: expected major mismatch message" >&2
-  cat "${err_file}" >&2
-  exit 1
-fi
+# -1: major mismatch → throws
+write_gen 9 0 1
+expect_throw "major mismatch (9.0.1 vs runtime)"
 
-echo "OK: rl.boot() failed on major version mismatch as expected"
+# -2: minor mismatch → throws
+write_gen 0 9 1
+expect_throw "minor mismatch (0.9.1 vs runtime)"
+
+# +1: patch drift → boot succeeds
+write_gen 0 0 9
+expect_success "patch drift (0.0.9 vs runtime)"

@@ -505,7 +505,10 @@ const RL = {
         const moduleFactory = await RL._loadModuleFactory(opts);
         moduleInstance = await moduleFactory(moduleOptions.env);
         if (RL._compareVersion() < 0) {
-            throw new Error("incompatible version");
+            throw new Error(
+                `librl version mismatch: runtime ${RL.versionMajor()}.${RL.versionMinor()}.${RL.versionPatch()}, ` +
+                `binding ${RL_BINDING_BUILT_MAJOR}.${RL_BINDING_BUILT_MINOR}.${RL_BINDING_BUILT_PATCH}`
+            );
         }
         
         RL._installScratchHelpers();

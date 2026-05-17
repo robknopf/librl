@@ -1,12 +1,15 @@
 # C Simple Example
 
 This example is a plain C runtime using the same host lifecycle as the other
-examples:
+examples. It mirrors the same "simple" scene used by `haxe-simple` and
+`nim-simple`: the same camera/light setup, the same asset set, the same
+animated sprite/model scene, and the same overlay/picking flow.
 
 - `rt_boot()` resets runtime state
-- `rt_init(host_context)` initializes `librl` and queues startup assets
-- `rt_tick(dt)` calls `rl_tick()`, advances loader work, draws a frame, and
-  returns `0` / stopped / failed
+- `rt_init(host_context)` initializes `librl`, queues the same startup assets as
+  the Haxe/Nim simple examples, and clears the initial frame
+- `rt_tick(dt)` calls `rl_tick()`, lets the shared loader queue complete asset
+  callbacks, draws a frame, and returns `0` / stopped / failed
 - `rt_shutdown()` releases resources and calls `rl_deinit()`
 
 Desktop uses `main.c` as a small host loop. Web uses

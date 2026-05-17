@@ -439,17 +439,10 @@ typedef struct {
     vec3_t  normal;   // local/object space
 } rl_pick_result_t;
 
-// Direct return variants
 rl_pick_result_t rl_pick_model(rl_handle_t camera, rl_handle_t model,
                                float mouse_x, float mouse_y);
 rl_pick_result_t rl_pick_sprite3d(rl_handle_t camera, rl_handle_t sprite3d,
                                   float mouse_x, float mouse_y);
-
-// Scratch-write variants (for wasm/JS interop)
-bool rl_pick_model_to_scratch(rl_handle_t camera, rl_handle_t model,
-                              float mouse_x, float mouse_y);
-bool rl_pick_sprite3d_to_scratch(rl_handle_t camera, rl_handle_t sprite3d,
-                                 float mouse_x, float mouse_y);
 
 // Telemetry
 void rl_pick_reset_stats(void);
@@ -462,7 +455,7 @@ int  rl_pick_get_narrowphase_hits(void);
 Notes:
 - Picking reads the stored transform from the model/sprite instance; no explicit position arguments are needed.
 - Broad-phase culling runs before narrow-phase: AABB test for models, bounding-sphere test for sprite3d.
-- `rl_pick_model_to_scratch()` writes hit point into scratch `vector3` and `{normal.x, normal.y, normal.z, distance}` into scratch `vector4`.
+- `rl_pick_model_to_scratch` / `rl_pick_sprite3d_to_scratch` are internal wasm bridge functions used by the JS binding; consumers call `RL.pickModel()` / `RL.pickSprite3d()` which handle the scratch read transparently.
 
 ---
 
@@ -905,9 +898,9 @@ If you add a new exported entry point (e.g. a custom host boot function) that ca
 
 ### Exported Functions
 
-All public API functions are listed in `EXPORTED_FUNCTIONS` in the Makefile (prefixed with `_`). Functions that return structs like `vec2_t` are not directly exported; instead a `_to_scratch` bridge variant is exported that writes the result into the scratch area for JS to read (see Scratch Area below).
+All public API functions are listed in `EXPORTED_FUNCTIONS` in the Makefile (prefixed with `_`). Functions that return structs like `vec2_t` cannot cross the wasm boundary directly, so internal `_to_scratch` bridge variants are exported instead. These are implementation details of the JS binding — consumers never call them directly.
 
-`_to_scratch` bridge functions currently exported:
+`_to_scratch` bridge functions (internal, used by JS binding):
 - `_rl_window_get_screen_size_to_scratch`
 - `_rl_window_get_position_to_scratch`
 - `_rl_window_get_monitor_position_to_scratch`

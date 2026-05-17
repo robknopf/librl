@@ -190,15 +190,6 @@ local function on_tick(delta_time)
 end
 
 local function on_shutdown()
-  rl.disable_lighting()
-  if ctx.sprite    and ctx.sprite    ~= 0 then rl.sprite3d_destroy(ctx.sprite) end
-  if ctx.model     and ctx.model     ~= 0 then rl.model_destroy(ctx.model) end
-  if ctx.mono_font and ctx.mono_font ~= 0 then rl.font_destroy(ctx.mono_font) end
-  if ctx.small_font and ctx.small_font ~= 0 then rl.font_destroy(ctx.small_font) end
-  if ctx.bgm       and ctx.bgm       ~= 0 then rl.music_destroy(ctx.bgm) end
-  if ctx.grey_alpha_color and ctx.grey_alpha_color ~= 0 then rl.color_destroy(ctx.grey_alpha_color) end
-  if ctx.bg_color  and ctx.bg_color  ~= 0 then rl.color_destroy(ctx.bg_color) end
-  if ctx.camera    and ctx.camera    ~= 0 then rl.camera3d_destroy(ctx.camera) end
   rl.deinit()
 end
 

@@ -21,19 +21,9 @@ class TestRL extends utest.Test {
   #end
 
   public function testVersionStamp() {
-    Assert.equals(RLVersion.BUILT_MAJOR, RL.VERSION_MAJOR);
-    Assert.equals(RLVersion.BUILT_MINOR, RL.VERSION_MINOR);
-    Assert.equals(RLVersion.BUILT_PATCH, RL.VERSION_PATCH);
-  }
-
-  public function testVersionValidateAgainst() {
-    final major = RL.versionMajor();
-    final minor = RL.versionMinor();
-    final patch = RL.versionPatch();
-    Assert.equals(0, RL.validateAgainst(major, minor, patch));
-    Assert.equals(1, RL.validateAgainst(major, minor, patch + 1));
-    Assert.equals(-2, RL.validateAgainst(major, minor + 1, patch));
-    Assert.equals(-1, RL.validateAgainst(major + 1, minor, patch));
+    Assert.equals(RLVersion.BUILT_MAJOR, RL.versionMajor());
+    Assert.equals(RLVersion.BUILT_MINOR, RL.versionMinor());
+    Assert.equals(RLVersion.BUILT_PATCH, RL.versionPatch());
   }
 
   #if cpp

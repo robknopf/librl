@@ -377,33 +377,6 @@ int rt_tick(float host_dt) {
 
 void rt_shutdown(void) {
   app_context_t *ctx = &g_app_context;
-
-  rl_disable_lighting();
-  if (ctx->bgm != 0) {
-    rl_music_destroy(ctx->bgm);
-  }
-  if (ctx->sprite != 0) {
-    rl_sprite3d_destroy(ctx->sprite);
-  }
-  if (ctx->gumshoe != 0) {
-    rl_model_destroy(ctx->gumshoe);
-  }
-  if (ctx->debug_font != 0) {
-    rl_font_destroy(ctx->debug_font);
-  }
-  if (ctx->komika_font != 0) {
-    rl_font_destroy(ctx->komika_font);
-  }
-  if (ctx->grey_alpha_color != 0) {
-    rl_color_destroy(ctx->grey_alpha_color);
-  }
-  if (ctx->background_color != 0) {
-    rl_color_destroy(ctx->background_color);
-  }
-  if (ctx->camera != 0) {
-    rl_camera3d_destroy(ctx->camera);
-  }
-
   rl_deinit();
   memset(ctx, 0, sizeof(*ctx));
 }

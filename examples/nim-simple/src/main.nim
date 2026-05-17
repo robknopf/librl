@@ -271,23 +271,6 @@ proc onTick(hostDt: float): int =
   ResultOk
 
 proc onShutdown() {.rlAsync.} =
-  rl_disable_lighting()
-  if ctx.bgm != 0:
-    rl_music_destroy(ctx.bgm)
-  if ctx.sprite != 0:
-    rl_sprite3d_destroy(ctx.sprite)
-  if ctx.gumshoe != 0:
-    rl_model_destroy(ctx.gumshoe)
-  if ctx.debugFont != 0:
-    rl_font_destroy(ctx.debugFont)
-  if ctx.komikaFont != 0:
-    rl_font_destroy(ctx.komikaFont)
-  if ctx.greyAlphaColor != 0:
-    rl_color_destroy(ctx.greyAlphaColor)
-  if ctx.backgroundColor != 0:
-    rl_color_destroy(ctx.backgroundColor)
-  if ctx.camera != 0:
-    rl_camera3d_destroy(ctx.camera)
   rlAwaitVoid rl_deinit()
 
 include runtime

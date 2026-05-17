@@ -9,7 +9,7 @@ common.hxml
 --macro hxasync.AsyncMacro.makeAsyncable("")
 --macro macros.MakeESM.apply()
 
---times
+#--times
 
 #--next
 #--macro macros.SuppressViteImportWarning.apply("out/js/main-js-simple.js")

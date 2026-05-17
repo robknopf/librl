@@ -94,6 +94,9 @@ class MainScript extends Script {
 			return RT_FAILED;
 		}
 
+		// move the window to the other monitor
+  		RL.windowSetMonitor(1);
+
 		RL.loaderClearCache();
 
 		// clear the screen

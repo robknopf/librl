@@ -40,7 +40,7 @@ var gCtx: AppContext
 
 proc onInit(ctx: ptr AppContext): cint =
   var initCfg: RLInitConfig
-  zeroMem(addr initCfg, sizeof(initCfg).csize_t)
+  #zeroMem(addr initCfg, sizeof(initCfg).csize_t)
   initCfg.window_width = 1024
   initCfg.window_height = 1280
   initCfg.window_title = "Hello, World! (Nim)"
@@ -174,10 +174,10 @@ proc onShutdown(ctx: ptr AppContext) =
   if ctx.greyAlphaColor != 0: rl_color_destroy(ctx.greyAlphaColor)
   if ctx.camera != 0: rl_camera3d_destroy(ctx.camera)
   rl_deinit()
-  zeroMem(ctx, sizeof(AppContext).csize_t)
+  #zeroMem(ctx, sizeof(AppContext).csize_t)
 
 proc rt_boot*(): cint {.cdecl, exportc: "rt_boot", dynlib.} =
-  zeroMem(addr gCtx, sizeof(gCtx).csize_t)
+  #zeroMem(addr gCtx, sizeof(gCtx).csize_t)
   return ResultOk
 
 proc rt_init*(userData: pointer): cint {.cdecl, exportc: "rt_init", dynlib.} =
@@ -215,4 +215,4 @@ when isMainModule and not defined(emscripten):
     if rc != ResultOk:
       rt_shutdown()
       quit(rc)
-    sleep(1)
+    #sleep(1)

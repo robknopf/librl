@@ -1,4 +1,4 @@
-import std/os
+import std/os except getCurrentDir, paramCount
 
 when declared(switch):
   switch("path", "src")
@@ -12,6 +12,7 @@ const
   libDir = librlRoot / "lib"
   outDir = getCurrentDir() / "out"
   mainEntry = "src/main.nim"
+  jsTestEntry = "src/testjs.nim"
   outFile = "main"
   nimCacheDir = ".nimcache"
 
@@ -19,7 +20,6 @@ when defined(emscripten):
   switch("nimcache", nimCacheDir / "wasm")
 else:
   switch("nimcache", nimCacheDir / "desktop")
-
 
 when defined(emscripten):
   switch("os", "linux")
@@ -62,10 +62,23 @@ when defined(emscripten):
   switch("passL", "-s JSPI_EXPORTS='[\"rt_boot\",\"rt_init\",\"rt_tick\",\"rt_shutdown\"]'")
   switch("passL", "-fwasm-exceptions")
 
-  switch("passL", "-O2")
-  switch("define", "release")
+  # based on if release or debug is defined, apply additional flags in getBuildModeFlags() and getOptimizationFlags()
+  switch("define", "debug")
 
 
+proc getBuildModeFlags(): string =
+  if defined(release):
+    result = "-d:release"
+  else:
+    result = "-d:debug"
+    if defined(js):
+      result = result & " --sourcemaps"
+
+proc getOptimizationFlags(): string =
+  if defined(release):
+    result = "--passL:-O2"
+  else:
+    result = "--passL:-O0"
 
 proc buildDesktop() =
   let outBin = outDir / "desktop" / outFile
@@ -74,7 +87,7 @@ proc buildDesktop() =
   echo "Building dependency: librl (desktop)"
   exec "make -C " & librlRoot & " desktop -j4"
   let entry = getCurrentDir() / mainEntry
-  exec "nim c -d:release" &
+  exec "nim c " &  
     " --out:" & outBin &
     " --passC:-I" & includeDir &
     " --passL:" & (libDir / "librl.a") & # to ensure we don't link to the shared lib (default linker behavior if both libs exist)
@@ -86,7 +99,11 @@ proc buildDesktop() =
     " --passL:-lz" &
     " --passL:-lssl" &
     " --passL:-lnghttp2" &
+    " " & getBuildModeFlags() &
+    " " & getOptimizationFlags() &
     " " & entry
+
+
 
 proc buildWasm() =
   let outBin = outDir / "wasm" / "main.js"
@@ -95,9 +112,22 @@ proc buildWasm() =
   echo "Building dependency: librl (wasm)"
   exec "make -C " & librlRoot & " wasm_archive -j4"
   let entry = getCurrentDir() / mainEntry
-  exec "nim c -d:emscripten -d:release " & 
+  exec "nim c -d:emscripten " & 
         " --out:" & outBin &
+        " " & getOptimizationFlags() &
+        " " & getBuildModeFlags() &
         " " & entry
+
+proc buildJs() =
+  let outBin = outDir / "js" / (jsTestEntry.splitFile().name & ".js")
+  echo "Building JS Nim binary: '" & outBin & "'..."
+  mkDir(outDir / "js")
+  let entry = getCurrentDir() / jsTestEntry
+  exec "nim js" &
+    " --out:" & outBin &
+    " " & getOptimizationFlags() &
+    " " & getBuildModeFlags() &
+    " " & entry
 
 proc selectedBuildTarget(): string =
   if paramCount() >= 2:
@@ -111,12 +141,14 @@ task build, "Build Nim targets: desktop, wasm, or all (default)":
     buildDesktop()
   of "wasm":
     buildWasm()
+  of "js":
+    buildJs()
   of "all":
     buildDesktop()
     buildWasm()
   else:
     quit "Invalid build target '" & selectedBuildTarget() &
-      "'. Expected: desktop, wasm, or all.", 1
+      "'. Expected: desktop, wasm, js, or all.", 1
   
   echo "Build complete."
 

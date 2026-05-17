@@ -245,9 +245,9 @@ class SimpleRuntime implements IRuntime {
 	}
 
 	@async
-	public function onShutdown():Void {
-		@await RL.deinit();
-		return;
+	public function onShutdown() {
+		return cast @await RL.deinit();
+		//return;
 	}
 
 	private function joinPath(pathComponents:haxe.Rest<String>):String {
@@ -390,7 +390,7 @@ interface IRuntime {
 	function onBoot():Int;
 	function onInit():Int;
 	function onTick(deltaTimeSec:Float):Int;
-	function onShutdown():Void;
+	function onShutdown():Any;  // for some reason, hxasync doesn't like Void, so we return Any
 }
 
 @:expose
@@ -446,7 +446,7 @@ class Main {
 	@:exportc.exit
 	@async static function rt_shutdown():Void {
 		if (_instance != null) {
-			_instance.onShutdown();
+			@await _instance.onShutdown();
 			_instance = null;
 		}
 

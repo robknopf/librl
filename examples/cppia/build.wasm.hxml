@@ -1,6 +1,3 @@
-#--cmd echo "WASM NOT SUPPORTED WITH CPPIA HOST, WASM BUILD SKIPPED"
-
-
 common.hxml
 
 -cpp out/wasm

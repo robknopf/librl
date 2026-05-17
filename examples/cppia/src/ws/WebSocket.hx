@@ -40,7 +40,12 @@ typedef WebSocketClientEntry = {
 @:headerInclude("websocket/websocket.h")
 @:headerInclude("stdint.h")
 @:headerInclude("ws/WebSocketBridge.h")
-/** CPPIA generates Dynamic-arg wrappers for cpp.ConstCharStar; these are C-only entry points. */
+/**
+ * C wgutils callbacks use `const char *`; with `-D scriptable`, CPPIA springs pass `Dynamic`
+ * for non-Object native types (e.g. cpp.ConstCharStar), which breaks the native compile.
+ * Use opaque `void *` / RawPointer here and cast inside; function-pointer casts in
+ * {@link WebSocketNative#create} remain ABI-safe for emscripten.
+ */
 @:unreflective
 @:noCompletion
 class WebSocketNative {
@@ -87,7 +92,10 @@ class WebSocketNative {
 }
 
 @:keep
-/** Avoid CPPIA glue for springClose/springMessage (ConstCharStar becomes Dynamic and breaks native compile). */
+/**
+ * C callback targets. With scriptable, signatures must avoid cpp.ConstCharStar so CPPIA
+ * trampolines (Dynamic args) still compile; use void* and cast to const char* where needed.
+ */
 @:unreflective
 @:noCompletion
 class WebSocketBridge {
@@ -111,13 +119,13 @@ class WebSocketBridge {
 			entry.handlers.onOpen(entry.client);
 	}
 
-	@:keep public static function springClose(ws: cpp.RawPointer<cpp.Void>, code: Int, reason: cpp.ConstCharStar,
+	@:keep public static function springClose(ws: cpp.RawPointer<cpp.Void>, code: Int, reason: cpp.RawPointer<cpp.Void>,
 			user: cpp.RawPointer<cpp.Void>): Void {
 		var id: Int = untyped __cpp__('(int)(intptr_t){0}', user);
 		var entry = clientEntries.get(id);
 		if (entry == null || entry.handlers.onClose == null)
 			return;
-		var r: String = untyped __cpp__('(reason == nullptr) ? ::String() : ::String((const char *)reason)');
+		var r: String = untyped __cpp__('(reason == nullptr) ? ::String() : ::String((const char *)(void *)reason)');
 		entry.handlers.onClose(entry.client, code, r);
 	}
 
@@ -128,7 +136,7 @@ class WebSocketBridge {
 			entry.handlers.onError(entry.client);
 	}
 
-	@:keep public static function springMessage(ws: cpp.RawPointer<cpp.Void>, data: cpp.ConstCharStar, len: Int, isText: Bool,
+	@:keep public static function springMessage(ws: cpp.RawPointer<cpp.Void>, data: cpp.RawPointer<cpp.Void>, len: Int, isText: Bool,
 			user: cpp.RawPointer<cpp.Void>): Void {
 		var id: Int = untyped __cpp__('(int)(intptr_t){0}', user);
 		var entry = clientEntries.get(id);
@@ -144,10 +152,10 @@ class WebSocketBridge {
 			return ::haxe::io::Bytes_obj::__alloc(HX_CTX_GET, 0, emptyArr);
 		}
 		Array<unsigned char> arr = Array_obj<unsigned char>::__new(len, len);
-		memcpy(arr->GetBase(), (const char *)data, (size_t)len);
+		memcpy(arr->GetBase(), (const char *)(void *)data, (size_t)len);
 		return ::haxe::io::Bytes_obj::__alloc(HX_CTX_GET, arr->length, arr);
 	')
-	static function bytesFromNative(data: cpp.ConstCharStar, len: Int): Bytes {
+	static function bytesFromNative(data: cpp.RawPointer<cpp.Void>, len: Int): Bytes {
 		return null;
 	}
 }

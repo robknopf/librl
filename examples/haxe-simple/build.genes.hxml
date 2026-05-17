@@ -8,6 +8,6 @@ common.hxml
 --macro hxasync.AsyncMacro.makeAsyncable("")
 --macro macros.FixGenesAsyncOutput.apply()
 
---times
+#--times
 
 --cmd echo "Build (genes) complete."

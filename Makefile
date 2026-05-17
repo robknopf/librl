@@ -445,7 +445,7 @@ desktop: binding-version libraylib_desktop wgutils_desktop ensure_out_dir ensure
 	$(Q)cd $(OBJ_DESKTOP_DIR)/.wgutils_unpack && ar x $(abspath $(WGUTILS_DESKTOP_ARCHIVE))
 	$(Q)ar rcs $(OUT_DESKTOP) $(DESKTOP_OBJS) $(OBJ_DESKTOP_DIR)/.raylib_unpack/*.o $(OBJ_DESKTOP_DIR)/.wgutils_unpack/*.o
 
-BINDING_GEN_SCRIPT := $(LIBRL_ROOT)/scripts/gen_binding_versions.py
+BINDING_GEN_SCRIPT := $(LIBRL_ROOT)/tools/gen_binding_versions.py
 PYTHON ?= python3
 
 .PHONY: binding-version

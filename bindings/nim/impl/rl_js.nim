@@ -124,7 +124,7 @@ proc rl_boot*(): Future[int] =
   when defined(debug):
     {.emit: """__rl_boot_url = __rl_boot_url + "?t=" + Date.now();""".}
   {.emit: """return (async function() {
-    var lib = await import(__rl_boot_url);
+    var lib = await import(/* @vite-ignore */ __rl_boot_url);
     __gRl = lib.rl || lib.default;
     var rc = await __gRl.boot({});
     if (rc === 0) {

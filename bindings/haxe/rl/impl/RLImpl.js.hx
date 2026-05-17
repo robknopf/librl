@@ -80,6 +80,15 @@ class RLImpl {
 	public static var COLOR_RAYWHITE:RLHandle = 0;
 	public static var COLOR_BLACK:RLHandle = 0;
 
+	private static function maybeCacheBustBindingsPath(path:String):String {
+		#if debug
+		var separator = path.indexOf("?") >= 0 ? "&" : "?";
+		return path + separator + "t=" + Std.string(Date.now().getTime());
+		#else
+		return path;
+		#end
+	}
+
 	@async
 	public static function boot(?options:Dynamic):Promise<Int> {
 		if (binding != null) {
@@ -93,7 +102,7 @@ class RLImpl {
 			return Promise.resolve(INIT_ERR_UNKNOWN);
 		}
 
-		var bindingsPath = optionString(options, "bindingsPath", "/bindings/js/rl.js");
+		var bindingsPath = maybeCacheBustBindingsPath(optionString(options, "bindingsPath", "/bindings/js/rl.js"));
 
 		bootPromise = cast js.Syntax.code("(async () => {
         try {

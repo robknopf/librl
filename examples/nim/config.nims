@@ -1,6 +1,20 @@
 import std/os except getCurrentDir, paramCount
 
 when declared(switch):
+  proc hasDefineFlag(name: string): bool =
+    for i in 1..paramCount():
+      let p = paramStr(i)
+      if p == "-d:" & name or p == "--define:" & name or
+         p == "-d:" & name & "=1" or p == "--define:" & name & "=1" or
+         p == "-d:" & name & "=true" or p == "--define:" & name & "=true":
+        return true
+    result = false
+
+  type BuildType = enum
+    debug, release
+
+  let buildType = if hasDefineFlag("debug"): BuildType.debug else: BuildType.release
+
   switch("path", "src")
   switch("path", "../../bindings/nim")
   switch("hints", "off")
@@ -65,12 +79,14 @@ when defined(emscripten):
   switch("passL", "-fwasm-exceptions")
 
 # Default to release unless debug is explicitly requested via -d:debug
-when not defined(debug):
+if buildType == BuildType.debug:
+  switch("define", "debug")
+else:
   switch("define", "release")
 
 
 proc getBuildModeFlags(): string =
-  if defined(release):
+  if buildType == BuildType.release:
     result = "-d:release"
   else:
     result = "-d:debug"
@@ -78,7 +94,7 @@ proc getBuildModeFlags(): string =
       result = result & " --sourcemaps"
 
 proc getOptimizationFlags(): string =
-  if defined(release):
+  if buildType == BuildType.release:
     result = "--passL:-O2"
   else:
     result = "--passL:-O0"

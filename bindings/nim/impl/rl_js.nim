@@ -47,6 +47,11 @@ type
 # ---------------------------------------------------------------------------
 
 const
+  RL_VERSION_MAJOR* = 0
+  RL_VERSION_MINOR* = 0
+  RL_VERSION_PATCH* = 1
+  RL_VERSION_LABEL* = "dev"
+  RL_VERSION_NUMBER* = 1'u32
   RL_INIT_OK* = 0
   RL_INIT_ERR_UNKNOWN* = -1
   RL_INIT_ERR_ALREADY_INITIALIZED* = -2
@@ -213,6 +218,12 @@ proc rl_get_time*(): float {.importjs: "__gRl.getTime()".}
 proc rl_get_delta_time*(): float {.importjs: "__gRl.getDeltaTime()".}
 proc rl_is_initialized*(): bool {.importjs: "__gRl.isInitialized()".}
 proc rl_get_platform*(): cstring {.importjs: "__gRl.getPlatform()".}
+proc rl_version_major*(): int {.importjs: "__gRl.versionMajor()".}
+proc rl_version_minor*(): int {.importjs: "__gRl.versionMinor()".}
+proc rl_version_patch*(): int {.importjs: "__gRl.versionPatch()".}
+proc rl_version_label*(): string {.importjs: "__gRl.versionLabel()".}
+proc rl_version_number*(): uint32 {.importjs: "__gRl.versionNumber()".}
+proc rl_version_string*(): string {.importjs: "__gRl.versionString()".}
 proc rl_scratch_refresh*() {.importjs: "__gRl.refreshScratch()".}
 proc rl_set_asset_host_impl(assetHost: cstring): int {.importjs: "__gRl.setAssetHost(#)".}
 proc rl_set_asset_host*(assetHost: string): int {.inline.} = rl_set_asset_host_impl(assetHost.cstring)

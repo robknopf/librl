@@ -24,6 +24,12 @@ class RLImpl {
 	static var binding:Dynamic = null;
 	static var bootPromise:Promise<Int> = null;
 
+	public static inline var VERSION_MAJOR:Int = 0;
+	public static inline var VERSION_MINOR:Int = 0;
+	public static inline var VERSION_PATCH:Int = 1;
+	public static inline var VERSION_LABEL:String = "dev";
+	public static inline var VERSION_NUMBER:Int = 1;
+
 	public static inline var INIT_OK:Int = 0;
 	public static inline var INIT_ERR_UNKNOWN:Int = -1;
 	public static inline var INIT_ERR_ALREADY_INITIALIZED:Int = -2;
@@ -251,6 +257,30 @@ class RLImpl {
 			return "js";
 		}
 		return cast binding.getPlatform();
+	}
+
+	public static function versionMajor():Int {
+		return binding == null ? VERSION_MAJOR : cast binding.versionMajor();
+	}
+
+	public static function versionMinor():Int {
+		return binding == null ? VERSION_MINOR : cast binding.versionMinor();
+	}
+
+	public static function versionPatch():Int {
+		return binding == null ? VERSION_PATCH : cast binding.versionPatch();
+	}
+
+	public static function versionLabel():String {
+		return binding == null ? VERSION_LABEL : cast binding.versionLabel();
+	}
+
+	public static function versionNumber():Int {
+		return binding == null ? VERSION_NUMBER : cast binding.versionNumber();
+	}
+
+	public static function versionString():String {
+		return binding == null ? "0.0.1-dev" : cast binding.versionString();
 	}
 
 	public static function scratchRefresh():Void {

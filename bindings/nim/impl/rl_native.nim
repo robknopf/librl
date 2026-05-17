@@ -114,6 +114,11 @@ var
   RL_COLOR_RAYWHITE* {.importc, header: "rl_color.h".}: RLHandle
 
 const
+  RL_VERSION_MAJOR* = 0
+  RL_VERSION_MINOR* = 0
+  RL_VERSION_PATCH* = 1
+  RL_VERSION_LABEL* = "dev"
+  RL_VERSION_NUMBER* = 1'u32
   RL_INIT_OK* = 0
   RL_INIT_ERR_UNKNOWN* = -1
   RL_INIT_ERR_ALREADY_INITIALIZED* = -2
@@ -462,6 +467,18 @@ proc rl_render_begin*() {.importc, cdecl, header: "rl.h".}
 proc rl_render_end*() {.importc, cdecl, header: "rl.h".}
 proc rl_is_initialized*(): bool {.importc, cdecl, header: "rl.h".}
 proc rl_get_platform*(): cstring {.importc, cdecl, header: "rl.h".}
+proc rl_version_major_c*(): cint {.importc: "rl_version_major", cdecl, header: "rl_version.h".}
+proc rl_version_minor_c*(): cint {.importc: "rl_version_minor", cdecl, header: "rl_version.h".}
+proc rl_version_patch_c*(): cint {.importc: "rl_version_patch", cdecl, header: "rl_version.h".}
+proc rl_version_label_c*(): cstring {.importc: "rl_version_label", cdecl, header: "rl_version.h".}
+proc rl_version_number_c*(): uint32 {.importc: "rl_version_number", cdecl, header: "rl_version.h".}
+proc rl_version_string_c*(): cstring {.importc: "rl_version_string", cdecl, header: "rl_version.h".}
+proc rl_version_major*(): int {.inline.} = rl_version_major_c().int
+proc rl_version_minor*(): int {.inline.} = rl_version_minor_c().int
+proc rl_version_patch*(): int {.inline.} = rl_version_patch_c().int
+proc rl_version_label*(): string {.inline.} = $rl_version_label_c()
+proc rl_version_number*(): uint32 {.inline.} = rl_version_number_c()
+proc rl_version_string*(): string {.inline.} = $rl_version_string_c()
 proc rl_render_begin_mode_2d*(camera: RLHandle) {.importc, cdecl, header: "rl_render.h".}
 proc rl_render_end_mode_2d*() {.importc, cdecl, header: "rl_render.h".}
 proc rl_render_begin_mode_3d*() {.importc, cdecl, header: "rl.h".}

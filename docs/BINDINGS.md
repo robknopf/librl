@@ -115,6 +115,11 @@ Notes:
   - task-style loader APIs like `restoreFSAsync()` / `importAssetAsync()` / `importAssetsAsync()` return task handles immediately.
 - JS exposes `isInitialized()` for `rl_is_initialized()`.
 - JS exposes `getPlatform()` for `rl_get_platform()`.
+- Version queries (`rl_version_*` in `rl_version.h`) are exposed on all bindings:
+  - JS: `versionMajor()`, `versionMinor()`, `versionPatch()`, `versionLabel()`, `versionNumber()`, `versionString()`
+  - Nim: `rl_version_major()`, … (plus `RL_VERSION_*` constants)
+  - Haxe: `RL.versionMajor()`, … (plus `RL.VERSION_*` constants)
+  - Lua: `rl.version_major()`, …
 - JS `pickModel(camera, model, mouseX, mouseY)` and `pickSprite3d(camera, sprite3d, mouseX, mouseY)` return local-space `point` / `normal` data from `rl_pick_result_t`.
 - Loader/cache helpers currently exposed in JS:
   - `loaderInit([mountPoint])`

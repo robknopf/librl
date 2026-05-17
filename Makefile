@@ -80,6 +80,12 @@ LDFLAGS_WASM = \
 	"_rl_init_config_sizeof", \
 	"_rl_is_initialized", \
 	"_rl_get_platform", \
+	"_rl_version_major", \
+	"_rl_version_minor", \
+	"_rl_version_patch", \
+	"_rl_version_label", \
+	"_rl_version_number", \
+	"_rl_version_string", \
 	"_rl_deinit", \
 	"_rl_scratch_refresh", \
 	"_rl_tick", \

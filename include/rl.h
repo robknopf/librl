@@ -25,6 +25,7 @@
 #include "rl_texture.h" // IWYU pragma: keep
 #include "rl_types.h" // IWYU pragma: keep
 #include "rl_config.h"
+#include "rl_version.h" // IWYU pragma: keep
 #include "rl_window.h" // IWYU pragma: keep
 
 #ifdef __cplusplus

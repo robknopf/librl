@@ -175,6 +175,48 @@ static int rl_get_platform_lua(lua_State *L)
     return 1;
 }
 
+static int rl_version_major_lua(lua_State *L)
+{
+    (void)L;
+    lua_pushinteger(L, rl_version_major());
+    return 1;
+}
+
+static int rl_version_minor_lua(lua_State *L)
+{
+    (void)L;
+    lua_pushinteger(L, rl_version_minor());
+    return 1;
+}
+
+static int rl_version_patch_lua(lua_State *L)
+{
+    (void)L;
+    lua_pushinteger(L, rl_version_patch());
+    return 1;
+}
+
+static int rl_version_label_lua(lua_State *L)
+{
+    (void)L;
+    lua_pushstring(L, rl_version_label());
+    return 1;
+}
+
+static int rl_version_number_lua(lua_State *L)
+{
+    (void)L;
+    lua_pushinteger(L, (lua_Integer)rl_version_number());
+    return 1;
+}
+
+static int rl_version_string_lua(lua_State *L)
+{
+    (void)L;
+    lua_pushstring(L, rl_version_string());
+    return 1;
+}
+
 static int rl_scratch_refresh_lua(lua_State *L)
 {
     (void)L;  /* Unused */
@@ -320,6 +362,12 @@ static const luaL_Reg rl_functions[] = {
     {"deinit", rl_deinit_lua},
     {"is_initialized", rl_is_initialized_lua},
     {"get_platform", rl_get_platform_lua},
+    {"version_major", rl_version_major_lua},
+    {"version_minor", rl_version_minor_lua},
+    {"version_patch", rl_version_patch_lua},
+    {"version_label", rl_version_label_lua},
+    {"version_number", rl_version_number_lua},
+    {"version_string", rl_version_string_lua},
     {"scratch_refresh", rl_scratch_refresh_lua},
     {"begin_drawing", rl_begin_drawing_lua},
     {"end_drawing", rl_end_drawing_lua},

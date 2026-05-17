@@ -806,6 +806,42 @@ const RL = {
     getPlatform: () => {
         return moduleInstance.ccall('rl_get_platform', 'string', [], []);
     },
+    versionMajor: () => {
+        if (!moduleInstance) {
+            return 0;
+        }
+        return moduleInstance.ccall('rl_version_major', 'number', [], []);
+    },
+    versionMinor: () => {
+        if (!moduleInstance) {
+            return 0;
+        }
+        return moduleInstance.ccall('rl_version_minor', 'number', [], []);
+    },
+    versionPatch: () => {
+        if (!moduleInstance) {
+            return 1;
+        }
+        return moduleInstance.ccall('rl_version_patch', 'number', [], []);
+    },
+    versionLabel: () => {
+        if (!moduleInstance) {
+            return 'dev';
+        }
+        return moduleInstance.ccall('rl_version_label', 'string', [], []);
+    },
+    versionNumber: () => {
+        if (!moduleInstance) {
+            return 1;
+        }
+        return moduleInstance.ccall('rl_version_number', 'number', [], []) >>> 0;
+    },
+    versionString: () => {
+        if (!moduleInstance) {
+            return '0.0.1-dev';
+        }
+        return moduleInstance.ccall('rl_version_string', 'string', [], []);
+    },
     uncacheAsset: (filename) => {
         return moduleInstance.ccall('rl_loader_uncache_asset', 'number', ['string'], [filename]);
     },

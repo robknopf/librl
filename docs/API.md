@@ -15,6 +15,7 @@ This document summarizes the current public C API exposed by `include/*.h`.  As 
   Both return `RL_INIT_OK` (`0`) on success or a negative `RL_INIT_ERR_*` code on failure (`RL_INIT_ERR_UNKNOWN`, `RL_INIT_ERR_ALREADY_INITIALIZED`, `RL_INIT_ERR_LOADER`, `RL_INIT_ERR_ASSET_HOST`, `RL_INIT_ERR_WINDOW`).
 - Use `rl_is_initialized()` to query whether the runtime is currently initialized.
 - Use `rl_get_platform()` to query the build/runtime platform string (`"desktop"` or `"web"`).
+- Use `rl_version_major()`, `rl_version_minor()`, `rl_version_patch()`, `rl_version_label()`, `rl_version_number()`, and `rl_version_string()` to query the librl build version (`include/rl_version.h`). `rl_version_label()` returns `""` when no label is set. `rl_version_number()` packs semver as `major*1_000_000 + minor*1_000 + patch`. This is separate from `RL_MODULE_ABI_VERSION` in `rl_module.h`.
 
 ## Resource Lifetime Semantics
 

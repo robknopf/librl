@@ -81,6 +81,32 @@ private extern class RLExterns {
     return untyped __cpp__("::String(::rl_get_platform())");
   }
 
+  @:native("rl_version_major")
+  static function versionMajorNative(): Int;
+
+  @:native("rl_version_minor")
+  static function versionMinorNative(): Int;
+
+  @:native("rl_version_patch")
+  static function versionPatchNative(): Int;
+
+  static inline function versionLabelNative(): String {
+    return untyped __cpp__("::String(::rl_version_label())");
+  }
+
+  @:native("rl_version_number")
+  static function versionNumberNative(): Int;
+
+  static inline function versionStringNative(): String {
+    return untyped __cpp__("::String(::rl_version_string())");
+  }
+
+  static inline var VERSION_MAJOR: Int = 0;
+  static inline var VERSION_MINOR: Int = 0;
+  static inline var VERSION_PATCH: Int = 1;
+  static inline var VERSION_LABEL: String = "dev";
+  static inline var VERSION_NUMBER: Int = 1;
+
   @:native("rl_scratch_refresh")
   static function scratchRefresh(): Void;
 
@@ -935,6 +961,36 @@ abstract RLImpl(RLExterns) {
   public static function getPlatform(): String {
     return RLExterns.getPlatformNative();
   }
+
+  public static function versionMajor(): Int {
+    return RLExterns.versionMajorNative();
+  }
+
+  public static function versionMinor(): Int {
+    return RLExterns.versionMinorNative();
+  }
+
+  public static function versionPatch(): Int {
+    return RLExterns.versionPatchNative();
+  }
+
+  public static function versionLabel(): String {
+    return RLExterns.versionLabelNative();
+  }
+
+  public static function versionNumber(): Int {
+    return RLExterns.versionNumberNative();
+  }
+
+  public static function versionString(): String {
+    return RLExterns.versionStringNative();
+  }
+
+  public static var VERSION_MAJOR(get, never): Int = RLExterns.VERSION_MAJOR;
+  public static var VERSION_MINOR(get, never): Int = RLExterns.VERSION_MINOR;
+  public static var VERSION_PATCH(get, never): Int = RLExterns.VERSION_PATCH;
+  public static var VERSION_LABEL(get, never): String = RLExterns.VERSION_LABEL;
+  public static var VERSION_NUMBER(get, never): Int = RLExterns.VERSION_NUMBER;
 
   public static function loaderRestoreFsAsync(): RLHandle {
     return RLLoader.loaderRestoreFsAsync();

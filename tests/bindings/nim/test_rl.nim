@@ -2,6 +2,14 @@ import unittest
 import rl
 
 suite "rl bindings":
+  test "version":
+    check rl_version_major() == 0
+    check rl_version_minor() == 0
+    check rl_version_patch() == 1
+    check rl_version_label() == "dev"
+    check rl_version_number() == RL_VERSION_NUMBER
+    check rl_version_string() == "0.0.1-dev"
+
   test "constants":
     check RL_INIT_OK == 0.cint
     check RL_INIT_ERR_UNKNOWN == (-1).cint

@@ -1,6 +1,8 @@
 ## Native (desktop / emscripten-wasm) binding.
 ## Included by rl.nim when not defined(js).  Do not import directly.
 
+include ../gen/rl_version
+
 type
   RLHandle* = uint32
   RLWindowFlags* = cuint
@@ -114,11 +116,6 @@ var
   RL_COLOR_RAYWHITE* {.importc, header: "rl_color.h".}: RLHandle
 
 const
-  RL_VERSION_MAJOR* = 0
-  RL_VERSION_MINOR* = 0
-  RL_VERSION_PATCH* = 1
-  RL_VERSION_LABEL* = "dev"
-  RL_VERSION_NUMBER* = 1'u32
   RL_INIT_OK* = 0
   RL_INIT_ERR_UNKNOWN* = -1
   RL_INIT_ERR_ALREADY_INITIALIZED* = -2
@@ -238,10 +235,6 @@ proc rl_loader_add_task*(task: RLHandle,
   ).int
   if result != RL_LOADER_QUEUE_TASK_OK and onFailure.isNil:
     rl_loader_release_closure_task(closureTask)
-
-proc rl_boot*(config = RLBootConfig()): int {.inline.} =
-  discard config
-  RL_INIT_OK
 
 proc rl_init_async*(): int {.inline.} =
   rl_init_async_raw(nil).int
@@ -479,6 +472,21 @@ proc rl_version_patch*(): int {.inline.} = rl_version_patch_c().int
 proc rl_version_label*(): string {.inline.} = $rl_version_label_c()
 proc rl_version_number*(): uint32 {.inline.} = rl_version_number_c()
 proc rl_version_string*(): string {.inline.} = $rl_version_string_c()
+
+proc rl_boot*(config = RLBootConfig()): int =
+  discard config
+  let runtimeMajor = rl_version_major()
+  let runtimeMinor = rl_version_minor()
+  let runtimePatch = rl_version_patch()
+  echo "[librl] bindings version: ", rlBindingMajor, ", ", rlBindingMinor, ", ", rlBindingPatch
+  echo "[librl] librl version: ", runtimeMajor, ", ", runtimeMinor, ", ", runtimePatch
+  if runtimeMajor != rlBindingMajor:
+    raise newException(ValueError, "librl major version mismatch")
+  if runtimeMinor != rlBindingMinor:
+    raise newException(ValueError, "librl minor version mismatch")
+  if runtimePatch != rlBindingPatch:
+    echo "[librl] warning: librl patch ", runtimePatch, " differs from binding patch ", rlBindingPatch
+  return RL_INIT_OK
 proc rl_render_begin_mode_2d*(camera: RLHandle) {.importc, cdecl, header: "rl_render.h".}
 proc rl_render_end_mode_2d*() {.importc, cdecl, header: "rl_render.h".}
 proc rl_render_begin_mode_3d*() {.importc, cdecl, header: "rl.h".}

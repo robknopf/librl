@@ -3,9 +3,11 @@
 #include <lua.h>
 #include <lauxlib.h>
 
+#include <stdio.h>
 #include <string.h>
 
 #include "rl.h"
+#include "gen/rl_lua_version.h"
 #include "rl_lua_camera3d.h"
 #include "rl_lua_color.h"
 #include "rl_lua_debug.h"
@@ -147,9 +149,41 @@ static int rl_init_values_async_lua(lua_State *L)
     return 1;
 }
 
+static int rl_lua_compare_version()
+{
+    const int runtime_major = rl_version_major();
+    const int runtime_minor = rl_version_minor();
+    const int runtime_patch = rl_version_patch();
+
+    fprintf(stderr, "[librl] bindings version: %d, %d, %d\n", RL_BINDING_BUILT_MAJOR, RL_BINDING_BUILT_MINOR, RL_BINDING_BUILT_PATCH);
+    fprintf(stderr, "[librl] librl version: %d, %d, %d\n", runtime_major, runtime_minor, runtime_patch);
+    (void)fflush(stderr);
+
+    if (runtime_major != RL_BINDING_BUILT_MAJOR) {
+        return -1;
+    }
+    if (runtime_minor != RL_BINDING_BUILT_MINOR) {
+        return -2;
+    }
+    if (runtime_patch != RL_BINDING_BUILT_PATCH) {
+        return 1;
+    }
+    return 0;
+}
+
+static void rl_lua_enforce_version(lua_State *L)
+{
+    const int version_check = rl_lua_compare_version();
+    if (version_check < 0) {
+        (void)luaL_error(L,
+                         "librl version mismatch (runtime %d.%d.%d, binding %d.%d.%d)", rl_version_major(),
+                         rl_version_minor(), rl_version_patch(), RL_BINDING_BUILT_MAJOR, RL_BINDING_BUILT_MINOR,
+                         RL_BINDING_BUILT_PATCH);
+    }
+}
+
 static int rl_boot_lua(lua_State *L)
 {
-    (void)L;  /* Unused */
     lua_pushinteger(L, (lua_Integer)RL_INIT_OK);
     return 1;
 }
@@ -393,6 +427,8 @@ static const luaL_Reg rl_functions[] = {
 
 int luaopen_rl(lua_State *L)
 {
+    rl_lua_enforce_version(L);
+
     luaL_newlib(L, rl_functions);
     lua_pushinteger(L, RL_INIT_OK);
     lua_setfield(L, -2, "RL_INIT_OK");

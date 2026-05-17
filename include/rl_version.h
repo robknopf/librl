@@ -38,4 +38,4 @@ const char *rl_version_string(void);
 }
 #endif
 
-#endif // RL_VERSION_H
+#endif /* RL_VERSION_H */

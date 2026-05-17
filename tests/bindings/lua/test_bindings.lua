@@ -34,6 +34,13 @@ end
 
 print("OK: Loaded rl module")
 
+local validate_rc = rl.validate_version()
+if validate_rc ~= 0 then
+    print("FAIL: validate_version expected 0, got", validate_rc)
+    os.exit(1)
+end
+print("OK: validate_version passed (binding matches librl)")
+
 if rl.RL_INIT_OK ~= 0 or rl.RL_INIT_ERR_UNKNOWN ~= -1 or rl.RL_INIT_ERR_ALREADY_INITIALIZED ~= -2 then
     print("FAIL: Expected rl init result constants")
     os.exit(1)

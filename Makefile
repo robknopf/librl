@@ -404,7 +404,7 @@ libraylib: libraylib_desktop libraylib_wasm
 	@echo "[libraylib] Built raylib archives (desktop + wasm)."
 
 # WebAssembly static build
-wasm: libraylib_wasm wgutils_wasm ensure_out_dir
+wasm: binding-version libraylib_wasm wgutils_wasm ensure_out_dir
 	$(info [wasm] Building WASM module: $(OUT_WASM))
 	$(call DETAILS,[wasm] Sources: $(WASM_SRCS))
 	$(call DETAILS,[wasm] LDFLAGS_WASM: $(LDFLAGS_WASM))
@@ -429,7 +429,7 @@ wasm_archive: libraylib_wasm wgutils_wasm ensure_out_dir ensure_obj_dir $(WASM_O
 	$(Q)$(EM_ENV) emar rcs $(OUT_WASM_ARCHIVE) $(WASM_OBJS) $(OBJ_WASM_DIR)/.raylib_unpack/*.o $(OBJ_WASM_DIR)/.wgutils_unpack/*.o
 
 # Desktop static library build
-desktop: libraylib_desktop wgutils_desktop ensure_out_dir ensure_obj_dir $(DESKTOP_OBJS)
+desktop: binding-version libraylib_desktop wgutils_desktop ensure_out_dir ensure_obj_dir $(DESKTOP_OBJS)
 	$(info [desktop] Building Desktop static archive: $(OUT_DESKTOP))
 	$(call DETAILS,[desktop] Sources: $(DESKTOP_SRCS))
 	$(info [desktop] Adding raylib archive: $(LIBRAYLIB_DESKTOP_ARCHIVE))
@@ -445,12 +445,19 @@ desktop: libraylib_desktop wgutils_desktop ensure_out_dir ensure_obj_dir $(DESKT
 	$(Q)cd $(OBJ_DESKTOP_DIR)/.wgutils_unpack && ar x $(abspath $(WGUTILS_DESKTOP_ARCHIVE))
 	$(Q)ar rcs $(OUT_DESKTOP) $(DESKTOP_OBJS) $(OBJ_DESKTOP_DIR)/.raylib_unpack/*.o $(OBJ_DESKTOP_DIR)/.wgutils_unpack/*.o
 
+BINDING_GEN_SCRIPT := $(LIBRL_ROOT)/scripts/gen_binding_versions.py
+PYTHON ?= python3
+
+.PHONY: binding-version
+binding-version: include/rl_version.h $(BINDING_GEN_SCRIPT)
+	$(Q)$(PYTHON) "$(BINDING_GEN_SCRIPT)" "$(abspath $(LIBRL_ROOT))"
+
 # Desktop shared core library (C API only, no Lua module entrypoint)
 LIBRL_SHARED_SO := $(OUT_LIB_DIR)/librl.so
 RL_LUA_MODULE_SO := $(OUT_LIB_DIR)/rl.so
 LUA_BINDINGS_SRC := $(wildcard $(LIBRL_ROOT)/bindings/lua/*.c)
 
-shared: libraylib_desktop wgutils_desktop ensure_out_dir ensure_obj_dir $(DESKTOP_OBJS)
+shared: binding-version libraylib_desktop wgutils_desktop ensure_out_dir ensure_obj_dir $(DESKTOP_OBJS)
 	$(info [shared] Building shared core library: $(LIBRL_SHARED_SO))
 	$(call DETAILS,[shared] Sources: $(DESKTOP_SRCS))
 	$(Q)test -f "$(LIBRAYLIB_DESKTOP_ARCHIVE)" || (echo "Missing raylib archive: $(LIBRAYLIB_DESKTOP_ARCHIVE)" && exit 1)
@@ -465,14 +472,14 @@ shared: libraylib_desktop wgutils_desktop ensure_out_dir ensure_obj_dir $(DESKTO
 # Desktop Lua module for require("rl"), linked against librl.so
 # Defaults LIBLUA_INC to $(LIBRL_ROOT)/deps/liblua/include.
 # Override LIBLUA_INC for custom lua headers.
-rl_lua: shared ensure_out_dir
+rl_lua: binding-version shared ensure_out_dir
 	$(info [rl_lua] Building Lua module: $(RL_LUA_MODULE_SO))
 	$(call DETAILS,[rl_lua] Sources: $(LUA_BINDINGS_SRC))
 	$(Q)test -f "$(LIBLUA_INC)/lua.h" || (echo "Error: lua.h not found at $(LIBLUA_INC). Build deps first or set LIBLUA_INC=/path/to/lua/include" && exit 1)
 	$(Q)test -f "$(LIBRL_SHARED_SO)" || (echo "Missing shared core library: $(LIBRL_SHARED_SO)" && exit 1)
 	$(Q)$(CC_DESKTOP) -shared -fPIC -o $(RL_LUA_MODULE_SO) \
 		$(LUA_BINDINGS_SRC) \
-		$(INCLUDES) -I$(LIBLUA_INC) \
+		$(INCLUDES) -I$(LIBRL_ROOT)/bindings/lua -I$(LIBLUA_INC) \
 		-L$(OUT_LIB_DIR) -lrl \
 		-Wl,-rpath,'$$ORIGIN' \
 		-lm -lpthread -ldl

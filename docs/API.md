@@ -16,6 +16,7 @@ This document summarizes the current public C API exposed by `include/*.h`.  As 
 - Use `rl_is_initialized()` to query whether the runtime is currently initialized.
 - Use `rl_get_platform()` to query the build/runtime platform string (`"desktop"` or `"web"`).
 - Use `rl_version_major()`, `rl_version_minor()`, `rl_version_patch()`, `rl_version_label()`, `rl_version_number()`, and `rl_version_string()` to query the librl build version (`include/rl_version.h`). `rl_version_label()` returns `""` when no label is set. `rl_version_number()` packs semver as `major*1_000_000 + minor*1_000 + patch`. This is separate from `RL_MODULE_ABI_VERSION` in `rl_module.h`.
+- Bindings embed a generated stamp under `bindings/*/gen/` (from `make binding-version`). At load/boot they query `rl_version_major()` / `minor()` / `patch()` and compare locally; policy (fatal major/minor, warn on patch) lives in each binding.
 
 ## Resource Lifetime Semantics
 

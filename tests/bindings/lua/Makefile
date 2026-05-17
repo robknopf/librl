@@ -13,12 +13,16 @@ LUA_BINDINGS_SRC := $(wildcard $(ROOT_DIR)/bindings/lua/*.c)
 SHARED_LIB := $(ROOT_DIR)/lib/librl.so
 LUA_MODULE_SO := $(ROOT_DIR)/lib/rl.so
 
-.PHONY: test build clean
+.PHONY: test build clean test_version_mismatch
 
 test: build
 	@./$(TEST_BIN)
 	@$(MAKE) test_require
+	@$(MAKE) test_version_mismatch
 	@echo "Lua binding tests passed."
+
+test_version_mismatch:
+	@bash "$(ROOT_DIR)/tests/bindings/lua/test_version_mismatch.sh" "$(ROOT_DIR)"
 
 build:
 	@if [ ! -f "$(LIBLUA_ARCHIVE)" ]; then \

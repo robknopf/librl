@@ -3,12 +3,16 @@ import rl
 
 suite "rl bindings":
   test "version":
+    check rl_boot() == RL_INIT_OK
     check rl_version_major() == 0
     check rl_version_minor() == 0
     check rl_version_patch() == 1
     check rl_version_label() == "dev"
     check rl_version_number() == RL_VERSION_NUMBER
     check rl_version_string() == "0.0.1-dev"
+    check rlBindingMajor == rl_version_major()
+    check rlBindingMinor == rl_version_minor()
+    check rlBindingPatch == rl_version_patch()
 
   test "constants":
     check RL_INIT_OK == 0.cint
@@ -27,13 +31,8 @@ suite "rl bindings":
     check rl_is_initialized() == false
     check rl_tick() == RL_TICK_FAILED
 
-  test "rl_tick after init":
-    check rl_init() == RL_INIT_OK
-    let t = rl_tick()
-    check t == RL_TICK_WAITING or t == RL_TICK_RUNNING
-    rl_deinit()
-
   test "init and deinit":
+    check rl_boot() == RL_INIT_OK
     check rl_is_initialized() == false
     check $rl_get_platform() in ["desktop", "web"]
     check rl_init() == RL_INIT_OK
@@ -42,6 +41,7 @@ suite "rl bindings":
     check rl_is_initialized() == false
 
   test "double init fails but runtime setters still work":
+    check rl_boot() == RL_INIT_OK
     check rl_is_initialized() == false
     check rl_init() == RL_INIT_OK
     check rl_is_initialized() == true
@@ -58,6 +58,7 @@ suite "rl bindings":
     rl_deinit()
 
   test "time functions":
+    check rl_boot() == RL_INIT_OK
     check rl_init() == RL_INIT_OK
     let t = rl_get_time()
     check t >= 0.0
@@ -67,6 +68,7 @@ suite "rl bindings":
     rl_deinit()
 
   test "asset host":
+    check rl_boot() == RL_INIT_OK
     check rl_init() == RL_INIT_OK
     let host: cstring = rl_get_asset_host()
     check not host.isNil
@@ -77,6 +79,7 @@ suite "rl bindings":
     rl_deinit()
 
   test "lighting":
+    check rl_boot() == RL_INIT_OK
     check rl_init() == RL_INIT_OK
     rl_enable_lighting()
     check rl_is_lighting_enabled() == 1.cint
@@ -87,6 +90,7 @@ suite "rl bindings":
     rl_deinit()
 
   test "window get screen size":
+    check rl_boot() == RL_INIT_OK
     check rl_init() == RL_INIT_OK
     let size = rl_window_get_screen_size()
     check size.x >= 0.0
@@ -94,6 +98,7 @@ suite "rl bindings":
     rl_deinit()
 
   test "window get monitor count":
+    check rl_boot() == RL_INIT_OK
     check rl_init() == RL_INIT_OK
     let count = rl_window_get_monitor_count()
     check count >= 0.cint

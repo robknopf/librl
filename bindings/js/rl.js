@@ -1,3 +1,10 @@
+import {
+    RL_BINDING_BUILT_MAJOR,
+    RL_BINDING_BUILT_MINOR,
+    RL_BINDING_BUILT_PATCH,
+    RL_BINDING_BUILT_VERSION_STRING,
+} from './gen/rl_version.js';
+
 var moduleInstance;
 var moduleFactoryPromise = null;
 var moduleFactoryPath = "";
@@ -458,8 +465,8 @@ const RL = {
             };
         }
 
-        // set up env for the Module
-        if (!moduleOptions.env.canvas) {
+        // set up env for the Module (browser only; Node callers pass env.canvas or omit)
+        if (!moduleOptions.env.canvas && typeof document !== "undefined") {
             const canvasId = moduleOptions.canvasId || "renderCanvas";
             moduleOptions.env.canvas = document.getElementById(canvasId);
         }
@@ -497,9 +504,14 @@ const RL = {
 
         const moduleFactory = await RL._loadModuleFactory(opts);
         moduleInstance = await moduleFactory(moduleOptions.env);
+        if (RL._compareVersion() < 0) {
+            throw new Error("incompatible version");
+        }
+        
         RL._installScratchHelpers();
         RL._patchColorConstants();
         moduleInstance.initScratchArea();
+
         return moduleInstance;
     },
     boot: async (opts = {}) => {
@@ -805,6 +817,29 @@ const RL = {
     },
     getPlatform: () => {
         return moduleInstance.ccall('rl_get_platform', 'string', [], []);
+    },
+    _compareVersion: () => {
+        console.info(
+            `[librl] bindings version: ${RL_BINDING_BUILT_MAJOR}, ${RL_BINDING_BUILT_MINOR}, ${RL_BINDING_BUILT_PATCH}`,
+        );
+        if (!moduleInstance) {
+            console.info('[librl] librl version: (not loaded)');
+            return -3;
+        }
+        const runtimeMajor = RL.versionMajor();
+        const runtimeMinor = RL.versionMinor();
+        const runtimePatch = RL.versionPatch();
+        console.info(`[librl] librl version: ${runtimeMajor}, ${runtimeMinor}, ${runtimePatch}`);
+        if (runtimeMajor !== (RL_BINDING_BUILT_MAJOR | 0)) {
+            return -1;
+        }
+        if (runtimeMinor !== (RL_BINDING_BUILT_MINOR | 0)) {
+            return -2;
+        }
+        if (runtimePatch !== (RL_BINDING_BUILT_PATCH | 0)) {
+            return 1;
+        }
+        return 0;
     },
     versionMajor: () => {
         if (!moduleInstance) {

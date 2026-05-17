@@ -120,6 +120,7 @@ Notes:
   - Nim: `rl_version_major()`, … (plus `RL_VERSION_*` constants)
   - Haxe: `RL.versionMajor()`, … (plus `RL.VERSION_*` constants)
   - Lua: `rl.version_major()`, …
+- Binding/core alignment: `make binding-version` (runs with `desktop` / `shared` / `wasm` / `rl_lua`) writes `bindings/*/gen/*` from `include/rl_version.h`. Each binding queries `rl_version_*` from librl, compares to its stamp, logs both versions, and applies local policy (`validate_version()` / `validateVersion()` / `rl_validate_version()` return `0` ok, `1` patch drift, `< 0` fatal). Checks run at load/boot (not `init`): Lua on `require("rl")` and `rl.boot()`; JS after wasm load; Nim/Haxe on `rl_boot()` / `RL.boot()`.
 - JS `pickModel(camera, model, mouseX, mouseY)` and `pickSprite3d(camera, sprite3d, mouseX, mouseY)` return local-space `point` / `normal` data from `rl_pick_result_t`.
 - Loader/cache helpers currently exposed in JS:
   - `loaderInit([mountPoint])`
@@ -199,7 +200,7 @@ Notes:
     - `locateFile`
   - `bindingsPath` lets callers override the runtime path to `bindings/js/rl.js`; if omitted, Nim JS defaults to `"/bindings/js/rl.js"`.
   - On Nim JS, `print` and `printErr` are forwarded into the wrapper `env` object. `locateFile` is currently accepted for API parity but ignored with a warning.
-  - On native targets, `rl_boot` remains a no-op bootstrap hook that returns `RL_INIT_OK`.
+  - On native targets, `rl_boot` loads nothing (static link) but still runs the binding/core version check, then returns `RL_INIT_OK`.
 - Loader helpers in Nim (all return native `int` or `bool`):
   - `rl_loader_init([mount_point])` → `int`
   - `rl_loader_init_async([mount_point])` → `int`
@@ -263,7 +264,7 @@ Current state:
   - `RLImpl.js.hx` on `js`
   - `RLImpl.hx` for unsupported targets, which fails at compile time
 - `RL.boot(?config)` is the backend bootstrap hook:
-  - On hxcpp/cppia it returns `Int` and currently succeeds immediately.
+  - On hxcpp/cppia it returns `Int`, runs the binding/core version check, and succeeds immediately when load is not required.
   - On Haxe JS it returns `js.lib.Promise<Int>` so the JS backend can import `bindings/js/rl.js`, which then instantiates `lib/librl.js` / `lib/librl.wasm` before normal `RL.init(...)` calls.
   - The current Haxe JS backend expects the generated raw `lib/librl.js` JSPI build plus the standalone wrapper in `bindings/js/rl.js`. If `WebAssembly.Suspending` / `WebAssembly.promising` are unavailable, `RL.boot()` returns an error code and leaves the backend unbooted.
   - Haxe JS uses a typed `RLBootConfig` surface with flattened fields like `bindingsPath`, `canvasId`, `modulePath`, `wasmPath`, `idealWidth`, `idealHeight`, `print`, `printErr`, and `locateFile`.
@@ -373,7 +374,7 @@ Notes:
 - The returned userdata exposes `add_task`, `add_import_task`, `add_import_tasks`, `tick`, `process`, `failed_paths`, etc.
 - Lua exposes mouse button state constants (`rl.RL_BUTTON_UP`, `rl.RL_BUTTON_PRESSED`, `rl.RL_BUTTON_DOWN`, `rl.RL_BUTTON_RELEASED`).
 - Lua exposes handle constants `rl.RL_CAMERA3D_DEFAULT` and `rl.RL_FONT_DEFAULT`.
-- Lua exposes `rl.boot()`, which currently returns `rl.RL_INIT_OK` without additional work. This keeps the binding lifecycle aligned with JS/Haxe callers that may use `boot() -> loader_init() -> init()`.
+- Lua exposes `rl.boot()`, which runs the binding/core version check and returns `rl.RL_INIT_OK` (same check as `require("rl")`). Use `boot() -> loader_init() -> init()` when mirroring JS/Haxe lifecycle; `require` alone already validated at load.
 - Lua exposes `rl.loader_ping_asset_host([asset_host])`, returning RTT ms or `< 0` on failure, for proactive asset-host diagnostics before importing.
 - Lua exposes `rl.loader_init([mount_point])` and `rl.loader_deinit()` for loader-only bootstrap without full `rl.init()`.
 - Lua also exposes `rl.loader_init_async([mount_point])` and `rl.init_async([config])` for the polling-style fallback path.

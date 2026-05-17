@@ -1,5 +1,5 @@
--lib utest
--lib hxasync
+-lib utest:1.13.2
+-lib hxasync:1.1.4
 -cp ../../..
 -cp ../../../bindings/haxe
 -main tests.bindings.haxe.Main

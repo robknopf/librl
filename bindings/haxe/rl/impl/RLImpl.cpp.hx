@@ -19,11 +19,13 @@ import rl.RLTypes.RLMouseState;
 import rl.RLTypes.RLKeyboardState;
 import rl.RLTaskGroup.RLTaskGroupCallback;
 import rl.RLTaskGroup.RLTaskGroupTaskCallback;
+import rl.gen.RLVersion;
 
 @:keep
 @:include("rl.h")
 @:include("rl_config.h")
 private extern class RLExterns {
+
   // --- Init result codes (rl.h) ---
   static inline var INIT_OK: Int = 0;
   static inline var INIT_ERR_UNKNOWN: Int = -1;
@@ -100,12 +102,6 @@ private extern class RLExterns {
   static inline function versionStringNative(): String {
     return untyped __cpp__("::String(::rl_version_string())");
   }
-
-  static inline var VERSION_MAJOR: Int = 0;
-  static inline var VERSION_MINOR: Int = 0;
-  static inline var VERSION_PATCH: Int = 1;
-  static inline var VERSION_LABEL: String = "dev";
-  static inline var VERSION_NUMBER: Int = 1;
 
   @:native("rl_scratch_refresh")
   static function scratchRefresh(): Void;
@@ -696,6 +692,10 @@ private typedef RLLoaderCallbacks = {
 @:headerInclude("alloca.h")
 abstract RLImpl(RLExterns) {
   // --- Forwarded constants (inline so cppia bakes values at script compile time) ---
+
+  public static inline var BOOT_OK: Int = 0;
+  public static inline var BOOT_ERR_UNKNOWN: Int = -1;
+  public static inline var BOOT_ERR_VERSION_MISMATCH: Int = -2;
   public static inline var INIT_OK: Int = 0;
   public static inline var INIT_ERR_UNKNOWN: Int = -1;
   public static inline var INIT_ERR_ALREADY_INITIALIZED: Int = -2;
@@ -747,7 +747,12 @@ abstract RLImpl(RLExterns) {
   public static var COLOR_MAGENTA(get, never): RLHandle; static function get_COLOR_MAGENTA() return RLExterns.COLOR_MAGENTA;
   public static var COLOR_RAYWHITE(get, never): RLHandle; static function get_COLOR_RAYWHITE() return RLExterns.COLOR_RAYWHITE;
   // --- Forwarded methods ---
-  public static function boot(?config: RLBootConfig): Int { return INIT_OK; }
+  public static function boot(?config: RLBootConfig): Int {
+    if (compareVersion() < 0) {
+      return BOOT_ERR_VERSION_MISMATCH;
+    }
+    return BOOT_OK;
+  }
   public static function deinit(): Void { RLExterns.deinit(); }
   public static function scratchRefresh(): Void { RLExterns.scratchRefresh(); }
   public static function tick(): Int { return RLExterns.tick(); }
@@ -986,11 +991,30 @@ abstract RLImpl(RLExterns) {
     return RLExterns.versionStringNative();
   }
 
-  public static var VERSION_MAJOR(get, never): Int = RLExterns.VERSION_MAJOR;
-  public static var VERSION_MINOR(get, never): Int = RLExterns.VERSION_MINOR;
-  public static var VERSION_PATCH(get, never): Int = RLExterns.VERSION_PATCH;
-  public static var VERSION_LABEL(get, never): String = RLExterns.VERSION_LABEL;
-  public static var VERSION_NUMBER(get, never): Int = RLExterns.VERSION_NUMBER;
+  static function compareVersion(): Int {
+    final runtimeMajor = versionMajor();
+    final runtimeMinor = versionMinor();
+    final runtimePatch = versionPatch();
+    final builtMajor =  RLVersion.BUILT_MAJOR;
+    final builtMinor =  RLVersion.BUILT_MINOR;
+    final builtPatch =  RLVersion.BUILT_PATCH;
+    
+    trace('[librl] bindings version: ' + builtMajor + ', ' + builtMinor + ', ' + builtPatch);
+    trace('[librl] librl version: ' + runtimeMajor + ', ' + runtimeMinor + ', ' + runtimePatch);
+
+    if (runtimeMajor != builtMajor) {
+      return -1;
+    }
+    if (runtimeMinor != builtMinor) {
+      return -2;
+    }
+    if (runtimePatch != builtPatch) {
+      // allow patch differences through
+      return 1;
+    }
+
+    return 0;
+  }
 
   public static function loaderRestoreFsAsync(): RLHandle {
     return RLLoader.loaderRestoreFsAsync();

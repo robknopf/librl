@@ -12,7 +12,7 @@ import rl.RLTypes.RLKeyboardState;
 import rl.RLTypes.RLMouseState;
 import rl.RLTypes.RLPickResult;
 import rl.RLTypes.RLVec2;
-
+import rl.gen.RLVersion;
 /**
  * Minimal JS-target backend for the target-neutral `rl.RL` facade.
  *
@@ -24,18 +24,16 @@ class RLImpl {
 	static var binding:Dynamic = null;
 	static var bootPromise:Promise<Int> = null;
 
-	public static inline var VERSION_MAJOR:Int = 0;
-	public static inline var VERSION_MINOR:Int = 0;
-	public static inline var VERSION_PATCH:Int = 1;
-	public static inline var VERSION_LABEL:String = "dev";
-	public static inline var VERSION_NUMBER:Int = 1;
-
 	public static inline var INIT_OK:Int = 0;
 	public static inline var INIT_ERR_UNKNOWN:Int = -1;
 	public static inline var INIT_ERR_ALREADY_INITIALIZED:Int = -2;
 	public static inline var INIT_ERR_LOADER:Int = -3;
 	public static inline var INIT_ERR_ASSET_HOST:Int = -4;
 	public static inline var INIT_ERR_WINDOW:Int = -5;
+
+	public static inline var BOOT_OK:Int = 0;
+	public static inline var BOOT_ERR_UNKNOWN:Int = -1;
+	public static inline var BOOT_ERR_VERSION_MISMATCH:Int = -2;
 
 	public static inline var TICK_RUNNING:Int = 0;
 	public static inline var TICK_WAITING:Int = 1;
@@ -126,12 +124,19 @@ class RLImpl {
           {3} = null;
           return {4};
         }
-      })()", bindingsPath, binding, bootOptions, bootPromise, INIT_ERR_UNKNOWN);
+      })()", bindingsPath, binding, bootOptions, bootPromise, BOOT_ERR_UNKNOWN);
 		var rc:Int = cast js.Syntax.code("await {0}", bootPromise);
-		if (rc == INIT_OK && binding != null) {
-			setColorConstants();
+		if (rc != BOOT_OK) {
+			return Promise.resolve(rc);
 		}
-		return Promise.resolve(rc);
+		
+		if ( compareVersion() < 0 ) {
+			return Promise.resolve(BOOT_ERR_VERSION_MISMATCH);
+		}
+	
+		setColorConstants();
+	
+		return Promise.resolve(BOOT_OK);
 	}
 
 	private static function buildBootOptions(?config:RLBootConfig):Dynamic {
@@ -260,27 +265,52 @@ class RLImpl {
 	}
 
 	public static function versionMajor():Int {
-		return binding == null ? VERSION_MAJOR : cast binding.versionMajor();
+		return binding == null ? 0 : cast binding.versionMajor();
 	}
 
 	public static function versionMinor():Int {
-		return binding == null ? VERSION_MINOR : cast binding.versionMinor();
+		return binding == null ? 0 : cast binding.versionMinor();
 	}
 
 	public static function versionPatch():Int {
-		return binding == null ? VERSION_PATCH : cast binding.versionPatch();
+		return binding == null ? 0 : cast binding.versionPatch();
 	}
 
 	public static function versionLabel():String {
-		return binding == null ? VERSION_LABEL : cast binding.versionLabel();
+		return binding == null ? "unknown" : cast binding.versionLabel();
 	}
 
 	public static function versionNumber():Int {
-		return binding == null ? VERSION_NUMBER : cast binding.versionNumber();
+		return binding == null ? 0 : cast binding.versionNumber();
 	}
 
 	public static function versionString():String {
-		return binding == null ? "0.0.1-dev" : cast binding.versionString();
+		return binding == null ? "0.0.0-unknown" : cast binding.versionString();
+	}
+
+	static function compareVersion():Int {
+		final runtimeMajor = versionMajor();
+		final runtimeMinor = versionMinor();
+		final runtimePatch = versionPatch();
+		final builtMajor = RLVersion.BUILT_MAJOR;
+		final builtMinor = RLVersion.BUILT_MINOR;
+		final builtPatch = RLVersion.BUILT_PATCH;
+
+		trace('[librl] bindings version: ' + builtMajor + ', ' + builtMinor + ', ' + builtPatch);
+		trace('[librl] librl version: ' + runtimeMajor + ', ' + runtimeMinor + ', ' + runtimePatch);
+
+		if (runtimeMajor != builtMajor) {
+			return -1;
+		}
+		if (runtimeMinor != builtMinor) {
+			return -2;
+		}
+		if (runtimePatch != builtPatch) {
+			// allow patch differences through
+			return 1;
+		}
+
+		return 0;
 	}
 
 	public static function scratchRefresh():Void {
@@ -532,7 +562,8 @@ class RLImpl {
 
 	public static function camera3dSet(camera:RLHandle, positionX:Float, positionY:Float, positionZ:Float, targetX:Float, targetY:Float, targetZ:Float,
 			upX:Float, upY:Float, upZ:Float, fovy:Float, projection:Int):Bool
-		return binding != null && cast binding.setCamera3d(camera, positionX, positionY, positionZ, targetX, targetY, targetZ, upX, upY, upZ, fovy, projection);
+		return binding != null
+			&& cast binding.setCamera3d(camera, positionX, positionY, positionZ, targetX, targetY, targetZ, upX, upY, upZ, fovy, projection);
 
 	public static function camera3dSetActive(camera:RLHandle):Bool
 		return binding != null && cast binding.setActiveCamera3d(camera);
@@ -547,7 +578,8 @@ class RLImpl {
 
 	public static function modelSetTransform(model:RLHandle, positionX:Float, positionY:Float, positionZ:Float, rotationX:Float, rotationY:Float,
 			rotationZ:Float, scaleX:Float, scaleY:Float, scaleZ:Float):Bool
-		return binding != null && cast binding.modelSetTransform(model, positionX, positionY, positionZ, rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ);
+		return binding != null
+			&& cast binding.modelSetTransform(model, positionX, positionY, positionZ, rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ);
 
 	public static function modelDraw(model:RLHandle, tint:RLHandle):Void {
 		if (binding != null)
@@ -620,7 +652,7 @@ class RLImpl {
 	}
 
 	public static function textureDrawGround(texture:RLHandle, positionX:Float, positionY:Float, positionZ:Float, width:Float, length:Float,
-		tint:RLHandle):Void {
+			tint:RLHandle):Void {
 		if (binding != null)
 			binding.drawTextureGround(texture, positionX, positionY, positionZ, width, length, tint);
 	}
@@ -840,8 +872,7 @@ class RLImpl {
 			title: config != null && config.windowTitle != null ? config.windowTitle : "",
 			flags: config != null && config.windowFlags != null ? config.windowFlags : 0,
 			assetHost: config != null && config.assetHost != null ? config.assetHost : "",
-			loaderCacheDir: config != null && config.loaderCacheDir != null ? config.loaderCacheDir : ""
-		};
+			loaderCacheDir: config != null && config.loaderCacheDir != null ? config.loaderCacheDir : ""};
 	}
 
 	static inline function pickResult():RLPickResult {

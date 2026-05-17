@@ -312,12 +312,6 @@ class RL {
 		return rl.impl.RLImpl.getPlatform();
 	}
 
-	public static inline var VERSION_MAJOR:Int = 0;
-	public static inline var VERSION_MINOR:Int = 0;
-	public static inline var VERSION_PATCH:Int = 1;
-	public static inline var VERSION_LABEL:String = "dev";
-	public static inline var VERSION_NUMBER:Int = 1;
-
 	public static function versionMajor():Int {
 		return rl.impl.RLImpl.versionMajor();
 	}

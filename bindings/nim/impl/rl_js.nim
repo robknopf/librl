@@ -4,6 +4,8 @@
 import std/asyncjs
 import std/jsffi
 
+include ../gen/rl_version
+
 # Module-level handle to the loaded rl.js binding object.
 # Set by rl_boot(); all other procs assume it is non-null.
 {.emit: "var __gRl = null;".}
@@ -47,11 +49,6 @@ type
 # ---------------------------------------------------------------------------
 
 const
-  RL_VERSION_MAJOR* = 0
-  RL_VERSION_MINOR* = 0
-  RL_VERSION_PATCH* = 1
-  RL_VERSION_LABEL* = "dev"
-  RL_VERSION_NUMBER* = 1'u32
   RL_INIT_OK* = 0
   RL_INIT_ERR_UNKNOWN* = -1
   RL_INIT_ERR_ALREADY_INITIALIZED* = -2
@@ -118,10 +115,8 @@ var
 # Boot / init / deinit  (async)
 # ---------------------------------------------------------------------------
 
-proc rl_boot*(config = RLBootConfig()): Future[int] =
-  ## Load bindings/js/rl.js via dynamic import, call rl.boot(), and patch
-  ## color constants into Nim global vars.  Must be awaited before any
-  ## other rl_ call.
+proc rl_boot_js_load*(config = RLBootConfig()): Future[int] =
+  ## Load bindings/js/rl.js, call rl.boot(), patch color constants.
   let bindingsPath = (if config.bindingsPath.len > 0: config.bindingsPath else: "/bindings/js/rl.js").cstring
   let canvasId = config.canvasId.cstring
   let modulePath = config.modulePath.cstring
@@ -148,7 +143,7 @@ if (Object.keys(__rl_boot_opts.env).length === 0) delete __rl_boot_opts.env;""".
     var lib = await import(/* @vite-ignore */ __rl_boot_url);
     __gRl = lib.rl || lib.default;
     var rc = await __gRl.boot(__rl_boot_opts);
-    if (rc === 0) {
+    if (!rc) {
       `RL_COLOR_DEFAULT` = __gRl.COLOR_DEFAULT >>> 0;
       `RL_COLOR_LIGHTGRAY` = __gRl.COLOR_LIGHTGRAY >>> 0;
       `RL_COLOR_GRAY` = __gRl.COLOR_GRAY >>> 0;
@@ -179,6 +174,13 @@ if (Object.keys(__rl_boot_opts.env).length === 0) delete __rl_boot_opts.env;""".
     }
     return rc | 0;
   })();""".}
+
+proc rl_boot*(config = RLBootConfig()): Future[int] {.async.} =
+  ## Load JS runtime, then compare binding stamp to librl version.
+  let rc = await rl_boot_js_load(config)
+  if rc != RL_INIT_OK:
+    return rc
+  return RL_INIT_OK
 
 proc rl_init_values_impl(windowWidth, windowHeight: int, windowTitle: cstring,
                          windowFlags: RLWindowFlags,

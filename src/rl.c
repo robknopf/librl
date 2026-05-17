@@ -6,6 +6,7 @@
 #include "internal/rl_event.h"
 #include "internal/rl_font.h"
 #include "internal/rl_logger.h"
+#include "rl_logger.h"
 #include "internal/rl_model.h"
 #include "internal/rl_music.h"
 #include "internal/rl_sound.h"
@@ -16,6 +17,7 @@
 #include "internal/rl_window.h"
 #include "raylib.h"
 #include "rl_loader.h"
+#include "rl_version.h"
 #include <stddef.h>
 #include <string.h>
 
@@ -54,6 +56,7 @@ int rl_init_async(const rl_init_config_t *config) {
     rl_init_apply_defaults(&cfg);
 
     rl_logger_init();
+    rl_logger_info("librl %s", rl_version_string());
     if (rl_loader_init_async(cfg.loader_cache_dir) != 0) {
         rl_logger_deinit();
         return RL_INIT_ERR_LOADER;
@@ -106,6 +109,7 @@ int rl_init(const rl_init_config_t *config) {
     rl_init_apply_defaults(&cfg);
 
     rl_logger_init();
+    rl_logger_info("librl %s", rl_version_string());
     if (rl_loader_init(cfg.loader_cache_dir) != 0) {
         rl_logger_deinit();
         return RL_INIT_ERR_LOADER;

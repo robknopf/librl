@@ -22,12 +22,14 @@ UNIT_TEST_SRCS := \
 	$(UNIT_TEST_DIR)/fetch_url_stub.c \
 	$(UNIT_TEST_DIR)/raylib_loader_stub.c \
 	$(UNIT_TEST_DIR)/rl_handle_pool_test.c \
-	$(UNIT_TEST_DIR)/rl_loader_test.c
+	$(UNIT_TEST_DIR)/rl_loader_test.c \
+	$(UNIT_TEST_DIR)/rl_version_test.c
 UNIT_TEST_LIB_SRCS := \
 	$(ROOT_DIR)/src/rl_handle_pool.c \
 	$(ROOT_DIR)/src/rl_loader.c \
 	$(ROOT_DIR)/src/rl_logger.c \
-	$(ROOT_DIR)/src/rl_scratch.c
+	$(ROOT_DIR)/src/rl_scratch.c \
+	$(ROOT_DIR)/src/rl_version.c
 UNIT_TEST_DESKTOP_BIN := /tmp/librl_unit_tests
 UNIT_TEST_WASM_JS := /tmp/librl_unit_tests.js
 
@@ -51,18 +53,20 @@ WASM_COMMON_LDFLAGS ?= \
 CFLAGS ?= -Wall -Wextra -fdiagnostics-color=always -Isrc -O2
 INCLUDES := -I$(ROOT_DIR) -I$(ROOT_DIR)/include -I$(ROOT_DIR)/deps/libraylib/include -I$(ROOT_DIR)/src -I$(CORE_INC_DIR)
 
-.PHONY: test test_desktop test_wasm unit_test_desktop unit_test_wasm test_haxe_bindings test_nim_bindings probe_idbfs_build probe_idbfs check_node check_chrome check_probe_python
+.PHONY: test test_desktop test_wasm unit_test_desktop unit_test_wasm test_haxe_bindings test_nim_bindings test_js_bindings test_lua_bindings probe_idbfs_build probe_idbfs check_node check_chrome check_probe_python
 
 test_desktop:
 	@$(MAKE) -C $(ROOT_DIR) desktop
 	@$(MAKE) unit_test_desktop
 	@$(MAKE) test_haxe_bindings
 	@$(MAKE) test_nim_bindings
-	@echo "Desktop smoke test passed (build + librl unit tests + haxe bindings + nim bindings)."
+	@$(MAKE) test_lua_bindings
+	@echo "Desktop smoke test passed (build + librl unit tests + haxe/nim/lua bindings)."
 
 test_wasm:
 	@$(MAKE) -C $(ROOT_DIR) wasm
 	@$(MAKE) unit_test_wasm
+	@$(MAKE) test_js_bindings
 	@$(MAKE) probe_idbfs
 	@test -s "$(OUT_WASM)" || (echo "Missing or empty wasm JS loader: $(OUT_WASM)" && exit 1)
 	@test -s "$(OUT_WASM:.js=.wasm)" || (echo "Missing or empty wasm binary: $(OUT_WASM:.js=.wasm)" && exit 1)
@@ -78,6 +82,10 @@ test_haxe_bindings:
 test_nim_bindings:
 	@$(MAKE) -C $(ROOT_DIR)/tests/bindings/nim test ROOT_DIR="$(abspath $(ROOT_DIR))"
 	@echo "Nim binding tests passed."
+
+test_js_bindings:
+	@$(MAKE) -C $(ROOT_DIR)/tests/bindings/js test ROOT_DIR="$(abspath $(ROOT_DIR))"
+	@echo "JS binding version tests passed."
 
 test_lua_bindings:
 	@$(MAKE) -C $(ROOT_DIR)/tests/bindings/lua test ROOT_DIR="$(abspath $(ROOT_DIR))"

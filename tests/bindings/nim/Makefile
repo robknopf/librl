@@ -8,7 +8,7 @@ test: build
 	@echo "Nim binding tests passed."
 
 build:
-	@$(MAKE) -C $(ROOT_DIR) desktop
+	@$(MAKE) -C $(ROOT_DIR) binding-version desktop
 	$(NIM) c \
 		--passC:"-I$(ROOT_DIR)/include" \
 		--passL:"$(ROOT_DIR)/lib/librl.a -lm -lpthread -ldl -lX11 -lcurl -lnghttp2 -lssl -lcrypto -lz" \

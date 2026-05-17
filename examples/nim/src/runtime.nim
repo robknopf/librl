@@ -1,10 +1,10 @@
-## Runtime ABI footer — `include` this at the bottom of your entry module (e.g. `testjs.nim`).
+## Runtime ABI footer — `include` this at the bottom of your entry module (e.g. `main.nim`).
 ##
 ## Define before include: `onBoot`, `onInit`, `onTick`, `onShutdown`.
 ## `onBoot` and `onInit` should carry `{.rlAsync.}` so they are transparently
 ## async on the JS target and sync on native.
 ##
-## LSP: analyze the entry file (`testjs.nim`), not this file alone.
+## LSP: analyze the entry file (`main.nim`), not this file alone.
 
 import esmexports
 when not declared(rlAsync):

@@ -25,16 +25,17 @@ typedef AppContext = {
 	var camera:RLHandle;
 	var bgm:RLHandle;
 	var greyAlphaColor:RLHandle;
-	var model:RLHandle;
+	var gumshoe:RLHandle;
 	var reloadCount:Int;
 	var spriteYOffset:Float;
+	var backgroundColor:RLHandle;
 }
 
 @:keep
 class MainScript extends Script {
 	final SCREEN_WIDTH:Int = 1024;
 	final SCREEN_HEIGHT:Int = 1280;
-	final SCREEN_TITLE:String = "nimrltest (Haxe runtime)";
+	final SCREEN_TITLE:String = "cppia-simple (Haxe runtime)";
 	final SCREEN_FLAGS:Int = RL.FLAG_MSAA_4X_HINT;
 
 	// this doesn't work since we are a script.  emscripten/platform web isn't defined
@@ -57,7 +58,7 @@ class MainScript extends Script {
 
 	var ctx:AppContext = null;
 
-	var msg:String = "Hello from Cppia script Main !";
+	var msg:String = "Hello from Haxe Simple Main !";
 	var platformText:String = "Platform: <unknown>";
 
 	public static function joinPath(pathComponents:haxe.Rest<String>):String {
@@ -76,9 +77,10 @@ class MainScript extends Script {
 			camera: 0,
 			bgm: 0,
 			greyAlphaColor: 0,
-			model: 0,
+			gumshoe: 0,
 			reloadCount: 0,
-			spriteYOffset: 3.0
+			spriteYOffset: 3.0,
+			backgroundColor: 0
 		};
 		RL.loggerSetLevel(RL.LOGGER_LEVEL_WARN);
 		var err = RL.init({
@@ -86,7 +88,7 @@ class MainScript extends Script {
 			windowHeight: SCREEN_HEIGHT,
 			windowTitle: SCREEN_TITLE,
 			windowFlags: SCREEN_FLAGS,
-			//assetHost: ASSET_HOST,
+			assetHost: ASSET_HOST,
 			// loaderCacheDir: LOADER_CACHE_DIR
 		});
 		if (err != 0) {
@@ -94,15 +96,7 @@ class MainScript extends Script {
 			return RT_FAILED;
 		}
 
-		// move the window to the other monitor
-  		RL.windowSetMonitor(1);
-
 		RL.loaderClearCache();
-
-		// clear the screen
-		RL.renderBegin();
-		RL.renderClearBackground(RL.COLOR_RAYWHITE);
-		RL.renderEnd();
 
 		// Setup lighting and camera
 		RL.enableLighting();
@@ -111,11 +105,15 @@ class MainScript extends Script {
 		ctx.camera = RL.camera3dCreate(12.0, 12.0, 12.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 45.0, RL.CAMERA_PERSPECTIVE);
 		RL.camera3dSetActive(ctx.camera);
 		ctx.greyAlphaColor = RL.colorCreate(0, 0, 0, 128);
+		ctx.backgroundColor = RL.colorCreate(245, 245, 245, 255);
 
 		loadAssets();
 
 		platformText = getPlatformText();
 
+		RL.renderBegin();
+		RL.renderClearBackground(ctx.backgroundColor);
+		RL.renderEnd();
 
 		return RT_SUCCESS;
 	}
@@ -128,15 +126,15 @@ class MainScript extends Script {
 			ctx.komikaFont = RL.fontCreate(path, KOMIKA_FONT_SIZE);
 		}, null, ctx);
 		RL.loaderAddTask(RL.loaderImportAssetAsync(MODEL_PATH), (path, _) -> {
-			ctx.model = RL.modelCreate(path);
-			RL.modelSetTransform(ctx.model, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
-			RL.modelSetAnimation(ctx.model, 1);
-			RL.modelSetAnimationSpeed(ctx.model, 1.0);
-			RL.modelSetAnimationLoop(ctx.model, true);
+			ctx.gumshoe = RL.modelCreate(path);
+			RL.modelSetTransform(ctx.gumshoe, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+			RL.modelSetAnimation(ctx.gumshoe, 1);
+			RL.modelSetAnimationSpeed(ctx.gumshoe, 1.0);
+			RL.modelSetAnimationLoop(ctx.gumshoe, true);
 		}, null, ctx);
 		RL.loaderAddTask(RL.loaderImportAssetAsync(SPRITE_PATH), (path, _) -> {
 			ctx.sprite = RL.sprite3dCreate(path);
-			RL.sprite3dSetTransform(ctx.sprite, 0.0, 0.0, 0.0, 1.0);
+			RL.sprite3dSetTransform(ctx.sprite, 0.0, 0.0, ctx.spriteYOffset, 1.0);
 		}, null, ctx);
 		RL.loaderAddTask(RL.loaderImportAssetAsync(BGM_PATH), (path, _) -> {
 			ctx.bgm = RL.musicCreate(path);
@@ -146,10 +144,8 @@ class MainScript extends Script {
 	}
 
 	public function animateFrame(deltaTimeSec:Float):Void {
-		if (ctx.model != 0) {
-			//RL.modelSetAnimation(ctx.model, 4);
-
-			RL.modelAnimate(ctx.model, deltaTimeSec);
+		if (ctx.gumshoe != 0) {
+			RL.modelAnimate(ctx.gumshoe, deltaTimeSec);
 		}
 
 		var spriteX = 0.0;
@@ -182,6 +178,7 @@ class MainScript extends Script {
 	override public function onTick(deltaTimeSec:Float):RTResult {
 		// trace("Main: onTick called with deltaTimeMS: " + deltaTimeMS);
 		ctx.elapsed = ctx.elapsed + deltaTimeSec;
+		ctx.totalTime += deltaTimeSec;
 		ctx.countdownTimer -= deltaTimeSec;
 		if (ctx.countdownTimer <= 0) {
 			// return RT_STOPPED;
@@ -196,12 +193,12 @@ class MainScript extends Script {
 		var remainingText = 'Remaining: ${formatFixed(ctx.countdownTimer, 2)}';
 		var elapsedText = 'Elapsed: ${formatFixed(ctx.totalTime, 2)}';
 
-		msg = "Nothing picked";
+		msg = "Nothing picked!";
 
 		var pickResult:RLPickResult;
 
-		if (ctx.model != 0) {
-			pickResult = RL.pickModel(ctx.camera, ctx.model, mouse.x, mouse.y);
+		if (ctx.gumshoe != 0) {
+			pickResult = RL.pickModel(ctx.camera, ctx.gumshoe, mouse.x, mouse.y);
 			if (pickResult.hit) {
 				trace('Model pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y);
 				msg = 'Model pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y;
@@ -217,12 +214,12 @@ class MainScript extends Script {
 		}
 
 		RL.renderBegin();
-		RL.renderClearBackground(RL.COLOR_RAYWHITE);
+		RL.renderClearBackground(ctx.backgroundColor);
 
 		// 3d render
 		RL.renderBeginMode3d();
-		if (ctx.model != 0) {
-			RL.modelDraw(ctx.model, RL.COLOR_RAYWHITE);
+		if (ctx.gumshoe != 0) {
+			RL.modelDraw(ctx.gumshoe, RL.COLOR_RAYWHITE);
 		}
 		if (ctx.sprite != 0) {
 			RL.sprite3dDraw(ctx.sprite, RL.COLOR_RAYWHITE);

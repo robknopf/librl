@@ -67,7 +67,7 @@ CFLAGS_WASM = \
 LDFLAGS_WASM = \
 	$(WASM_COMMON_LDFLAGS) \
 	-s JSPI=1 \
-	-s JSPI_EXPORTS='["rl_init","rl_init_values","rl_init_values_async","rl_loader_init","rl_loader_import_asset","rl_deinit","rl_loader_deinit"]' \
+	-s JSPI_EXPORTS='["rl_init","rl_init_values","rl_loader_init","rl_loader_import_asset","rl_deinit","rl_loader_deinit"]' \
 	-fwasm-exceptions \
 	-s INITIAL_MEMORY=67108864 \
 	-s EXPORTED_FUNCTIONS='[ \

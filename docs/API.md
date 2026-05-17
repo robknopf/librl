@@ -454,7 +454,7 @@ int  rl_pick_get_narrowphase_hits(void);
 
 Notes:
 - Picking reads the stored transform from the model/sprite instance; no explicit position arguments are needed.
-- Broad-phase culling runs before narrow-phase: AABB test for models, bounding-sphere test for sprite3d.
+- Internally uses broad-phase culling before narrow-phase testing.
 - `rl_pick_model_to_scratch` / `rl_pick_sprite3d_to_scratch` are internal wasm bridge functions used by the JS binding; consumers call `RL.pickModel()` / `RL.pickSprite3d()` which handle the scratch read transparently.
 
 ---

@@ -318,11 +318,9 @@ Notes:
   - `examples/haxe-simple/build.hxml` dispatches between the desktop and wasm build configs.
   - `InjectLibRL.hx` adds the emcc linker flags and links against `librl.wasm.a`.
 - Example-specific wasm exports live in example-local `@:buildXml` classes:
-  - `examples/haxe-simple/src/ExampleWasmExports.hx`
-  - `examples/haxe-runtime/src/RuntimeWasmExports.hx`
+  - `examples/haxe-simple/src/InjectWasmExports.hx`
   - Keep app/runtime export lists out of `bindings/haxe/rl/InjectLibRL.hx`; it should stay focused on librl link/config flags.
-- `examples/haxe-simple` is the canonical direct-librl example. It is not a host/runtime ABI example.
-- `examples/haxe-runtime` is a preserved host/runtime ABI experiment. Its `rt_*` ABI helpers live inside that example, not in the librl Haxe binding.
+- `examples/haxe-simple` is the canonical Haxe example and the canonical host/runtime ABI example for Haxe in this repo.
 
 Async loader sugar:
 

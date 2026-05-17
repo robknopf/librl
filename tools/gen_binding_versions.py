@@ -6,7 +6,6 @@ from __future__ import annotations
 import argparse
 import re
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 
 DEFINE_RE = re.compile(r"^#define\s+(RL_VERSION_MAJOR|RL_VERSION_MINOR|RL_VERSION_PATCH)\s+(\S+)", re.M)
@@ -27,24 +26,22 @@ def parse_version_header(header_path: Path) -> tuple[int, int, int]:
     return found["RL_VERSION_MAJOR"], found["RL_VERSION_MINOR"], found["RL_VERSION_PATCH"]
 
 
-def c_block_comment(generated_at: str, source: str) -> str:
+def c_block_comment(source: str) -> str:
     return "\n".join(
         (
             "/* GENERATED — DO NOT EDIT",
             " * librl binding version stamp",
-            f" * generated: {generated_at}",
             f" * from: {source}",
             " */",
         )
     )
 
 
-def nim_comment(generated_at: str, source: str) -> str:
+def nim_comment(source: str) -> str:
     return "\n".join(
         (
             "## GENERATED — DO NOT EDIT",
             "## librl binding version stamp",
-            f"## generated: {generated_at}",
             f"## from: {source}",
         )
     )
@@ -54,9 +51,9 @@ def version_core(major: int, minor: int, patch: int) -> str:
     return f"{major}.{minor}.{patch}"
 
 
-def write_lua_header(path: Path, major: int, minor: int, patch: int, generated_at: str) -> None:
+def write_lua_header(path: Path, major: int, minor: int, patch: int) -> None:
     version = version_core(major, minor, patch)
-    body = f"""{c_block_comment(generated_at, "include/rl_version.h")}
+    body = f"""{c_block_comment("include/rl_version.h")}
 
 #ifndef RL_LUA_VERSION_H
 #define RL_LUA_VERSION_H
@@ -71,9 +68,9 @@ def write_lua_header(path: Path, major: int, minor: int, patch: int, generated_a
     path.write_text(body, encoding="utf-8", newline="\n")
 
 
-def write_js_module(path: Path, major: int, minor: int, patch: int, generated_at: str) -> None:
+def write_js_module(path: Path, major: int, minor: int, patch: int) -> None:
     version = version_core(major, minor, patch)
-    body = f"""{c_block_comment(generated_at, "include/rl_version.h")}
+    body = f"""{c_block_comment("include/rl_version.h")}
 
 export const RL_BINDING_BUILT_MAJOR = {major};
 export const RL_BINDING_BUILT_MINOR = {minor};
@@ -83,9 +80,9 @@ export const RL_BINDING_BUILT_VERSION_STRING = "{version}";
     path.write_text(body, encoding="utf-8", newline="\n")
 
 
-def write_nim_module(path: Path, major: int, minor: int, patch: int, generated_at: str) -> None:
+def write_nim_module(path: Path, major: int, minor: int, patch: int) -> None:
     version = version_core(major, minor, patch)
-    body = f"""{nim_comment(generated_at, "include/rl_version.h")}
+    body = f"""{nim_comment("include/rl_version.h")}
 
 const
   rlBindingMajor* = {major}
@@ -96,9 +93,9 @@ const
     path.write_text(body, encoding="utf-8", newline="\n")
 
 
-def write_haxe_module(path: Path, major: int, minor: int, patch: int, generated_at: str) -> None:
+def write_haxe_module(path: Path, major: int, minor: int, patch: int) -> None:
     version = version_core(major, minor, patch)
-    body = f"""{c_block_comment(generated_at, "include/rl_version.h")}
+    body = f"""{c_block_comment("include/rl_version.h")}
 package rl.gen;
 
 class RLVersion {{
@@ -117,7 +114,6 @@ def generate(root: Path) -> tuple[int, int, int]:
         raise FileNotFoundError(f"missing {header_path}")
 
     major, minor, patch = parse_version_header(header_path)
-    generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     outputs = {
         root / "bindings/lua/gen/rl_lua_version.h": write_lua_header,
@@ -127,7 +123,7 @@ def generate(root: Path) -> tuple[int, int, int]:
     }
     for path, writer in outputs.items():
         path.parent.mkdir(parents=True, exist_ok=True)
-        writer(path, major, minor, patch, generated_at)
+        writer(path, major, minor, patch)
 
     return major, minor, patch
 
@@ -138,7 +134,7 @@ def main(argv: list[str] | None = None) -> int:
         "root",
         nargs="?",
         default=None,
-        help="librl repository root (default: parent of scripts/)",
+        help="librl repository root (default: parent of tools/)",
     )
     args = parser.parse_args(argv)
     root = Path(args.root).resolve() if args.root else repo_root()

@@ -10,6 +10,7 @@ import haxe.ds.StringMap;
 import rl.InjectLibRL;
 import rl.RLHandle;
 import rl.impl.RLLoaderImpl.RLLoader;
+import rl.RLTypes.RLBootConfig;
 import rl.RLTypes.RLInitConfig;
 import rl.RLTypes.RLVec2;
 import rl.RLTypes.RLVec3;
@@ -720,7 +721,7 @@ abstract RLImpl(RLExterns) {
   public static var COLOR_MAGENTA(get, never): RLHandle; static function get_COLOR_MAGENTA() return RLExterns.COLOR_MAGENTA;
   public static var COLOR_RAYWHITE(get, never): RLHandle; static function get_COLOR_RAYWHITE() return RLExterns.COLOR_RAYWHITE;
   // --- Forwarded methods ---
-  public static function boot(?options: Dynamic): Int { return INIT_OK; }
+  public static function boot(?config: RLBootConfig): Int { return INIT_OK; }
   public static function deinit(): Void { RLExterns.deinit(); }
   public static function scratchRefresh(): Void { RLExterns.scratchRefresh(); }
   public static function tick(): Int { return RLExterns.tick(); }

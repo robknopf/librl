@@ -9,6 +9,18 @@ typedef RLInitConfig = {
   ?loaderCacheDir: String,
 };
 
+typedef RLBootConfig = {
+  ?bindingsPath: String,
+  ?canvasId: String,
+  ?modulePath: String,
+  ?wasmPath: String,
+  ?idealWidth: Int,
+  ?idealHeight: Int,
+  ?print: String->Void,
+  ?printErr: String->Void,
+  ?locateFile: String->String->String,
+};
+
 typedef RLVec2 = {
   var x: Float;
   var y: Float;

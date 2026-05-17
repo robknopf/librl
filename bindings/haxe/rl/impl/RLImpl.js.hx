@@ -6,6 +6,7 @@ import js.lib.Promise;
 import rl.RLHandle;
 import rl.RLTaskGroup;
 import rl.RLTaskGroup.RLTaskGroupCallback;
+import rl.RLTypes.RLBootConfig;
 import rl.RLTypes.RLInitConfig;
 import rl.RLTypes.RLKeyboardState;
 import rl.RLTypes.RLMouseState;
@@ -90,7 +91,7 @@ class RLImpl {
 	}
 
 	@async
-	public static function boot(?options:Dynamic):Promise<Int> {
+	public static function boot(?config:RLBootConfig):Promise<Int> {
 		if (binding != null) {
 			return Promise.resolve(INIT_OK);
 		}
@@ -102,7 +103,8 @@ class RLImpl {
 			return Promise.resolve(INIT_ERR_UNKNOWN);
 		}
 
-		var bindingsPath = maybeCacheBustBindingsPath(optionString(options, "bindingsPath", "/bindings/js/rl.js"));
+		var bootOptions = buildBootOptions(config);
+		var bindingsPath = maybeCacheBustBindingsPath(optionString(bootOptions, "bindingsPath", "/bindings/js/rl.js"));
 
 		bootPromise = cast js.Syntax.code("(async () => {
         try {
@@ -118,12 +120,56 @@ class RLImpl {
           {3} = null;
           return {4};
         }
-      })()", bindingsPath, binding, options, bootPromise, INIT_ERR_UNKNOWN);
+      })()", bindingsPath, binding, bootOptions, bootPromise, INIT_ERR_UNKNOWN);
 		var rc:Int = cast js.Syntax.code("await {0}", bootPromise);
 		if (rc == INIT_OK && binding != null) {
 			setColorConstants();
 		}
 		return Promise.resolve(rc);
+	}
+
+	private static function buildBootOptions(?config:RLBootConfig):Dynamic {
+		var options:Dynamic = {};
+		var env:Dynamic = {};
+		var hasEnv = false;
+
+		if (config == null) {
+			return options;
+		}
+		if (config.bindingsPath != null) {
+			Reflect.setField(options, "bindingsPath", config.bindingsPath);
+		}
+		if (config.canvasId != null) {
+			Reflect.setField(options, "canvasId", config.canvasId);
+		}
+		if (config.modulePath != null) {
+			Reflect.setField(options, "modulePath", config.modulePath);
+		}
+		if (config.wasmPath != null) {
+			Reflect.setField(options, "wasmPath", config.wasmPath);
+		}
+		if (config.idealWidth != null) {
+			Reflect.setField(options, "idealWidth", config.idealWidth);
+		}
+		if (config.idealHeight != null) {
+			Reflect.setField(options, "idealHeight", config.idealHeight);
+		}
+		if (config.print != null) {
+			Reflect.setField(env, "print", config.print);
+			hasEnv = true;
+		}
+		if (config.printErr != null) {
+			Reflect.setField(env, "printErr", config.printErr);
+			hasEnv = true;
+		}
+		if (config.locateFile != null) {
+			Reflect.setField(env, "locateFile", config.locateFile);
+			hasEnv = true;
+		}
+		if (hasEnv) {
+			Reflect.setField(options, "env", env);
+		}
+		return options;
 	}
 
 	private static function setColorConstants():Void {

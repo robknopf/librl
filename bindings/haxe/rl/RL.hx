@@ -13,6 +13,7 @@
 package rl;
 
 import haxe.io.Bytes;
+import rl.RLTypes.RLBootConfig;
 import rl.RLHandle;
 import rl.RLTypes.RLInitConfig;
 import rl.RLTypes.RLVec2;
@@ -281,8 +282,8 @@ class RL {
 	static inline function get_COLOR_BLACK():RLHandle
 		return rl.impl.RLImpl.COLOR_BLACK;
 
-	public static function boot(?options:Dynamic):Int {
-		return cast rl.impl.RLImpl.boot(options);
+	public static function boot(?config:RLBootConfig):Int {
+		return cast rl.impl.RLImpl.boot(config);
 	}
 
 	@async

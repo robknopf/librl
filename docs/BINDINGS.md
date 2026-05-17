@@ -100,7 +100,7 @@ Notes:
     - `getPickStats()`
 - JS `boot(opts)` instantiates the Emscripten module and prepares the scratch/color helpers without calling `rl_init(...)`.
   - This is useful when callers need the loader-only/bootstrap path first, for example `boot() -> loaderInit() -> init()`.
-  - `boot(...)` is the canonical place for module/browser options such as `env`, `canvasId`, `modulePath`, `wasmPath`, and presentation hints like `idealWidth` / `idealHeight`.
+  - `boot(...)` is the canonical place for module/browser options such as `canvasId`, `modulePath`, `wasmPath`, `idealWidth`, `idealHeight`, and optional callback hooks like `print`, `printErr`, and `locateFile`.
   - `modulePath` selects the raw Emscripten JS runtime module (`lib/librl.js` by default, resolved relative to `bindings/js/rl.js`).
   - `init(...)` and `initAsync(...)` reuse the booted module instance when one already exists.
 - JS `init(opts)` calls the default synchronous `rl_init()` with a wasm `rl_init_config_t` built from:
@@ -180,7 +180,21 @@ Notes:
   - `rl_window_init(width, height, title, flags)`
   - `RL_FLAG_MSAA_4X_HINT`
 - Window close polling is exposed in Nim as `rl_window_close_requested()`.
-- Nim exposes `rl_boot()`, which currently returns `RL_INIT_OK` without additional work. This keeps the binding lifecycle aligned with JS/Haxe callers that may use `boot() -> loader_init() -> init()`.
+- Nim exposes `rl_boot([config])`.
+  - On JS, `rl_boot` dynamically imports `bindings/js/rl.js`, boots the wrapper, and patches color constants.
+  - `RLBootConfig` on JS currently exposes:
+    - `bindingsPath`
+    - `canvasId`
+    - `modulePath`
+    - `wasmPath`
+    - `idealWidth`
+    - `idealHeight`
+    - `print`
+    - `printErr`
+    - `locateFile`
+  - `bindingsPath` lets callers override the runtime path to `bindings/js/rl.js`; if omitted, the binding falls back to the compile-time `rlBindingPath` default.
+  - On Nim JS, `print` and `printErr` are forwarded into the wrapper `env` object. `locateFile` is currently accepted for API parity but ignored with a warning.
+  - On native targets, `rl_boot` remains a no-op bootstrap hook that returns `RL_INIT_OK`.
 - Loader helpers in Nim (all return native `int` or `bool`):
   - `rl_loader_init([mount_point])` → `int`
   - `rl_loader_init_async([mount_point])` → `int`
@@ -243,11 +257,11 @@ Current state:
   - `RLImpl.cpp.hx` on `cpp`
   - `RLImpl.js.hx` on `js`
   - `RLImpl.hx` for unsupported targets, which fails at compile time
-- `RL.boot(?options)` is the backend bootstrap hook:
+- `RL.boot(?config)` is the backend bootstrap hook:
   - On hxcpp/cppia it returns `Int` and currently succeeds immediately.
   - On Haxe JS it returns `js.lib.Promise<Int>` so the JS backend can import `bindings/js/rl.js`, which then instantiates `lib/librl.js` / `lib/librl.wasm` before normal `RL.init(...)` calls.
   - The current Haxe JS backend expects the generated raw `lib/librl.js` JSPI build plus the standalone wrapper in `bindings/js/rl.js`. If `WebAssembly.Suspending` / `WebAssembly.promising` are unavailable, `RL.boot()` returns an error code and leaves the backend unbooted.
-  - Haxe JS uses `bindingsPath` to locate `bindings/js/rl.js`; once loaded, the JS binding itself uses `modulePath` and `wasmPath` to locate the raw Emscripten artifacts.
+  - Haxe JS uses a typed `RLBootConfig` surface with flattened fields like `bindingsPath`, `canvasId`, `modulePath`, `wasmPath`, `idealWidth`, `idealHeight`, `print`, `printErr`, and `locateFile`.
 - Haxe JS returns Promises for blocking JSPI-backed calls:
   - `RL.init(...)`, `RL.initValues(...)`, `RL.deinit()`
   - `RL.loaderInit(...)`, `RL.loaderDeinit()`, `RL.loaderImportAsset(...)`

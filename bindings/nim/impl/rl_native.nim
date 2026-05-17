@@ -234,7 +234,8 @@ proc rl_loader_add_task*(task: RLHandle,
   if result != RL_LOADER_QUEUE_TASK_OK and onFailure.isNil:
     rl_loader_release_closure_task(closureTask)
 
-proc rl_boot*(): int {.inline.} =
+proc rl_boot*(config = RLBootConfig()): int {.inline.} =
+  discard config
   RL_INIT_OK
 
 proc rl_init_async*(): int {.inline.} =

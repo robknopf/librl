@@ -37,7 +37,9 @@ var ctx: AppContext
 
 proc onBoot(): int {.rlAsync.} =
   echo "boot"
-  let rc = rlAwait rl_boot()
+  let rc = rlAwait rl_boot(RLBootConfig(
+    bindingsPath: "/bindings/js/rl.js",
+  ))
   if rc != 0: return rc
   return ResultOk
 

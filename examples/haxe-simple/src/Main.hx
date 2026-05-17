@@ -53,13 +53,11 @@ class SimpleRuntime implements IRuntime {
 		var rc = @await RL.boot({
 			canvasId: "renderCanvas",
 			/*
-			env: {
-				print: (msg) -> {
-					trace(msg);
-				},
-				printErr: (msg) -> {
-					trace(msg);
-				}
+			print: (msg) -> {
+				trace(msg);
+			},
+			printErr: (msg) -> {
+				trace(msg);
 			},
 			*/
 

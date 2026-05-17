@@ -116,17 +116,36 @@ const rlBindingPath {.strdefine.} = "../../../../bindings/js/rl.js"
 # Boot / init / deinit  (async)
 # ---------------------------------------------------------------------------
 
-proc rl_boot*(): Future[int] =
+proc rl_boot*(config = RLBootConfig()): Future[int] =
   ## Load bindings/js/rl.js via dynamic import, call rl.boot(), and patch
   ## color constants into Nim global vars.  Must be awaited before any
   ## other rl_ call.
-  {.emit: "var __rl_boot_url = \"`rlBindingPath`\";".}
+  let bindingsPath = (if config.bindingsPath.len > 0: config.bindingsPath else: rlBindingPath).cstring
+  let canvasId = config.canvasId.cstring
+  let modulePath = config.modulePath.cstring
+  let wasmPath = config.wasmPath.cstring
+  let idealWidth = config.idealWidth
+  let idealHeight = config.idealHeight
+  let printFn = config.print
+  let printErrFn = config.printErr
+  let hasLocateFile = not config.locateFile.isNil
+  {.emit: "var __rl_boot_url = `bindingsPath`;".}
+  {.emit: """var __rl_boot_opts = { env: {} };
+if (`canvasId`.length > 0) __rl_boot_opts.canvasId = `canvasId`;
+if (`modulePath`.length > 0) __rl_boot_opts.modulePath = `modulePath`;
+if (`wasmPath`.length > 0) __rl_boot_opts.wasmPath = `wasmPath`;
+if (`idealWidth` > 0) __rl_boot_opts.idealWidth = `idealWidth`;
+if (`idealHeight` > 0) __rl_boot_opts.idealHeight = `idealHeight`;
+if (`printFn` !== null) __rl_boot_opts.env.print = `printFn`;
+if (`printErrFn` !== null) __rl_boot_opts.env.printErr = `printErrFn`;
+if (`hasLocateFile`) console.warn("rl_boot: RLBootConfig.locateFile is not supported on Nim JS yet; ignoring");
+if (Object.keys(__rl_boot_opts.env).length === 0) delete __rl_boot_opts.env;""".}
   when defined(debug):
-    {.emit: """__rl_boot_url = __rl_boot_url + "?t=" + Date.now();""".}
+    {.emit: """__rl_boot_url = __rl_boot_url + (__rl_boot_url.indexOf("?") >= 0 ? "&" : "?") + "t=" + Date.now();""".}
   {.emit: """return (async function() {
     var lib = await import(/* @vite-ignore */ __rl_boot_url);
     __gRl = lib.rl || lib.default;
-    var rc = await __gRl.boot({});
+    var rc = await __gRl.boot(__rl_boot_opts);
     if (rc === 0) {
       `RL_COLOR_DEFAULT` = __gRl.COLOR_DEFAULT >>> 0;
       `RL_COLOR_LIGHTGRAY` = __gRl.COLOR_LIGHTGRAY >>> 0;

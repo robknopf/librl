@@ -876,9 +876,71 @@ RL_LOGGER_LEVEL_WARN, RL_LOGGER_LEVEL_ERROR, RL_LOGGER_LEVEL_FATAL
 
 ---
 
-## Wasm / IDBFS Notes
+---
 
-- On wasm, `fileio_init()` mounts IDBFS and starts an async restore. `Module.fileio_idbfs_ready` is `false` until restore completes.
-- `rl_loader_deinit()` flushes IDBFS before teardown. `rl_deinit()` calls this, so it is the normal deterministic teardown boundary.
-- `rl_loader_import_asset()` uses the JSPI sync-fetch path on wasm. Exported entry points that can reach it must be listed in `JSPI_EXPORTS`.
-- `rl_loader_init_async()` starts restore without blocking; pump `rl_loader_tick()` until `rl_loader_is_ready()`.
+## Wasm Build
+
+### JSPI (JavaScript Promise Integration)
+
+Several librl functions need to suspend the wasm stack while waiting for async JS work (filesystem restore, network fetch). This uses Emscripten's JSPI (`-s JSPI=1`), which allows a wasm export to `await` a JS Promise without blocking the browser thread.
+
+**Functions that require JSPI** — any exported entry point that can call these must appear in `JSPI_EXPORTS`:
+
+| Function | Why |
+|---|---|
+| `rl_init` / `rl_init_values` / `rl_init_values_async` | Calls loader init, which may restore IDBFS |
+| `rl_loader_init` | Mounts IDBFS and awaits restore |
+| `rl_loader_import_asset` | Synchronous fetch via `EM_ASYNC_JS` |
+| `rl_deinit` / `rl_loader_deinit` | Flush IDBFS before teardown |
+
+Current `JSPI_EXPORTS` (from `Makefile`):
+```
+rl_init, rl_init_values, rl_init_values_async,
+rl_loader_init, rl_loader_import_asset,
+rl_deinit, rl_loader_deinit
+```
+
+If you add a new exported entry point (e.g. a custom host boot function) that can reach any of the above, add it to `JSPI_EXPORTS` in the Makefile.
+
+### Exported Functions
+
+All public API functions are listed in `EXPORTED_FUNCTIONS` in the Makefile (prefixed with `_`). Functions that return structs like `vec2_t` are not directly exported; instead a `_to_scratch` bridge variant is exported that writes the result into the scratch area for JS to read (see Scratch Area below).
+
+`_to_scratch` bridge functions currently exported:
+- `_rl_window_get_screen_size_to_scratch`
+- `_rl_window_get_position_to_scratch`
+- `_rl_window_get_monitor_position_to_scratch`
+- `_rl_input_get_mouse_position_to_scratch`
+- `_rl_text_measure_ex_to_scratch`
+- `_rl_pick_model_to_scratch` / `_rl_pick_sprite3d_to_scratch`
+
+### Scratch Area
+
+**Why it exists:** Crossing the wasm/JS boundary has a per-call cost ("border tax"). For high-frequency data like mouse position, keyboard state, and frame vectors, reading them through individual exported function calls each frame adds up. The scratch area is a shared memory block at a fixed wasm address that both C and JS can read and write directly, avoiding repeated boundary crossings.
+
+**How it works:**
+1. `rl_scratch_get_base()` returns the wasm memory address of the scratch struct as an integer (not a pointer, to avoid BigInt issues with wasm).
+2. `rl_scratch_get_offsets()` returns a struct of byte offsets for every field, so JS can compute absolute addresses for any sub-field without hardcoding layout.
+3. JS reads values directly from `Module.HEAP*` views using `base + offset`, with no wasm call required per field.
+4. C writes into the scratch area via `rl_scratch_set_*()` helpers or `rl_scratch_refresh()`.
+
+**How it is refreshed:**
+
+The normal path is through the JS binding's `tick()` wrapper, which calls `rl_scratch_refresh()` immediately before `rl_tick()`:
+
+```js
+// Inside rl.js RL.tick()
+moduleInstance.ccall('rl_scratch_refresh', null, [], []);
+return moduleInstance.ccall('rl_tick', 'number', [], []);
+```
+
+`rl_scratch_refresh()` pulls the current raylib input state (mouse position/buttons/wheel, keyboard keys/queues, gamepad axes/buttons, touch points) into the scratch struct so JS can read it for the rest of the frame without additional wasm calls.
+
+For cases where input state is needed outside the normal tick (e.g. during init), call `RL.refreshScratch()` from JS or `rl_scratch_refresh()` from C directly.
+
+### IDBFS (Persistent Asset Cache on Web)
+
+- `rl_loader_init()` mounts IDBFS at the cache directory and starts an async restore. `Module.fileio_idbfs_ready` is `false` until restore completes.
+- Do not read cached assets until `rl_loader_is_ready()` returns `true`.
+- `rl_loader_deinit()` flushes IDBFS to disk before teardown. `rl_deinit()` calls this, making it the normal deterministic shutdown boundary.
+- A sync-overlap guard (`Module.fileio_idbfs_syncing`) prevents concurrent flush operations.

@@ -1292,6 +1292,7 @@ const RL = {
         return moduleInstance.ccall('rl_render_end_mode_3d', null, [], []);
     },
     tick: () => {
+        moduleInstance.ccall('rl_scratch_refresh', null, [], []);
         return moduleInstance.ccall('rl_tick', 'number', [], []);
     },
     getDeltaTime: () => {

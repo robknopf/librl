@@ -417,7 +417,6 @@ class Main {
 	@:exportc
 	static function rt_tick(dt:Float):Int {
 		try {
-			RL.scratchRefresh();
 			var rc = RL.tick();
 			if (rc == RL.TICK_FAILED) {
 				Log.error("Main: RL.tick failed with error: " + rc);

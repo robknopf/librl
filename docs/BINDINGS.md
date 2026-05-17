@@ -154,7 +154,7 @@ Role:
 
 Used by:
 
-- `examples/nim/src/main.nim`
+- `examples/nim-simple/src/main.nim`
 
 Notes:
 
@@ -220,7 +220,7 @@ Binding-level async loader ergonomics:
   - `loaderCreateTaskGroup[T](ctx, onComplete?, onError?)`
   - `addTask`, `addImportTask`, `addImportTasks`
   - `tick()`, `process()`, `remainingTasks()`, `failedPaths()`
-- The Nim example (`examples/nim/src/main.nim`) is the canonical pattern:
+- The Nim example (`examples/nim-simple/src/main.nim`) is the canonical pattern:
   - `rl_run(onInit, onTick, onShutdown, addr ctx)` drives the main loop.
   - `if not ctx.loadingGroup.isNil and ctx.loadingGroup.process() > 0: return` gates frame work until imports finish.
 
@@ -412,7 +412,7 @@ When public C headers change:
 2. Update binding layers (`bindings/js/*`, `bindings/nim/rl.nim`, `bindings/haxe/rl/RL.hx`) that expose affected functions.
 3. Smoke test:
    - web (JS binding): `examples/www/?example=simple`
-   - desktop Nim: `examples/nim/src/main.nim`
+   - desktop Nim: `examples/nim-simple/src/main.nim`
    - desktop Haxe: `examples/haxe-simple/src/Main.hx`
-   - wasm Nim: `npm run build:nim:wasm` + `?example=nim`
-   - wasm Haxe: `npm run build:haxe:wasm` + `?example=haxe`
+   - wasm Nim: `npm run build:nim:wasm` + `?example=nim-wasm-simple`
+   - wasm Haxe: `npm run build:haxe:wasm` + `?example=haxe-wasm-simple`

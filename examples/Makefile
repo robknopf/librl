@@ -46,11 +46,11 @@ haxe-js-simple:
 
 nim: nim-desktop nim-wasm nim-js
 nim-desktop:
-	cd nim && $(NIM) build desktop
+	cd nim-simple && $(NIM) build desktop
 nim-wasm:
-	cd nim && $(NIM) build wasm
+	cd nim-simple && $(NIM) build wasm
 nim-js:
-	cd nim && $(NIM) build js
+	cd nim-simple && $(NIM) build js
 
 cppia: cppia-script cppia-desktop
 cppia-desktop:
@@ -68,4 +68,4 @@ clean:
 	$(MAKE) -C cppia clean
 	$(MAKE) -C lua clean
 	cd haxe && rm -rf out cache
-	cd nim && $(NIM) clean
+	cd nim-simple && $(NIM) clean

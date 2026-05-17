@@ -1,31 +1,29 @@
 local rl = require("rl")
 
-rl.logger_set_level(rl.RL_LOGGER_LEVEL_DEBUG)
+rl.logger_set_level(rl.RL_LOGGER_LEVEL_WARN)
 
-
--- now() function, for now, use rl.get_time()
-local now = rl.get_time
+local DebugFontSize  = 18
+local KomikaFontSize = 24
 
 local ctx = {
-  mono_font_size = 18,
-  small_font_size = 24,
-  message = "",
-  mono_font = 0,
-  small_font = 0,
-  model = 0,
-  sprite = 0,
-  bgm = 0,
-  camera = 0,
-  bg_color = 0,
-  fps_color = 0,
-  countdown = 5.0,
-  --total_time = 0.0,
-  --last_time = 0.0,
+  elapsed        = 0.0,
+  countdown      = 30.0,
+  message        = "Nothing picked!",
+  mono_font      = 0,
+  small_font     = 0,
+  model          = 0,
+  sprite         = 0,
+  bgm            = 0,
+  camera         = 0,
+  bg_color       = 0,
+  fps_color      = 0,
+  sprite_y_offset = 3.0,
 }
 
+local platform_text = "Platform: <unknown>"
+
 local function setup_scene()
-  local music_path = "assets/music/ethernight_club.mp3"
-  local music_task = rl.loader_import_asset_async(music_path)
+  local music_task = rl.loader_import_asset_async("assets/music/ethernight_club.mp3")
   if music_task and music_task ~= 0 then
     rl.loader_add_task(music_task, function(path)
       ctx.bgm = rl.music_create(path)
@@ -36,26 +34,21 @@ local function setup_scene()
     rl.warn("Failed to create music import task")
   end
 
-  ctx.bg_color = rl.color_create(245, 245, 245, 255)
+  ctx.bg_color  = rl.color_create(245, 245, 245, 255)
   ctx.fps_color = rl.color_create(0, 121, 241, 255)
-  ctx.message = "Hello, World!"
 
   ctx.camera = rl.camera3d_create(
     12.0, 12.0, 12.0,
-    0.0, 1.0, 0.0,
-    0.0, 1.0, 0.0,
-    45.0,
-    0
+    0.0,  1.0,  0.0,
+    0.0,  1.0,  0.0,
+    45.0, 0
   )
   rl.enable_lighting()
   rl.set_light_direction(-0.6, -1.0, -0.5)
   rl.set_light_ambient(0.25)
   rl.camera3d_set_active(ctx.camera)
 
-  --ctx.last_time = rl.get_time()
-  ctx.countdown = 5.0
-
-  -- draw a blank screen while loading assets
+  -- draw a blank frame while assets load
   rl.begin_drawing()
   rl.clear_background(ctx.bg_color)
   rl.end_drawing()
@@ -63,40 +56,45 @@ end
 
 ---@return ResultCode
 local function on_init()
-  local init_rc = rl.init({
-    window_width = 1024,
+  local rc = rl.init({
+    window_width  = 1024,
     window_height = 1280,
-    window_title = "Hello, World! (Lua)",
-    window_flags = rl.RL_WINDOW_FLAG_MSAA_4X_HINT,
-    asset_host = "https://localhost:4444",
+    window_title  = "Hello, World! (Lua)",
+    window_flags  = rl.RL_WINDOW_FLAG_MSAA_4X_HINT,
+    asset_host    = "https://localhost:4444",
   })
-  if init_rc ~= rl.RL_INIT_OK then
-    error("rl.init failed: " .. tostring(init_rc))
+  if rc ~= rl.RL_INIT_OK then
+    error("rl.init failed: " .. tostring(rc))
     return ResultCode.ERROR
   end
 
   rl.set_target_fps(60)
-
-  -- TODO:clearing the cache here may be too early if the fs hasn't synced yet.  probably should move it to the rt_init
-  --rl.loader_clear_cache()
+  rl.loader_clear_cache()
 
   setup_scene()
+
+  platform_text = "Platform: " .. tostring(rl.get_platform())
 
   rl.loader_add_task(rl.loader_import_asset_async("assets/models/gumshoe/gumshoe.glb"), function(path)
     ctx.model = rl.model_create(path)
     rl.model_set_animation(ctx.model, 1)
     rl.model_set_animation_speed(ctx.model, 1.0)
     rl.model_set_animation_loop(ctx.model, true)
+    rl.model_set_transform(ctx.model, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0)
   end, nil)
+
   rl.loader_add_task(rl.loader_import_asset_async("assets/sprites/logo/wg-logo-bw-alpha.png"), function(path)
     ctx.sprite = rl.sprite3d_create(path)
   end, nil)
+
   rl.loader_add_task(
-    rl.loader_import_asset_async("assets/fonts/JetBrainsMono/JetBrainsMono-Regular.ttf"), function(path)
-      ctx.mono_font = rl.font_create(path, ctx.mono_font_size)
+    rl.loader_import_asset_async("assets/fonts/JetBrainsMono/JetBrainsMono-Regular.ttf"),
+    function(path)
+      ctx.mono_font = rl.font_create(path, DebugFontSize)
     end, nil)
+
   rl.loader_add_task(rl.loader_import_asset_async("assets/fonts/Komika/KOMIKAH_.ttf"), function(path)
-    ctx.small_font = rl.font_create(path, ctx.small_font_size)
+    ctx.small_font = rl.font_create(path, KomikaFontSize)
   end, nil)
 
   return ResultCode.OK
@@ -105,84 +103,85 @@ end
 ---@param delta_time number delta time in seconds
 ---@return ResultCode
 local function on_tick(delta_time)
-  --local current = rl.get_time()
-  --local delta = current - ctx.last_time
-  --ctx.total_time = ctx.total_time + delta
-  --ctx.last_time = current
+  ctx.elapsed   = ctx.elapsed + delta_time
   ctx.countdown = ctx.countdown - delta_time
-  if ctx.countdown <= 0 then
-    return ResultCode.QUIT
-  end
 
   rl.music_update_all()
 
-  rl.begin_drawing()
-  rl.clear_background(ctx.bg_color)
-  rl.render_begin_mode_3d()
+  -- bob sprite
+  if ctx.sprite and ctx.sprite ~= 0 then
+    local bob_y = math.sin(ctx.elapsed) * 1.5 + ctx.sprite_y_offset
+    rl.sprite3d_set_transform(ctx.sprite, 0.0, bob_y, 0.0, 1.0)
+  end
+
+  -- animate model
   if ctx.model and ctx.model ~= 0 then
     rl.model_animate(ctx.model, delta_time)
-    rl.model_set_transform(ctx.model, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0)
-    rl.model_draw(ctx.model, rl.RL_COLOR_WHITE)
+  end
+
+  -- pick testing
+  local mouse = rl.input_get_mouse_state()
+  ctx.message = "Nothing picked!"
+  if ctx.model and ctx.model ~= 0 then
+    local pick = rl.pick_model(ctx.camera, ctx.model, mouse.x, mouse.y)
+    if pick.hit then
+      ctx.message = string.format("Model pick: (%d, %d) y=%.2f", mouse.x, mouse.y, pick.point.y)
+    end
   end
   if ctx.sprite and ctx.sprite ~= 0 then
-    rl.sprite3d_set_transform(ctx.sprite, 0.0, 0.0, 0.0, 1.0)
-    rl.sprite3d_draw(ctx.sprite, rl.RL_COLOR_WHITE)
+    local pick = rl.pick_sprite3d(ctx.camera, ctx.sprite, mouse.x, mouse.y)
+    if pick.hit then
+      ctx.message = string.format("Sprite pick: (%d, %d) y=%.2f", mouse.x, mouse.y, pick.point.y)
+    end
+  end
+
+  rl.begin_drawing()
+  rl.clear_background(ctx.bg_color)
+
+  rl.render_begin_mode_3d()
+  if ctx.model and ctx.model ~= 0 then
+    rl.model_draw(ctx.model, rl.RL_COLOR_RAYWHITE)
+  end
+  if ctx.sprite and ctx.sprite ~= 0 then
+    rl.sprite3d_draw(ctx.sprite, rl.RL_COLOR_RAYWHITE)
   end
   rl.render_end_mode_3d()
 
-  local w, h = rl.window_get_screen_size()
-  w = math.floor(w)
-  h = math.floor(h)
+  local screen_w, screen_h = rl.window_get_screen_size()
+  screen_w = math.floor(screen_w)
+  screen_h = math.floor(screen_h)
 
-  -- generic message display
-  if ctx.mono_font and ctx.mono_font ~= 0 then
-    local tw, th = rl.text_measure_ex(ctx.mono_font, ctx.message, ctx.mono_font_size, 0)
-    local text_x = math.floor((w - tw) / 2)
-    local text_y = math.floor((h - th) / 2)
-    rl.text_draw_ex(ctx.mono_font, ctx.message, text_x, text_y, ctx.mono_font_size, 1.0, rl.RL_COLOR_BLUE)
-  else
-    local fallback_w = rl.text_measure(ctx.message, ctx.mono_font_size)
-    local fallback_x = math.floor((w - fallback_w) / 2)
-    local fallback_y = math.floor(h / 2)
-    rl.text_draw(ctx.message, fallback_x, fallback_y, ctx.small_font_size, rl.RL_COLOR_BLUE)
-  end
-
-  -- countdown timer
-  local rem = string.format("Remaining: %.2f", ctx.countdown)
-   if ctx.mono_font and ctx.mono_font ~= 0 then
-    rl.text_draw_ex(ctx.mono_font, rem, 10, 36, ctx.mono_font_size, 1.0, rl.RL_COLOR_BLACK)
-  else
-    rl.text_draw(rem, 10, 36, ctx.mono_font_size, rl.RL_COLOR_BLACK)
-  end
-
-  -- mouse info
-  local mouse = rl.input_get_mouse_state()
-  local mouse_text = "Mouse: ("
-      .. tostring(mouse.x)
-      .. ", "
-      .. tostring(mouse.y)
-      .. ") w:"
-      .. tostring(mouse.wheel)
-      .. " b:["
-      .. tostring(mouse.left)
-      .. ", "
-      .. tostring(mouse.right)
-      .. ", "
-      .. tostring(mouse.middle)
-      .. "]"
+  -- center message (Komika)
   if ctx.small_font and ctx.small_font ~= 0 then
-    -- rl.text_draw_ex(ctx.small_font, el, 10, 56, ctx.small_font_size, 1.0, rl.RL_COLOR_BLACK)
-    rl.text_draw_ex(ctx.small_font, mouse_text, 10, 76, ctx.small_font_size, 1.0, rl.RL_COLOR_BLACK)
+    local tw, th = rl.text_measure_ex(ctx.small_font, ctx.message, KomikaFontSize, 1.0)
+    local tx = math.floor((screen_w - tw) / 2)
+    local ty = math.floor((screen_h - th) / 2)
+    rl.text_draw_ex(ctx.small_font, ctx.message, tx, ty, KomikaFontSize, 1.0, rl.RL_COLOR_BLUE)
   else
-    -- rl.text_draw(el, 10, 56, ctx.small_font_size, rl.RL_COLOR_BLACK)
-    rl.text_draw(mouse_text, 10, 76, ctx.small_font_size, rl.RL_COLOR_BLACK)
+    local tw = rl.text_measure(ctx.message, KomikaFontSize)
+    local tx = math.floor((screen_w - tw) / 2)
+    local ty = math.floor(screen_h / 2)
+    rl.text_draw(ctx.message, tx, ty, KomikaFontSize, rl.RL_COLOR_BLUE)
   end
 
-  -- fps display
+  -- debug overlay (mono font)
+  local remaining_text = string.format("Remaining: %.2f", ctx.countdown)
+  local elapsed_text   = string.format("Elapsed: %.2f",   ctx.elapsed)
+  local mouse_text     = string.format("Mouse: (%d, %d) w:%d b:[%d, %d, %d]",
+    mouse.x, mouse.y, mouse.wheel, mouse.left, mouse.right, mouse.middle)
+
   if ctx.mono_font and ctx.mono_font ~= 0 then
-    rl.text_draw_fps_ex(ctx.mono_font, 10, 10, ctx.mono_font_size, ctx.fps_color)
+    rl.text_draw_fps_ex(ctx.mono_font, 10, 10, DebugFontSize, ctx.fps_color)
+    rl.text_draw_ex(ctx.mono_font, remaining_text, 10,  36, DebugFontSize, 1.0, rl.RL_COLOR_BLACK)
+    rl.text_draw_ex(ctx.mono_font, elapsed_text,   10,  56, DebugFontSize, 1.0, rl.RL_COLOR_BLACK)
+    rl.text_draw_ex(ctx.mono_font, mouse_text,     10,  76, DebugFontSize, 1.0, rl.RL_COLOR_BLACK)
+    rl.text_draw_ex(ctx.mono_font, platform_text,  10,  96, DebugFontSize, 1.0, rl.RL_COLOR_BLACK)
   else
     rl.text_draw_fps(10, 10)
+    rl.text_draw(remaining_text, 10, 36, DebugFontSize, rl.RL_COLOR_BLACK)
+    rl.text_draw(elapsed_text,   10, 56, DebugFontSize, rl.RL_COLOR_BLACK)
+    rl.text_draw(mouse_text,     10, 76, DebugFontSize, rl.RL_COLOR_BLACK)
+    rl.text_draw(platform_text,  10, 96, DebugFontSize, rl.RL_COLOR_BLACK)
   end
 
   rl.end_drawing()
@@ -192,125 +191,27 @@ end
 
 local function on_shutdown()
   rl.disable_lighting()
-  if ctx.sprite and ctx.sprite ~= 0 then
-    rl.sprite3d_destroy(ctx.sprite)
-  end
-  if ctx.model and ctx.model ~= 0 then
-    rl.model_destroy(ctx.model)
-  end
-  if ctx.mono_font and ctx.mono_font ~= 0 then
-    rl.font_destroy(ctx.mono_font)
-  end
-  if ctx.small_font and ctx.small_font ~= 0 then
-    rl.font_destroy(ctx.small_font)
-  end
-  if ctx.bgm and ctx.bgm ~= 0 then
-    rl.music_destroy(ctx.bgm)
-  end
-  if ctx.fps_color and ctx.fps_color ~= 0 then
-    rl.color_destroy(ctx.fps_color)
-  end
-  if ctx.bg_color and ctx.bg_color ~= 0 then
-    rl.color_destroy(ctx.bg_color)
-  end
-  if ctx.camera and ctx.camera ~= 0 then
-    rl.camera3d_destroy(ctx.camera)
-  end
+  if ctx.sprite    and ctx.sprite    ~= 0 then rl.sprite3d_destroy(ctx.sprite) end
+  if ctx.model     and ctx.model     ~= 0 then rl.model_destroy(ctx.model) end
+  if ctx.mono_font and ctx.mono_font ~= 0 then rl.font_destroy(ctx.mono_font) end
+  if ctx.small_font and ctx.small_font ~= 0 then rl.font_destroy(ctx.small_font) end
+  if ctx.bgm       and ctx.bgm       ~= 0 then rl.music_destroy(ctx.bgm) end
+  if ctx.fps_color and ctx.fps_color ~= 0 then rl.color_destroy(ctx.fps_color) end
+  if ctx.bg_color  and ctx.bg_color  ~= 0 then rl.color_destroy(ctx.bg_color) end
+  if ctx.camera    and ctx.camera    ~= 0 then rl.camera3d_destroy(ctx.camera) end
   rl.deinit()
 end
 
-
--- helper to keep RL ticking clear of the core tick()
 local function on_tick_wrapper(delta_time)
-    local rc = rl.tick()
-    if (rc == rl.RL_TICK_FAILED) then return ResultCode.ERROR end
-    if (rc == rl.RL_TICK_WAITING) then return ResultCode.OK end
-    if (rl.window_close_requested()) then return ResultCode.QUIT end
-    return on_tick(delta_time)
+  local rc = rl.tick()
+  if rc == rl.RL_TICK_FAILED then return ResultCode.ERROR end
+  if rc == rl.RL_TICK_WAITING then return ResultCode.OK end
+  if rl.window_close_requested() then return ResultCode.QUIT end
+  return on_tick(delta_time)
 end
 
 return {
-  on_init = on_init,
-  on_tick = on_tick_wrapper,
-  on_shutdown = on_shutdown
+  on_init     = on_init,
+  on_tick     = on_tick_wrapper,
+  on_shutdown = on_shutdown,
 }
-
---[[
----Initial bootstrap
----@return RTResult
-local function rt_boot()
-    -- do initial bootstrap setup
-    return RTResult.OK
-end
-
----@return RTResult
-local function rt_init(_host_context)
-    return on_init()
-end
-
-
----@param delta_time number in seconds
----@return RTResult
-local function rt_tick(delta_time)
-    local rc = rl.tick()
-    if (rc == rl.RL_TICK_FAILED) then return RTResult.ERROR end
-    if (rc == rl.RL_TICK_WAITING) then return RTResult.OK end
-    if (rl.window_close_requested()) then return RTResult.QUIT end
-    return on_tick(delta_time)
-end
-
----@return nil
-local function rt_shutdown()
-    on_shutdown()
-end
-
-
--- deprecated, we have to pump the runtime from an outside host
--- rl.run(on_init, on_tick, on_shutdown, app_context)
-
--- use socket for the time module, fall back to os.clock
-do
-    -- for now, use libRL's time
-    now = rl.get_time
-
-    if not now then
-        local ok, socket = pcall(require, "socket")
-        if ok and socket and socket.gettime then
-            print("using socket.gettime for now()")
-            now = socket.gettime
-        else
-            print("socket module unavailable, using os.clock() for now()")
-            now = os.clock
-        end
-    end
-end
-
-return {
-    rt_boot = rt_boot,
-    rt_init = rt_init,
-    rt_tick = rt_tick,
-    rt_shutdown = rt_shutdown
-}
---]]
-
---[[
---------------------------------------------------------------
--- act like we were hosted and simulate the lifecycle pump
-
-local rc = rt_boot()
-if rc ~= RTResult.OK then return end
-
-rc = rt_init(nil)
-if rc ~= RTResult.OK then return end
-
-local last_time = now()
-local delta_time = 0
-repeat
-    delta_time = now() - last_time
-    rc = rt_tick(delta_time)
-    last_time = now()
-until rc ~= RTResult.OK
-rt_shutdown()
-
----------------------------------------------------------------
-]] --

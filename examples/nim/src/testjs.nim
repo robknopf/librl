@@ -35,14 +35,23 @@ type
 
 var ctx: AppContext
 
-proc onBoot(): int =
+proc onBoot(): int {.rlAsync.} =
   echo "boot"
-  ResultOk
+  let rc = rlAwait rl_boot()
+  if rc != 0: return rc
+  return ResultOk
 
-proc onInit(): int =
+proc onInit(): int {.rlAsync.} =
   echo "init"
   log.debug("Hello")
-  ResultOk
+  let rc = rlAwait rl_init(RLInitConfig(
+    windowWidth: 800,
+    windowHeight: 600,
+    windowTitle: "Hello World!",
+    assetHost: assetHost,
+  ))
+  if rc != 0: return rc
+  return ResultOk
 
 proc onTick(hostDt: float): int =
   echo "tick"
@@ -50,8 +59,6 @@ proc onTick(hostDt: float): int =
 
 proc onShutdown() =
   echo "shutdown"
-
-
 
 
 # include the runtime footer

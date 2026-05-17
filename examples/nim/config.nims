@@ -12,14 +12,16 @@ const
   libDir = librlRoot / "lib"
   outDir = getCurrentDir() / "out"
   mainEntry = "src/main.nim"
-  jsTestEntry = "src/testjs.nim"
   outFile = "main"
   nimCacheDir = ".nimcache"
 
 when defined(emscripten):
   switch("nimcache", nimCacheDir / "wasm")
+when defined(js):
+  switch("nimcache", nimCacheDir / "js")
 else:
   switch("nimcache", nimCacheDir / "desktop")
+
 
 when defined(emscripten):
   switch("os", "linux")
@@ -62,8 +64,9 @@ when defined(emscripten):
   switch("passL", "-s JSPI_EXPORTS='[\"rt_boot\",\"rt_init\",\"rt_tick\",\"rt_shutdown\"]'")
   switch("passL", "-fwasm-exceptions")
 
-  # based on if release or debug is defined, apply additional flags in getBuildModeFlags() and getOptimizationFlags()
-  switch("define", "debug")
+# Default to release unless debug is explicitly requested via -d:debug
+when not defined(debug):
+  switch("define", "release")
 
 
 proc getBuildModeFlags(): string =
@@ -106,7 +109,7 @@ proc buildDesktop() =
 
 
 proc buildWasm() =
-  let outBin = outDir / "wasm" / "main.js"
+  let outBin = outDir / "wasm" / (mainEntry.splitFile().name & ".js")
   echo "Building WASM Nim binary: '" & outBin & "'..."
   mkDir(outDir / "wasm")
   echo "Building dependency: librl (wasm)"
@@ -119,10 +122,10 @@ proc buildWasm() =
         " " & entry
 
 proc buildJs() =
-  let outBin = outDir / "js" / (jsTestEntry.splitFile().name & ".js")
+  let outBin = outDir / "js" / (mainEntry.splitFile().name & ".js")
   echo "Building JS Nim binary: '" & outBin & "'..."
   mkDir(outDir / "js")
-  let entry = getCurrentDir() / jsTestEntry
+  let entry = getCurrentDir() / mainEntry
   exec "nim js" &
     " --out:" & outBin &
     " " & getOptimizationFlags() &
@@ -146,6 +149,7 @@ task build, "Build Nim targets: desktop, wasm, or all (default)":
   of "all":
     buildDesktop()
     buildWasm()
+    buildJs()
   else:
     quit "Invalid build target '" & selectedBuildTarget() &
       "'. Expected: desktop, wasm, js, or all.", 1

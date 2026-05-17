@@ -22,16 +22,14 @@ import rl.RLTypes.RLKeyboardState;
 import rl.RLTaskGroup;
 import rl.RLTaskGroup.RLTaskGroupCallback;
 
-/*
+
 	#if js
-	//For js, we return promise that we can await on instead of a straight Int
-	typedef RLIntResult = js.lib.Promise<Int>;
-	typedef RLVoidResult = js.lib.Promise<Void>;
+	//For js, we return promise<void>  instead of straight void
+	typedef VoidResult = js.lib.Promise<Void>;
 	#else
-	typedef RLIntResult = Int;
-	typedef RLVoidResult = Void;
+	typedef VoidResult = Void;
 	#end
- */
+
 class RL {
 	public static var INIT_OK(get, never):Int;
 
@@ -301,7 +299,7 @@ class RL {
 	}
 
 	@async
-	public static function deinit() {
+	public static function deinit():VoidResult{
 		return rl.impl.RLImpl.deinit();
 	}
 
@@ -723,7 +721,7 @@ class RL {
 	}
 
 	@async
-	public static function loaderDeinit() {
+	public static function loaderDeinit():VoidResult {
 		return rl.impl.RLImpl.loaderDeinit();
 	}
 
@@ -740,8 +738,8 @@ class RL {
 	}
 
 	@async
-	public static function loaderImportAsset(filename:String) {
-		return rl.impl.RLImpl.loaderImportAsset(filename);
+	public static function loaderImportAsset(filename:String):RLHandle {
+		return cast rl.impl.RLImpl.loaderImportAsset(filename);
 	}
 
 	public static function loaderImportAssetsAsync(filenames:Array<String>):RLHandle {

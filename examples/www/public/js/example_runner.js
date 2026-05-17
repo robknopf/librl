@@ -175,7 +175,7 @@ export async function runExample(displayName, modulePath, options = {}) {
     applyLetterboxCanvasStyle(canvas, IDEAL_WIDTH, IDEAL_HEIGHT);
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    console.error(`[wasm] startup failed: ${message}`);
+    console.error(`[runner] module startup failed: ${message}`);
     await teardown();
   }
 }

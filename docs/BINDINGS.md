@@ -7,6 +7,30 @@ This project currently maintains four primary bindings in an 'add as I need' cyc
 - Haxe (hxcpp / C++ FFI)
 - Lua (C module + Lua-side helpers)
 
+## Native Type Policy
+
+All user-facing binding APIs must expose native language types — not C FFI types. C FFI types (`cint`, `cfloat`, `cstring`, `Int32`, etc.) are an implementation detail of the C bridge layer and must not appear in public proc/method signatures or constants.
+
+| Binding | Public types | C bridge types (private) |
+|---------|-------------|--------------------------|
+| Nim | `int`, `float`, `string`, `bool` | `cint`, `cfloat`, `cstring` in `_c`/`_raw` procs |
+| Haxe | `Int`, `Float`, `String`, `Bool` | hxcpp externs stay inside `RLImpl.*.hx` |
+| Lua | Lua number, string | C types internal to `bindings/lua/*.c` |
+| JS | JS `number`, `string` | `ccall` / Emscripten internals stay in `bindings/js/rl.js` |
+
+**Rule:** if a user would need to write `.cint`, `.cfloat`, `.cstring`, or an explicit integer cast at the call site, the binding is incomplete and needs a wrapper.
+
+**Pattern (Nim example):**
+```nim
+# private C bridge
+proc rl_foo_c(x: cint): cint {.importc: "rl_foo", cdecl, header: "rl.h".}
+
+# public user-facing wrapper
+proc rl_foo*(x: int): int {.inline.} = rl_foo_c(x.cint).int
+```
+
+Constants follow the same rule: `RL_INIT_OK`, `RL_TICK_FAILED`, etc. must be the target language's native integer, not a C-cast literal.
+
 ## Architecture: Direct API vs Frame Commands
 
 Native bindings (Nim, Haxe) call the C API directly. Frame commands are reserved for contexts where direct calls have overhead or serialization needs:
@@ -134,12 +158,12 @@ Used by:
 
 Notes:
 
-- This binding is direct/low-level and close to the C surface.
+- All public-facing Nim procs use native Nim types (`int`, `float`, `string`) — not C FFI types (`cint`, `cfloat`, `cstring`). C-imported procs that must use C types are named with a `_c` or `_raw` suffix and kept private. See the Native Type Policy in `AGENTS.md`.
 - Keep declarations synchronized with header changes in `include/`.
 - It maps `RLMouseState` directly to `rl_mouse_state_t` via `rl_input_get_mouse_state()`.
 - It maps `RLKeyboardState` directly to `rl_keyboard_state_t` via `rl_input_get_keyboard_state()`.
 - It exposes `rl_is_initialized()` and `rl_get_platform()` directly.
-- Mouse button states use shared constants:
+- Mouse button states use shared constants (plain `int`):
   - `RL_BUTTON_UP`
   - `RL_BUTTON_PRESSED`
   - `RL_BUTTON_DOWN`
@@ -157,23 +181,23 @@ Notes:
   - `RL_FLAG_MSAA_4X_HINT`
 - Window close polling is exposed in Nim as `rl_window_close_requested()`.
 - Nim exposes `rl_boot()`, which currently returns `RL_INIT_OK` without additional work. This keeps the binding lifecycle aligned with JS/Haxe callers that may use `boot() -> loader_init() -> init()`.
-- Loader helpers in Nim:
-  - `rl_loader_init([mount_point])`
-  - `rl_loader_init_async([mount_point])`
+- Loader helpers in Nim (all return native `int` or `bool`):
+  - `rl_loader_init([mount_point])` → `int`
+  - `rl_loader_init_async([mount_point])` → `int`
   - `rl_loader_deinit()`
   - `rl_loader_is_initialized()` → `bool`
-  - `loaderPingAssetHost(assetHost?)` → RTT ms, or `< 0` on failure
+  - `loaderPingAssetHost(assetHost?)` → `float` RTT ms, or `< 0` on failure
   - `rl_loader_restore_fs_async()` → `RLHandle`
   - `rl_loader_create_import_task(filename)` → `RLHandle`
-  - `rl_loader_import_asset(filename)` → `cint` (`0` success)
+  - `rl_loader_import_asset(filename)` → `int` (`0` success)
   - `rl_loader_import_assets_async(filenames, count)` → `RLHandle`
-  - `rl_loader_poll_task(task)`
-  - `rl_loader_finish_task(task)`
+  - `rl_loader_poll_task(task)` → `bool`
+  - `rl_loader_finish_task(task)` → `int`
   - `rl_loader_free_task(task)`
-  - `rl_loader_is_asset_cached(filename)`
-  - `rl_loader_uncache_asset(filename)`
-  - `rl_loader_clear_cache()`
-- Init result constants are exposed as `RL_INIT_OK` / `RL_INIT_ERR_*`.
+  - `rl_loader_is_asset_cached(filename)` → `bool`
+  - `rl_loader_uncache_asset(filename)` → `int`
+  - `rl_loader_clear_cache()` → `int`
+- Init result constants are exposed as `RL_INIT_OK` / `RL_INIT_ERR_*` (plain `int`).
 - Nim also exposes `rl_init_async([config])`.
 
 Binding-level async loader ergonomics:
@@ -361,7 +385,7 @@ Notes:
 - Per-binding naming style:
   - Lua: lower snake case function names.
     - examples: `frame_buffer_submit`, `window_get_screen_size`
-  - Nim: close to C surface (snake_case / importc-aligned naming).
+  - Nim: snake_case aligned with C names, but all public procs use native Nim types (`int`/`float`/`string`). Internal C bridge procs use `_c` or `_raw` suffix.
   - Haxe: lowerCamelCase method names.
     - examples: `frameBufferSubmit`, `windowGetScreenSize`
 - Avoid inventing alternate verb ordering in bindings if the C API is clear.

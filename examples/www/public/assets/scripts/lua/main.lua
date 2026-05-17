@@ -16,7 +16,7 @@ local ctx = {
   bgm            = 0,
   camera         = 0,
   bg_color       = 0,
-  fps_color      = 0,
+  grey_alpha_color = 0,
   sprite_y_offset = 3.0,
 }
 
@@ -34,8 +34,8 @@ local function setup_scene()
     rl.warn("Failed to create music import task")
   end
 
-  ctx.bg_color  = rl.color_create(245, 245, 245, 255)
-  ctx.fps_color = rl.color_create(0, 121, 241, 255)
+  ctx.bg_color         = rl.color_create(245, 245, 245, 255)
+  ctx.grey_alpha_color = rl.color_create(0, 0, 0, 128)
 
   ctx.camera = rl.camera3d_create(
     12.0, 12.0, 12.0,
@@ -171,7 +171,7 @@ local function on_tick(delta_time)
     mouse.x, mouse.y, mouse.wheel, mouse.left, mouse.right, mouse.middle)
 
   if ctx.mono_font and ctx.mono_font ~= 0 then
-    rl.text_draw_fps_ex(ctx.mono_font, 10, 10, DebugFontSize, ctx.fps_color)
+    rl.text_draw_fps_ex(ctx.mono_font, 10, 10, DebugFontSize, ctx.grey_alpha_color)
     rl.text_draw_ex(ctx.mono_font, remaining_text, 10,  36, DebugFontSize, 1.0, rl.RL_COLOR_BLACK)
     rl.text_draw_ex(ctx.mono_font, elapsed_text,   10,  56, DebugFontSize, 1.0, rl.RL_COLOR_BLACK)
     rl.text_draw_ex(ctx.mono_font, mouse_text,     10,  76, DebugFontSize, 1.0, rl.RL_COLOR_BLACK)
@@ -196,7 +196,7 @@ local function on_shutdown()
   if ctx.mono_font and ctx.mono_font ~= 0 then rl.font_destroy(ctx.mono_font) end
   if ctx.small_font and ctx.small_font ~= 0 then rl.font_destroy(ctx.small_font) end
   if ctx.bgm       and ctx.bgm       ~= 0 then rl.music_destroy(ctx.bgm) end
-  if ctx.fps_color and ctx.fps_color ~= 0 then rl.color_destroy(ctx.fps_color) end
+  if ctx.grey_alpha_color and ctx.grey_alpha_color ~= 0 then rl.color_destroy(ctx.grey_alpha_color) end
   if ctx.bg_color  and ctx.bg_color  ~= 0 then rl.color_destroy(ctx.bg_color) end
   if ctx.camera    and ctx.camera    ~= 0 then rl.camera3d_destroy(ctx.camera) end
   rl.deinit()

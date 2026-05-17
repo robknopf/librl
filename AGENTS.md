@@ -43,6 +43,12 @@ proc rl_foo*(x: int): int {.inline.} = rl_foo_c(x.cint).int
 
 When adding new procs to any binding, always check: would a user need to write `.cint`, `.cfloat`, or `.cstring` at the call site? If yes, the binding is incomplete — add the wrapper.
 
+## API Documentation
+
+- `docs/API.md` is the authoritative reference for the public C API. **When any function, type, constant, or enum in `include/*.h` is added, removed, or changed, update `docs/API.md` in the same pass.**
+- Each section in `docs/API.md` maps to one header. If a new header is added, add a new section. If a header is removed, remove its section.
+- Do not document internal-only symbols (e.g. `rl_window_open`, `rl_window_close`) — only symbols that appear in the public `include/` headers.
+
 ## Commit Workflow
 
 - Before any commits, update relevant documentation (`docs/*`, API notes, and binding docs) to match behavior and API changes in the commit.

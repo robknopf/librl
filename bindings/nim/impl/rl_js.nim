@@ -343,6 +343,8 @@ proc rl_model_set_animation_loop*(model: RLHandle, shouldLoop: bool): bool {.
   importjs: "__gRl.modelSetAnimationLoop(#,#)".}
 proc rl_model_animate*(model: RLHandle, deltaSeconds: float): bool {.
   importjs: "__gRl.modelAnimate(#,#)".}
+proc rl_pick_model*(camera, model: RLHandle, mouseX, mouseY: float): RLPickResult {.
+  importjs: "__gRl.pickModel(#,#,#,#)".}
 
 # Sprite3D
 proc rl_sprite3d_create*(filename: cstring): RLHandle {.importjs: "__gRl.createSprite3d(#)".}
@@ -354,6 +356,8 @@ proc rl_sprite3d_set_transform*(sprite: RLHandle,
   importjs: "__gRl.sprite3dSetTransform(#,#,#,#,#)".}
 proc rl_sprite3d_draw*(sprite: RLHandle, tint: RLHandle) {.importjs: "__gRl.drawSprite3d(#,#)".}
 proc rl_sprite3d_destroy*(sprite: RLHandle) {.importjs: "__gRl.destroySprite3d(#)".}
+proc rl_pick_sprite3d*(camera, sprite3d: RLHandle, mouseX, mouseY: float): RLPickResult {.
+  importjs: "__gRl.pickSprite3d(#,#,#,#)".}
 
 # Sprite2D
 proc rl_sprite2d_create*(filename: cstring): RLHandle {.importjs: "__gRl.createSprite2D(#)".}

@@ -11,6 +11,6 @@ runExample("Haxe Simple (js)", "js/haxe_js_simple_genes_adapter.js", {
 */
 
 /* use the generated haxe directly. This is a plain object */
-runExample("Haxe Simple (js)", "examples/haxe-simple/out/js/main-js-simple.js", {
+runExample("Haxe Simple (js)", "examples/haxe-simple/out/js/main.js", {
   onModuleReady: (mod) => startRuntime(mod, "haxe-js-simple"),
 });

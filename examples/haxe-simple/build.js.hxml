@@ -1,7 +1,7 @@
 common.hxml
 
 
--js out/js/main-js-simple.js
+-js out/js/main.js
 
 # to fix sourcemap generation after hxasync changes the output, we
 # take a snapshot before.
@@ -12,6 +12,6 @@ common.hxml
 #--times
 
 #--next
-#--macro macros.SuppressViteImportWarning.apply("out/js/main-js-simple.js")
+#--macro macros.SuppressViteImportWarning.apply("out/js/main.js")
 
 --cmd echo "Build (js) complete."

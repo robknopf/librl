@@ -192,7 +192,7 @@ Notes:
     - `print`
     - `printErr`
     - `locateFile`
-  - `bindingsPath` lets callers override the runtime path to `bindings/js/rl.js`; if omitted, the binding falls back to the compile-time `rlBindingPath` default.
+  - `bindingsPath` lets callers override the runtime path to `bindings/js/rl.js`; if omitted, Nim JS defaults to `"/bindings/js/rl.js"`.
   - On Nim JS, `print` and `printErr` are forwarded into the wrapper `env` object. `locateFile` is currently accepted for API parity but ignored with a warning.
   - On native targets, `rl_boot` remains a no-op bootstrap hook that returns `RL_INIT_OK`.
 - Loader helpers in Nim (all return native `int` or `bool`):

@@ -109,9 +109,6 @@ var
   RL_COLOR_MAGENTA* = 0.RLHandle
   RL_COLOR_RAYWHITE* = 0.RLHandle
 
-# Path to rl.js — override at compile time with -d:rlBindingPath=...
-const rlBindingPath {.strdefine.} = "../../../../bindings/js/rl.js"
-
 # ---------------------------------------------------------------------------
 # Boot / init / deinit  (async)
 # ---------------------------------------------------------------------------
@@ -120,7 +117,7 @@ proc rl_boot*(config = RLBootConfig()): Future[int] =
   ## Load bindings/js/rl.js via dynamic import, call rl.boot(), and patch
   ## color constants into Nim global vars.  Must be awaited before any
   ## other rl_ call.
-  let bindingsPath = (if config.bindingsPath.len > 0: config.bindingsPath else: rlBindingPath).cstring
+  let bindingsPath = (if config.bindingsPath.len > 0: config.bindingsPath else: "/bindings/js/rl.js").cstring
   let canvasId = config.canvasId.cstring
   let modulePath = config.modulePath.cstring
   let wasmPath = config.wasmPath.cstring

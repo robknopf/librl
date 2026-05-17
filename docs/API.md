@@ -900,7 +900,6 @@ rl_loader_init, rl_loader_import_asset,
 rl_deinit, rl_loader_deinit
 ```
 
-Note: `rl_init_async` / `rl_init_values_async` are **not** in `JSPI_EXPORTS` — they call `rl_loader_init_async` which returns immediately without suspending. Only the synchronous `rl_init` / `rl_init_values` path reaches `rl_loader_wait_for_fileio_sync_js` (an `EM_ASYNC_JS`).
 
 If you add a new exported entry point (e.g. a custom host boot function) that can reach any of the above, add it to `JSPI_EXPORTS` in the Makefile.
 

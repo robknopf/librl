@@ -3,12 +3,12 @@
 #include <raylib.h>
 #include <stdbool.h>
 #include <stdio.h>
-
+#include "rl_logger.h"
 #include "internal/exports.h"
 #include "internal/rl_handle_pool.h"
-#include "logger/logger.h"
 #include "path/path.h"
 #include "rl_loader.h"
+
 
 #define MAX_SOUNDS 256
 

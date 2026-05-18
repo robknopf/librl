@@ -264,15 +264,15 @@ class RLFileio {
     return cast ensureGroupAsyncNative(filenames);
   }
 
-  public static function fileioPoll(task: RLHandle): Bool {
+  public static function fileioPollTask(task: RLHandle): Bool {
     return pollNative(task);
   }
 
-  public static function fileioFinish(task: RLHandle): Int {
+  public static function fileioFinishTask(task: RLHandle): Int {
     return finishNative(task);
   }
 
-  public static function fileioGetPath(task: RLHandle): String {
+  public static function fileioGetTaskPath(task: RLHandle): String {
     return getPathNative(task);
   }
 
@@ -301,7 +301,7 @@ class RLFileio {
     return clearNative();
   }
 
-  public static function fileioFree(task: RLHandle): Void {
+  public static function fileioFreeTask(task: RLHandle): Void {
     freeNative(task);
   }
 

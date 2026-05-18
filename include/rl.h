@@ -7,7 +7,6 @@
 #include "rl_debug.h" // IWYU pragma: keep
 #include "rl_event.h" // IWYU pragma: keep
 #include "rl_render.h" // IWYU pragma: keep
-#include "rl_frame_command.h" // IWYU pragma: keep
 #include "rl_font.h" // IWYU pragma: keep
 #include "rl_input.h" // IWYU pragma: keep
 #include "rl_fileio.h" // IWYU pragma: keep

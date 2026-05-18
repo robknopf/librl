@@ -29,7 +29,7 @@ OUT_DIR := out
 BIN := $(OUT_DIR)/main
 WASM_JS := $(OUT_DIR)/main.js
 SRC_DIR := src
-SRC := $(SRC_DIR)/main.c $(SRC_DIR)/rl_ws_client.c $(SRC_DIR)/rl_protocol.c $(SRC_DIR)/rl_resource_handler.c
+SRC := $(SRC_DIR)/main.c $(SRC_DIR)/rl_ws_client.c $(SRC_DIR)/rl_protocol.c $(SRC_DIR)/rl_resource_handler.c $(SRC_DIR)/rl_frame_command.c
 OBJS := $(patsubst $(SRC_DIR)/%.c,$(OUT_DIR)/%.o,$(SRC))
 WASM_OBJS := $(patsubst $(SRC_DIR)/%.c,$(OUT_DIR)/%.wasm.o,$(SRC))
 

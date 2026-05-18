@@ -2,7 +2,7 @@ ROOT := ..
 HAXE ?= haxe
 NIM ?= nim
 
-.PHONY: all desktop wasm clean \
+.PHONY: all desktop wasm js clean \
 	c-simple c-simple-desktop c-simple-wasm \
 	c-lua c-lua-desktop c-lua-wasm \
 	remote remote-desktop remote-wasm \
@@ -11,11 +11,13 @@ NIM ?= nim
 	cppia cppia-desktop cppia-script \
 	lua
 
-all: desktop wasm
+all: desktop wasm js
 
 desktop: c-simple-desktop c-lua-desktop remote-desktop haxe-desktop nim-desktop cppia-desktop lua
 
 wasm: c-simple-wasm c-lua-wasm remote-wasm haxe-wasm-simple nim-wasm
+
+js: haxe-js-simple nim-js
 
 c-simple: c-simple-desktop c-simple-wasm
 c-simple-desktop:

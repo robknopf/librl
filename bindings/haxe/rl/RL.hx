@@ -102,20 +102,20 @@ class RL {
 	static inline function get_CAMERA_ORTHOGRAPHIC():Int
 		return rl.impl.RLImpl.CAMERA_ORTHOGRAPHIC;
 
-	public static var LOADER_QUEUE_TASK_OK(get, never):Int;
+	public static var FILEIO_ADD_TASK_OK(get, never):Int;
 
-	static inline function get_LOADER_QUEUE_TASK_OK():Int
-		return rl.impl.RLImpl.LOADER_QUEUE_TASK_OK;
+	static inline function get_FILEIO_ADD_TASK_OK():Int
+		return rl.impl.RLImpl.FILEIO_ADD_TASK_OK;
 
-	public static var LOADER_QUEUE_TASK_ERR_INVALID(get, never):Int;
+	public static var FILEIO_ADD_TASK_ERR_INVALID(get, never):Int;
 
-	static inline function get_LOADER_QUEUE_TASK_ERR_INVALID():Int
-		return rl.impl.RLImpl.LOADER_QUEUE_TASK_ERR_INVALID;
+	static inline function get_FILEIO_ADD_TASK_ERR_INVALID():Int
+		return rl.impl.RLImpl.FILEIO_ADD_TASK_ERR_INVALID;
 
-	public static var LOADER_QUEUE_TASK_ERR_QUEUE_FULL(get, never):Int;
+	public static var FILEIO_ADD_TASK_ERR_QUEUE_FULL(get, never):Int;
 
-	static inline function get_LOADER_QUEUE_TASK_ERR_QUEUE_FULL():Int
-		return rl.impl.RLImpl.LOADER_QUEUE_TASK_ERR_QUEUE_FULL;
+	static inline function get_FILEIO_ADD_TASK_ERR_QUEUE_FULL():Int
+		return rl.impl.RLImpl.FILEIO_ADD_TASK_ERR_QUEUE_FULL;
 
 	public static var LOGGER_LEVEL_TRACE(get, never):Int;
 
@@ -295,8 +295,8 @@ class RL {
 		return rl.impl.RLImpl.initAsync(config);
 	}
 
-	public static function initValuesInt(width:Int, height:Int, title:String, flags:Int = 0, assetHost:String = "", loaderCacheDir:String = ""):Int {
-		return cast rl.impl.RLImpl.initValues(width, height, title, flags, assetHost, loaderCacheDir);
+	public static function initValuesInt(width:Int, height:Int, title:String, flags:Int = 0, assetHost:String = "", fileioBaseDir:String = ""):Int {
+		return cast rl.impl.RLImpl.initValues(width, height, title, flags, assetHost, fileioBaseDir);
 	}
 
 	@async
@@ -737,98 +737,98 @@ class RL {
 	}
 
 	@async
-	public static function loaderInit(?mountPoint:String):Int {
-		return cast rl.impl.RLImpl.loaderInit(mountPoint);
+	public static function fileioInit(?baseDir:String):Int {
+		return cast rl.impl.RLImpl.fileioInit(baseDir);
 	}
 
-	public static function loaderInitAsync(?mountPoint:String):Int {
-		return rl.impl.RLImpl.loaderInitAsync(mountPoint);
-	}
-
-	@async
-	public static function loaderDeinit():VoidResult {
-		return rl.impl.RLImpl.loaderDeinit();
-	}
-
-	public static function loaderIsInitialized():Bool {
-		return rl.impl.RLImpl.loaderIsInitialized();
-	}
-
-	public static function loaderRestoreFsAsync():RLHandle {
-		return rl.impl.RLImpl.loaderRestoreFsAsync();
-	}
-
-	public static function loaderImportAssetAsync(filename:String):RLHandle {
-		return rl.impl.RLImpl.loaderImportAssetAsync(filename);
+	public static function fileioInitAsync(?baseDir:String):Int {
+		return rl.impl.RLImpl.fileioInitAsync(baseDir);
 	}
 
 	@async
-	public static function loaderImportAsset(filename:String):RLHandle {
-		return cast rl.impl.RLImpl.loaderImportAsset(filename);
+	public static function fileioDeinit():VoidResult {
+		return rl.impl.RLImpl.fileioDeinit();
 	}
 
-	public static function loaderImportAssetsAsync(filenames:Array<String>):RLHandle {
-		return rl.impl.RLImpl.loaderImportAssetsAsync(filenames);
+	public static function fileioIsInitialized():Bool {
+		return rl.impl.RLImpl.fileioIsInitialized();
 	}
 
-	public static function loaderPollTask(task:RLHandle):Bool {
-		return rl.impl.RLImpl.loaderPollTask(task);
+	public static function fileioRestoreAsync():RLHandle {
+		return rl.impl.RLImpl.fileioRestoreAsync();
 	}
 
-	public static function loaderFinishTask(task:RLHandle):Int {
-		return rl.impl.RLImpl.loaderFinishTask(task);
+	public static function fileioEnsureAsync(localPath:String, ?src:String):RLHandle {
+		return rl.impl.RLImpl.fileioEnsureAsync(localPath, src);
 	}
 
-	public static function loaderGetTaskPath(task:RLHandle):String {
-		return rl.impl.RLImpl.loaderGetTaskPath(task);
+	@async
+	public static function fileioEnsure(localPath:String, ?src:String):RLHandle {
+		return cast rl.impl.RLImpl.fileioEnsure(localPath, src);
 	}
 
-	public static function loaderReadLocal(filename:String):Bytes {
-		return rl.impl.RLImpl.loaderReadLocal(filename);
+	public static function fileioEnsureGroupAsync(filenames:Array<String>):RLHandle {
+		return rl.impl.RLImpl.fileioEnsureGroupAsync(filenames);
 	}
 
-	public static function loaderFreeTask(task:RLHandle):Void {
-		rl.impl.RLImpl.loaderFreeTask(task);
+	public static function fileioPoll(task:RLHandle):Bool {
+		return rl.impl.RLImpl.fileioPoll(task);
 	}
 
-	public static function loaderIsAssetCached(filename:String):Bool {
-		return rl.impl.RLImpl.loaderIsAssetCached(filename);
+	public static function fileioFinish(task:RLHandle):Int {
+		return rl.impl.RLImpl.fileioFinish(task);
 	}
 
-	public static function loaderPingAssetHost(?assetHost:String):Float {
-		return rl.impl.RLImpl.loaderPingAssetHost(assetHost);
+	public static function fileioGetPath(task:RLHandle):String {
+		return rl.impl.RLImpl.fileioGetPath(task);
 	}
 
-	public static function loaderGetCacheDir():String {
-		return rl.impl.RLImpl.loaderGetCacheDir();
+	public static function fileioRead(filename:String):Bytes {
+		return rl.impl.RLImpl.fileioRead(filename);
 	}
 
-	public static function loaderCreateTaskGroup<T>(?onComplete:RLTaskGroupCallback<T>, ?onError:RLTaskGroupCallback<T>, ?ctx:T):RLTaskGroup {
-		return rl.impl.RLImpl.loaderCreateTaskGroup(onComplete, onError, ctx);
+	public static function fileioFree(task:RLHandle):Void {
+		rl.impl.RLImpl.fileioFree(task);
 	}
 
-	public static function loaderTaskInvalid():RLHandle {
-		return rl.impl.RLImpl.loaderTaskInvalid();
+	public static function fileioExists(filename:String):Bool {
+		return rl.impl.RLImpl.fileioExists(filename);
 	}
 
-	public static function loaderTaskIsValid(task:RLHandle):Bool {
-		return rl.impl.RLImpl.loaderTaskIsValid(task);
+	public static function fileioPingAssetHost(?assetHost:String):Float {
+		return rl.impl.RLImpl.fileioPingAssetHost(assetHost);
 	}
 
-	public static function loaderAddTask<T>(task:RLHandle, onSuccess:String->T->Void, onFailure:String->T->Void, ctx:T):Int {
-		return rl.impl.RLImpl.loaderAddTask(task, onSuccess, onFailure, ctx);
+	public static function fileioGetBaseDir():String {
+		return rl.impl.RLImpl.fileioGetBaseDir();
 	}
 
-	public static function loaderTick():Void {
-		rl.impl.RLImpl.loaderTick();
+	public static function fileioCreateTaskGroup<T>(?onComplete:RLTaskGroupCallback<T>, ?onError:RLTaskGroupCallback<T>, ?ctx:T):RLTaskGroup {
+		return rl.impl.RLImpl.fileioCreateTaskGroup(onComplete, onError, ctx);
 	}
 
-	public static function loaderClearCache():Int {
-		return rl.impl.RLImpl.loaderClearCache();
+	public static function fileioTaskInvalid():RLHandle {
+		return rl.impl.RLImpl.fileioTaskInvalid();
 	}
 
-	public static function loaderUncacheAsset(filename:String):Int {
-		return rl.impl.RLImpl.loaderUncacheAsset(filename);
+	public static function fileioTaskIsValid(task:RLHandle):Bool {
+		return rl.impl.RLImpl.fileioTaskIsValid(task);
+	}
+
+	public static function fileioAddTask<T>(task:RLHandle, onSuccess:String->T->Void, onFailure:String->T->Void, ctx:T):Int {
+		return rl.impl.RLImpl.fileioAddTask(task, onSuccess, onFailure, ctx);
+	}
+
+	public static function fileioTick():Void {
+		rl.impl.RLImpl.fileioTick();
+	}
+
+	public static function fileioClear():Int {
+		return rl.impl.RLImpl.fileioClear();
+	}
+
+	public static function fileioRemove(filename:String):Int {
+		return rl.impl.RLImpl.fileioRemove(filename);
 	}
 
 	public static function loggerMessage(level:Int, message:String):Void {

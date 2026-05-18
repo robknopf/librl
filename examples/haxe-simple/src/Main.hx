@@ -86,9 +86,9 @@ class SimpleRuntime implements IRuntime {
 			// we can init the loader separate from the rest of librl. 
 			// that will allow us to fetch files required before init
 			// otherwise, use RL.init() for normal flow
-			var rc = @await RL.loaderInit();
+			var rc = @await RL.fileioInit();
 			if (rc != 0) {
-				Log.error("RL.loaderInit failed: " + rc);
+				Log.error("RL.fileioInit failed: " + rc);
 				return RT_FAILED;
 			}
 		 */
@@ -119,14 +119,14 @@ class SimpleRuntime implements IRuntime {
 			windowTitle: SCREEN_TITLE,
 			windowFlags: SCREEN_FLAGS,
 			assetHost: ASSET_HOST,
-			// loaderCacheDir: LOADER_CACHE_DIR
+			// fileioBaseDir: LOADER_CACHE_DIR
 		});
 		if (rc != 0) {
 			Log.error("Main: onInit failed with error: " + rc);
 			return RT_FAILED;
 		}
 
-		RL.loaderClearCache();
+		RL.fileioClear();
 
 		// Setup lighting and camera
 		RL.enableLighting();
@@ -279,9 +279,9 @@ class SimpleRuntime implements IRuntime {
 
 	// helper to combine creating an import task and adding it to the loader queue
 	private function importAssetAsync(path:String, ?onSuccess:String->Dynamic->Void, ?onFailure:String->Dynamic->Void, ?userData:Dynamic):Int {
-		var task = RL.loaderImportAssetAsync(path);
-		if (RL.loaderTaskIsValid(task)) {
-			RL.loaderAddTask(task, (path, userData) -> {
+		var task = RL.fileioEnsureAsync(path);
+		if (RL.fileioTaskIsValid(task)) {
+			RL.fileioAddTask(task, (path, userData) -> {
 				if (onSuccess != null) {
 					onSuccess(path, userData);
 				}

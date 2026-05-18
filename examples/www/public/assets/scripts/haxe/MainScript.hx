@@ -89,14 +89,14 @@ class MainScript extends Script {
 			windowTitle: SCREEN_TITLE,
 			windowFlags: SCREEN_FLAGS,
 			assetHost: ASSET_HOST,
-			// loaderCacheDir: LOADER_CACHE_DIR
+			// fileioBaseDir: LOADER_CACHE_DIR
 		});
 		if (err != 0) {
 			trace("Main: onInit failed with error: " + err);
 			return RT_FAILED;
 		}
 
-		RL.loaderClearCache();
+		RL.fileioClear();
 
 		// Setup lighting and camera
 		RL.enableLighting();
@@ -119,24 +119,24 @@ class MainScript extends Script {
 	}
 
 	function loadAssets():Void {
-		RL.loaderAddTask(RL.loaderImportAssetAsync(DEBUG_FONT_PATH), (path, _) -> {
+		RL.fileioAddTask(RL.fileioEnsureAsync(DEBUG_FONT_PATH), (path, _) -> {
 			ctx.debugFont = RL.fontCreate(path, DEBUG_FONT_SIZE);
 		}, null, ctx);
-		RL.loaderAddTask(RL.loaderImportAssetAsync(KOMIKA_FONT_PATH), (path, _) -> {
+		RL.fileioAddTask(RL.fileioEnsureAsync(KOMIKA_FONT_PATH), (path, _) -> {
 			ctx.komikaFont = RL.fontCreate(path, KOMIKA_FONT_SIZE);
 		}, null, ctx);
-		RL.loaderAddTask(RL.loaderImportAssetAsync(MODEL_PATH), (path, _) -> {
+		RL.fileioAddTask(RL.fileioEnsureAsync(MODEL_PATH), (path, _) -> {
 			ctx.gumshoe = RL.modelCreate(path);
 			RL.modelSetTransform(ctx.gumshoe, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
 			RL.modelSetAnimation(ctx.gumshoe, 1);
 			RL.modelSetAnimationSpeed(ctx.gumshoe, 1.0);
 			RL.modelSetAnimationLoop(ctx.gumshoe, true);
 		}, null, ctx);
-		RL.loaderAddTask(RL.loaderImportAssetAsync(SPRITE_PATH), (path, _) -> {
+		RL.fileioAddTask(RL.fileioEnsureAsync(SPRITE_PATH), (path, _) -> {
 			ctx.sprite = RL.sprite3dCreate(path);
 			RL.sprite3dSetTransform(ctx.sprite, 0.0, 0.0, ctx.spriteYOffset, 1.0);
 		}, null, ctx);
-		RL.loaderAddTask(RL.loaderImportAssetAsync(BGM_PATH), (path, _) -> {
+		RL.fileioAddTask(RL.fileioEnsureAsync(BGM_PATH), (path, _) -> {
 			ctx.bgm = RL.musicCreate(path);
 			RL.musicSetLoop(ctx.bgm, true);
 			RL.musicPlay(ctx.bgm);

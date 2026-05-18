@@ -37,12 +37,12 @@ interface sys.db.ResultSet
 class sys.db._Mysql.D
 interface sys.db.Connection
 class sys.FileSystem
-class rl.impl.RLLoader
 class rl.impl._RLImpl.RLImpl_Impl_
 class rl.impl._RLImpl.RLBridgeImpl
 class rl.impl._RLImpl.RLKeyboardBridge
-class rl.impl._RLImpl.RLLoaderCallbackBridge
+class rl.impl._RLImpl.RLFileioCallbackBridge
 class rl.impl._RLImpl.RLLoggerBridge
+class rl.impl.RLFileio
 class rl.gen.RLVersion
 class rl.RLKeyboardState
 class rl.RLTaskGroup
@@ -243,7 +243,7 @@ file rl/RLHandle.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl
 file rl/RLTaskGroup.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/RLTaskGroup.hx
 file rl/RLTypes.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/RLTypes.hx
 file rl/gen/RLVersion.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/gen/RLVersion.hx
+file rl/impl/RLFileioImpl.cpp.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/cppia/rl/impl/RLFileioImpl.cpp.hx
 file rl/impl/RLImpl.cpp.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/cppia/rl/impl/RLImpl.cpp.hx
-file rl/impl/RLLoaderImpl.cpp.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/cppia/rl/impl/RLLoaderImpl.cpp.hx
 file tools/PathUtil.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/cppia/tools/PathUtil.hx
 file ws/WebSocket.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/cppia/src/ws/WebSocket.hx

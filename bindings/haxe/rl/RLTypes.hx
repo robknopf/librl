@@ -6,7 +6,7 @@ typedef RLInitConfig = {
   ?windowTitle: String,
   ?windowFlags: Int,
   ?assetHost: String,
-  ?loaderCacheDir: String,
+  ?fileioBaseDir: String,
 };
 
 typedef RLBootConfig = {

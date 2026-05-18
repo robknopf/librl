@@ -99,20 +99,20 @@ Notes:
     - `resetPickStats()`
     - `getPickStats()`
 - JS `boot(opts)` instantiates the Emscripten module and prepares the scratch/color helpers without calling `rl_init(...)`.
-  - This is useful when callers need the loader-only/bootstrap path first, for example `boot() -> loaderInit() -> init()`.
+  - This is useful when callers need the loader-only/bootstrap path first, for example `boot() -> fileioInit() -> init()`.
   - `boot(...)` is the canonical place for module/browser options such as `canvasId`, `modulePath`, `wasmPath`, `idealWidth`, `idealHeight`, and optional callback hooks like `print`, `printErr`, and `locateFile`.
   - `modulePath` selects the raw Emscripten JS runtime module (`lib/librl.js` by default, resolved relative to `bindings/js/rl.js`).
   - `init(...)` and `initAsync(...)` reuse the booted module instance when one already exists.
 - JS `init(opts)` calls the default synchronous `rl_init()` with a wasm `rl_init_config_t` built from:
-  - `windowWidth`, `windowHeight`, `windowTitle`, `windowFlags`, `assetHost`, `loaderCacheDir`
+  - `windowWidth`, `windowHeight`, `windowTitle`, `windowFlags`, `assetHost`, `fileioBaseDir`
   - Example: `await rl.init({ windowWidth: 800, windowHeight: 600, windowTitle: "Title", windowFlags: rl.FLAG_MSAA_4X_HINT, assetHost })`
   - Init result constants are exposed (`INIT_OK`, `INIT_ERR_UNKNOWN`, `INIT_ERR_ALREADY_INITIALIZED`, `INIT_ERR_LOADER`, `INIT_ERR_ASSET_HOST`, `INIT_ERR_WINDOW`).
-- JS `initValues(width, height, title, flags, assetHost, loaderCacheDir)` uses the flattened C helper `rl_init_values(...)` instead of marshaling `rl_init_config_t`.
+- JS `initValues(width, height, title, flags, assetHost, fileioBaseDir)` uses the flattened C helper `rl_init_values(...)` instead of marshaling `rl_init_config_t`.
 - JS also exposes `initAsync(opts)` for the polling-style init path, now routed through the flattened `rl_init_values_async(...)` helper.
-- JS exposes `initValuesAsync(width, height, title, flags, assetHost, loaderCacheDir)` for direct flattened polling-style init.
+- JS exposes `initValuesAsync(width, height, title, flags, assetHost, fileioBaseDir)` for direct flattened polling-style init.
 - In JS, polling-style `*Async` entrypoints keep the same immediate-return contract as the other bindings:
-  - `initAsync(...)`, `initValuesAsync(...)`, and `loaderInitAsync(...)` return plain integer status codes.
-  - task-style loader APIs like `restoreFSAsync()` / `importAssetAsync()` / `importAssetsAsync()` return task handles immediately.
+  - `initAsync(...)`, `initValuesAsync(...)`, and `fileioInitAsync(...)` return plain integer status codes.
+  - task-style fileio APIs like `fileioRestoreAsync()` / `ensureAsync()` return task handles immediately.
 - JS exposes `isInitialized()` for `rl_is_initialized()`.
 - JS exposes `getPlatform()` for `rl_get_platform()`.
 - Version queries (`rl_version_*` in `rl_version.h`) are exposed on all bindings:
@@ -122,29 +122,29 @@ Notes:
   - Lua: `rl.version_major()`, …
 - Binding/core alignment: `make binding-version` (runs with `desktop` / `shared` / `wasm` / `rl_lua`) writes `bindings/*/gen/*` from `include/rl_version.h`. Each binding queries `rl_version_*` from librl, compares to its stamp, logs both versions, and applies local policy (`validate_version()` / `validateVersion()` / `rl_validate_version()` return `0` ok, `1` patch drift, `< 0` fatal). Checks run at load/boot (not `init`): Lua on `require("rl")` and `rl.boot()`; JS after wasm load; Nim/Haxe on `rl_boot()` / `RL.boot()`.
 - JS `pickModel(camera, model, mouseX, mouseY)` and `pickSprite3d(camera, sprite3d, mouseX, mouseY)` return local-space `point` / `normal` data from `rl_pick_result_t`.
-- Loader/cache helpers currently exposed in JS:
-  - `loaderInit([mountPoint])`
-  - `loaderInitAsync([mountPoint])`
-  - `loaderDeinit()`
-  - `loaderIsReady()`
-  - `restoreFSAsync()` → task handle for `rl_loader_restore_fs_async()`
-  - `importAsset(filename)` → Promise/integer result for `rl_loader_import_asset()`
+- Fileio helpers currently exposed in JS:
+  - `fileioInit([baseDir])`
+  - `fileioInitAsync([baseDir])`
+  - `fileioDeinit()`
+  - `fileioIsReady()`
+  - `fileioRestoreAsync()` → task handle for `rl_fileio_restore_async()`
+  - `fileioEnsure(localPath, src?)` → Promise/integer result for `rl_fileio_ensure()`
     - JS warns when `filename` ends in `.gltf`, because this synchronous/JSPI path does not currently follow `.gltf` dependencies.
-  - `importAssetAsync(filename)` → task handle for `rl_loader_create_import_task()`
-  - `importAssetsAsync(filenames)` → task handle via the scratch ABI and `rl_loader_import_assets_from_scratch_async()`
-  - `waitForImportAssetAsync(filename)` / `waitForImportAssetsAsync(filenames)` → Promise/integer convenience wrappers around the task-returning imports
-  - `readLocal(filename)` → `rl_loader_read_local` (copy into a `Uint8Array`) or `null` on error / missing data pointer
-  - `uncacheAsset(filename)`
-  - `clearCache()`
+  - `fileioEnsureAsync(localPath, src?)` → task handle for `rl_fileio_ensure_async()`
+  - `fileioEnsureGroupAsync(filenames)` → task handle via the scratch ABI and `rl_fileio_ensure_group_from_scratch_async()`
+  - `waitForFileioEnsureAsync(localPath)` / `waitForFileioEnsureGroupAsync(filenames)` → Promise/integer convenience wrappers around the task-returning imports
+  - `fileioRead(filename)` → `rl_fileio_read` (copy into a `Uint8Array`) or `null` on error / missing data pointer
+  - `fileioRemove(filename)`
+  - `fileioClear()`
 - JS binding-level TaskGroup ergonomics:
   - `createTaskGroup(onComplete?, onError?, ctx?)`
   - `addTask`, `addImportTask`, `addImportTasks`
   - `tick()`, `process()`, `remainingTasks()`, `failedPaths()`
-- JS `addTask(task, onSuccess?, onFailure?, ctx?)` now mirrors the Haxe/cpp callback contract by installing local JS springboard callbacks around `rl_loader_add_task(...)`.
+- JS `addTask(task, onSuccess?, onFailure?, ctx?)` now mirrors the Haxe/cpp callback contract by installing local JS springboard callbacks around `rl_fileio_add_task(...)`.
 - JS `create*` helpers now match the other bindings: they create resources from paths that are already available in librl's local filesystem/cache.
-  - Call `importAsset(...)`, `waitForImportAssetAsync(...)`, task groups, or another loader flow first when the asset is not local yet.
+  - Call `fileioEnsure(...)`, `waitForFileioEnsureAsync(...)`, task groups, or another fileio flow first when the asset is not local yet.
   - This applies to `createFont`, `createModel`, `createMusic`, `createSound`, `createTexture`, `createSprite3d`, and `createSprite2D`.
-- JS task-returning loader helpers use the same naming convention as C: `_async` means the call starts work and returns a task handle. Default names such as `importAsset(...)` follow the synchronous/default contract, even though JS callers still `await` them when JSPI is involved.
+- JS task-returning fileio helpers use the same naming convention as C: `_async` means the call starts work and returns a task handle. Default names such as `fileioEnsure(...)` follow the synchronous/default contract, even though JS callers still `await` them when JSPI is involved.
 
 ## Nim Binding
 
@@ -201,29 +201,29 @@ Notes:
   - `bindingsPath` lets callers override the runtime path to `bindings/js/rl.js`; if omitted, Nim JS defaults to `"/bindings/js/rl.js"`.
   - On Nim JS, `print` and `printErr` are forwarded into the wrapper `env` object. `locateFile` is currently accepted for API parity but ignored with a warning.
   - On native targets, `rl_boot` loads nothing (static link) but still runs the binding/core version check, then returns `RL_INIT_OK`.
-- Loader helpers in Nim (all return native `int` or `bool`):
-  - `rl_loader_init([mount_point])` → `int`
-  - `rl_loader_init_async([mount_point])` → `int`
-  - `rl_loader_deinit()`
-  - `rl_loader_is_initialized()` → `bool`
-  - `loaderPingAssetHost(assetHost?)` → `float` RTT ms, or `< 0` on failure
-  - `rl_loader_restore_fs_async()` → `RLHandle`
-  - `rl_loader_create_import_task(filename)` → `RLHandle`
-  - `rl_loader_import_asset(filename)` → `int` (`0` success)
-  - `rl_loader_import_assets_async(filenames, count)` → `RLHandle`
-  - `rl_loader_poll_task(task)` → `bool`
-  - `rl_loader_finish_task(task)` → `int`
-  - `rl_loader_free_task(task)`
-  - `rl_loader_is_asset_cached(filename)` → `bool`
-  - `rl_loader_uncache_asset(filename)` → `int`
-  - `rl_loader_clear_cache()` → `int`
+- Fileio helpers in Nim (all return native `int` or `bool`):
+  - `rl_fileio_init([base_dir])` → `int`
+  - `rl_fileio_init_async([base_dir])` → `int`
+  - `rl_fileio_deinit()`
+  - `rl_fileio_is_initialized()` → `bool`
+  - `fileioPingAssetHost(assetHost?)` → `float` RTT ms, or `< 0` on failure
+  - `rl_fileio_restore_async()` → `RLHandle`
+  - `rl_fileio_ensure_async(localPath, src?)` → `RLHandle`
+  - `rl_fileio_ensure(localPath, src?)` → `int` (`0` success)
+  - `rl_fileio_ensure_group_async(filenames, count)` → `RLHandle`
+  - `rl_fileio_poll(task)` → `bool`
+  - `rl_fileio_finish(task)` → `int`
+  - `rl_fileio_free(task)`
+  - `rl_fileio_exists(filename)` → `bool`
+  - `rl_fileio_remove(filename)` → `int`
+  - `rl_fileio_clear()` → `int`
 - Init result constants are exposed as `RL_INIT_OK` / `RL_INIT_ERR_*` (plain `int`).
 - Nim also exposes `rl_init_async([config])`.
 
-Binding-level async loader ergonomics:
+Binding-level async fileio ergonomics:
 
 - `RLTaskGroup[T]` is available in Nim via `bindings/nim/rl.nim`:
-  - `loaderCreateTaskGroup[T](ctx, onComplete?, onError?)`
+  - `fileioCreateTaskGroup[T](ctx, onComplete?, onError?)`
   - `addTask`, `addImportTask`, `addImportTasks`
   - `tick()`, `process()`, `remainingTasks()`, `failedPaths()`
 - The Nim example (`examples/nim-simple/src/main.nim`) is the canonical pattern:
@@ -239,7 +239,7 @@ Files:
 - `bindings/haxe/rl/impl/RLImpl.js.hx` — Haxe `js` backend. It is a thin adapter over the standalone JS binding exported from `bindings/js/rl.js`.
 - `bindings/haxe/rl/impl/RLImpl.hx` — unsupported fallback that fails compilation for targets without a backend.
 - `bindings/haxe/rl/RLHandle.hx` — shared integer handle type.
-- `bindings/haxe/rl/impl/RLLoaderImpl.cpp.hx` — current hxcpp-only loader impl (`RLLoader` class).
+- `bindings/haxe/rl/impl/RLFileioImpl.cpp.hx` — current hxcpp-only fileio impl (`RLFileio` class).
 - `bindings/haxe/rl/RLTaskGroup.hx` — pure Haxe task group helper; all methods are non-inline for cppia compatibility.
 - `bindings/haxe/rl/InjectLibRL.hx`
 - `examples/haxe-simple/src/Main.hx`
@@ -250,9 +250,9 @@ Role:
 - `RL.hx` is the script-facing/public API module and must remain free of `cpp.*`, `@:native`, and `untyped __cpp__`.
 - `RLImpl.cpp.hx` currently holds the hxcpp-specific backend and is compiled into the host binary with `-D scriptable`.
 - Uses `@:buildXml`, `@:functionCode` in `RLImpl.cpp.hx` to:
-  - Include `rl.h` / `rl_loader.h`.
+  - Include `rl.h` / `rl_fileio.h`.
   - Inject link flags (`librl.a` / `librl.wasm.a`).
-  - Bridge Haxe loader callbacks to `rl_loader_add_task`.
+  - Bridge Haxe loader callbacks to `rl_fileio_add_task`.
 
 ### Haxe Architecture Notes
 
@@ -270,13 +270,13 @@ Current state:
   - Haxe JS uses a typed `RLBootConfig` surface with flattened fields like `bindingsPath`, `canvasId`, `modulePath`, `wasmPath`, `idealWidth`, `idealHeight`, `print`, `printErr`, and `locateFile`.
 - Haxe JS returns Promises for blocking JSPI-backed calls:
   - `RL.init(...)`, `RL.initValues(...)`, `RL.deinit()`
-  - `RL.loaderInit(...)`, `RL.loaderDeinit()`, `RL.loaderImportAsset(...)`
-  - The `*Async` task-starting APIs keep their C semantics: they return immediate status/task handles and are polled/finished through the loader task API.
+  - `RL.fileioInit(...)`, `RL.fileioDeinit()`, `RL.fileioEnsure(...)`
+  - The `*Async` task-starting APIs keep their C semantics: they return immediate status/task handles and are polled/finished through the fileio task API.
 - The Haxe JS backend now reuses `bindings/js/*` exclusively. `RLImpl.js.hx` no longer calls the wasm exports directly; all browser-side behavior flows through the JS binding layer.
 - On Haxe JS, `RL.scratchRefresh()` forwards to the JS binding's scratch refresh path. Call it in the tick/frame loop before reading scratch-backed state such as mouse or keyboard snapshots.
 - `RLImpl.cpp.hx` keeps the raw C extern table private as `RLExterns`; authored code never imports it directly.
 - There is no generic runtime fallback. New targets must add an explicit backend such as `RLImpl.lua.hx`.
-- `examples/haxe-js-simple` is the current compile/run smoke test for the Haxe `js` backend. It exercises `RL.boot()` and loader init/deinit; in runtimes without JSPI support, boot returns an error code without instantiating wasm.
+- `examples/haxe-js-simple` is the current compile/run smoke test for the Haxe `js` backend. It exercises `RL.boot()` and fileio init/deinit; in runtimes without JSPI support, boot returns an error code without instantiating wasm.
 
 Target-neutral direction:
 
@@ -286,9 +286,9 @@ Target-neutral direction:
   - `bindings/haxe/rl/impl/RLImpl.cpp.hx`
   - `bindings/haxe/rl/impl/RLImpl.js.hx`
   - `bindings/haxe/rl/impl/RLImpl.lua.hx`
-- The same pattern should be applied to loader internals:
-  - `bindings/haxe/rl/impl/RLLoaderImpl.cpp.hx`
-  - `bindings/haxe/rl/impl/RLLoaderImpl.lua.hx`
+- The same pattern should be applied to fileio internals:
+  - `bindings/haxe/rl/impl/RLFileioImpl.cpp.hx`
+  - `bindings/haxe/rl/impl/RLFileioImpl.lua.hx`
 
 Design rules for that split:
 
@@ -328,27 +328,27 @@ Notes:
   - Keep app/runtime export lists out of `bindings/haxe/rl/InjectLibRL.hx`; it should stay focused on librl link/config flags.
 - `examples/haxe-simple` is the canonical Haxe example and the canonical host/runtime ABI example for Haxe in this repo.
 
-Async loader sugar:
+Async fileio sugar:
 
 - The binding exposes both init contracts:
   - `RL.init(...)`
   - `RL.initAsync(...)`
-  - `RL.loaderInit([mountPoint])`
-  - `RL.loaderInitAsync([mountPoint])`
-  - `RL.loaderIsInitialized(): Bool`
+  - `RL.fileioInit([baseDir])`
+  - `RL.fileioInitAsync([baseDir])`
+  - `RL.fileioIsInitialized(): Bool`
 - The binding exposes:
-  - `RL.loaderPingAssetHost(assetHost?): Float` → RTT ms, or `< 0` on failure
-  - `RL.loaderImportAssetAsync(path: String): RLHandle`
-  - `RLLoader.loaderAddTask(task, onSuccess, onFailure, userData)` with the callback path derived from `RLLoader.loaderGetTaskPath(task)`
-  - `RL.loaderPollTask(task: RLHandle): Bool`
-  - `RL.loaderFinishTask(task: RLHandle): Int`
-  - `RL.loaderCreateTaskGroup<T>(onComplete?, onError?, ctx?)`
+  - `RL.fileioPingAssetHost(assetHost?): Float` → RTT ms, or `< 0` on failure
+  - `RL.fileioEnsureAsync(localPath: String, ?src: String): RLHandle`
+  - `RLFileio.fileioAddTask(task, onSuccess, onFailure, userData)` with the callback path derived from `RLFileio.fileioGetPath(task)`
+  - `RL.fileioPoll(task: RLHandle): Bool`
+  - `RL.fileioFinish(task: RLHandle): Int`
+  - `RL.fileioCreateTaskGroup<T>(onComplete?, onError?, ctx?)`
   - `RLTaskGroup.addImportTask(path, onSuccess?, onError?)`
   - `RLTaskGroup.process()`, `RLTaskGroup.remainingTasks()`, `RLTaskGroup.failedPaths()`
-  - `RL.loaderAddTask(task, onSuccess, onFailure, ctx)`
-- `rl_loader_add_task` is wrapped so Haxe loader callbacks use plain `(path, ctx)` handlers:
-  - `RL.loaderAddTask(task, onAssetReady, onAssetFailed, ctx)`
-- `RL.loaderAddTask(...)` consumes the task handle when queueing succeeds; use task groups or callbacks rather than polling the same handle after queueing it.
+  - `RL.fileioAddTask(task, onSuccess, onFailure, ctx)`
+- `rl_fileio_add_task` is wrapped so Haxe fileio callbacks use plain `(path, ctx)` handlers:
+  - `RL.fileioAddTask(task, onAssetReady, onAssetFailed, ctx)`
+- `RL.fileioAddTask(...)` consumes the task handle when queueing succeeds; use task groups or callbacks rather than polling the same handle after queueing it.
 - The example (`examples/haxe-simple/src/Main.hx`) is the canonical reference for:
   - Direct `RL.init` / frame loop / `RL.deinit` usage.
   - Non-blocking async import gating via `loadingGroup.process()`.
@@ -359,31 +359,31 @@ Async loader sugar:
 Files:
 
 - `bindings/lua/rl_lua.c`
-- `bindings/lua/rl_lua_loader.c`
+- `bindings/lua/rl_lua_fileio.c`
 - `bindings/lua/rl_task_group.lua` (optional reference; logic is native in `rl_lua_task_group.c`)
 
 Role:
 
 - `bindings/lua/rl_lua*.c` exposes direct C-backed Lua APIs.
-- **`rl.loader_create_task_group`** is implemented in C (`rl_lua_task_group.c`), same role as:
-  - Haxe: `RL.loaderCreateTaskGroup` → `RLTaskGroup` (`rl/RL.hx`, `rl/RLTaskGroup.hx`)
-  - Nim: `loaderCreateTaskGroup` / `RLTaskGroup` in `rl.nim`
+- **`rl.fileio_create_task_group`** is implemented in C (`rl_lua_task_group.c`), same role as:
+  - Haxe: `RL.fileioCreateTaskGroup` → `RLTaskGroup` (`rl/RL.hx`, `rl/RLTaskGroup.hx`)
+  - Nim: `fileioCreateTaskGroup` / `RLTaskGroup` in `rl.nim`
 
 Notes:
 
 - The returned userdata exposes `add_task`, `add_import_task`, `add_import_tasks`, `tick`, `process`, `failed_paths`, etc.
 - Lua exposes mouse button state constants (`rl.RL_BUTTON_UP`, `rl.RL_BUTTON_PRESSED`, `rl.RL_BUTTON_DOWN`, `rl.RL_BUTTON_RELEASED`).
 - Lua exposes handle constants `rl.RL_CAMERA3D_DEFAULT` and `rl.RL_FONT_DEFAULT`.
-- Lua exposes `rl.boot()`, which runs the binding/core version check and returns `rl.RL_INIT_OK` (same check as `require("rl")`). Use `boot() -> loader_init() -> init()` when mirroring JS/Haxe lifecycle; `require` alone already validated at load.
-- Lua exposes `rl.loader_ping_asset_host([asset_host])`, returning RTT ms or `< 0` on failure, for proactive asset-host diagnostics before importing.
-- Lua exposes `rl.loader_init([mount_point])` and `rl.loader_deinit()` for loader-only bootstrap without full `rl.init()`.
-- Lua also exposes `rl.loader_init_async([mount_point])` and `rl.init_async([config])` for the polling-style fallback path.
-- Lua exposes `rl.loader_is_ready()` for `rl_loader_is_ready()`.
-- Lua exposes `rl.loader_is_initialized()` for `rl_loader_is_initialized()`.
-- Lua exposes `rl.loader_create_import_task(filename)` for `rl_loader_create_import_task()`.
-- Lua exposes `rl.loader_import_asset(filename)` → integer return code (`0` success); on wasm this follows the same constraints as the C API (see `rl_loader_import_asset` in `rl_loader.h`).
-- Lua `rl.loader_add_task(task, on_success?, on_failure?, ctx?)` derives the callback path from `rl_loader_get_task_path(task)`. Loader callbacks receive `(path, ctx)`.
-- Lua exposes loader queue result constants (`rl.RL_LOADER_QUEUE_TASK_OK`, `rl.RL_LOADER_QUEUE_TASK_ERR_INVALID`, `rl.RL_LOADER_QUEUE_TASK_ERR_QUEUE_FULL`).
+- Lua exposes `rl.boot()`, which runs the binding/core version check and returns `rl.RL_INIT_OK` (same check as `require("rl")`). Use `boot() -> fileio_init() -> init()` when mirroring JS/Haxe lifecycle; `require` alone already validated at load.
+- Lua exposes `rl.fileio_ping_asset_host([asset_host])`, returning RTT ms or `< 0` on failure, for proactive asset-host diagnostics before importing.
+- Lua exposes `rl.fileio_init([base_dir])` and `rl.fileio_deinit()` for fileio-only bootstrap without full `rl.init()`.
+- Lua also exposes `rl.fileio_init_async([base_dir])` and `rl.init_async([config])` for the polling-style fallback path.
+- Lua exposes `rl.fileio_is_ready()` for `rl_fileio_is_ready()`.
+- Lua exposes `rl.fileio_is_initialized()` for `rl_fileio_is_initialized()`.
+- Lua exposes `rl.fileio_ensure_async(local_path, src?)` for `rl_fileio_ensure_async()`.
+- Lua exposes `rl.fileio_ensure(local_path, src?)` → integer return code (`0` success); on wasm this follows the same constraints as the C API (see `rl_fileio_ensure` in `rl_fileio.h`).
+- Lua `rl.fileio_add_task(task, on_success?, on_failure?, ctx?)` derives the callback path from `rl_fileio_get_path(task)`. Fileio callbacks receive `(path, ctx)`.
+- Lua exposes fileio queue result constants (`rl.RL_FILEIO_ADD_TASK_OK`, `rl.RL_FILEIO_ADD_TASK_ERR_INVALID`, `rl.RL_FILEIO_ADD_TASK_ERR_QUEUE_FULL`).
 - Lua exposes init result constants (`rl.RL_INIT_OK`, `rl.RL_INIT_ERR_UNKNOWN`, `rl.RL_INIT_ERR_ALREADY_INITIALIZED`, `rl.RL_INIT_ERR_LOADER`, `rl.RL_INIT_ERR_ASSET_HOST`, `rl.RL_INIT_ERR_WINDOW`).
 - Lua exposes `rl.is_initialized()` for `rl_is_initialized()`.
 - Lua exposes `rl.get_platform()` for `rl_get_platform()`.

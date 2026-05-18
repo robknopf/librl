@@ -1,7 +1,7 @@
 #include "rl_module_lua.h"
 #include "rl_color.h"
 #include "rl_camera3d.h"
-#include "rl_loader.h"
+#include "rl_fileio.h"
 #include "rl_font.h"
 #include "rl_model.h"
 #include "rl_music.h"
@@ -800,7 +800,7 @@ static rl_handle_t lua_module_cached_load(rl_lua_cached_resource_t *cache,
         return 0;
     }
 
-    rl_loader_normalize_path(path, normalized_path, sizeof(normalized_path));
+    rl_fileio_normalize_path(path, normalized_path, sizeof(normalized_path));
 
     for (i = 0; i < cache_count; i++) {
         if (cache[i].handle != 0 && strcmp(cache[i].path, normalized_path) == 0) {
@@ -886,7 +886,7 @@ static rl_handle_t lua_module_cached_load_font(rl_lua_cached_font_t *cache,
         return 0;
     }
 
-    rl_loader_normalize_path(path, normalized_path, sizeof(normalized_path));
+    rl_fileio_normalize_path(path, normalized_path, sizeof(normalized_path));
 
     for (i = 0; i < cache_count; i++) {
         if (cache[i].handle != 0 &&
@@ -2471,7 +2471,7 @@ static void lua_module_on_do_file(void *payload, void *listener_user_data)
 
     if (rl_lua_resolve_path(filename, resolved_path, sizeof(resolved_path)) != 0) {
         char normalized[512] = {0};
-        rl_loader_normalize_path(filename, normalized, sizeof(normalized));
+        rl_fileio_normalize_path(filename, normalized, sizeof(normalized));
         (void)rl_lua_fetch_to_fileio(normalized);
         if (rl_lua_resolve_path(filename, resolved_path, sizeof(resolved_path)) != 0) {
             set_error(&state->vm, "lua do_file path resolution failed");
@@ -2539,7 +2539,7 @@ static void lua_module_build_path_templates(const char *path,
                                             char *tmpl_init, size_t init_sz)
 {
     char normalized[256] = {0};
-    rl_loader_normalize_path(path, normalized, sizeof(normalized));
+    rl_fileio_normalize_path(path, normalized, sizeof(normalized));
     (void)snprintf(tmpl_lua,  lua_sz,  "%s/?.lua",     normalized);
     (void)snprintf(tmpl_dir,  dir_sz,  "%s/?/?.lua",   normalized);
     (void)snprintf(tmpl_init, init_sz, "%s/?/init.lua", normalized);
@@ -2549,7 +2549,7 @@ static void lua_module_build_cpath_templates(const char *path,
                                              char *tmpl_so, size_t so_sz)
 {
     char normalized[256] = {0};
-    rl_loader_normalize_path(path, normalized, sizeof(normalized));
+    rl_fileio_normalize_path(path, normalized, sizeof(normalized));
     (void)snprintf(tmpl_so, so_sz, "%s/?.so", normalized);
 }
 

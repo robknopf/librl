@@ -28,7 +28,7 @@ What this does:
 
 1. prepends `examples/lua/libs/` to `package.cpath`
 2. `require("rl")` loads the local native Lua binding module
-3. initializes the loader with `rl.loader_init()`
+3. initializes the loader with `rl.fileio_init()`
 4. points the loader at the desktop asset host with `rl.loader_set_asset_host("https://localhost:4444")`
 5. prepends `assets/scripts/lua` to `package.path`
 6. `require(...)`s the shared `runtime_wrapper` module

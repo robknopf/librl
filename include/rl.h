@@ -11,7 +11,7 @@
 #include "rl_frame_command.h" // IWYU pragma: keep
 #include "rl_font.h" // IWYU pragma: keep
 #include "rl_input.h" // IWYU pragma: keep
-#include "rl_loader.h" // IWYU pragma: keep
+#include "rl_fileio.h" // IWYU pragma: keep
 #include "rl_logger.h" // IWYU pragma: keep
 #include "rl_model.h" // IWYU pragma: keep
 #include "rl_music.h" // IWYU pragma: keep
@@ -54,13 +54,13 @@ int rl_init_values(int window_width,
                    const char *window_title,
                    unsigned int window_flags,
                    const char *asset_host,
-                   const char *loader_cache_dir);
+                   const char *fileio_base_dir);
 int rl_init_values_async(int window_width,
                          int window_height,
                          const char *window_title,
                          unsigned int window_flags,
                          const char *asset_host,
-                         const char *loader_cache_dir);
+                         const char *fileio_base_dir);
 bool rl_is_initialized(void);
 const char *rl_get_platform(void);
 void rl_deinit();

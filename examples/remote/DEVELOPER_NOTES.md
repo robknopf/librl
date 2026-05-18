@@ -39,8 +39,8 @@ Server                                         Client
 2. **ResourceManager** assigns a RID, stores promise, queues request
 3. **Frame loop** picks up pending requests via `getPendingRequests()` (each sent only once)
 4. **Client** receives request in a resource-request packet, starts async load
-5. **Client** polls `rl_loader_poll_task()` each frame until asset is fetched
-6. **Client** calls `rl_loader_finish_task()` then creates the resource handle
+5. **Client** polls `rl_fileio_poll()` each frame until asset is fetched
+6. **Client** calls `rl_fileio_finish()` then creates the resource handle
 7. **Client** sends response with `{rid, handle, success}`
 8. **Server** matches RID, resolves promise, game code continues
 
@@ -52,7 +52,7 @@ Server                                         Client
 
 **Async** (response comes in a later frame, after file fetch):
 - Font, Texture, Model, Sound, Music, Sprite3D
-- Uses `rl_loader_create_import_task()` → poll → finish → create handle
+- Uses `rl_fileio_ensure_async()` → poll → finish → create handle
 
 ## Client Rendering Pipeline
 

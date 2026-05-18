@@ -38,7 +38,7 @@ class RLTaskGroup {
     }
     entries.push({
       task: task,
-      path: RL.loaderGetTaskPath(task),
+      path: RL.fileioGetPath(task),
       done: false,
       rc: 1,
       onSuccess: cast onSuccess,
@@ -47,7 +47,7 @@ class RLTaskGroup {
   }
 
   public function addImportTask<T>(path:String, ?onSuccess:RLTaskGroupTaskCallback<T>, ?onError:RLTaskGroupTaskCallback<T>):Void {
-    addTask(RL.loaderImportAssetAsync(path), onSuccess, onError);
+    addTask(RL.fileioEnsureAsync(path), onSuccess, onError);
   }
 
   public function addImportTasks(paths:Array<String>):Void {
@@ -69,16 +69,16 @@ class RLTaskGroup {
   }
 
   public function tick():Bool {
-    RL.loaderTick();
+    RL.fileioTick();
     for (entry in entries) {
       if (entry.done) {
         continue;
       }
-      if (!RL.loaderPollTask(entry.task)) {
+      if (!RL.fileioPoll(entry.task)) {
         continue;
       }
-      entry.rc = RL.loaderFinishTask(entry.task);
-      RL.loaderFreeTask(entry.task);
+      entry.rc = RL.fileioFinish(entry.task);
+      RL.fileioFree(entry.task);
       entry.done = true;
       completedCount++;
       if (entry.rc != 0) {

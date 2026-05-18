@@ -3,7 +3,7 @@
 #include "rl_font.h"
 #include "rl_frame_command.h"
 #include "rl_input.h"
-#include "rl_loader.h"
+#include "rl_fileio.h"
 #include "rl_logger.h"
 #include "rl_protocol.h"
 #include "rl_text.h"
@@ -87,7 +87,7 @@ int rt_init(void *user_data) {
   (void)user_data;
   remote_context_t *context = &g_remote_context;
   const char *ws_url = get_remote_ws_url();
-  rl_loader_queue_task_result_t loader_rc = RL_LOADER_QUEUE_TASK_OK;
+  rl_fileio_add_task_result_t loader_rc = RL_FILEIO_ADD_TASK_OK;
   rl_init_config_t init_cfg;
 
   memset(&init_cfg, 0, sizeof(init_cfg));
@@ -104,9 +104,9 @@ int rt_init(void *user_data) {
 
   // In init:
   loader_rc =
-      rl_loader_add_task(rl_loader_create_import_task(debug_font_path),
+      rl_fileio_add_task(rl_fileio_ensure_async(debug_font_path, NULL),
                          on_debug_font_ready, NULL, NULL);
-  if (loader_rc != RL_LOADER_QUEUE_TASK_OK) {
+  if (loader_rc != RL_FILEIO_ADD_TASK_OK) {
     log_error("[Remote] Failed to queue debug font load (%d)", loader_rc);
   }
 
@@ -126,10 +126,10 @@ int rt_init(void *user_data) {
 
   context->overlay_font = 0;
   context->overlay_font_size = 24;
-  loader_rc = rl_loader_add_task(
-      rl_loader_create_import_task(overlay_font_path),
+  loader_rc = rl_fileio_add_task(
+      rl_fileio_ensure_async(overlay_font_path, NULL),
       on_overlay_font_ready, NULL, context);
-  if (loader_rc != RL_LOADER_QUEUE_TASK_OK) {
+  if (loader_rc != RL_FILEIO_ADD_TASK_OK) {
     log_error("[Remote] Failed to queue overlay font load (%d)", loader_rc);
   }
 

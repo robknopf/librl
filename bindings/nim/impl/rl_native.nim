@@ -46,8 +46,8 @@ type
   RLModuleEventOffFn* = proc(hostUserData: pointer, eventName: cstring,
                              listener: RLModuleEventListenerFn, listenerUserData: pointer): cint {.cdecl.}
   RLModuleEventEmitFn* = proc(hostUserData: pointer, eventName: cstring, payload: pointer): cint {.cdecl.}
-  RLLoaderCallbackFn* = proc(path: cstring, userData: pointer) {.cdecl.}
-  RLLoaderClosureCallback* = proc(path: string) {.closure.}
+  RLFileioCallbackFn* = proc(path: cstring, userData: pointer) {.cdecl.}
+  RLFileioClosureCallback* = proc(path: string) {.closure.}
   RLModuleInitFn* = proc(host: ptr RLModuleHostApi, moduleState: ptr pointer): cint {.cdecl.}
   RLModuleDeinitFn* = proc(moduleState: pointer) {.cdecl.}
   RLModuleUpdateFn* = proc(moduleState: pointer, dtSeconds: cfloat): cint {.cdecl.}
@@ -79,12 +79,12 @@ type
     window_title: cstring
     window_flags: RLWindowFlags
     asset_host: cstring
-    loader_cache_dir: cstring
-  RLLoaderClosureTask = ref object
-    onSuccess: RLLoaderClosureCallback
-    onFailure: RLLoaderClosureCallback
+    fileio_base_dir: cstring
+  RLFileioClosureTask = ref object
+    onSuccess: RLFileioClosureCallback
+    onFailure: RLFileioClosureCallback
 
-var rlLoaderClosureTasks: seq[RLLoaderClosureTask] = @[]
+var rlFileioClosureTasks: seq[RLFileioClosureTask] = @[]
 
 var
   RL_COLOR_DEFAULT* {.importc, header: "rl_color.h".}: RLHandle
@@ -145,148 +145,156 @@ const
   RL_LOGGER_LEVEL_ERROR* = 4
   RL_LOGGER_LEVEL_FATAL* = 5
   RL_MODULE_ABI_VERSION* = 1
-  RL_LOADER_QUEUE_TASK_OK* = 0
-  RL_LOADER_QUEUE_TASK_ERR_INVALID* = -1
-  RL_LOADER_QUEUE_TASK_ERR_QUEUE_FULL* = -2
+  RL_FILEIO_ADD_TASK_OK* = 0
+  RL_FILEIO_ADD_TASK_ERR_INVALID* = -1
+  RL_FILEIO_ADD_TASK_ERR_QUEUE_FULL* = -2
 proc rl_init_raw(config: ptr RLInitConfigC): cint {.importc: "rl_init", cdecl, header: "rl.h".}
 proc rl_init_async_raw(config: ptr RLInitConfigC): cint {.importc: "rl_init_async", cdecl, header: "rl.h".}
 proc rl_init_values_raw(windowWidth: cint, windowHeight: cint, windowTitle: cstring,
                         windowFlags: RLWindowFlags, assetHost: cstring,
-                        loaderCacheDir: cstring): cint {.importc: "rl_init_values", cdecl, header: "rl.h".}
+                        fileioBaseDir: cstring): cint {.importc: "rl_init_values", cdecl, header: "rl.h".}
 proc rl_init_values_async_raw(windowWidth: cint, windowHeight: cint, windowTitle: cstring,
                               windowFlags: RLWindowFlags, assetHost: cstring,
-                              loaderCacheDir: cstring): cint {.importc: "rl_init_values_async", cdecl, header: "rl.h".}
+                              fileioBaseDir: cstring): cint {.importc: "rl_init_values_async", cdecl, header: "rl.h".}
 proc rl_deinit*() {.importc, cdecl, header: "rl.h".}
 proc rl_set_asset_host*(assetHost: cstring): cint {.importc, cdecl, header: "rl.h".}
 proc rl_get_asset_host*(): cstring {.importc, cdecl, header: "rl.h".}
-proc rl_loader_init*(mountPoint: cstring): cint {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_init_async*(mountPoint: cstring): cint {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_deinit*() {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_is_initialized*(): bool {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_set_asset_host*(assetHost: cstring): cint {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_get_asset_host*(): cstring {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_get_cache_dir*(): cstring {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_ping_asset_host*(assetHost: cstring): cfloat {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_restore_fs_async*(): RLHandle {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_create_import_task*(filename: cstring): RLHandle {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_import_asset*(filename: cstring): cint {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_import_assets_async_raw(filenames: ptr cstring, filenameCount: csize_t): RLHandle {.importc: "rl_loader_import_assets_async", cdecl, header: "rl_loader.h".}
+proc rl_fileio_init*(baseDir: cstring): cint {.importc, cdecl, header: "rl_fileio.h".}
+proc rl_fileio_init_async*(baseDir: cstring): cint {.importc, cdecl, header: "rl_fileio.h".}
+proc rl_fileio_deinit*() {.importc, cdecl, header: "rl_fileio.h".}
+proc rl_fileio_is_initialized*(): bool {.importc, cdecl, header: "rl_fileio.h".}
+proc rl_fileio_set_asset_host*(assetHost: cstring): cint {.importc, cdecl, header: "rl_fileio.h".}
+proc rl_fileio_get_asset_host*(): cstring {.importc, cdecl, header: "rl_fileio.h".}
+proc rl_fileio_get_base_dir*(): cstring {.importc, cdecl, header: "rl_fileio.h".}
+proc rl_fileio_ping_asset_host*(assetHost: cstring): cfloat {.importc, cdecl, header: "rl_fileio.h".}
+proc rl_fileio_is_ready*(): bool {.importc, cdecl, header: "rl_fileio.h".}
+proc rl_fileio_flush*(): cint {.importc, cdecl, header: "rl_fileio.h".}
+proc rl_fileio_deinit_async*(): RLHandle {.importc, cdecl, header: "rl_fileio.h".}
+proc rl_fileio_write*(path: cstring, data: ptr byte, size: csize_t): cint {.importc, cdecl, header: "rl_fileio.h".}
+proc rl_fileio_mkdir*(path: cstring): cint {.importc, cdecl, header: "rl_fileio.h".}
+proc rl_fileio_rmdir*(path: cstring): cint {.importc, cdecl, header: "rl_fileio.h".}
+proc rl_fileio_restore_async*(): RLHandle {.importc, cdecl, header: "rl_fileio.h".}
+proc rl_fileio_ensure_async*(localPath: cstring, src: cstring): RLHandle {.importc, cdecl, header: "rl_fileio.h".}
+proc rl_fileio_ensure*(localPath: cstring, src: cstring): cint {.importc, cdecl, header: "rl_fileio.h".}
+proc rl_fileio_ensure_group_async_raw(filenames: ptr cstring, filenameCount: csize_t): RLHandle {.importc: "rl_fileio_ensure_group_async", cdecl, header: "rl_fileio.h".}
 
-proc rl_loader_import_assets_async*(filenames: openArray[string]): RLHandle =
+proc rl_fileio_ensure_group_async*(filenames: openArray[string]): RLHandle =
   if filenames.len == 0:
     return 0.RLHandle
   var cstrs = newSeq[cstring](filenames.len)
   for i, s in filenames:
     cstrs[i] = s.cstring
-  return rl_loader_import_assets_async_raw(addr cstrs[0], cstrs.len.csize_t)
+  return rl_fileio_ensure_group_async_raw(addr cstrs[0], cstrs.len.csize_t)
 
-proc rl_loader_poll_task*(task: RLHandle): bool {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_finish_task_c(task: RLHandle): cint {.importc: "rl_loader_finish_task", cdecl, header: "rl_loader.h".}
-proc rl_loader_get_task_path*(task: RLHandle): cstring {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_free_task*(task: RLHandle) {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_add_task_raw*(task: RLHandle,
-                         onSuccess: RLLoaderCallbackFn, onFailure: RLLoaderCallbackFn,
-                         userData: pointer): cint {.importc: "rl_loader_add_task", cdecl, header: "rl_loader.h".}
-proc rl_loader_tick*() {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_is_asset_cached*(filename: cstring): bool {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_uncache_asset*(filename: cstring): cint {.importc, cdecl, header: "rl_loader.h".}
-proc rl_loader_clear_cache*(): cint {.importc, cdecl, header: "rl_loader.h".}
+proc rl_fileio_poll*(task: RLHandle): bool {.importc, cdecl, header: "rl_fileio.h".}
+proc rl_fileio_finish_c(task: RLHandle): cint {.importc: "rl_fileio_finish", cdecl, header: "rl_fileio.h".}
+proc rl_fileio_get_path*(task: RLHandle): cstring {.importc, cdecl, header: "rl_fileio.h".}
+proc rl_fileio_free*(task: RLHandle) {.importc, cdecl, header: "rl_fileio.h".}
+proc rl_fileio_add_task_raw*(task: RLHandle,
+                         onSuccess: RLFileioCallbackFn, onFailure: RLFileioCallbackFn,
+                         userData: pointer): cint {.importc: "rl_fileio_add_task", cdecl, header: "rl_fileio.h".}
+proc rl_fileio_tick*() {.importc, cdecl, header: "rl_fileio.h".}
+proc rl_fileio_exists*(filename: cstring): bool {.importc, cdecl, header: "rl_fileio.h".}
+proc rl_fileio_remove*(filename: cstring): cint {.importc, cdecl, header: "rl_fileio.h".}
+proc rl_fileio_clear*(): cint {.importc, cdecl, header: "rl_fileio.h".}
 
-proc rl_loader_add_task*(task: RLHandle,
-                         onSuccess: RLLoaderCallbackFn, onFailure: RLLoaderCallbackFn,
+proc rl_fileio_add_task*(task: RLHandle,
+                         onSuccess: RLFileioCallbackFn, onFailure: RLFileioCallbackFn,
                          userData: pointer): int =
-  rl_loader_add_task_raw(task, onSuccess, onFailure, userData).int
+  rl_fileio_add_task_raw(task, onSuccess, onFailure, userData).int
 
-proc rl_loader_release_closure_task(task: RLLoaderClosureTask) =
+proc rl_fileio_release_closure_task(task: RLFileioClosureTask) =
   if task.isNil:
     return
-  for idx in 0 ..< rlLoaderClosureTasks.len:
-    if rlLoaderClosureTasks[idx] == task:
-      rlLoaderClosureTasks.delete(idx)
+  for idx in 0 ..< rlFileioClosureTasks.len:
+    if rlFileioClosureTasks[idx] == task:
+      rlFileioClosureTasks.delete(idx)
       break
 
-proc rl_loader_add_task_success_trampoline(path: cstring, userData: pointer) {.cdecl.} =
-  let task = cast[RLLoaderClosureTask](userData)
-  rl_loader_release_closure_task(task)
+proc rl_fileio_add_task_success_trampoline(path: cstring, userData: pointer) {.cdecl.} =
+  let task = cast[RLFileioClosureTask](userData)
+  rl_fileio_release_closure_task(task)
   if not task.isNil and task.onSuccess != nil:
     task.onSuccess($path)
 
-proc rl_loader_add_task_failure_trampoline(path: cstring, userData: pointer) {.cdecl.} =
-  let task = cast[RLLoaderClosureTask](userData)
-  rl_loader_release_closure_task(task)
+proc rl_fileio_add_task_failure_trampoline(path: cstring, userData: pointer) {.cdecl.} =
+  let task = cast[RLFileioClosureTask](userData)
+  rl_fileio_release_closure_task(task)
   if not task.isNil and task.onFailure != nil:
     task.onFailure($path)
 
-proc rl_loader_add_task*(task: RLHandle,
-                         onSuccess: RLLoaderClosureCallback = nil,
-                         onFailure: RLLoaderClosureCallback = nil): int =
+proc rl_fileio_add_task*(task: RLHandle,
+                         onSuccess: RLFileioClosureCallback = nil,
+                         onFailure: RLFileioClosureCallback = nil): int =
   if onSuccess.isNil and onFailure.isNil:
-    return rl_loader_add_task_raw(task, nil, nil, nil).int
-  let closureTask = RLLoaderClosureTask(
+    return rl_fileio_add_task_raw(task, nil, nil, nil).int
+  let closureTask = RLFileioClosureTask(
     onSuccess: onSuccess,
     onFailure: onFailure
   )
-  rlLoaderClosureTasks.add(closureTask)
-  result = rl_loader_add_task_raw(
+  rlFileioClosureTasks.add(closureTask)
+  result = rl_fileio_add_task_raw(
     task,
-    rl_loader_add_task_success_trampoline,
-    rl_loader_add_task_failure_trampoline,
+    rl_fileio_add_task_success_trampoline,
+    rl_fileio_add_task_failure_trampoline,
     cast[pointer](closureTask)
   ).int
-  if result != RL_LOADER_QUEUE_TASK_OK and onFailure.isNil:
-    rl_loader_release_closure_task(closureTask)
+  if result != RL_FILEIO_ADD_TASK_OK and onFailure.isNil:
+    rl_fileio_release_closure_task(closureTask)
 
 proc rl_init_async*(): int {.inline.} =
   rl_init_async_raw(nil).int
 
 proc rl_init_values*(windowWidth, windowHeight: int, windowTitle: string,
                      windowFlags: RLWindowFlags = 0.RLWindowFlags,
-                     assetHost: string = "", loaderCacheDir: string = ""): int {.inline.} =
+                     assetHost: string = "", fileioBaseDir: string = ""): int {.inline.} =
   rl_init_values_raw(windowWidth.cint, windowHeight.cint, windowTitle.cstring, windowFlags,
-                     assetHost.cstring, loaderCacheDir.cstring).int
+                     assetHost.cstring, fileioBaseDir.cstring).int
 
 proc rl_init_values_async*(windowWidth, windowHeight: int, windowTitle: string,
                            windowFlags: RLWindowFlags = 0.RLWindowFlags,
-                           assetHost: string = "", loaderCacheDir: string = ""): int {.inline.} =
+                           assetHost: string = "", fileioBaseDir: string = ""): int {.inline.} =
   rl_init_values_async_raw(windowWidth.cint, windowHeight.cint, windowTitle.cstring, windowFlags,
-                           assetHost.cstring, loaderCacheDir.cstring).int
+                           assetHost.cstring, fileioBaseDir.cstring).int
 
 proc rl_set_asset_host*(assetHost: string): int {.inline.} =
   rl_set_asset_host(assetHost.cstring).int
 
-proc rl_loader_init*(mountPoint: string): int {.inline.} =
-  rl_loader_init(mountPoint.cstring).int
+proc rl_fileio_init*(baseDir: string): int {.inline.} =
+  rl_fileio_init(baseDir.cstring).int
 
-proc rl_loader_init*(): int {.inline.} =
-  rl_loader_init(nil).int
+proc rl_fileio_init*(): int {.inline.} =
+  rl_fileio_init(nil).int
 
-proc rl_loader_init_async*(mountPoint: string): int {.inline.} =
-  rl_loader_init_async(mountPoint.cstring).int
+proc rl_fileio_init_async*(baseDir: string): int {.inline.} =
+  rl_fileio_init_async(baseDir.cstring).int
 
-proc rl_loader_init_async*(): int {.inline.} =
-  rl_loader_init_async(nil).int
+proc rl_fileio_init_async*(): int {.inline.} =
+  rl_fileio_init_async(nil).int
 
-proc rl_loader_set_asset_host*(assetHost: string): int {.inline.} =
-  rl_loader_set_asset_host(assetHost.cstring).int
+proc rl_fileio_set_asset_host*(assetHost: string): int {.inline.} =
+  rl_fileio_set_asset_host(assetHost.cstring).int
 
-proc rl_loader_ping_asset_host*(assetHost: string): float {.inline.} =
-  rl_loader_ping_asset_host(assetHost.cstring).float
+proc rl_fileio_ping_asset_host*(assetHost: string): float {.inline.} =
+  rl_fileio_ping_asset_host(assetHost.cstring).float
 
-proc rl_loader_create_import_task*(filename: string): RLHandle {.inline.} =
-  rl_loader_create_import_task(filename.cstring)
+proc rl_fileio_ensure_async*(localPath: string, src: string = ""): RLHandle {.inline.} =
+  let srcPtr = if src.len == 0: nil else: src.cstring
+  rl_fileio_ensure_async(localPath.cstring, srcPtr)
 
-proc rl_loader_is_asset_cached*(filename: string): bool {.inline.} =
-  rl_loader_is_asset_cached(filename.cstring)
+proc rl_fileio_exists*(filename: string): bool {.inline.} =
+  rl_fileio_exists(filename.cstring)
 
-proc rl_loader_uncache_asset*(filename: string): int {.inline.} =
-  rl_loader_uncache_asset(filename.cstring).int
+proc rl_fileio_remove*(filename: string): int {.inline.} =
+  rl_fileio_remove(filename.cstring).int
 
-proc rl_loader_import_asset*(filename: string): int {.inline.} =
-  rl_loader_import_asset(filename.cstring).int
+proc rl_fileio_ensure*(localPath: string, src: string = ""): int {.inline.} =
+  let srcPtr = if src.len == 0: nil else: src.cstring
+  rl_fileio_ensure(localPath.cstring, srcPtr).int
 
-proc loaderPingAssetHost*(assetHost = ""): float =
+proc fileioPingAssetHost*(assetHost = ""): float =
   let host = if assetHost.len == 0: nil else: assetHost.cstring
-  rl_loader_ping_asset_host(host).float
+  rl_fileio_ping_asset_host(host).float
 
 type
   RLTaskGroupTaskCallback*[T] = proc(path: string, ctx: var T) {.closure.}
@@ -307,7 +315,7 @@ type
     failedCount*: int
     completedCount*: int
 
-proc loaderCreateTaskGroup*[T](
+proc fileioCreateTaskGroup*[T](
   ctx: ptr T,
   onComplete: RLTaskGroupCallback[T] = nil,
   onError: RLTaskGroupCallback[T] = nil
@@ -331,7 +339,7 @@ proc addTask*[T](
     return
   group.entries.add(RLTaskGroupEntry[T](
     task: task,
-    path: $rl_loader_get_task_path(task),
+    path: $rl_fileio_get_path(task),
     done: false,
     rc: 1,
     onSuccess: onSuccess,
@@ -346,7 +354,7 @@ proc addImportTask*[T](
 ) =
   if group.isNil:
     return
-  group.addTask(rl_loader_create_import_task(path), onSuccess, onError)
+  group.addTask(rl_fileio_ensure_async(path, ""), onSuccess, onError)
 
 proc addImportTasks*[T](group: RLTaskGroup[T], paths: openArray[string]) =
   for path in paths:
@@ -368,14 +376,14 @@ proc hasFailures*[T](group: RLTaskGroup[T]): bool =
 proc tick*[T](group: RLTaskGroup[T]): bool =
   if group.isNil:
     return false
-  rl_loader_tick()
+  rl_fileio_tick()
   for idx in 0 ..< group.entries.len:
     if group.entries[idx].done:
       continue
-    if not rl_loader_poll_task(group.entries[idx].task):
+    if not rl_fileio_poll(group.entries[idx].task):
       continue
-    group.entries[idx].rc = rl_loader_finish_task_c(group.entries[idx].task).int
-    rl_loader_free_task(group.entries[idx].task)
+    group.entries[idx].rc = rl_fileio_finish_c(group.entries[idx].task).int
+    rl_fileio_free(group.entries[idx].task)
     group.entries[idx].done = true
     group.completedCount.inc
     if group.entries[idx].rc != 0:
@@ -627,7 +635,7 @@ proc rl_is_lighting_enabled*(): int {.inline.} = rl_is_lighting_enabled_c().int
 
 proc rl_model_animation_count*(model: RLHandle): int {.inline.} = rl_model_animation_count_c(model).int
 
-proc rl_loader_finish_task*(task: RLHandle): int {.inline.} = rl_loader_finish_task_c(task).int
+proc rl_fileio_finish*(task: RLHandle): int {.inline.} = rl_fileio_finish_c(task).int
 
 proc rl_window_set_title*(title: string) {.inline.} =
   rl_window_set_title(title.cstring)

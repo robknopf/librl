@@ -1,7 +1,7 @@
 // C simple example aligned with the Haxe/Nim simple runtime scenes.
 #include "rl.h"
 #include "rl_color.h"
-#include "rl_loader.h"
+#include "rl_fileio.h"
 #include "rl_logger.h"
 #include "rl_music.h"
 #include "rl_render.h"
@@ -137,16 +137,15 @@ static void on_import_failed(const char *path, void *user_data) {
                            path != NULL ? path : "(null)");
 }
 
-static int import_asset_async(const char *path, rl_loader_callback_fn on_success,
+static int import_asset_async(const char *path, rl_fileio_callback_fn on_success,
                               void *user_data) {
-  rl_handle_t task = rl_loader_create_import_task(path);
+  rl_handle_t task = rl_fileio_ensure_async(path, NULL);
   if (task == 0) {
     on_import_failed(path, user_data);
     return -1;
   }
-  if (rl_loader_add_task(task, on_success, on_import_failed, user_data) !=
-      RL_LOADER_QUEUE_TASK_OK) {
-    rl_loader_free_task(task);
+  if (rl_fileio_add_task(task, on_success, on_import_failed, user_data) != RL_FILEIO_ADD_TASK_OK) {
+    rl_fileio_free(task);
     on_import_failed(path, user_data);
     return -1;
   }
@@ -235,7 +234,7 @@ int rt_init(void *user_data) {
 
   rl_logger_set_level(RL_LOGGER_LEVEL_WARN);
   rl_set_target_fps(60);
-  (void)rl_loader_clear_cache();
+  (void)rl_fileio_clear();
 
   rl_enable_lighting();
   rl_set_light_direction(-0.6f, -1.0f, -0.5f);

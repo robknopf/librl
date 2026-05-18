@@ -22,11 +22,11 @@ UNIT_TEST_SRCS := \
 	$(UNIT_TEST_DIR)/fetch_url_stub.c \
 	$(UNIT_TEST_DIR)/raylib_loader_stub.c \
 	$(UNIT_TEST_DIR)/rl_handle_pool_test.c \
-	$(UNIT_TEST_DIR)/rl_loader_test.c \
+	$(UNIT_TEST_DIR)/rl_fileio_test.c \
 	$(UNIT_TEST_DIR)/rl_version_test.c
 UNIT_TEST_LIB_SRCS := \
 	$(ROOT_DIR)/src/rl_handle_pool.c \
-	$(ROOT_DIR)/src/rl_loader.c \
+	$(ROOT_DIR)/src/rl_fileio.c \
 	$(ROOT_DIR)/src/rl_logger.c \
 	$(ROOT_DIR)/src/rl_scratch.c \
 	$(ROOT_DIR)/src/rl_version.c

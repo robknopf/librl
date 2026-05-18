@@ -3,7 +3,7 @@
 
 #include <lua.h>
 
-/* Registers loader_create_task_group on the rl module (matches Haxe RL.loaderCreateTaskGroup). */
+/* Registers fileio_create_task_group on the rl module (matches Haxe RL.fileioCreateTaskGroup). */
 void rl_register_lua_task_group(lua_State *L);
 
 #endif

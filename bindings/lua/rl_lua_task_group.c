@@ -1,4 +1,4 @@
-/* Task group for async loader tasks — mirrors Haxe RL.loaderCreateTaskGroup / Nim loaderCreateTaskGroup. */
+/* Task group for async fileio tasks — mirrors Haxe RL.fileioCreateTaskGroup / Nim fileioCreateTaskGroup. */
 
 #include <lauxlib.h>
 #include <lua.h>
@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "rl_loader.h"
+#include "rl_fileio.h"
 #include "rl_lua_task_group.h"
 
 #define RL_TASK_GROUP_MT "librl.task_group"
@@ -132,7 +132,7 @@ static int rl_tg_append_entry(lua_State *L, rl_task_group_ud_t *g, rl_handle_t t
     }
     e = &g->entries[g->n];
     memset(e, 0, sizeof(*e));
-    p = rl_loader_get_task_path(task);
+    p = rl_fileio_get_path(task);
     e->path = (p != NULL && p[0] != '\0') ? strdup(p) : strdup("");
     if (e->path == NULL) {
         if (sref != LUA_NOREF) {
@@ -192,7 +192,7 @@ static int task_group_add_import_task(lua_State *L)
     rl_handle_t task;
     (void)rl_tg_check(L, 1);
     path = luaL_checkstring(L, 2);
-    task = rl_loader_create_import_task(path);
+    task = rl_fileio_ensure_async(path, NULL);
     if (task == 0) {
         return 0;
     }
@@ -220,7 +220,7 @@ static int task_group_add_import_tasks(lua_State *L)
         lua_rawgeti(L, 2, (int)i);
         path = luaL_checkstring(L, -1);
         lua_pop(L, 1);
-        task = rl_loader_create_import_task(path);
+        task = rl_fileio_ensure_async(path, NULL);
         if (task == 0) {
             continue;
         }
@@ -277,18 +277,18 @@ static int task_group_tick(lua_State *L)
     size_t j;
     int rem;
 
-    rl_loader_tick();
+    rl_fileio_tick();
     for (j = 0; j < g->n; j++) {
         rl_tg_entry_t *e = &g->entries[j];
 
         if (e->done) {
             continue;
         }
-        if (!rl_loader_poll_task(e->task)) {
+        if (!rl_fileio_poll(e->task)) {
             continue;
         }
-        e->rc = rl_loader_finish_task(e->task);
-        rl_loader_free_task(e->task);
+        e->rc = rl_fileio_finish(e->task);
+        rl_fileio_free(e->task);
         e->task = 0;
         e->done = 1;
         g->completed_count++;
@@ -373,7 +373,7 @@ static int task_group_gc(lua_State *L)
     for (j = 0; j < g->n; j++) {
         rl_tg_entry_t *e = &g->entries[j];
         if (!e->done && e->task != 0) {
-            rl_loader_free_task(e->task);
+            rl_fileio_free(e->task);
             e->task = 0;
         }
         rl_tg_entry_clear(L, e);
@@ -460,5 +460,5 @@ void rl_register_lua_task_group(lua_State *L)
     /* Module table at -1; under require() modname is at 1 (Lua 5.1) — use -2 like other rl_register_*. */
     task_group_ensure_meta(L);
     lua_pushcfunction(L, loader_create_task_group);
-    lua_setfield(L, -2, "loader_create_task_group");
+    lua_setfield(L, -2, "fileio_create_task_group");
 }

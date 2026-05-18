@@ -82,7 +82,7 @@ import { rl } from "../../bindings/js/rl.js";
 
     // helper to import assets tasks
     const importAssetTask = (path, onSuccess, onError) => {
-      const task = rl.importAssetAsync(path);
+      const task = rl.ensureAsync(path, null);
       if (rl.taskIsValid(task)) {
         rl.addTask(task, onSuccess, onError);
       } else {

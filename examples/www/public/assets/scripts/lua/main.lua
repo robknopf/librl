@@ -23,9 +23,9 @@ local ctx = {
 local platform_text = "Platform: <unknown>"
 
 local function setup_scene()
-  local music_task = rl.loader_import_asset_async("assets/music/ethernight_club.mp3")
+  local music_task = rl.fileio_ensure_async("assets/music/ethernight_club.mp3")
   if music_task and music_task ~= 0 then
-    rl.loader_add_task(music_task, function(path)
+    rl.fileio_add_task(music_task, function(path)
       ctx.bgm = rl.music_create(path)
       rl.music_set_loop(ctx.bgm, true)
       rl.music_play(ctx.bgm)
@@ -69,13 +69,13 @@ local function on_init()
   end
 
   rl.set_target_fps(60)
-  rl.loader_clear_cache()
+  rl.fileio_clear()
 
   setup_scene()
 
   platform_text = "Platform: " .. tostring(rl.get_platform())
 
-  rl.loader_add_task(rl.loader_import_asset_async("assets/models/gumshoe/gumshoe.glb"), function(path)
+  rl.fileio_add_task(rl.fileio_ensure_async("assets/models/gumshoe/gumshoe.glb"), function(path)
     ctx.model = rl.model_create(path)
     rl.model_set_animation(ctx.model, 1)
     rl.model_set_animation_speed(ctx.model, 1.0)
@@ -83,17 +83,17 @@ local function on_init()
     rl.model_set_transform(ctx.model, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0)
   end, nil)
 
-  rl.loader_add_task(rl.loader_import_asset_async("assets/sprites/logo/wg-logo-bw-alpha.png"), function(path)
+  rl.fileio_add_task(rl.fileio_ensure_async("assets/sprites/logo/wg-logo-bw-alpha.png"), function(path)
     ctx.sprite = rl.sprite3d_create(path)
   end, nil)
 
-  rl.loader_add_task(
-    rl.loader_import_asset_async("assets/fonts/JetBrainsMono/JetBrainsMono-Regular.ttf"),
+  rl.fileio_add_task(
+    rl.fileio_ensure_async("assets/fonts/JetBrainsMono/JetBrainsMono-Regular.ttf"),
     function(path)
       ctx.mono_font = rl.font_create(path, DebugFontSize)
     end, nil)
 
-  rl.loader_add_task(rl.loader_import_asset_async("assets/fonts/Komika/KOMIKAH_.ttf"), function(path)
+  rl.fileio_add_task(rl.fileio_ensure_async("assets/fonts/Komika/KOMIKAH_.ttf"), function(path)
     ctx.small_font = rl.font_create(path, KomikaFontSize)
   end, nil)
 

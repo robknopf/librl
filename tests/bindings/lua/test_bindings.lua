@@ -71,24 +71,24 @@ rl.log("logger alias: log")
 rl.debug("logger alias: debug")
 print("OK: logger log/debug aliases")
 
-if type(rl.loader_create_task_group) ~= "function" then
-    print("FAIL: Expected rl.loader_create_task_group (Haxe: RL.loaderCreateTaskGroup)")
+if type(rl.fileio_create_task_group) ~= "function" then
+    print("FAIL: Expected rl.fileio_create_task_group (Haxe: RL.fileioCreateTaskGroup)")
     os.exit(1)
 end
-if type(rl.loader_ping_asset_host) ~= "function" then
-    print("FAIL: Expected rl.loader_ping_asset_host function")
+if type(rl.fileio_ping_asset_host) ~= "function" then
+    print("FAIL: Expected rl.fileio_ping_asset_host function")
     os.exit(1)
 end
-if type(rl.loader_import_asset) ~= "function" then
-    print("FAIL: Expected rl.loader_import_asset function")
+if type(rl.fileio_ensure) ~= "function" then
+    print("FAIL: Expected rl.fileio_ensure function")
     os.exit(1)
 end
-local g = rl.loader_create_task_group()
+local g = rl.fileio_create_task_group()
 if g == nil or type(g.remaining_tasks) ~= "function" then
-    print("FAIL: loader_create_task_group should return a group with :remaining_tasks()")
+    print("FAIL: fileio_create_task_group should return a group with :remaining_tasks()")
     os.exit(1)
 end
-print("OK: loader task group (empty remaining:", g:remaining_tasks(), ")")
+print("OK: fileio task group (empty remaining:", g:remaining_tasks(), ")")
 
 -- Test color creation
 local white = rl.color_create(255, 255, 255, 255)

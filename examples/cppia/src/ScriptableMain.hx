@@ -105,19 +105,19 @@ class ScriptableRuntime implements IRuntime {
 	}
 
 	function fetchAndReload(assetPath:String):Void {
-		var borrowed = !RL.loaderIsInitialized();
+		var borrowed = !RL.fileioIsInitialized();
 		if (borrowed) {
-			var initRc = RL.loaderInit();
+			var initRc = RL.fileioInit();
 			if (initRc != 0) {
 				Log.error('[reload] loader init failed ($initRc)');
 				return;
 			}
 		}
-		RL.loaderUncacheAsset(assetPath);
-		RL.loaderAddTask(RL.loaderImportAssetAsync(assetPath), (localPath, _) -> {
-			var bytes = RL.loaderReadLocal(localPath);
+		RL.fileioRemove(assetPath);
+		RL.fileioAddTask(RL.fileioEnsureAsync(assetPath), (localPath, _) -> {
+			var bytes = RL.fileioRead(localPath);
 			if (borrowed)
-				RL.loaderDeinit();
+				RL.fileioDeinit();
 			if (bytes == null) {
 				Log.error('[reload] failed to read $localPath');
 				return;
@@ -125,7 +125,7 @@ class ScriptableRuntime implements IRuntime {
 			loadMainCppia(bytes);
 		}, (localPath, _) -> {
 			if (borrowed)
-				RL.loaderDeinit();
+				RL.fileioDeinit();
 			Log.error('[reload] failed to fetch $localPath');
 		}, null);
 	}
@@ -163,7 +163,7 @@ class ScriptableRuntime implements IRuntime {
 		trace("Edit " + PathUtil.joinPath("./", Path.withoutExtension(MAIN_CPPIA_FILE)) + ".hx to change the script");
 
 		// start the loader so we can cache the main script
-		var rc = RL.loaderInit();
+		var rc = RL.fileioInit();
 		if (rc != 0) {
 			Log.error("[script] Loader init failed");
 			return RT_FAILED;
@@ -178,29 +178,29 @@ class ScriptableRuntime implements IRuntime {
 		// Ping the asset host to see if it's reachable
 		#if !(emscripten || PLATFORM_WEB)
 		trace('ScriptableMain: onBoot: pinging asset host $ASSET_HOST');
-		var rtt = RL.loaderPingAssetHost(ASSET_HOST);
+		var rtt = RL.fileioPingAssetHost(ASSET_HOST);
 		if (rtt < 0) {
 			Log.error("[script] Asset host not reachable");
 			return RT_FAILED;
 		}
 		#end
 
-		RL.loaderUncacheAsset(MAIN_CPPIA_FILE);
+		RL.fileioRemove(MAIN_CPPIA_FILE);
 
 		// Synchronously fetch the main cppia into the loader cache. On wasm
 		// this suspends through JSPI; on desktop it's a normal blocking fetch.
-		var impRc = RL.loaderImportAsset(MAIN_CPPIA_FILE);
+		var impRc = RL.fileioEnsure(MAIN_CPPIA_FILE);
 		if (impRc != 0) {
 			Log.error('[script] sync import failed for $MAIN_CPPIA_FILE (code $impRc)');
-			RL.loaderDeinit();
+			RL.fileioDeinit();
 			return RT_FAILED;
 		}
 
 		// now that we have the main script, we can create our script main instance
-		var cppiaBytes = RL.loaderReadLocal(MAIN_CPPIA_FILE);
+		var cppiaBytes = RL.fileioRead(MAIN_CPPIA_FILE);
 		if (cppiaBytes == null) {
 			Log.error("[script] Main.cppia bytes empty after sync import");
-			RL.loaderDeinit();
+			RL.fileioDeinit();
 			return RT_FAILED;
 		}
 		loadMainCppia(cppiaBytes);
@@ -209,7 +209,7 @@ class ScriptableRuntime implements IRuntime {
 			return RT_FAILED;
 		}
 		// loader was only needed to bootstrap the cppia; Main.hx owns its own loader lifecycle
-		RL.loaderDeinit();
+		RL.fileioDeinit();
 
 		if (SCRIPT_WATCHER_URL.length > 0) {
 			Log.info('[script_watcher] client constructing for ${SCRIPT_WATCHER_URL}');

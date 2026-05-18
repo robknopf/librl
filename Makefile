@@ -67,7 +67,7 @@ CFLAGS_WASM = \
 LDFLAGS_WASM = \
 	$(WASM_COMMON_LDFLAGS) \
 	-s JSPI=1 \
-	-s JSPI_EXPORTS='["rl_init","rl_init_values","rl_loader_init","rl_loader_import_asset","rl_deinit","rl_loader_deinit"]' \
+	-s JSPI_EXPORTS='["rl_init","rl_init_values","rl_fileio_init","rl_fileio_ensure","rl_deinit","rl_fileio_deinit"]' \
 	-fwasm-exceptions \
 	-s INITIAL_MEMORY=67108864 \
 	-s EXPORTED_FUNCTIONS='[ \
@@ -195,30 +195,39 @@ LDFLAGS_WASM = \
 			"_rl_text_measure_ex_to_scratch", \
 			"_rl_set_asset_host", \
 			"_rl_get_asset_host", \
-			"_rl_loader_init", \
-			"_rl_loader_init_async", \
-			"_rl_loader_deinit", \
-		"_rl_loader_import_asset", \
-		"_rl_loader_restore_fs_async", \
-		"_rl_loader_create_import_task", \
-			"_rl_loader_import_assets_from_scratch_async", \
-			"_rl_loader_is_initialized", \
-			"_rl_loader_is_ready", \
-			"_rl_loader_poll_task", \
-			"_rl_loader_finish_task", \
-			"_rl_loader_get_task_path", \
-			"_rl_loader_get_cache_dir", \
-			"_rl_loader_ping_asset_host", \
-			"_rl_loader_read_local", \
-			"_rl_loader_read_result_free", \
-			"_rl_loader_free_task", \
-		"_rl_loader_add_task", \
-		"_rl_loader_tick", \
-		"_rl_loader_is_asset_cached", \
+			"_rl_fileio_init", \
+			"_rl_fileio_init_async", \
+			"_rl_fileio_deinit", \
+			"_rl_fileio_deinit_async", \
+			"_rl_fileio_is_initialized", \
+			"_rl_fileio_is_ready", \
+			"_rl_fileio_flush", \
+			"_rl_fileio_restore_async", \
+			"_rl_fileio_get_base_dir", \
+			"_rl_fileio_set_asset_host", \
+			"_rl_fileio_get_asset_host", \
+			"_rl_fileio_ping_asset_host", \
+			"_rl_fileio_exists", \
+			"_rl_fileio_read", \
+			"_rl_fileio_read_free", \
+			"_rl_fileio_write", \
+			"_rl_fileio_remove", \
+			"_rl_fileio_mkdir", \
+			"_rl_fileio_rmdir", \
+			"_rl_fileio_clear", \
+			"_rl_fileio_normalize_path", \
+			"_rl_fileio_ensure", \
+			"_rl_fileio_ensure_async", \
+			"_rl_fileio_poll", \
+			"_rl_fileio_finish", \
+			"_rl_fileio_get_path", \
+			"_rl_fileio_free", \
+			"_rl_fileio_ensure_group_async", \
+			"_rl_fileio_ensure_group_from_scratch_async", \
+			"_rl_fileio_add_task", \
+			"_rl_fileio_tick", \
 		"_rl_logger_message", \
 		"_rl_logger_set_level", \
-		"_rl_loader_uncache_asset", \
-		"_rl_loader_clear_cache", \
 		"_rl_event_on", \
 		"_rl_event_once", \
 		"_rl_event_off", \

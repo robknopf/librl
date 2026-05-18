@@ -77,9 +77,9 @@ const
   RL_LOGGER_LEVEL_WARN* = 3
   RL_LOGGER_LEVEL_ERROR* = 4
   RL_LOGGER_LEVEL_FATAL* = 5
-  RL_LOADER_QUEUE_TASK_OK* = 0
-  RL_LOADER_QUEUE_TASK_ERR_INVALID* = -1
-  RL_LOADER_QUEUE_TASK_ERR_QUEUE_FULL* = -2
+  RL_FILEIO_ADD_TASK_OK* = 0
+  RL_FILEIO_ADD_TASK_ERR_INVALID* = -1
+  RL_FILEIO_ADD_TASK_ERR_QUEUE_FULL* = -2
 
 # Color handles — zero until rl_boot() succeeds (rl.js patches them after boot)
 var
@@ -184,31 +184,31 @@ proc rl_boot*(config = RLBootConfig()): Future[int] {.async.} =
 
 proc rl_init_values_impl(windowWidth, windowHeight: int, windowTitle: cstring,
                          windowFlags: RLWindowFlags,
-                         assetHost: cstring, loaderCacheDir: cstring): Future[int] =
+                         assetHost: cstring, fileioBaseDir: cstring): Future[int] =
   {.emit: """return (async function() {
     return await __gRl.initValues(
       `windowWidth`, `windowHeight`, `windowTitle`,
-      `windowFlags`, `assetHost`, `loaderCacheDir`
+      `windowFlags`, `assetHost`, `fileioBaseDir`
     ) | 0;
   })();""".}
 
 proc rl_init_values*(windowWidth, windowHeight: int, windowTitle: string,
                      windowFlags: RLWindowFlags = 0.RLWindowFlags,
-                     assetHost: string = "", loaderCacheDir: string = ""): Future[int] =
+                     assetHost: string = "", fileioBaseDir: string = ""): Future[int] =
   rl_init_values_impl(windowWidth, windowHeight, windowTitle.cstring, windowFlags,
-                      assetHost.cstring, loaderCacheDir.cstring)
+                      assetHost.cstring, fileioBaseDir.cstring)
 
 proc rl_deinit*(): Future[void] =
   {.emit: "return (async function() { await __gRl.deinit(); })();".}
 
-proc rl_loader_init_impl(mountPoint: cstring): Future[int] =
-  {.emit: "return (async function() { return await __gRl.loaderInit(`mountPoint`) | 0; })();".}
+proc rl_fileio_init_impl(baseDir: cstring): Future[int] =
+  {.emit: "return (async function() { return await __gRl.fileioInit(`baseDir`) | 0; })();".}
 
-proc rl_loader_init*(mountPoint: string = ""): Future[int] =
-  rl_loader_init_impl(mountPoint.cstring)
+proc rl_fileio_init*(baseDir: string = ""): Future[int] =
+  rl_fileio_init_impl(baseDir.cstring)
 
-proc rl_loader_deinit*(): Future[void] =
-  {.emit: "return (async function() { await __gRl.loaderDeinit(); })();".}
+proc rl_fileio_deinit*(): Future[void] =
+  {.emit: "return (async function() { await __gRl.fileioDeinit(); })();".}
 
 # ---------------------------------------------------------------------------
 # Synchronous API
@@ -408,22 +408,32 @@ proc rl_sound_set_pitch*(sound: RLHandle, pitch: float): bool {.importjs: "__gRl
 proc rl_sound_set_pan*(sound: RLHandle, pan: float): bool {.importjs: "__gRl.setSoundPan(#,#)".}
 proc rl_sound_is_playing*(sound: RLHandle): bool {.importjs: "__gRl.isSoundPlaying(#)".}
 
-# Loader
-proc rl_loader_is_initialized*(): bool {.importjs: "__gRl.loaderIsInitialized()".}
-proc rl_loader_get_cache_dir*(): cstring {.importjs: "__gRl.getCacheDir()".}
-proc rl_loader_is_asset_cached*(filename: cstring): bool {.importjs: "__gRl.isAssetCached(#)".}
-proc rl_loader_is_asset_cached*(filename: string): bool {.inline.} =
-  rl_loader_is_asset_cached(filename.cstring)
-proc rl_loader_uncache_asset*(filename: cstring): int {.importjs: "__gRl.uncacheAsset(#)".}
-proc rl_loader_clear_cache*(): int {.importjs: "__gRl.clearCache()".}
-proc rl_loader_create_import_task*(filename: cstring): RLHandle {.importjs: "__gRl.importAssetAsync(#)".}
-proc rl_loader_create_import_task*(filename: string): RLHandle {.inline.} =
-  rl_loader_create_import_task(filename.cstring)
-proc rl_loader_poll_task*(task: RLHandle): bool {.importjs: "__gRl.pollTask(#)".}
-proc rl_loader_finish_task*(task: RLHandle): int {.importjs: "__gRl.finishTask(#)".}
-proc rl_loader_get_task_path*(task: RLHandle): cstring {.importjs: "__gRl.getTaskPath(#)".}
-proc rl_loader_free_task*(task: RLHandle) {.importjs: "__gRl.freeTask(#)".}
-proc rl_loader_tick*() {.importjs: "__gRl.loaderTick()".}
+# Fileio
+proc rl_fileio_is_initialized*(): bool {.importjs: "__gRl.fileioIsInitialized()".}
+proc rl_fileio_is_ready*(): bool {.importjs: "__gRl.fileioIsReady()".}
+proc rl_fileio_flush*(): int {.importjs: "__gRl.fileioFlush()".}
+proc rl_fileio_get_base_dir*(): cstring {.importjs: "__gRl.getBaseDir()".}
+proc rl_fileio_exists*(filename: cstring): bool {.importjs: "__gRl.fileioExists(#)".}
+proc rl_fileio_exists*(filename: string): bool {.inline.} =
+  rl_fileio_exists(filename.cstring)
+proc rl_fileio_remove*(filename: cstring): int {.importjs: "__gRl.fileioRemove(#)".}
+proc rl_fileio_remove*(filename: string): int {.inline.} =
+  rl_fileio_remove(filename.cstring)
+proc rl_fileio_clear*(): int {.importjs: "__gRl.fileioClear()".}
+proc rl_fileio_restore_async*(): RLHandle {.importjs: "__gRl.restoreAsync()".}
+proc rl_fileio_ensure_async*(localPath: cstring, src: cstring): RLHandle {.importjs: "__gRl.ensureAsync(#,#)".}
+proc rl_fileio_ensure_async*(localPath: string, src: string = ""): RLHandle {.inline.} =
+  let srcPtr = if src.len == 0: cstring(nil) else: src.cstring
+  rl_fileio_ensure_async(localPath.cstring, srcPtr)
+proc rl_fileio_poll*(task: RLHandle): bool {.importjs: "__gRl.fileioPoll(#)".}
+proc rl_fileio_finish*(task: RLHandle): int {.importjs: "__gRl.fileioFinish(#)".}
+proc rl_fileio_get_path*(task: RLHandle): cstring {.importjs: "__gRl.fileioGetPath(#)".}
+proc rl_fileio_free*(task: RLHandle) {.importjs: "__gRl.fileioFree(#)".}
+proc rl_fileio_tick*() {.importjs: "__gRl.fileioTick()".}
+proc rl_fileio_ping_asset_host*(assetHost: cstring): float {.importjs: "__gRl.fileioPingAssetHost(#)".}
+proc rl_fileio_ping_asset_host*(assetHost: string = ""): float {.inline.} =
+  let hostPtr = if assetHost.len == 0: cstring(nil) else: assetHost.cstring
+  rl_fileio_ping_asset_host(hostPtr)
 
 # Logger
 # rl_log.nim calls these with a printf-style format string + message arg;
@@ -443,7 +453,7 @@ proc rl_event_emit*(eventName: cstring, payload: int): int {.importjs: "__gRl.em
 # ---------------------------------------------------------------------------
 
 type
-  RLLoaderClosureCallback* = proc(path: string) {.closure.}
+  RLFileioClosureCallback* = proc(path: string) {.closure.}
   RLTaskGroupTaskCallback*[T] = proc(path: string, ctx: var T) {.closure.}
   RLTaskGroupCallback*[T] = proc(group: RLTaskGroup[T], ctx: var T) {.closure.}
   RLTaskGroupEntry[T] = object
@@ -462,7 +472,7 @@ type
     failedCount*: int
     completedCount*: int
 
-proc loaderCreateTaskGroup*[T](
+proc fileioCreateTaskGroup*[T](
   ctx: ptr T,
   onComplete: RLTaskGroupCallback[T] = nil,
   onError: RLTaskGroupCallback[T] = nil
@@ -478,14 +488,14 @@ proc addTask*[T](group: RLTaskGroup[T], task: RLHandle,
                  onError: RLTaskGroupTaskCallback[T] = nil) =
   if group.isNil or task == 0: return
   group.entries.add(RLTaskGroupEntry[T](
-    task: task, path: $rl_loader_get_task_path(task),
+    task: task, path: $rl_fileio_get_path(task),
     done: false, rc: 1, onSuccess: onSuccess, onError: onError))
 
 proc addImportTask*[T](group: RLTaskGroup[T], path: string,
                        onSuccess: RLTaskGroupTaskCallback[T] = nil,
                        onError: RLTaskGroupTaskCallback[T] = nil) =
   if group.isNil: return
-  group.addTask(rl_loader_create_import_task(path), onSuccess, onError)
+  group.addTask(rl_fileio_ensure_async(path, ""), onSuccess, onError)
 
 proc addImportTasks*[T](group: RLTaskGroup[T], paths: openArray[string]) =
   for path in paths: group.addImportTask(path)
@@ -502,12 +512,12 @@ proc hasFailures*[T](group: RLTaskGroup[T]): bool =
 
 proc tick*[T](group: RLTaskGroup[T]): bool =
   if group.isNil: return false
-  rl_loader_tick()
+  rl_fileio_tick()
   for idx in 0 ..< group.entries.len:
     if group.entries[idx].done: continue
-    if not rl_loader_poll_task(group.entries[idx].task): continue
-    group.entries[idx].rc = rl_loader_finish_task(group.entries[idx].task)
-    rl_loader_free_task(group.entries[idx].task)
+    if not rl_fileio_poll(group.entries[idx].task): continue
+    group.entries[idx].rc = rl_fileio_finish(group.entries[idx].task)
+    rl_fileio_free(group.entries[idx].task)
     group.entries[idx].done = true
     group.completedCount.inc
     if group.entries[idx].rc != 0:

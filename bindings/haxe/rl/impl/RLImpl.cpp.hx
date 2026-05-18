@@ -9,7 +9,7 @@ package rl.impl;
 import haxe.ds.StringMap;
 import rl.InjectLibRL;
 import rl.RLHandle;
-import rl.impl.RLLoaderImpl.RLLoader;
+import rl.impl.RLFileioImpl.RLFileio;
 import rl.RLTypes.RLBootConfig;
 import rl.RLTypes.RLInitConfig;
 import rl.RLTypes.RLVec2;
@@ -48,10 +48,10 @@ private extern class RLExterns {
   static inline var CAMERA_PERSPECTIVE: Int = 0;
   static inline var CAMERA_ORTHOGRAPHIC: Int = 1;
 
-  // --- Loader queue_task result codes (rl_loader.h) ---
-  static inline var LOADER_QUEUE_TASK_OK: Int = 0;
-  static inline var LOADER_QUEUE_TASK_ERR_INVALID: Int = -1;
-  static inline var LOADER_QUEUE_TASK_ERR_QUEUE_FULL: Int = -2;
+  // --- Fileio add_task result codes (rl_fileio.h) ---
+  static inline var FILEIO_ADD_TASK_OK: Int = 0;
+  static inline var FILEIO_ADD_TASK_ERR_INVALID: Int = -1;
+  static inline var FILEIO_ADD_TASK_ERR_QUEUE_FULL: Int = -2;
 
   // --- Logger levels (rl_logger.h) ---
   static inline var LOGGER_LEVEL_TRACE: Int = 0;
@@ -575,7 +575,7 @@ private class RLLoggerBridge {
   #include <stdlib.h>
   #include <string.h>
 ')
-private class RLLoaderCallbackBridge {
+private class RLFileioCallbackBridge {
   @:functionCode('
     if (key == null()) {
       return nullptr;
@@ -657,33 +657,33 @@ private class RLKeyboardBridge {
 }
 
 private class RLBridgeImpl {
-  public static var nextLoaderCallbackId: Int = 0;
-  public static var loaderCallbacks: StringMap<RLLoaderCallbacks> = new StringMap();
+  public static var nextFileioCallbackId: Int = 0;
+  public static var fileioCallbacks: StringMap<RLFileioCallbacks> = new StringMap();
 
-  public static function makeLoaderCallbackKey(path: String): String {
-    var key = (path == null ? "" : path) + "#" + nextLoaderCallbackId;
-    nextLoaderCallbackId++;
+  public static function makeFileioCallbackKey(path: String): String {
+    var key = (path == null ? "" : path) + "#" + nextFileioCallbackId;
+    nextFileioCallbackId++;
     return key;
   }
 
-  @:keep public static function onLoaderSuccessSpringboard(path: cpp.ConstCharStar, userData: cpp.RawPointer<cpp.Void>): Void {
-    dispatchLoaderCallback(RLLoaderCallbackBridge.consume(userData), cast path, true);
+  @:keep public static function onFileioSuccessSpringboard(path: cpp.ConstCharStar, userData: cpp.RawPointer<cpp.Void>): Void {
+    dispatchFileioCallback(RLFileioCallbackBridge.consume(userData), cast path, true);
   }
 
-  @:keep public static function onLoaderFailureSpringboard(path: cpp.ConstCharStar, userData: cpp.RawPointer<cpp.Void>): Void {
-    dispatchLoaderCallback(RLLoaderCallbackBridge.consume(userData), cast path, false);
+  @:keep public static function onFileioFailureSpringboard(path: cpp.ConstCharStar, userData: cpp.RawPointer<cpp.Void>): Void {
+    dispatchFileioCallback(RLFileioCallbackBridge.consume(userData), cast path, false);
   }
 
-  static function dispatchLoaderCallback(callbackKey: String, path: String, success: Bool): Void {
-    var callbacks = loaderCallbacks.get(callbackKey);
+  static function dispatchFileioCallback(callbackKey: String, path: String, success: Bool): Void {
+    var callbacks = fileioCallbacks.get(callbackKey);
     if (callbacks == null) return;
-    loaderCallbacks.remove(callbackKey);
+    fileioCallbacks.remove(callbackKey);
     var fn = success ? callbacks.onSuccess : callbacks.onFailure;
     if (fn != null) fn(path, callbacks.ctx);
   }
 }
 
-private typedef RLLoaderCallbacks = {
+private typedef RLFileioCallbacks = {
   var onSuccess: Null<String->Dynamic->Void>;
   var onFailure: Null<String->Dynamic->Void>;
   var ctx: Dynamic;
@@ -710,9 +710,9 @@ abstract RLImpl(RLExterns) {
   public static inline var FLAG_VSYNC_HINT: Int = 0x00000040;
   public static inline var CAMERA_PERSPECTIVE: Int = 0;
   public static inline var CAMERA_ORTHOGRAPHIC: Int = 1;
-  public static inline var LOADER_QUEUE_TASK_OK: Int = 0;
-  public static inline var LOADER_QUEUE_TASK_ERR_INVALID: Int = -1;
-  public static inline var LOADER_QUEUE_TASK_ERR_QUEUE_FULL: Int = -2;
+  public static inline var FILEIO_ADD_TASK_OK: Int = 0;
+  public static inline var FILEIO_ADD_TASK_ERR_INVALID: Int = -1;
+  public static inline var FILEIO_ADD_TASK_ERR_QUEUE_FULL: Int = -2;
   public static inline var LOGGER_LEVEL_TRACE: Int = 0;
   public static inline var LOGGER_LEVEL_DEBUG: Int = 1;
   public static inline var LOGGER_LEVEL_INFO: Int = 2;
@@ -936,9 +936,9 @@ abstract RLImpl(RLExterns) {
 
   public static function initValues(
     width: Int, height: Int, title: String,
-    flags: Int = 0, assetHost: String = "", loaderCacheDir: String = ""
+    flags: Int = 0, assetHost: String = "", fileioBaseDir: String = ""
   ): Int {
-    return RLExterns.initValuesNative(width, height, title, flags, assetHost, loaderCacheDir);
+    return RLExterns.initValuesNative(width, height, title, flags, assetHost, fileioBaseDir);
   }
 
   static function normalizeInitConfig(?config: RLInitConfig):{
@@ -955,7 +955,7 @@ abstract RLImpl(RLExterns) {
       title: config != null && config.windowTitle != null ? config.windowTitle : "",
       flags: config != null && config.windowFlags != null ? config.windowFlags : 0,
       asset: config != null && config.assetHost != null ? config.assetHost : "",
-      cache: config != null && config.loaderCacheDir != null ? config.loaderCacheDir : ""
+      cache: config != null && config.fileioBaseDir != null ? config.fileioBaseDir : ""
     };
   }
 
@@ -1016,119 +1016,143 @@ abstract RLImpl(RLExterns) {
     return 0;
   }
 
-  public static function loaderRestoreFsAsync(): RLHandle {
-    return RLLoader.loaderRestoreFsAsync();
+  public static function fileioRestoreAsync(): RLHandle {
+    return RLFileio.fileioRestoreAsync();
   }
 
-  public static function loaderInit(?mountPoint: String): Int {
-    return RLLoader.loaderInit(mountPoint);
+  public static function fileioInit(?baseDir: String): Int {
+    return RLFileio.fileioInit(baseDir);
   }
 
-  public static function loaderInitAsync(?mountPoint: String): Int {
-    return RLLoader.loaderInitAsync(mountPoint);
+  public static function fileioInitAsync(?baseDir: String): Int {
+    return RLFileio.fileioInitAsync(baseDir);
   }
 
-  public static function loaderDeinit(): Void {
-    RLLoader.loaderDeinit();
+  public static function fileioDeinit(): Void {
+    RLFileio.fileioDeinit();
   }
 
-  public static function loaderIsInitialized(): Bool {
-    return RLLoader.loaderIsInitialized();
+  public static function fileioDeinitAsync(): RLHandle {
+    return RLFileio.fileioDeinitAsync();
   }
 
-  public static function loaderImportAssetAsync(filename: String): RLHandle {
-    return RLLoader.loaderImportAssetAsync(filename);
+  public static function fileioIsInitialized(): Bool {
+    return RLFileio.fileioIsInitialized();
   }
 
-  public static function loaderImportAsset(filename: String): Int {
-    return RLLoader.loaderImportAsset(filename);
+  public static function fileioIsReady(): Bool {
+    return RLFileio.fileioIsReady();
   }
 
-  public static function loaderImportAssetsAsync(filenames: Array<String>): RLHandle {
-    return RLLoader.loaderImportAssetsAsync(filenames);
+  public static function fileioFlush(): Int {
+    return RLFileio.fileioFlush();
   }
 
-  public static function loaderPollTask(task: RLHandle): Bool {
-    return RLLoader.loaderPollTask(task);
+  public static function fileioEnsureAsync(localPath: String, ?src: String): RLHandle {
+    return RLFileio.fileioEnsureAsync(localPath, src);
   }
 
-  public static function loaderFinishTask(task: RLHandle): Int {
-    return RLLoader.loaderFinishTask(task);
+  public static function fileioEnsure(localPath: String, ?src: String): Int {
+    return RLFileio.fileioEnsure(localPath, src);
   }
 
-  public static function loaderCreateTaskGroup<T>(?onComplete:RLTaskGroupCallback<T>, ?onError:RLTaskGroupCallback<T>, ?ctx:T): RLTaskGroup {
+  public static function fileioEnsureGroupAsync(filenames: Array<String>): RLHandle {
+    return RLFileio.fileioEnsureGroupAsync(filenames);
+  }
+
+  public static function fileioPoll(task: RLHandle): Bool {
+    return RLFileio.fileioPoll(task);
+  }
+
+  public static function fileioFinish(task: RLHandle): Int {
+    return RLFileio.fileioFinish(task);
+  }
+
+  public static function fileioCreateTaskGroup<T>(?onComplete:RLTaskGroupCallback<T>, ?onError:RLTaskGroupCallback<T>, ?ctx:T): RLTaskGroup {
     return new RLTaskGroup(cast onComplete, cast onError, ctx);
   }
 
-  public static function loaderTaskInvalid(): RLHandle {
+  public static function fileioTaskInvalid(): RLHandle {
     return RLHandle.invalid();
   }
 
-  public static function loaderTaskIsValid(task: RLHandle): Bool {
+  public static function fileioTaskIsValid(task: RLHandle): Bool {
     return task.isValid();
   }
 
-  public static function loaderGetTaskPath(task: RLHandle): String {
-    return RLLoader.loaderGetTaskPath(task);
+  public static function fileioGetPath(task: RLHandle): String {
+    return RLFileio.fileioGetPath(task);
   }
 
-  public static function loaderReadLocal(filename: String): haxe.io.Bytes {
-    return RLLoader.loaderReadLocal(filename);
+  public static function fileioRead(filename: String): haxe.io.Bytes {
+    return RLFileio.fileioRead(filename);
   }
 
-  public static function loaderFreeTask(task: RLHandle): Void {
-    RLLoader.loaderFreeTask(task);
+  public static function fileioWrite(path: String, bytes: haxe.io.Bytes): Int {
+    return RLFileio.fileioWrite(path, bytes);
   }
 
-  public static function loaderIsAssetCached(filename: String): Bool {
-    return RLLoader.loaderIsAssetCached(filename);
+  public static function fileioMkdir(path: String): Int {
+    return RLFileio.fileioMkdir(path);
   }
 
-  public static function loaderPingAssetHost(?assetHost: String): Float {
-    return RLLoader.loaderPingAssetHost(assetHost);
+  public static function fileioRmdir(path: String): Int {
+    return RLFileio.fileioRmdir(path);
   }
 
-  public static function loaderGetCacheDir(): String {
-    return RLLoader.loaderGetCacheDir();
+  public static function fileioFree(task: RLHandle): Void {
+    RLFileio.fileioFree(task);
   }
 
-  static function loaderAddTaskNative(task: RLHandle,
+  public static function fileioExists(filename: String): Bool {
+    return RLFileio.fileioExists(filename);
+  }
+
+  public static function fileioPingAssetHost(?assetHost: String): Float {
+    return RLFileio.fileioPingAssetHost(assetHost);
+  }
+
+  public static function fileioGetBaseDir(): String {
+    return RLFileio.fileioGetBaseDir();
+  }
+
+  static function fileioAddTaskNative(task: RLHandle,
     onSuccess: cpp.Callable<cpp.ConstCharStar->cpp.RawPointer<cpp.Void>->Void>,
     onFailure: cpp.Callable<cpp.ConstCharStar->cpp.RawPointer<cpp.Void>->Void>,
     userData: cpp.RawPointer<cpp.Void>): Int {
-    return RLLoader.loaderAddTask(task, onSuccess, onFailure, userData);
+    return RLFileio.fileioAddTask(task, onSuccess, onFailure, userData);
   }
 
-  public static function loaderTick(): Void {
-    RLLoader.loaderTick();
+  public static function fileioTick(): Void {
+    RLFileio.fileioTick();
   }
 
-  public static function loaderClearCache(): Int {
-    return RLLoader.loaderClearCache();
+  public static function fileioClear(): Int {
+    return RLFileio.fileioClear();
   }
 
-  public static function loaderUncacheAsset(filename: String): Int {
-    return RLLoader.loaderUncacheAsset(filename);
+  public static function fileioRemove(filename: String): Int {
+    return RLFileio.fileioRemove(filename);
   }
 
-  public static function loaderAddTask<T>(task: RLHandle,
+  public static function fileioAddTask<T>(task: RLHandle,
     onSuccess: String->T->Void, onFailure: String->T->Void, ctx: T): Int {
     var successSpringboard: cpp.Callable<cpp.ConstCharStar->cpp.RawPointer<cpp.Void>->Void> =
-      cpp.Function.fromStaticFunction(RLBridgeImpl.onLoaderSuccessSpringboard);
+      cpp.Function.fromStaticFunction(RLBridgeImpl.onFileioSuccessSpringboard);
     var failureSpringboard: cpp.Callable<cpp.ConstCharStar->cpp.RawPointer<cpp.Void>->Void> =
-      cpp.Function.fromStaticFunction(RLBridgeImpl.onLoaderFailureSpringboard);
-    var path = loaderGetTaskPath(task);
-    var callbackKey = RLBridgeImpl.makeLoaderCallbackKey(path);
+      cpp.Function.fromStaticFunction(RLBridgeImpl.onFileioFailureSpringboard);
+    var path = fileioGetPath(task);
+    var callbackKey = RLBridgeImpl.makeFileioCallbackKey(path);
     var callbackInvoked = false;
-    var callbackUserData = RLLoaderCallbackBridge.alloc(callbackKey);
+    var callbackUserData = RLFileioCallbackBridge.alloc(callbackKey);
     if (callbackUserData == null) {
       if (onFailure != null) {
         onFailure(path, ctx);
       }
-      loaderFreeTask(task);
-      return RLExterns.LOADER_QUEUE_TASK_ERR_INVALID;
+      fileioFree(task);
+      return RLExterns.FILEIO_ADD_TASK_ERR_INVALID;
     }
-    RLBridgeImpl.loaderCallbacks.set(callbackKey, {
+    RLBridgeImpl.fileioCallbacks.set(callbackKey, {
       onSuccess: cast function(callbackPath:String, callbackCtx:T):Void {
         callbackInvoked = true;
         if (onSuccess != null) {
@@ -1143,10 +1167,10 @@ abstract RLImpl(RLExterns) {
       },
       ctx: ctx
     });
-    var rc = loaderAddTaskNative(task, successSpringboard, failureSpringboard, callbackUserData);
-    if (rc != RLExterns.LOADER_QUEUE_TASK_OK && !callbackInvoked) {
-      RLBridgeImpl.loaderCallbacks.remove(callbackKey);
-      RLLoaderCallbackBridge.free(callbackUserData);
+    var rc = fileioAddTaskNative(task, successSpringboard, failureSpringboard, callbackUserData);
+    if (rc != RLExterns.FILEIO_ADD_TASK_OK && !callbackInvoked) {
+      RLBridgeImpl.fileioCallbacks.remove(callbackKey);
+      RLFileioCallbackBridge.free(callbackUserData);
     }
     return rc;
   }

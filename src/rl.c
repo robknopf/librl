@@ -16,7 +16,7 @@
 #include "internal/rl_texture.h"
 #include "internal/rl_window.h"
 #include "raylib.h"
-#include "rl_loader.h"
+#include "rl_fileio.h"
 #include "rl_version.h"
 #include <stddef.h>
 #include <string.h>
@@ -34,8 +34,8 @@ static void rl_init_apply_defaults(rl_init_config_t *out)
     if (out->window_title == NULL) {
         out->window_title = "librl";
     }
-    if (out->loader_cache_dir == NULL) {
-        out->loader_cache_dir = "cache";
+    if (out->fileio_base_dir == NULL) {
+        out->fileio_base_dir = "cache";
     }
 }
 
@@ -57,13 +57,13 @@ int rl_init_async(const rl_init_config_t *config) {
 
     rl_logger_init();
     rl_logger_info("librl %s", rl_version_string());
-    if (rl_loader_init_async(cfg.loader_cache_dir) != 0) {
+    if (rl_fileio_init_async(cfg.fileio_base_dir) != 0) {
         rl_logger_deinit();
         return RL_INIT_ERR_LOADER;
     }
     if (cfg.asset_host != NULL && cfg.asset_host[0] != '\0') {
         if (rl_set_asset_host(cfg.asset_host) != 0) {
-            rl_loader_deinit();
+            rl_fileio_deinit();
             rl_logger_deinit();
             return RL_INIT_ERR_ASSET_HOST;
         }
@@ -75,7 +75,7 @@ int rl_init_async(const rl_init_config_t *config) {
         cfg.window_flags
     );
     if (!IsWindowReady()) {
-        rl_loader_deinit();
+        rl_fileio_deinit();
         rl_logger_deinit();
         return RL_INIT_ERR_WINDOW;
     }
@@ -110,13 +110,13 @@ int rl_init(const rl_init_config_t *config) {
 
     rl_logger_init();
     rl_logger_info("librl %s", rl_version_string());
-    if (rl_loader_init(cfg.loader_cache_dir) != 0) {
+    if (rl_fileio_init(cfg.fileio_base_dir) != 0) {
         rl_logger_deinit();
         return RL_INIT_ERR_LOADER;
     }
     if (cfg.asset_host != NULL && cfg.asset_host[0] != '\0') {
         if (rl_set_asset_host(cfg.asset_host) != 0) {
-            rl_loader_deinit();
+            rl_fileio_deinit();
             rl_logger_deinit();
             return RL_INIT_ERR_ASSET_HOST;
         }
@@ -128,7 +128,7 @@ int rl_init(const rl_init_config_t *config) {
         cfg.window_flags
     );
     if (!IsWindowReady()) {
-        rl_loader_deinit();
+        rl_fileio_deinit();
         rl_logger_deinit();
         return RL_INIT_ERR_WINDOW;
     }
@@ -154,7 +154,7 @@ int rl_init_values(int window_width,
                    const char *window_title,
                    unsigned int window_flags,
                    const char *asset_host,
-                   const char *loader_cache_dir) {
+                   const char *fileio_base_dir) {
     rl_init_config_t cfg;
 
     memset(&cfg, 0, sizeof(cfg));
@@ -163,7 +163,7 @@ int rl_init_values(int window_width,
     cfg.window_title = (window_title != NULL && window_title[0] != '\0') ? window_title : NULL;
     cfg.window_flags = window_flags;
     cfg.asset_host = (asset_host != NULL && asset_host[0] != '\0') ? asset_host : NULL;
-    cfg.loader_cache_dir = (loader_cache_dir != NULL && loader_cache_dir[0] != '\0') ? loader_cache_dir : NULL;
+    cfg.fileio_base_dir = (fileio_base_dir != NULL && fileio_base_dir[0] != '\0') ? fileio_base_dir : NULL;
 
     return rl_init(&cfg);
 }
@@ -174,7 +174,7 @@ int rl_init_values_async(int window_width,
                          const char *window_title,
                          unsigned int window_flags,
                          const char *asset_host,
-                         const char *loader_cache_dir) {
+                         const char *fileio_base_dir) {
     rl_init_config_t cfg;
 
     memset(&cfg, 0, sizeof(cfg));
@@ -183,7 +183,7 @@ int rl_init_values_async(int window_width,
     cfg.window_title = (window_title != NULL && window_title[0] != '\0') ? window_title : NULL;
     cfg.window_flags = window_flags;
     cfg.asset_host = (asset_host != NULL && asset_host[0] != '\0') ? asset_host : NULL;
-    cfg.loader_cache_dir = (loader_cache_dir != NULL && loader_cache_dir[0] != '\0') ? loader_cache_dir : NULL;
+    cfg.fileio_base_dir = (fileio_base_dir != NULL && fileio_base_dir[0] != '\0') ? fileio_base_dir : NULL;
 
     return rl_init_async(&cfg);
 }
@@ -222,7 +222,7 @@ void rl_deinit() {
         CloseAudioDevice();
     }
     rl_scratch_deinit();
-    rl_loader_deinit();
+    rl_fileio_deinit();
     initialized = false;
     rl_window_close_internal();
     rl_logger_deinit();
@@ -230,12 +230,12 @@ void rl_deinit() {
 
 RL_KEEP
 int rl_set_asset_host(const char *asset_host) {
-    return rl_loader_set_asset_host(asset_host);
+    return rl_fileio_set_asset_host(asset_host);
 }
 
 RL_KEEP
 const char *rl_get_asset_host(void) {
-    return rl_loader_get_asset_host();
+    return rl_fileio_get_asset_host();
 }
 
 RL_KEEP
@@ -243,8 +243,8 @@ rl_tick_result_t rl_tick(void) {
     if (!initialized) {
         return RL_TICK_FAILED;
     }
-    rl_loader_tick();
-    if (!rl_loader_is_ready()) {
+    rl_fileio_tick();
+    if (!rl_fileio_is_ready()) {
         return RL_TICK_WAITING;
     }
     return RL_TICK_RUNNING;

@@ -46,9 +46,9 @@ class RLImpl {
 	public static inline var CAMERA_PERSPECTIVE:Int = 0;
 	public static inline var CAMERA_ORTHOGRAPHIC:Int = 1;
 
-	public static inline var LOADER_QUEUE_TASK_OK:Int = 0;
-	public static inline var LOADER_QUEUE_TASK_ERR_INVALID:Int = -1;
-	public static inline var LOADER_QUEUE_TASK_ERR_QUEUE_FULL:Int = -2;
+	public static inline var FILEIO_ADD_TASK_OK:Int = 0;
+	public static inline var FILEIO_ADD_TASK_ERR_INVALID:Int = -1;
+	public static inline var FILEIO_ADD_TASK_ERR_QUEUE_FULL:Int = -2;
 
 	public static inline var LOGGER_LEVEL_TRACE:Int = 0;
 	public static inline var LOGGER_LEVEL_DEBUG:Int = 1;
@@ -217,7 +217,7 @@ class RLImpl {
 
 	public static function init(?config:RLInitConfig):Promise<Int> {
 		var values = normalizeInitConfig(config);
-		return initValues(values.width, values.height, values.title, values.flags, values.assetHost, values.loaderCacheDir);
+		return initValues(values.width, values.height, values.title, values.flags, values.assetHost, values.fileioBaseDir);
 	}
 
 	public static function initAsync(?config:RLInitConfig):Int {
@@ -225,21 +225,21 @@ class RLImpl {
 			return INIT_ERR_UNKNOWN;
 		}
 		var values = normalizeInitConfig(config);
-		return initValuesAsync(values.width, values.height, values.title, values.flags, values.assetHost, values.loaderCacheDir);
+		return initValuesAsync(values.width, values.height, values.title, values.flags, values.assetHost, values.fileioBaseDir);
 	}
 
-	public static function initValues(width:Int, height:Int, title:String, flags:Int = 0, assetHost:String = "", loaderCacheDir:String = ""):Promise<Int> {
+	public static function initValues(width:Int, height:Int, title:String, flags:Int = 0, assetHost:String = "", fileioBaseDir:String = ""):Promise<Int> {
 		if (binding == null) {
 			return Promise.resolve(INIT_ERR_UNKNOWN);
 		}
-		return cast binding.initValues(width, height, title, flags, assetHost, loaderCacheDir);
+		return cast binding.initValues(width, height, title, flags, assetHost, fileioBaseDir);
 	}
 
-	public static function initValuesAsync(width:Int, height:Int, title:String, flags:Int = 0, assetHost:String = "", loaderCacheDir:String = ""):Int {
+	public static function initValuesAsync(width:Int, height:Int, title:String, flags:Int = 0, assetHost:String = "", fileioBaseDir:String = ""):Int {
 		if (binding == null) {
 			return INIT_ERR_UNKNOWN;
 		}
-		return cast binding.initValuesAsync(width, height, title, flags, assetHost, loaderCacheDir);
+		return cast binding.initValuesAsync(width, height, title, flags, assetHost, fileioBaseDir);
 	}
 
 	@async
@@ -701,113 +701,113 @@ class RLImpl {
 		return binding == null ? 0 : cast binding.getPickStats().narrowphaseHits;
 
 	@async
-	public static function loaderInit(?mountPoint:String):Promise<Int> {
+	public static function fileioInit(?baseDir:String):Promise<Int> {
 		if (binding == null) {
 			return Promise.resolve(-1);
 		}
-		var path = mountPoint == null ? "" : mountPoint;
-		return cast binding.loaderInit(path);
+		var path = baseDir == null ? "" : baseDir;
+		return cast binding.fileioInit(path);
 	}
 
-	public static function loaderInitAsync(?mountPoint:String):Int {
+	public static function fileioInitAsync(?baseDir:String):Int {
 		if (binding == null) {
 			return -1;
 		}
-		var path = mountPoint == null ? "" : mountPoint;
-		return cast binding.loaderInitAsync(path);
+		var path = baseDir == null ? "" : baseDir;
+		return cast binding.fileioInitAsync(path);
 	}
 
 	@async
-	public static function loaderDeinit():Promise<Void> {
+	public static function fileioDeinit():Promise<Void> {
 		if (binding == null) {
 			return Promise.resolve(null);
 		}
-		binding.loaderDeinit();
+		binding.fileioDeinit();
 		return Promise.resolve(null);
 	}
 
-	public static function loaderIsInitialized():Bool {
-		return binding != null && cast binding.loaderIsInitialized();
+	public static function fileioIsInitialized():Bool {
+		return binding != null && cast binding.fileioIsInitialized();
 	}
 
-	public static function loaderRestoreFsAsync():RLHandle {
-		return binding == null ? 0 : cast binding.restoreFSAsync();
+	public static function fileioRestoreAsync():RLHandle {
+		return binding == null ? 0 : cast binding.restoreAsync();
 	}
 
-	public static function loaderImportAssetAsync(filename:String):RLHandle {
-		return binding == null ? 0 : cast binding.importAssetAsync(filename);
+	public static function fileioEnsureAsync(localPath:String, ?src:String):RLHandle {
+		return binding == null ? 0 : cast binding.ensureAsync(localPath, src);
 	}
 
-	public static function loaderImportAsset(filename:String):Promise<Int> {
+	public static function fileioEnsure(localPath:String, ?src:String):Promise<Int> {
 		if (binding == null) {
 			return Promise.resolve(-1);
 		}
-		return cast binding.importAsset(filename);
+		return cast binding.ensure(localPath, src);
 	}
 
-	public static function loaderImportAssetsAsync(filenames:Array<String>):RLHandle
-		return binding == null ? 0 : cast binding.importAssetsAsync(filenames);
+	public static function fileioEnsureGroupAsync(filenames:Array<String>):RLHandle
+		return binding == null ? 0 : cast binding.ensureGroupAsync(filenames);
 
-	public static function loaderPollTask(task:RLHandle):Bool {
+	public static function fileioPoll(task:RLHandle):Bool {
 		return binding != null && cast binding.pollTask(task);
 	}
 
-	public static function loaderFinishTask(task:RLHandle):Int {
+	public static function fileioFinish(task:RLHandle):Int {
 		return binding == null ? -1 : cast binding.finishTask(task);
 	}
 
-	public static function loaderGetTaskPath(task:RLHandle):String {
+	public static function fileioGetPath(task:RLHandle):String {
 		return binding == null ? "" : cast binding.getTaskPath(task);
 	}
 
-	public static function loaderReadLocal(filename:String):Bytes {
+	public static function fileioRead(filename:String):Bytes {
 		if (binding == null)
 			return null;
-		var d = binding.readLocal(filename);
+		var d = binding.fileioRead(filename);
 		return d == null ? null : Bytes.ofData(cast d);
 	}
 
-	public static function loaderFreeTask(task:RLHandle):Void {
+	public static function fileioFree(task:RLHandle):Void {
 		if (binding != null)
 			binding.freeTask(task);
 	}
 
-	public static function loaderIsAssetCached(filename:String):Bool {
-		return binding != null && cast binding.isAssetCached(filename);
+	public static function fileioExists(filename:String):Bool {
+		return binding != null && cast binding.fileioExists(filename);
 	}
 
-	public static function loaderPingAssetHost(?assetHost:String):Float {
+	public static function fileioPingAssetHost(?assetHost:String):Float {
 		var host = assetHost == null ? "" : assetHost;
 		return binding == null ? -1 : cast binding.pingAssetHost(host);
 	}
 
-	public static function loaderGetCacheDir():String {
-		return binding == null ? "" : cast binding.getCacheDir();
+	public static function fileioGetBaseDir():String {
+		return binding == null ? "" : cast binding.getBaseDir();
 	}
 
-	public static function loaderCreateTaskGroup<T>(?onComplete:RLTaskGroupCallback<T>, ?onError:RLTaskGroupCallback<T>, ?ctx:T):RLTaskGroup
+	public static function fileioCreateTaskGroup<T>(?onComplete:RLTaskGroupCallback<T>, ?onError:RLTaskGroupCallback<T>, ?ctx:T):RLTaskGroup
 		return new RLTaskGroup(cast onComplete, cast onError, ctx);
 
-	public static function loaderTaskInvalid():RLHandle
+	public static function fileioTaskInvalid():RLHandle
 		return 0;
 
-	public static function loaderTaskIsValid(task:RLHandle):Bool
+	public static function fileioTaskIsValid(task:RLHandle):Bool
 		return task != 0;
 
-	public static function loaderAddTask<T>(task:RLHandle, onSuccess:String->T->Void, onFailure:String->T->Void, ctx:T):Int
-		return binding == null ? LOADER_QUEUE_TASK_ERR_INVALID : cast binding.addTask(task, onSuccess, onFailure, ctx);
+	public static function fileioAddTask<T>(task:RLHandle, onSuccess:String->T->Void, onFailure:String->T->Void, ctx:T):Int
+		return binding == null ? FILEIO_ADD_TASK_ERR_INVALID : cast binding.addTask(task, onSuccess, onFailure, ctx);
 
-	public static function loaderTick():Void {
+	public static function fileioTick():Void {
 		if (binding != null)
-			binding.loaderTick();
+			binding.fileioTick();
 	}
 
-	public static function loaderClearCache():Int {
-		return binding == null ? -1 : cast binding.clearCache();
+	public static function fileioClear():Int {
+		return binding == null ? -1 : cast binding.fileioClear();
 	}
 
-	public static function loaderUncacheAsset(filename:String):Int {
-		return binding == null ? -1 : cast binding.uncacheAsset(filename);
+	public static function fileioRemove(filename:String):Int {
+		return binding == null ? -1 : cast binding.fileioRemove(filename);
 	}
 
 	public static function loggerMessage(level:Int, message:String):Void {
@@ -864,7 +864,7 @@ class RLImpl {
 		var title:String;
 		var flags:Int;
 		var assetHost:String;
-		var loaderCacheDir:String;
+		var fileioBaseDir:String;
 	} {
 		return {
 			width: config != null && config.windowWidth != null ? config.windowWidth : 0,
@@ -872,7 +872,7 @@ class RLImpl {
 			title: config != null && config.windowTitle != null ? config.windowTitle : "",
 			flags: config != null && config.windowFlags != null ? config.windowFlags : 0,
 			assetHost: config != null && config.assetHost != null ? config.assetHost : "",
-			loaderCacheDir: config != null && config.loaderCacheDir != null ? config.loaderCacheDir : ""};
+			fileioBaseDir: config != null && config.fileioBaseDir != null ? config.fileioBaseDir : ""};
 	}
 
 	static inline function pickResult():RLPickResult {

@@ -27,9 +27,9 @@ type RLInitConfig* = object
   windowTitle*: string
   windowFlags*: RLWindowFlags
   assetHost*: string
-  loaderCacheDir*: string
+  fileioBaseDir*: string
 
 proc rl_init*(config = RLInitConfig()): int {.rlAsync.} =
   return rlAwait rl_init_values(config.windowWidth, config.windowHeight,
                                 config.windowTitle, config.windowFlags,
-                                config.assetHost, config.loaderCacheDir)
+                                config.assetHost, config.fileioBaseDir)

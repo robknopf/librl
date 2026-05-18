@@ -4,7 +4,7 @@
 #include "rl_resource_protocol.h"
 #include "rl_protocol.h"
 #include "rl_frame_command.h"
-#include "rl_loader.h"
+#include "rl_fileio.h"
 
 #ifdef __cplusplus
 extern "C" {

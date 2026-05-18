@@ -1,4 +1,4 @@
-#include "rl_loader.h"
+#include "rl_fileio.h"
 #include "rl_logger.h"
 
 #include <lauxlib.h>
@@ -248,8 +248,8 @@ static int load_runtime_module(lua_runtime_t *runtime, char *error,
 
   asset_host = get_asset_host();
   if (asset_host != NULL && asset_host[0] != '\0') {
-    if (rl_loader_set_asset_host(asset_host) != 0) {
-      (void)snprintf(error, error_size, "rl_loader_set_asset_host failed");
+    if (rl_fileio_set_asset_host(asset_host) != 0) {
+      (void)snprintf(error, error_size, "rl_fileio_set_asset_host failed");
       return RT_ERROR;
     }
   }
@@ -359,20 +359,20 @@ int rt_boot(void) {
   runtime->state = state;
 
   // initialize the loader so we can cache and require() files
-  if (rl_loader_init("cache") != 0) {
-    (void)snprintf(error, sizeof(error), "rl_loader_init failed");
+  if (rl_fileio_init("cache") != 0) {
+    (void)snprintf(error, sizeof(error), "rl_fileio_init failed");
     rl_logger_message_source(RL_LOGGER_LEVEL_ERROR, "lua", 0, "%s", error);
     free_runtime(runtime);
     return RT_ERROR;
   }
 
   // debugging, clear the cache first
-  rl_loader_clear_cache();
+  rl_fileio_clear();
 
   // load the lua runtime module
   if (load_runtime_module(runtime, error, sizeof(error)) != 0) {
     rl_logger_message_source(RL_LOGGER_LEVEL_ERROR, "lua", 0, "%s", error);
-    rl_loader_deinit();
+    rl_fileio_deinit();
     free_runtime(runtime);
     return RT_ERROR;
   }
@@ -384,14 +384,14 @@ int rt_boot(void) {
   if (rc < RT_OK) {
     rl_logger_message_source(RL_LOGGER_LEVEL_ERROR, "lua", 0, "%s",
                              runtime->error);
-    rl_loader_deinit();
+    rl_fileio_deinit();
     free_runtime(runtime);
     return rc;
   }
 
   // module booted, we can shut down our loader, allowing the real runtime to
   // init cleanly
-  rl_loader_deinit();
+  rl_fileio_deinit();
   return rc;
 }
 

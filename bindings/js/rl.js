@@ -490,7 +490,7 @@ const RL = {
             windowTitle: opts.windowTitle ?? moduleOptions.windowTitle ?? "",
             windowFlags: opts.windowFlags ?? moduleOptions.windowFlags ?? 0,
             assetHost: opts.assetHost ?? moduleOptions.assetHost ?? "",
-            loaderCacheDir: opts.loaderCacheDir ?? moduleOptions.loaderCacheDir ?? "",
+            fileioBaseDir: opts.fileioBaseDir ?? moduleOptions.fileioBaseDir ?? "",
             idealWidth: moduleOptions.idealWidth ?? opts.windowWidth ?? 1024,
             idealHeight: moduleOptions.idealHeight ?? opts.windowHeight ?? 1280,
         };
@@ -582,7 +582,7 @@ const RL = {
                     initOptions.windowTitle ?? "",
                     (initOptions.windowFlags || 0) >>> 0,
                     initOptions.assetHost ?? "",
-                    initOptions.loaderCacheDir ?? "",
+                    initOptions.fileioBaseDir ?? "",
                 ],
                 asyncOptions
             )) | 0;
@@ -608,7 +608,7 @@ const RL = {
 
                 const titlePtr = stringToTempUtf8OrNull(initOptions.windowTitle);
                 const assetPtr = stringToTempUtf8OrNull(initOptions.assetHost);
-                const cachePtr = stringToTempUtf8OrNull(initOptions.loaderCacheDir);
+                const cachePtr = stringToTempUtf8OrNull(initOptions.fileioBaseDir);
                 allocatedPtrs.push(titlePtr, assetPtr, cachePtr);
 
                 setI32(8, titlePtr >>> 0);
@@ -659,7 +659,7 @@ const RL = {
                     initOptions.windowTitle ?? "",
                     (initOptions.windowFlags || 0) >>> 0,
                     initOptions.assetHost ?? "",
-                    initOptions.loaderCacheDir ?? "",
+                    initOptions.fileioBaseDir ?? "",
                 ]
             ) | 0;
         } else {
@@ -728,7 +728,7 @@ const RL = {
 
                 const titlePtr = stringToTempUtf8OrNull(initOptions.windowTitle);
                 const assetPtr = stringToTempUtf8OrNull(initOptions.assetHost);
-                const cachePtr = stringToTempUtf8OrNull(initOptions.loaderCacheDir);
+                const cachePtr = stringToTempUtf8OrNull(initOptions.fileioBaseDir);
                 allocatedPtrs.push(titlePtr, assetPtr, cachePtr);
 
                 setI32(8, titlePtr >>> 0);
@@ -766,7 +766,7 @@ const RL = {
     },
     initValues: async (
         width, height, title,
-        flags = 0, assetHost = "", loaderCacheDir = ""
+        flags = 0, assetHost = "", fileioBaseDir = ""
     ) => {
         return await RL._callInitWithOptionsAsync({
             windowWidth: width,
@@ -774,12 +774,12 @@ const RL = {
             windowTitle: title,
             windowFlags: flags,
             assetHost,
-            loaderCacheDir
+            fileioBaseDir
         }, "rl_init_values", { async: true });
     },
     initValuesAsync: (
         width, height, title,
-        flags = 0, assetHost = "", loaderCacheDir = ""
+        flags = 0, assetHost = "", fileioBaseDir = ""
     ) => {
         return RL._callInitWithOptionsImmediate({
             windowWidth: width,
@@ -787,7 +787,7 @@ const RL = {
             windowTitle: title,
             windowFlags: flags,
             assetHost,
-            loaderCacheDir
+            fileioBaseDir
         }, "rl_init_values_async");
     },
     setAssetHost: (assetHost) => {
@@ -880,78 +880,84 @@ const RL = {
         }
         return moduleInstance.ccall('rl_version_string', 'string', [], []);
     },
-    uncacheAsset: (filename) => {
-        return moduleInstance.ccall('rl_loader_uncache_asset', 'number', ['string'], [filename]);
+    fileioRemove: (filename) => {
+        return moduleInstance.ccall('rl_fileio_remove', 'number', ['string'], [filename]);
     },
-    clearCache: () => {
-        return moduleInstance.ccall('rl_loader_clear_cache', 'number', [], []);
+    fileioClear: () => {
+        return moduleInstance.ccall('rl_fileio_clear', 'number', [], []);
     },
-    loaderInit: async (mountPoint = "") => {
-        return await moduleInstance.ccall('rl_loader_init', 'number', ['string'], [mountPoint || ""], { async: true });
+    fileioInit: async (baseDir = "") => {
+        return await moduleInstance.ccall('rl_fileio_init', 'number', ['string'], [baseDir || ""], { async: true });
     },
-    loaderInitAsync: (mountPoint = "") => {
-        return moduleInstance.ccall('rl_loader_init_async', 'number', ['string'], [mountPoint || ""]);
+    fileioInitAsync: (baseDir = "") => {
+        return moduleInstance.ccall('rl_fileio_init_async', 'number', ['string'], [baseDir || ""]);
     },
-    loaderDeinit: async () => {
-        moduleInstance.ccall('rl_loader_deinit', null, [], [], { async: true });
+    fileioDeinitAsync: () => {
+        return moduleInstance.ccall('rl_fileio_deinit_async', 'number', [], []) >>> 0;
     },
-    loaderIsInitialized: () => {
-        return moduleInstance.ccall('rl_loader_is_initialized', 'number', [], []) !== 0;
+    fileioDeinit: async () => {
+        moduleInstance.ccall('rl_fileio_deinit', null, [], [], { async: true });
     },
-    loaderIsReady: () => {
-        return moduleInstance.ccall('rl_loader_is_ready', 'number', [], []) !== 0;
+    fileioIsInitialized: () => {
+        return moduleInstance.ccall('rl_fileio_is_initialized', 'number', [], []) !== 0;
     },
-    getCacheDir: () => {
-        return moduleInstance.ccall('rl_loader_get_cache_dir', 'string', [], []);
+    fileioIsReady: () => {
+        return moduleInstance.ccall('rl_fileio_is_ready', 'number', [], []) !== 0;
+    },
+    fileioFlush: () => {
+        return moduleInstance.ccall('rl_fileio_flush', 'number', [], []) | 0;
+    },
+    getBaseDir: () => {
+        return moduleInstance.ccall('rl_fileio_get_base_dir', 'string', [], []);
     },
     pingAssetHost: (assetHost = "") => {
         return moduleInstance.ccall(
-            'rl_loader_ping_asset_host',
+            'rl_fileio_ping_asset_host',
             'number',
             ['string'],
             [assetHost || ""]
         );
     },
-    restoreFSAsync: () => {
-        return moduleInstance.ccall('rl_loader_restore_fs_async', 'number', [], []);
+    restoreAsync: () => {
+        return moduleInstance.ccall('rl_fileio_restore_async', 'number', [], []);
     },
-    importAsset: async (filename) => {
-        if (typeof filename === "string" && /\.gltf(?:[?#].*)?$/i.test(filename)) {
+    ensure: async (localPath, src = null) => {
+        if (typeof localPath === "string" && /\.gltf(?:[?#].*)?$/i.test(localPath)) {
             console.warn(
-                `[librl] importAsset("${filename}") does not currently follow .gltf dependencies. ` +
-                `Use importAssetAsync()/waitForImportAssetAsync() or a task group instead.`
+                `[librl] ensure("${localPath}") does not currently follow .gltf dependencies. ` +
+                `Use ensureAsync()/waitForEnsureAsync() or a task group instead.`
             );
         }
         return await moduleInstance.ccall(
-            'rl_loader_import_asset',
+            'rl_fileio_ensure',
             'number',
-            ['string'],
-            [filename],
+            ['string', 'string'],
+            [localPath, src ?? null],
             { async: true }
         );
     },
-    importAssetAsync: (filename) => {
-        return moduleInstance.ccall('rl_loader_create_import_task', 'number', ['string'], [filename]);
+    ensureAsync: (localPath, src = null) => {
+        return moduleInstance.ccall('rl_fileio_ensure_async', 'number', ['string', 'string'], [localPath, src ?? null]);
     },
-    importAssetsAsync: (filenames) => {
+    ensureGroupAsync: (filenames) => {
         const count = moduleInstance.writeScratchStringTable(filenames);
-        return moduleInstance.ccall('rl_loader_import_assets_from_scratch_async', 'number', ['number'], [count]);
+        return moduleInstance.ccall('rl_fileio_ensure_group_from_scratch_async', 'number', ['number'], [count]);
     },
     pollTask: (task) => {
-        return moduleInstance.ccall('rl_loader_poll_task', 'number', ['number'], [task]) !== 0;
+        return moduleInstance.ccall('rl_fileio_poll', 'number', ['number'], [task]) !== 0;
     },
     finishTask: (task) => {
-        return moduleInstance.ccall('rl_loader_finish_task', 'number', ['number'], [task]);
+        return moduleInstance.ccall('rl_fileio_finish', 'number', ['number'], [task]);
     },
     getTaskPath: (task) => {
-        return moduleInstance.ccall('rl_loader_get_task_path', 'string', ['number'], [task]);
+        return moduleInstance.ccall('rl_fileio_get_path', 'string', ['number'], [task]);
     },
 
 /*
     // js native read, using the FS.  We are using the librl version, 
     // but keep this around for reference
 
-    readLocal: (filename) => {
+    fileioRead: (filename) => {
         const fs = moduleInstance && moduleInstance.FS;
         let data = null;
         if (!fs || typeof fs.readFile !== "function") {
@@ -966,26 +972,20 @@ const RL = {
     },
 */
 
-    readLocal: (filename) => {
+    fileioRead: (filename) => {
         if (!moduleInstance) {
             return null;
         }
-        const readFn = moduleInstance._rl_loader_read_local;
-        const freeResultFn = moduleInstance._rl_loader_read_result_free;
         const stackSave = moduleInstance.stackSave;
         const stackRestore = moduleInstance.stackRestore;
         const stackAlloc = moduleInstance.stackAlloc;
         const heapU32 = moduleInstance.HEAPU32;
-        const heapI32 = moduleInstance.HEAP32;
         const heapU8 = moduleInstance.HEAPU8;
         if (
-            typeof readFn !== "function" ||
-            typeof freeResultFn !== "function" ||
             typeof stackSave !== "function" ||
             typeof stackRestore !== "function" ||
             typeof stackAlloc !== "function" ||
             !heapU32 ||
-            !heapI32 ||
             !heapU8
         ) {
             return null;
@@ -993,41 +993,60 @@ const RL = {
         const name = filename == null ? "" : String(filename);
         const prevSp = stackSave();
         try {
-            const resultPtr = stackAlloc(12) >>> 0;
-            const pathPtr = RL._stringToNewUtf8OrNull(name);
-            if (!pathPtr && name.length > 0) {
-                return null;
-            }
-            try {
-                readFn(resultPtr >>> 0, pathPtr >>> 0);
-            } finally {
-                RL._freeIfPossible(pathPtr);
-            }
-            const dataPtr = heapU32[resultPtr >>> 2] >>> 0;
-            const size = heapU32[(resultPtr + 4) >>> 2] >>> 0;
-            const err = heapI32[(resultPtr + 8) >>> 2] | 0;
-            if (err !== 0 || !dataPtr) {
-                freeResultFn(resultPtr);
+            // Allocate out-param slots: *out_data (pointer) and *out_size (size_t)
+            const outDataSlot = stackAlloc(4) >>> 0;
+            const outSizeSlot = stackAlloc(4) >>> 0;
+            heapU32[outDataSlot >>> 2] = 0;
+            heapU32[outSizeSlot >>> 2] = 0;
+            const rc = moduleInstance.ccall(
+                'rl_fileio_read',
+                'number',
+                ['string', 'number', 'number'],
+                [name, outDataSlot, outSizeSlot]
+            ) | 0;
+            const dataPtr = heapU32[outDataSlot >>> 2] >>> 0;
+            const size = heapU32[outSizeSlot >>> 2] >>> 0;
+            if (rc !== 0 || !dataPtr) {
+                if (dataPtr) {
+                    moduleInstance.ccall('rl_fileio_read_free', null, ['number'], [dataPtr]);
+                }
                 return null;
             }
             const out = new Uint8Array(size);
             if (size > 0) {
                 out.set(heapU8.subarray(dataPtr, dataPtr + size));
             }
-            freeResultFn(resultPtr);
+            moduleInstance.ccall('rl_fileio_read_free', null, ['number'], [dataPtr]);
             return out;
         } finally {
             stackRestore(prevSp);
         }
     },
-  
+    fileioWrite: (path, data) => {
+        if (typeof data === "string") {
+            data = new TextEncoder().encode(data);
+        }
+        const ptr = RL._mallocOrThrow(data.byteLength);
+        try {
+            moduleInstance.HEAPU8.set(data, ptr);
+            return moduleInstance.ccall('rl_fileio_write', 'number', ['string', 'number', 'number'], [path, ptr, data.byteLength]) | 0;
+        } finally {
+            RL._freeIfPossible(ptr);
+        }
+    },
+    fileioMkdir: (path) => {
+        return moduleInstance.ccall('rl_fileio_mkdir', 'number', ['string'], [path]) | 0;
+    },
+    fileioRmdir: (path) => {
+        return moduleInstance.ccall('rl_fileio_rmdir', 'number', ['string'], [path]) | 0;
+    },
     taskIsValid: (task) => {
-        //return moduleInstance.ccall('rl_loader_task_is_valid', 'number', ['number'], [task]) !== 0;
+        
         return task !== 0;
     },
 
     freeTask: (task) => {
-        return moduleInstance.ccall('rl_loader_free_task', null, ['number'], [task]);
+        return moduleInstance.ccall('rl_fileio_free', null, ['number'], [task]);
     },
     addTask: (task, onSuccess = null, onFailure = null, ctx = null) => {
         let successPtr = 0;
@@ -1058,7 +1077,7 @@ const RL = {
             return "";
         };
 
-        // Mirror the cpp binding's rl_loader_add_task behavior with local JS
+        // Mirror the cpp binding's rl_fileio_add_task behavior with local JS
         // springboards. The closures capture the provided callbacks/context, so
         // we do not need a separate userdata registry on the JS side.
         successPtr = moduleInstance.addFunction((pathPtr, _userData) => {
@@ -1082,7 +1101,7 @@ const RL = {
 
         try {
             const rc = moduleInstance.ccall(
-                'rl_loader_add_task',
+                'rl_fileio_add_task',
                 'number',
                 ['number', 'number', 'number', 'number'],
                 [task, successPtr, failurePtr, 0]
@@ -1096,8 +1115,8 @@ const RL = {
             throw err;
         }
     },
-    loaderTick: () => {
-        moduleInstance.ccall('rl_loader_tick', null, [], []);
+    fileioTick: () => {
+        moduleInstance.ccall('rl_fileio_tick', null, [], []);
     },
     createTaskGroup: (onComplete = null, onError = null, ctx = null) => {
         const group = {
@@ -1122,7 +1141,7 @@ const RL = {
                 });
             },
             addImportTask(path, onSuccess = null, onTaskError = null) {
-                this.addTask(RL.importAssetAsync(path), onSuccess, onTaskError);
+                this.addTask(RL.ensureAsync(path), onSuccess, onTaskError);
             },
             addImportTasks(paths, onSuccess = null, onTaskError = null) {
                 if (!Array.isArray(paths)) {
@@ -1142,7 +1161,7 @@ const RL = {
                 return this.failedCount > 0;
             },
             tick() {
-                RL.loaderTick();
+                RL.fileioTick();
                 for (const entry of this.entries) {
                     if (entry.done) {
                         continue;
@@ -1191,8 +1210,8 @@ const RL = {
         };
         return group;
     },
-    isAssetCached: (filename) => {
-        return moduleInstance.ccall('rl_loader_is_asset_cached', 'number', ['string'], [filename]) !== 0;
+    fileioExists: (filename) => {
+        return moduleInstance.ccall('rl_fileio_exists', 'number', ['string'], [filename]) !== 0;
     },
     waitForTask: async (task, pollMs = 16) => {
         let rc = 0;
@@ -1210,13 +1229,13 @@ const RL = {
         return rc;
     },
     restoreAsync: async () => {
-        return RL.waitForTask(RL.restoreFSAsync());
+        return RL.waitForTask(RL.restoreAsync());
     },
     waitForImportAssetAsync: async (filename) => {
-        return RL.waitForTask(RL.importAssetAsync(filename));
+        return RL.waitForTask(RL.ensureAsync(filename));
     },
     waitForImportAssetsAsync: async (filenames) => {
-        return RL.waitForTask(RL.importAssetsAsync(filenames));
+        return RL.waitForTask(RL.ensureGroupAsync(filenames));
     },
     emitEvent: (eventName, payload = 0) => {
         return moduleInstance.ccall('rl_event_emit', 'number', ['string', 'number'], [eventName, payload]);
@@ -1546,6 +1565,9 @@ const RL = {
     INIT_ERR_LOADER: -3,
     INIT_ERR_ASSET_HOST: -4,
     INIT_ERR_WINDOW: -5,
+    FILEIO_ADD_TASK_OK: 0,
+    FILEIO_ADD_TASK_ERR_INVALID: -1,
+    FILEIO_ADD_TASK_ERR_QUEUE_FULL: -2,
     CAMERA_PERSPECTIVE: 0,
     CAMERA_ORTHOGRAPHIC: 1,
     FLAG_MSAA_4X_HINT: 32,

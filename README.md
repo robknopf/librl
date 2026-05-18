@@ -25,8 +25,8 @@ Key goals:
   - Unified loading path across desktop and web builds.
   - Web can fetch/store assets in browser-backed storage (IndexedDB).
   - Desktop can read/write local files through the same higher-level loader path.
-- LRU-backed loader behavior:
-  - `rl_loader` uses LRU cache infrastructure to reduce repeated decode/fetch work.
+- LRU-backed fileio behavior:
+  - `rl_fileio` uses LRU cache infrastructure to reduce repeated decode/fetch work.
   - This is especially useful for wasm/browser workflows where fetch/decode churn can be costly.
 - URL/path normalization helpers:
   - File and URL normalization now share one path utility flow.

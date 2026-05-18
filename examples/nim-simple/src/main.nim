@@ -49,7 +49,7 @@ proc getPlatformText(): string =
   "Platform: " & $rl_get_platform()
 
 proc queueAssets() =
-  ctx.loadingGroup = loaderCreateTaskGroup(
+  ctx.loadingGroup = fileioCreateTaskGroup(
     addr ctx,
     onComplete = proc(group: RLTaskGroup[AppContext], loadedCtx: var AppContext) =
       loadedCtx.loadingGroup = nil,
@@ -162,7 +162,7 @@ proc onInit(): int {.rlAsync.} =
     log.error("Main: onInit failed with error: " & $rc)
     return ResultError
 
-  discard rl_loader_clear_cache()
+  discard rl_fileio_clear()
 
   rl_enable_lighting()
   rl_set_light_direction(-0.6, -1.0, -0.5)

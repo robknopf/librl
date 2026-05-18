@@ -56,7 +56,7 @@ cppia: cppia-script cppia-desktop
 cppia-desktop:
 	$(MAKE) -C cppia build
 cppia-script:
-	$(MAKE) -C cppia test_script
+	$(MAKE) -C cppia main_script
 
 lua:
 	$(MAKE) -C lua deps
@@ -67,5 +67,5 @@ clean:
 	$(MAKE) -C remote clean
 	$(MAKE) -C cppia clean
 	$(MAKE) -C lua clean
-	cd haxe && rm -rf out cache
+	cd haxe-simple && rm -rf out cache
 	cd nim-simple && $(NIM) clean

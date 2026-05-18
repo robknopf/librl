@@ -15,7 +15,7 @@
 #include "rl_lua_font.h"
 #include "rl_lua_frame_buffer.h"
 #include "rl_lua_input.h"
-#include "rl_lua_loader.h"
+#include "rl_lua_fileio.h"
 #include "rl_lua_logger.h"
 #include "rl_lua_model.h"
 #include "rl_lua_module.h"
@@ -68,8 +68,8 @@ static int rl_init_lua(lua_State *L)
         cfg.asset_host = lua_isstring(L, -1) ? lua_tostring(L, -1) : NULL;
         lua_pop(L, 1);
 
-        lua_getfield(L, 1, "loader_cache_dir");
-        cfg.loader_cache_dir = lua_isstring(L, -1) ? lua_tostring(L, -1) : NULL;
+        lua_getfield(L, 1, "fileio_base_dir");
+        cfg.fileio_base_dir = lua_isstring(L, -1) ? lua_tostring(L, -1) : NULL;
         lua_pop(L, 1);
     }
 
@@ -104,8 +104,8 @@ static int rl_init_async_lua(lua_State *L)
         cfg.asset_host = lua_isstring(L, -1) ? lua_tostring(L, -1) : NULL;
         lua_pop(L, 1);
 
-        lua_getfield(L, 1, "loader_cache_dir");
-        cfg.loader_cache_dir = lua_isstring(L, -1) ? lua_tostring(L, -1) : NULL;
+        lua_getfield(L, 1, "fileio_base_dir");
+        cfg.fileio_base_dir = lua_isstring(L, -1) ? lua_tostring(L, -1) : NULL;
         lua_pop(L, 1);
     }
 
@@ -120,14 +120,14 @@ static int rl_init_values_lua(lua_State *L)
     const char *window_title = lua_isstring(L, 3) ? lua_tostring(L, 3) : NULL;
     const unsigned int window_flags = (unsigned int)luaL_optinteger(L, 4, 0);
     const char *asset_host = lua_isstring(L, 5) ? lua_tostring(L, 5) : NULL;
-    const char *loader_cache_dir = lua_isstring(L, 6) ? lua_tostring(L, 6) : NULL;
+    const char *fileio_base_dir = lua_isstring(L, 6) ? lua_tostring(L, 6) : NULL;
 
     lua_pushinteger(L, (lua_Integer)rl_init_values(window_width,
                                                    window_height,
                                                    window_title,
                                                    window_flags,
                                                    asset_host,
-                                                   loader_cache_dir));
+                                                   fileio_base_dir));
     return 1;
 }
 
@@ -138,14 +138,14 @@ static int rl_init_values_async_lua(lua_State *L)
     const char *window_title = lua_isstring(L, 3) ? lua_tostring(L, 3) : NULL;
     const unsigned int window_flags = (unsigned int)luaL_optinteger(L, 4, 0);
     const char *asset_host = lua_isstring(L, 5) ? lua_tostring(L, 5) : NULL;
-    const char *loader_cache_dir = lua_isstring(L, 6) ? lua_tostring(L, 6) : NULL;
+    const char *fileio_base_dir = lua_isstring(L, 6) ? lua_tostring(L, 6) : NULL;
 
     lua_pushinteger(L, (lua_Integer)rl_init_values_async(window_width,
                                                          window_height,
                                                          window_title,
                                                          window_flags,
                                                          asset_host,
-                                                         loader_cache_dir));
+                                                         fileio_base_dir));
     return 1;
 }
 
@@ -456,7 +456,7 @@ int luaopen_rl(lua_State *L)
     rl_register_logger_bindings(L);
     rl_register_frame_buffer_bindings(L);
     rl_register_input_bindings(L);
-    rl_register_loader_bindings(L);
+    rl_register_fileio_bindings(L);
     rl_register_model_bindings(L);
     rl_register_module_bindings(L);
     rl_register_music_bindings(L);

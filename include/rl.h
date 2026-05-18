@@ -2,7 +2,6 @@
 #define RL_H
 
 #include <stdbool.h>
-#include "rl_module.h" // IWYU pragma: keep
 #include "rl_camera3d.h" // IWYU pragma: keep
 #include "rl_color.h" // IWYU pragma: keep
 #include "rl_debug.h" // IWYU pragma: keep

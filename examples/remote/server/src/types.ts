@@ -1,4 +1,4 @@
-// Mirror of rl_module.h command types
+// Mirror of rl_frame_command.h command types
 export enum CommandType {
   CLEAR = 0,
   DRAW_TEXT = 1,

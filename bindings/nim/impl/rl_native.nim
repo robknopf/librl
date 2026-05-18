@@ -35,44 +35,8 @@ type
     num_pressed_chars*: cint
     pressed_chars*: array[32, cint]
   RLEventListenerFn* = proc(payload: pointer, userData: pointer) {.cdecl.}
-  RLModuleLogFn* = proc(userData: pointer, level: cint, message: cstring) {.cdecl.}
-  RLModuleLogSourceFn* = proc(userData: pointer, level: cint, sourceFile: cstring,
-                              sourceLine: cint, message: cstring) {.cdecl.}
-  RLModuleAllocFn* = proc(size: csize_t, userData: pointer): pointer {.cdecl.}
-  RLModuleFreeFn* = proc(p: pointer, userData: pointer) {.cdecl.}
-  RLModuleEventListenerFn* = proc(payload: pointer, listenerUserData: pointer) {.cdecl.}
-  RLModuleEventOnFn* = proc(hostUserData: pointer, eventName: cstring,
-                            listener: RLModuleEventListenerFn, listenerUserData: pointer): cint {.cdecl.}
-  RLModuleEventOffFn* = proc(hostUserData: pointer, eventName: cstring,
-                             listener: RLModuleEventListenerFn, listenerUserData: pointer): cint {.cdecl.}
-  RLModuleEventEmitFn* = proc(hostUserData: pointer, eventName: cstring, payload: pointer): cint {.cdecl.}
   RLFileioCallbackFn* = proc(path: cstring, userData: pointer) {.cdecl.}
   RLFileioClosureCallback* = proc(path: string) {.closure.}
-  RLModuleInitFn* = proc(host: ptr RLModuleHostApi, moduleState: ptr pointer): cint {.cdecl.}
-  RLModuleDeinitFn* = proc(moduleState: pointer) {.cdecl.}
-  RLModuleUpdateFn* = proc(moduleState: pointer, dtSeconds: cfloat): cint {.cdecl.}
-  RLModuleHostApi* {.importc: "rl_module_host_api_t", header: "rl_module.h", bycopy.} = object
-    user_data*: pointer
-    log*: RLModuleLogFn
-    log_source*: RLModuleLogSourceFn
-    alloc*: RLModuleAllocFn
-    free*: RLModuleFreeFn
-    event_on*: RLModuleEventOnFn
-    event_off*: RLModuleEventOffFn
-    event_emit*: RLModuleEventEmitFn
-  RLModuleApi* {.importc: "rl_module_api_t", header: "rl_module.h", bycopy.} = object
-    name*: cstring
-    abi_version*: cint
-    init*: RLModuleInitFn
-    deinit*: RLModuleDeinitFn
-    update*: RLModuleUpdateFn
-  RLModuleInstance* {.importc: "rl_module_instance_t", header: "rl_module.h", bycopy.} = object
-    api*: ptr RLModuleApi
-    state*: pointer
-  RLModuleEntryGetApiFn* = proc(): ptr RLModuleApi {.cdecl.}
-  RLModuleEntry* {.importc: "rl_module_entry_t", header: "rl_module.h", bycopy.} = object
-    name*: cstring
-    get_api_fn*: RLModuleEntryGetApiFn
   RLInitConfigC {.importc: "rl_init_config_t", header: "rl_config.h", bycopy.} = object
     window_width: cint
     window_height: cint
@@ -133,18 +97,12 @@ const
   RL_BUTTON_PRESSED* = 1
   RL_BUTTON_DOWN* = 2
   RL_BUTTON_RELEASED* = 3
-  RL_MODULE_LOG_TRACE* = 0
-  RL_MODULE_LOG_DEBUG* = 1
-  RL_MODULE_LOG_INFO* = 2
-  RL_MODULE_LOG_WARN* = 3
-  RL_MODULE_LOG_ERROR* = 4
   RL_LOGGER_LEVEL_TRACE* = 0
   RL_LOGGER_LEVEL_DEBUG* = 1
   RL_LOGGER_LEVEL_INFO* = 2
   RL_LOGGER_LEVEL_WARN* = 3
   RL_LOGGER_LEVEL_ERROR* = 4
   RL_LOGGER_LEVEL_FATAL* = 5
-  RL_MODULE_ABI_VERSION* = 1
   RL_FILEIO_ADD_TASK_OK* = 0
   RL_FILEIO_ADD_TASK_ERR_INVALID* = -1
   RL_FILEIO_ADD_TASK_ERR_QUEUE_FULL* = -2
@@ -419,23 +377,6 @@ proc rl_logger_set_level*(level: cint) {.importc, cdecl, header: "rl_logger.h".}
 proc rl_logger_message*(level: cint, format: cstring) {.importc, cdecl, varargs, header: "rl_logger.h".}
 proc rl_logger_message_source*(level: cint, sourceFile: cstring, sourceLine: cint,
                                format: cstring) {.importc, cdecl, varargs, header: "rl_logger.h".}
-proc rl_module_log*(host: ptr RLModuleHostApi, level: cint, message: cstring) {.importc, cdecl, header: "rl_module.h".}
-proc rl_module_log_source*(host: ptr RLModuleHostApi, level: cint, sourceFile: cstring,
-                           sourceLine: cint, message: cstring) {.importc, cdecl, header: "rl_module.h".}
-proc rl_module_alloc*(host: ptr RLModuleHostApi, size: csize_t): pointer {.importc, cdecl, header: "rl_module.h".}
-proc rl_module_free*(host: ptr RLModuleHostApi, p: pointer) {.importc, cdecl, header: "rl_module.h".}
-proc rl_module_event_on*(host: ptr RLModuleHostApi, eventName: cstring,
-                         listener: RLModuleEventListenerFn, listenerUserData: pointer): cint {.importc, cdecl, header: "rl_module.h".}
-proc rl_module_event_off*(host: ptr RLModuleHostApi, eventName: cstring,
-                          listener: RLModuleEventListenerFn, listenerUserData: pointer): cint {.importc, cdecl, header: "rl_module.h".}
-proc rl_module_event_emit*(host: ptr RLModuleHostApi, eventName: cstring, payload: pointer): cint {.importc, cdecl, header: "rl_module.h".}
-proc rl_module_api_validate*(api: ptr RLModuleApi, error: cstring, errorSize: csize_t): cint {.importc, cdecl, header: "rl_module.h".}
-proc rl_module_init_instance*(api: ptr RLModuleApi, host: ptr RLModuleHostApi, moduleState: ptr pointer,
-                              error: cstring, errorSize: csize_t): cint {.importc, cdecl, header: "rl_module.h".}
-proc rl_module_deinit_instance*(api: ptr RLModuleApi, moduleState: pointer) {.importc, cdecl, header: "rl_module.h".}
-proc rl_module_get_api*(name: cstring): ptr RLModuleApi {.importc, cdecl, header: "rl_module.h".}
-proc rl_module_init*(name: cstring, host: ptr RLModuleHostApi, outApi: ptr ptr RLModuleApi,
-                     moduleState: ptr pointer, error: cstring, errorSize: csize_t): cint {.importc, cdecl, header: "rl_module.h".}
 proc rl_event_on*(eventName: cstring, listener: RLEventListenerFn, userData: pointer): cint {.importc, cdecl, header: "rl_event.h".}
 proc rl_event_once*(eventName: cstring, listener: RLEventListenerFn, userData: pointer): cint {.importc, cdecl, header: "rl_event.h".}
 proc rl_event_off*(eventName: cstring, listener: RLEventListenerFn, userData: pointer): cint {.importc, cdecl, header: "rl_event.h".}

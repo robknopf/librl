@@ -18,7 +18,6 @@
 #include "rl_lua_fileio.h"
 #include "rl_lua_logger.h"
 #include "rl_lua_model.h"
-#include "rl_lua_module.h"
 #include "rl_lua_music.h"
 #include "rl_lua_pick.h"
 #include "rl_lua_searcher.h"
@@ -458,7 +457,6 @@ int luaopen_rl(lua_State *L)
     rl_register_input_bindings(L);
     rl_register_fileio_bindings(L);
     rl_register_model_bindings(L);
-    rl_register_module_bindings(L);
     rl_register_music_bindings(L);
     rl_register_pick_bindings(L);
     rl_register_shape_bindings(L);

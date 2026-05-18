@@ -408,8 +408,6 @@ Notes:
     - examples: `frameBufferSubmit`, `windowGetScreenSize`
 - Avoid inventing alternate verb ordering in bindings if the C API is clear.
   - prefer section-first semantics equivalent to `rl_<section>_<action>`.
-- Note on macro-only C symbols:
-  - `rl_module_register` is a C preprocessor macro helper, not a callable function symbol, so it is not exposed as a runtime binding API.
 
 ## Sync Guidance (Mostly for myself)
 When public C headers change:

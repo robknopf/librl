@@ -420,10 +420,10 @@ proc rl_fileio_ensure_async*(localPath: cstring, src: cstring): RLHandle {.impor
 proc rl_fileio_ensure_async*(localPath: string, src: string = ""): RLHandle {.inline.} =
   let srcPtr = if src.len == 0: cstring(nil) else: src.cstring
   rl_fileio_ensure_async(localPath.cstring, srcPtr)
-proc rl_fileio_poll*(task: RLHandle): bool {.importjs: "__gRl.fileioPoll(#)".}
-proc rl_fileio_finish*(task: RLHandle): int {.importjs: "__gRl.fileioFinish(#)".}
-proc rl_fileio_get_path*(task: RLHandle): cstring {.importjs: "__gRl.fileioGetPath(#)".}
-proc rl_fileio_free*(task: RLHandle) {.importjs: "__gRl.fileioFree(#)".}
+proc rl_fileio_poll_task*(task: RLHandle): bool {.importjs: "__gRl.fileioPollTask(#)".}
+proc rl_fileio_finish_task*(task: RLHandle): int {.importjs: "__gRl.fileioFinishTask(#)".}
+proc rl_fileio_get_task_path*(task: RLHandle): cstring {.importjs: "__gRl.fileioGetTaskPath(#)".}
+proc rl_fileio_free_task*(task: RLHandle) {.importjs: "__gRl.fileioFreeTask(#)".}
 proc rl_fileio_tick*() {.importjs: "__gRl.fileioTick()".}
 proc rl_fileio_ping_asset_host*(assetHost: cstring): float {.importjs: "__gRl.fileioPingAssetHost(#)".}
 proc rl_fileio_ping_asset_host*(assetHost: string = ""): float {.inline.} =
@@ -483,7 +483,7 @@ proc addTask*[T](group: RLTaskGroup[T], task: RLHandle,
                  onError: RLTaskGroupTaskCallback[T] = nil) =
   if group.isNil or task == 0: return
   group.entries.add(RLTaskGroupEntry[T](
-    task: task, path: $rl_fileio_get_path(task),
+    task: task, path: $rl_fileio_get_task_path(task),
     done: false, rc: 1, onSuccess: onSuccess, onError: onError))
 
 proc addImportTask*[T](group: RLTaskGroup[T], path: string,
@@ -510,9 +510,9 @@ proc tick*[T](group: RLTaskGroup[T]): bool =
   rl_fileio_tick()
   for idx in 0 ..< group.entries.len:
     if group.entries[idx].done: continue
-    if not rl_fileio_poll(group.entries[idx].task): continue
-    group.entries[idx].rc = rl_fileio_finish(group.entries[idx].task)
-    rl_fileio_free(group.entries[idx].task)
+    if not rl_fileio_poll_task(group.entries[idx].task): continue
+    group.entries[idx].rc = rl_fileio_finish_task(group.entries[idx].task)
+    rl_fileio_free_task(group.entries[idx].task)
     group.entries[idx].done = true
     group.completedCount.inc
     if group.entries[idx].rc != 0:

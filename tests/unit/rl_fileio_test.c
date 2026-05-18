@@ -76,9 +76,9 @@ int test_rl_fileio_run(void)
 
     task = rl_fileio_restore_async();
     TEST_ASSERT(task != 0);
-    TEST_ASSERT(rl_fileio_poll(task) == true);
-    TEST_ASSERT(rl_fileio_finish(task) == 0);
-    rl_fileio_free(task);
+    TEST_ASSERT(rl_fileio_poll_task(task) == true);
+    TEST_ASSERT(rl_fileio_finish_task(task) == 0);
+    rl_fileio_free_task(task);
     task = 0;
 
     data = test_raylib_invoke_load_file_data_callback("assets/model.glb", &data_size);
@@ -87,9 +87,9 @@ int test_rl_fileio_run(void)
     fetch_url_stub_set_response(200, glb_payload, sizeof(glb_payload) - 1);
     task = rl_fileio_ensure_async("assets/model.glb", "https://example.com/assets/model.glb?x=1#frag");
     TEST_ASSERT(task != 0);
-    TEST_ASSERT(rl_fileio_poll(task) == true);
-    TEST_ASSERT(rl_fileio_finish(task) == 0);
-    rl_fileio_free(task);
+    TEST_ASSERT(rl_fileio_poll_task(task) == true);
+    TEST_ASSERT(rl_fileio_finish_task(task) == 0);
+    rl_fileio_free_task(task);
     task = 0;
     TEST_ASSERT(fetch_url_stub_get_call_count() == 1);
     TEST_ASSERT(strcmp(fetch_url_stub_get_last_host(), "https://example.com") == 0);
@@ -112,9 +112,9 @@ int test_rl_fileio_run(void)
     fetch_url_stub_set_response(200, txt_payload, sizeof(txt_payload) - 1);
     task = rl_fileio_ensure_async("assets/readme.txt", NULL);
     TEST_ASSERT(task != 0);
-    TEST_ASSERT(rl_fileio_poll(task) == true);
-    TEST_ASSERT(rl_fileio_finish(task) == 0);
-    rl_fileio_free(task);
+    TEST_ASSERT(rl_fileio_poll_task(task) == true);
+    TEST_ASSERT(rl_fileio_finish_task(task) == 0);
+    rl_fileio_free_task(task);
     task = 0;
     TEST_ASSERT(fetch_url_stub_get_call_count() == 2);
     TEST_ASSERT(strcmp(fetch_url_stub_get_last_host(), custom_host) == 0);
@@ -135,11 +135,11 @@ int test_rl_fileio_run(void)
     fetch_url_stub_enqueue_response(200, (const char *)tex_payload, sizeof(tex_payload));
     task = rl_fileio_ensure_async("assets/scene.gltf", NULL);
     TEST_ASSERT(task != 0);
-    TEST_ASSERT(rl_fileio_poll(task) == false);
-    TEST_ASSERT(rl_fileio_poll(task) == false);
-    TEST_ASSERT(rl_fileio_poll(task) == true);
-    TEST_ASSERT(rl_fileio_finish(task) == 0);
-    rl_fileio_free(task);
+    TEST_ASSERT(rl_fileio_poll_task(task) == false);
+    TEST_ASSERT(rl_fileio_poll_task(task) == false);
+    TEST_ASSERT(rl_fileio_poll_task(task) == true);
+    TEST_ASSERT(rl_fileio_finish_task(task) == 0);
+    rl_fileio_free_task(task);
     task = 0;
     TEST_ASSERT(fetch_url_stub_get_call_count() == 5);
     TEST_ASSERT(rl_fileio_exists("assets/scene.gltf") == true);
@@ -176,13 +176,13 @@ int test_rl_fileio_run(void)
         task = rl_fileio_ensure_group_async(batch_paths, 2);
         TEST_ASSERT(task != 0);
         poll_count = 0;
-        while (!rl_fileio_poll(task) && poll_count < 8) {
+        while (!rl_fileio_poll_task(task) && poll_count < 8) {
             poll_count++;
         }
         TEST_ASSERT(poll_count > 0);
         TEST_ASSERT(poll_count < 8);
-        TEST_ASSERT(rl_fileio_finish(task) == 0);
-        rl_fileio_free(task);
+        TEST_ASSERT(rl_fileio_finish_task(task) == 0);
+        rl_fileio_free_task(task);
         task = 0;
     }
 
@@ -207,9 +207,9 @@ int test_rl_fileio_run(void)
 
     task = rl_fileio_restore_async();
     TEST_ASSERT(task != 0);
-    TEST_ASSERT(rl_fileio_poll(task) == true);
-    TEST_ASSERT(rl_fileio_finish(task) == 0);
-    rl_fileio_free(task);
+    TEST_ASSERT(rl_fileio_poll_task(task) == true);
+    TEST_ASSERT(rl_fileio_finish_task(task) == 0);
+    rl_fileio_free_task(task);
     task = 0;
 
     data = test_raylib_invoke_load_file_data_callback("assets/readme.txt", &data_size);

@@ -1060,12 +1060,12 @@ abstract RLImpl(RLExterns) {
     return RLFileio.fileioEnsureGroupAsync(filenames);
   }
 
-  public static function fileioPoll(task: RLHandle): Bool {
-    return RLFileio.fileioPoll(task);
+  public static function fileioPollTask(task: RLHandle): Bool {
+    return RLFileio.fileioPollTask(task);
   }
 
-  public static function fileioFinish(task: RLHandle): Int {
-    return RLFileio.fileioFinish(task);
+  public static function fileioFinishTask(task: RLHandle): Int {
+    return RLFileio.fileioFinishTask(task);
   }
 
   public static function fileioCreateTaskGroup<T>(?onComplete:RLTaskGroupCallback<T>, ?onError:RLTaskGroupCallback<T>, ?ctx:T): RLTaskGroup {
@@ -1080,8 +1080,8 @@ abstract RLImpl(RLExterns) {
     return task.isValid();
   }
 
-  public static function fileioGetPath(task: RLHandle): String {
-    return RLFileio.fileioGetPath(task);
+  public static function fileioGetTaskPath(task: RLHandle): String {
+    return RLFileio.fileioGetTaskPath(task);
   }
 
   public static function fileioRead(filename: String): haxe.io.Bytes {
@@ -1100,8 +1100,8 @@ abstract RLImpl(RLExterns) {
     return RLFileio.fileioRmdir(path);
   }
 
-  public static function fileioFree(task: RLHandle): Void {
-    RLFileio.fileioFree(task);
+  public static function fileioFreeTask(task: RLHandle): Void {
+    RLFileio.fileioFreeTask(task);
   }
 
   public static function fileioExists(filename: String): Bool {
@@ -1141,7 +1141,7 @@ abstract RLImpl(RLExterns) {
       cpp.Function.fromStaticFunction(RLBridgeImpl.onFileioSuccessSpringboard);
     var failureSpringboard: cpp.Callable<cpp.ConstCharStar->cpp.RawPointer<cpp.Void>->Void> =
       cpp.Function.fromStaticFunction(RLBridgeImpl.onFileioFailureSpringboard);
-    var path = fileioGetPath(task);
+    var path = fileioGetTaskPath(task);
     var callbackKey = RLBridgeImpl.makeFileioCallbackKey(path);
     var callbackInvoked = false;
     var callbackUserData = RLFileioCallbackBridge.alloc(callbackKey);
@@ -1149,7 +1149,7 @@ abstract RLImpl(RLExterns) {
       if (onFailure != null) {
         onFailure(path, ctx);
       }
-      fileioFree(task);
+      fileioFreeTask(task);
       return RLExterns.FILEIO_ADD_TASK_ERR_INVALID;
     }
     RLBridgeImpl.fileioCallbacks.set(callbackKey, {

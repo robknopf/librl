@@ -38,7 +38,7 @@ class RLTaskGroup {
     }
     entries.push({
       task: task,
-      path: RL.fileioGetPath(task),
+      path: RL.fileioGetTaskPath(task),
       done: false,
       rc: 1,
       onSuccess: cast onSuccess,
@@ -74,11 +74,11 @@ class RLTaskGroup {
       if (entry.done) {
         continue;
       }
-      if (!RL.fileioPoll(entry.task)) {
+      if (!RL.fileioPollTask(entry.task)) {
         continue;
       }
-      entry.rc = RL.fileioFinish(entry.task);
-      RL.fileioFree(entry.task);
+      entry.rc = RL.fileioFinishTask(entry.task);
+      RL.fileioFreeTask(entry.task);
       entry.done = true;
       completedCount++;
       if (entry.rc != 0) {

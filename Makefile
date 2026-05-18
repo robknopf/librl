@@ -218,10 +218,10 @@ LDFLAGS_WASM = \
 			"_rl_fileio_normalize_path", \
 			"_rl_fileio_ensure", \
 			"_rl_fileio_ensure_async", \
-			"_rl_fileio_poll", \
-			"_rl_fileio_finish", \
-			"_rl_fileio_get_path", \
-			"_rl_fileio_free", \
+			"_rl_fileio_poll_task", \
+			"_rl_fileio_finish_task", \
+			"_rl_fileio_get_task_path", \
+			"_rl_fileio_free_task", \
 			"_rl_fileio_ensure_group_async", \
 			"_rl_fileio_ensure_group_from_scratch_async", \
 			"_rl_fileio_add_task", \

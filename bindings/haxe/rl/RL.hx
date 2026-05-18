@@ -771,24 +771,24 @@ class RL {
 		return rl.impl.RLImpl.fileioEnsureGroupAsync(filenames);
 	}
 
-	public static function fileioPoll(task:RLHandle):Bool {
-		return rl.impl.RLImpl.fileioPoll(task);
+	public static function fileioPollTask(task:RLHandle):Bool {
+		return rl.impl.RLImpl.fileioPollTask(task);
 	}
 
-	public static function fileioFinish(task:RLHandle):Int {
-		return rl.impl.RLImpl.fileioFinish(task);
+	public static function fileioFinishTask(task:RLHandle):Int {
+		return rl.impl.RLImpl.fileioFinishTask(task);
 	}
 
-	public static function fileioGetPath(task:RLHandle):String {
-		return rl.impl.RLImpl.fileioGetPath(task);
+	public static function fileioGetTaskPath(task:RLHandle):String {
+		return rl.impl.RLImpl.fileioGetTaskPath(task);
 	}
 
 	public static function fileioRead(filename:String):Bytes {
 		return rl.impl.RLImpl.fileioRead(filename);
 	}
 
-	public static function fileioFree(task:RLHandle):Void {
-		rl.impl.RLImpl.fileioFree(task);
+	public static function fileioFreeTask(task:RLHandle):Void {
+		rl.impl.RLImpl.fileioFreeTask(task);
 	}
 
 	public static function fileioExists(filename:String):Bool {

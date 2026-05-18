@@ -144,10 +144,10 @@ proc rl_fileio_ensure_group_async*(filenames: openArray[string]): RLHandle =
     cstrs[i] = s.cstring
   return rl_fileio_ensure_group_async_raw(addr cstrs[0], cstrs.len.csize_t)
 
-proc rl_fileio_poll*(task: RLHandle): bool {.importc, cdecl, header: "rl_fileio.h".}
-proc rl_fileio_finish_c(task: RLHandle): cint {.importc: "rl_fileio_finish", cdecl, header: "rl_fileio.h".}
-proc rl_fileio_get_path*(task: RLHandle): cstring {.importc, cdecl, header: "rl_fileio.h".}
-proc rl_fileio_free*(task: RLHandle) {.importc, cdecl, header: "rl_fileio.h".}
+proc rl_fileio_poll_task*(task: RLHandle): bool {.importc, cdecl, header: "rl_fileio.h".}
+proc rl_fileio_finish_c(task: RLHandle): cint {.importc: "rl_fileio_finish_task", cdecl, header: "rl_fileio.h".}
+proc rl_fileio_get_task_path*(task: RLHandle): cstring {.importc, cdecl, header: "rl_fileio.h".}
+proc rl_fileio_free_task*(task: RLHandle) {.importc, cdecl, header: "rl_fileio.h".}
 proc rl_fileio_add_task_raw*(task: RLHandle,
                          onSuccess: RLFileioCallbackFn, onFailure: RLFileioCallbackFn,
                          userData: pointer): cint {.importc: "rl_fileio_add_task", cdecl, header: "rl_fileio.h".}
@@ -297,7 +297,7 @@ proc addTask*[T](
     return
   group.entries.add(RLTaskGroupEntry[T](
     task: task,
-    path: $rl_fileio_get_path(task),
+    path: $rl_fileio_get_task_path(task),
     done: false,
     rc: 1,
     onSuccess: onSuccess,
@@ -338,10 +338,10 @@ proc tick*[T](group: RLTaskGroup[T]): bool =
   for idx in 0 ..< group.entries.len:
     if group.entries[idx].done:
       continue
-    if not rl_fileio_poll(group.entries[idx].task):
+    if not rl_fileio_poll_task(group.entries[idx].task):
       continue
     group.entries[idx].rc = rl_fileio_finish_c(group.entries[idx].task).int
-    rl_fileio_free(group.entries[idx].task)
+    rl_fileio_free_task(group.entries[idx].task)
     group.entries[idx].done = true
     group.completedCount.inc
     if group.entries[idx].rc != 0:
@@ -576,7 +576,7 @@ proc rl_is_lighting_enabled*(): int {.inline.} = rl_is_lighting_enabled_c().int
 
 proc rl_model_animation_count*(model: RLHandle): int {.inline.} = rl_model_animation_count_c(model).int
 
-proc rl_fileio_finish*(task: RLHandle): int {.inline.} = rl_fileio_finish_c(task).int
+proc rl_fileio_finish_task*(task: RLHandle): int {.inline.} = rl_fileio_finish_c(task).int
 
 proc rl_window_set_title*(title: string) {.inline.} =
   rl_window_set_title(title.cstring)

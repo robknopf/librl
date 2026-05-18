@@ -943,14 +943,14 @@ const RL = {
         const count = moduleInstance.writeScratchStringTable(filenames);
         return moduleInstance.ccall('rl_fileio_ensure_group_from_scratch_async', 'number', ['number'], [count]);
     },
-    pollTask: (task) => {
-        return moduleInstance.ccall('rl_fileio_poll', 'number', ['number'], [task]) !== 0;
+    fileioPollTask: (task) => {
+        return moduleInstance.ccall('rl_fileio_poll_task', 'number', ['number'], [task]) !== 0;
     },
-    finishTask: (task) => {
-        return moduleInstance.ccall('rl_fileio_finish', 'number', ['number'], [task]);
+    fileioFinishTask: (task) => {
+        return moduleInstance.ccall('rl_fileio_finish_task', 'number', ['number'], [task]);
     },
-    getTaskPath: (task) => {
-        return moduleInstance.ccall('rl_fileio_get_path', 'string', ['number'], [task]);
+    fileioGetTaskPath: (task) => {
+        return moduleInstance.ccall('rl_fileio_get_task_path', 'string', ['number'], [task]);
     },
 
 /*
@@ -1045,10 +1045,10 @@ const RL = {
         return task !== 0;
     },
 
-    freeTask: (task) => {
-        return moduleInstance.ccall('rl_fileio_free', null, ['number'], [task]);
+    fileioFreeTask: (task) => {
+        return moduleInstance.ccall('rl_fileio_free_task', null, ['number'], [task]);
     },
-    addTask: (task, onSuccess = null, onFailure = null, ctx = null) => {
+    fileioAddTask: (task, onSuccess = null, onFailure = null, ctx = null) => {
         let successPtr = 0;
         let failurePtr = 0;
         let cleanedUp = false;
@@ -1133,7 +1133,7 @@ const RL = {
                 }
                 this.entries.push({
                     task,
-                    path: RL.getTaskPath(task),
+                    path: RL.fileioGetTaskPath(task),
                     done: false,
                     rc: 1,
                     onSuccess: typeof onSuccess === "function" ? onSuccess : null,
@@ -1166,11 +1166,11 @@ const RL = {
                     if (entry.done) {
                         continue;
                     }
-                    if (!RL.pollTask(entry.task)) {
+                    if (!RL.fileioPollTask(entry.task)) {
                         continue;
                     }
-                    entry.rc = RL.finishTask(entry.task);
-                    RL.freeTask(entry.task);
+                    entry.rc = RL.fileioFinishTask(entry.task);
+                    RL.fileioFreeTask(entry.task);
                     entry.done = true;
                     this.completedCount += 1;
                     if (entry.rc !== 0) {
@@ -1220,12 +1220,12 @@ const RL = {
             return -1;
         }
 
-        while (!RL.pollTask(task)) {
+        while (!RL.fileioPollTask(task)) {
             await new Promise((resolve) => setTimeout(resolve, pollMs));
         }
 
-        rc = RL.finishTask(task);
-        RL.freeTask(task);
+        rc = RL.fileioFinishTask(task);
+        RL.fileioFreeTask(task);
         return rc;
     },
     restoreAsync: async () => {

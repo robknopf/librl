@@ -83,8 +83,8 @@ if rl.fileio_init() ~= 0 then
     return
 end
 
-if rl.loader_set_asset_host("https://localhost:4444") ~= 0 then
-    rl.error("rl.loader_set_asset_host failed")
+if rl.fileio_set_asset_host("https://localhost:4444") ~= 0 then
+    rl.error("rl.fileio_set_asset_host failed")
     return
 end
 
@@ -109,16 +109,16 @@ local function await_import_asset(asset_path)
         if not task or task == 0 then
             rl.error("fileio_ensure_async failed for " .. asset_path)
         end
-        while not rl.fileio_poll(task) do
+        while not rl.fileio_poll_task(task) do
             rl.fileio_tick()
             coroutine.yield("loading")
         end
-        local rc = rl.fileio_finish(task)
+        local rc = rl.fileio_finish_task(task)
         if rc ~= 0 then
             rl.error("import failed (rc=" .. tostring(rc) .. "): " .. asset_path)
         end
-        local path = rl.fileio_get_path(task)
-        rl.fileio_free(task)
+        local path = rl.fileio_get_task_path(task)
+        rl.fileio_free_task(task)
         if not path or path == "" then
             rl.error("no local path after import: " .. asset_path)
         end

@@ -145,7 +145,7 @@ static int import_asset_async(const char *path, rl_fileio_callback_fn on_success
     return -1;
   }
   if (rl_fileio_add_task(task, on_success, on_import_failed, user_data) != RL_FILEIO_ADD_TASK_OK) {
-    rl_fileio_free(task);
+    rl_fileio_free_task(task);
     on_import_failed(path, user_data);
     return -1;
   }

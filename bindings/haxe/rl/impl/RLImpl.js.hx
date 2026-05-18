@@ -748,16 +748,16 @@ class RLImpl {
 	public static function fileioEnsureGroupAsync(filenames:Array<String>):RLHandle
 		return binding == null ? 0 : cast binding.ensureGroupAsync(filenames);
 
-	public static function fileioPoll(task:RLHandle):Bool {
-		return binding != null && cast binding.pollTask(task);
+	public static function fileioPollTask(task:RLHandle):Bool {
+		return binding != null && cast binding.fileioPollTask(task);
 	}
 
-	public static function fileioFinish(task:RLHandle):Int {
-		return binding == null ? -1 : cast binding.finishTask(task);
+	public static function fileioFinishTask(task:RLHandle):Int {
+		return binding == null ? -1 : cast binding.fileioFinishTask(task);
 	}
 
-	public static function fileioGetPath(task:RLHandle):String {
-		return binding == null ? "" : cast binding.getTaskPath(task);
+	public static function fileioGetTaskPath(task:RLHandle):String {
+		return binding == null ? "" : cast binding.fileioGetTaskPath(task);
 	}
 
 	public static function fileioRead(filename:String):Bytes {
@@ -767,9 +767,9 @@ class RLImpl {
 		return d == null ? null : Bytes.ofData(cast d);
 	}
 
-	public static function fileioFree(task:RLHandle):Void {
+	public static function fileioFreeTask(task:RLHandle):Void {
 		if (binding != null)
-			binding.freeTask(task);
+			binding.fileioFreeTask(task);
 	}
 
 	public static function fileioExists(filename:String):Bool {
@@ -795,7 +795,7 @@ class RLImpl {
 		return task != 0;
 
 	public static function fileioAddTask<T>(task:RLHandle, onSuccess:String->T->Void, onFailure:String->T->Void, ctx:T):Int
-		return binding == null ? FILEIO_ADD_TASK_ERR_INVALID : cast binding.addTask(task, onSuccess, onFailure, ctx);
+		return binding == null ? FILEIO_ADD_TASK_ERR_INVALID : cast binding.fileioAddTask(task, onSuccess, onFailure, ctx);
 
 	public static function fileioTick():Void {
 		if (binding != null)

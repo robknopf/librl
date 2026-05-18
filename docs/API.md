@@ -558,10 +558,10 @@ void        rl_fileio_normalize_path(const char *path, char *buf, size_t buf_siz
 //           If not, fetch from src. If src is NULL, resolve against asset host.
 int         rl_fileio_ensure(const char *local_path, const char *src);  // requires JSPI on wasm
 rl_handle_t rl_fileio_ensure_async(const char *local_path, const char *src);
-bool        rl_fileio_poll(rl_handle_t handle);
-int         rl_fileio_finish(rl_handle_t handle);
-const char *rl_fileio_get_path(rl_handle_t handle);
-void        rl_fileio_free(rl_handle_t handle);
+bool        rl_fileio_poll_task(rl_handle_t handle);
+int         rl_fileio_finish_task(rl_handle_t handle);
+const char *rl_fileio_get_task_path(rl_handle_t handle);
+void        rl_fileio_free_task(rl_handle_t handle);
 
 // Group ensure (convenience)
 rl_handle_t rl_fileio_ensure_group_async(const char *const *paths, size_t count);

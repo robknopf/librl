@@ -132,7 +132,7 @@ static int rl_tg_append_entry(lua_State *L, rl_task_group_ud_t *g, rl_handle_t t
     }
     e = &g->entries[g->n];
     memset(e, 0, sizeof(*e));
-    p = rl_fileio_get_path(task);
+    p = rl_fileio_get_task_path(task);
     e->path = (p != NULL && p[0] != '\0') ? strdup(p) : strdup("");
     if (e->path == NULL) {
         if (sref != LUA_NOREF) {
@@ -284,11 +284,11 @@ static int task_group_tick(lua_State *L)
         if (e->done) {
             continue;
         }
-        if (!rl_fileio_poll(e->task)) {
+        if (!rl_fileio_poll_task(e->task)) {
             continue;
         }
-        e->rc = rl_fileio_finish(e->task);
-        rl_fileio_free(e->task);
+        e->rc = rl_fileio_finish_task(e->task);
+        rl_fileio_free_task(e->task);
         e->task = 0;
         e->done = 1;
         g->completed_count++;
@@ -373,7 +373,7 @@ static int task_group_gc(lua_State *L)
     for (j = 0; j < g->n; j++) {
         rl_tg_entry_t *e = &g->entries[j];
         if (!e->done && e->task != 0) {
-            rl_fileio_free(e->task);
+            rl_fileio_free_task(e->task);
             e->task = 0;
         }
         rl_tg_entry_clear(L, e);

@@ -289,28 +289,28 @@ static int rl_fileio_ensure_group_async_lua(lua_State *L)
 static int rl_fileio_poll_lua(lua_State *L)
 {
     rl_handle_t task = (rl_handle_t)luaL_checkinteger(L, 1);
-    lua_pushboolean(L, rl_fileio_poll(task) ? 1 : 0);
+    lua_pushboolean(L, rl_fileio_poll_task(task) ? 1 : 0);
     return 1;
 }
 
 static int rl_fileio_finish_lua(lua_State *L)
 {
     rl_handle_t task = (rl_handle_t)luaL_checkinteger(L, 1);
-    lua_pushinteger(L, rl_fileio_finish(task));
+    lua_pushinteger(L, rl_fileio_finish_task(task));
     return 1;
 }
 
 static int rl_fileio_free_lua(lua_State *L)
 {
     rl_handle_t task = (rl_handle_t)luaL_checkinteger(L, 1);
-    rl_fileio_free(task);
+    rl_fileio_free_task(task);
     return 0;
 }
 
 static int rl_fileio_get_path_lua(lua_State *L)
 {
     rl_handle_t task = (rl_handle_t)luaL_checkinteger(L, 1);
-    const char *path = rl_fileio_get_path(task);
+    const char *path = rl_fileio_get_task_path(task);
     if (path == NULL) {
         lua_pushnil(L);
     } else {
@@ -427,7 +427,7 @@ static int rl_fileio_add_task_lua(lua_State *L)
         if (success_ref != LUA_NOREF) luaL_unref(L, LUA_REGISTRYINDEX, success_ref);
         if (failure_ref != LUA_NOREF) luaL_unref(L, LUA_REGISTRYINDEX, failure_ref);
         if (ctx_ref != LUA_NOREF) luaL_unref(L, LUA_REGISTRYINDEX, ctx_ref);
-        rl_fileio_free(task);
+        rl_fileio_free_task(task);
         lua_pushinteger(L, -2);
         return 1;
     }
@@ -511,16 +511,16 @@ void rl_register_fileio_bindings(lua_State *L)
     lua_setfield(L, -2, "fileio_ensure_group_async");
 
     lua_pushcfunction(L, rl_fileio_poll_lua);
-    lua_setfield(L, -2, "fileio_poll");
+    lua_setfield(L, -2, "fileio_poll_task");
 
     lua_pushcfunction(L, rl_fileio_finish_lua);
-    lua_setfield(L, -2, "fileio_finish");
+    lua_setfield(L, -2, "fileio_finish_task");
 
     lua_pushcfunction(L, rl_fileio_free_lua);
-    lua_setfield(L, -2, "fileio_free");
+    lua_setfield(L, -2, "fileio_free_task");
 
     lua_pushcfunction(L, rl_fileio_get_path_lua);
-    lua_setfield(L, -2, "fileio_get_path");
+    lua_setfield(L, -2, "fileio_get_task_path");
 
     lua_pushcfunction(L, rl_fileio_exists_lua);
     lua_setfield(L, -2, "fileio_exists");

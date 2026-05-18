@@ -98,21 +98,21 @@ class RLFileio {
   }
 
   @:functionCode('
-    return ::rl_fileio_poll((::rl_handle_t)task);
+    return ::rl_fileio_poll_task((::rl_handle_t)task);
   ')
   static function pollNative(task: RLHandle): Bool {
     return false;
   }
 
   @:functionCode('
-    return ::rl_fileio_finish((::rl_handle_t)task);
+    return ::rl_fileio_finish_task((::rl_handle_t)task);
   ')
   static function finishNative(task: RLHandle): Int {
     return 0;
   }
 
   @:functionCode('
-    return ::rl_fileio_get_path((::rl_handle_t)task);
+    return ::rl_fileio_get_task_path((::rl_handle_t)task);
   ')
   static function getPathNative(task: RLHandle): String {
     return null;
@@ -179,7 +179,7 @@ class RLFileio {
   }
 
   @:functionCode('
-    ::rl_fileio_free((::rl_handle_t)task);
+    ::rl_fileio_free_task((::rl_handle_t)task);
   ')
   static function freeNative(task: RLHandle): Void {}
 

@@ -407,7 +407,7 @@ proc rl_sound_is_playing*(sound: RLHandle): bool {.importjs: "__gRl.isSoundPlayi
 proc rl_fileio_is_initialized*(): bool {.importjs: "__gRl.fileioIsInitialized()".}
 proc rl_fileio_is_ready*(): bool {.importjs: "__gRl.fileioIsReady()".}
 proc rl_fileio_flush*(): int {.importjs: "__gRl.fileioFlush()".}
-proc rl_fileio_get_base_dir*(): cstring {.importjs: "__gRl.getBaseDir()".}
+proc rl_fileio_get_base_dir*(): cstring {.importjs: "__gRl.fileioGetBaseDir()".}
 proc rl_fileio_exists*(filename: cstring): bool {.importjs: "__gRl.fileioExists(#)".}
 proc rl_fileio_exists*(filename: string): bool {.inline.} =
   rl_fileio_exists(filename.cstring)
@@ -415,8 +415,8 @@ proc rl_fileio_remove*(filename: cstring): int {.importjs: "__gRl.fileioRemove(#
 proc rl_fileio_remove*(filename: string): int {.inline.} =
   rl_fileio_remove(filename.cstring)
 proc rl_fileio_clear*(): int {.importjs: "__gRl.fileioClear()".}
-proc rl_fileio_restore_async*(): RLHandle {.importjs: "__gRl.restoreAsync()".}
-proc rl_fileio_ensure_async*(localPath: cstring, src: cstring): RLHandle {.importjs: "__gRl.ensureAsync(#,#)".}
+proc rl_fileio_restore_async*(): RLHandle {.importjs: "__gRl.fileioRestoreAsync()".}
+proc rl_fileio_ensure_async*(localPath: cstring, src: cstring): RLHandle {.importjs: "__gRl.fileioEnsureAsync(#,#)".}
 proc rl_fileio_ensure_async*(localPath: string, src: string = ""): RLHandle {.inline.} =
   let srcPtr = if src.len == 0: cstring(nil) else: src.cstring
   rl_fileio_ensure_async(localPath.cstring, srcPtr)

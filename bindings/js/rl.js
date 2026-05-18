@@ -907,10 +907,10 @@ const RL = {
     fileioFlush: () => {
         return moduleInstance.ccall('rl_fileio_flush', 'number', [], []) | 0;
     },
-    getBaseDir: () => {
+    fileioGetBaseDir: () => {
         return moduleInstance.ccall('rl_fileio_get_base_dir', 'string', [], []);
     },
-    pingAssetHost: (assetHost = "") => {
+    fileioPingAssetHost: (assetHost = "") => {
         return moduleInstance.ccall(
             'rl_fileio_ping_asset_host',
             'number',
@@ -918,14 +918,14 @@ const RL = {
             [assetHost || ""]
         );
     },
-    restoreAsync: () => {
+    fileioRestoreAsync: () => {
         return moduleInstance.ccall('rl_fileio_restore_async', 'number', [], []);
     },
     ensure: async (localPath, src = null) => {
         if (typeof localPath === "string" && /\.gltf(?:[?#].*)?$/i.test(localPath)) {
             console.warn(
                 `[librl] ensure("${localPath}") does not currently follow .gltf dependencies. ` +
-                `Use ensureAsync()/waitForEnsureAsync() or a task group instead.`
+                `Use fileioEnsureAsync()/waitForEnsureAsync() or a task group instead.`
             );
         }
         return await moduleInstance.ccall(
@@ -936,10 +936,10 @@ const RL = {
             { async: true }
         );
     },
-    ensureAsync: (localPath, src = null) => {
+    fileioEnsureAsync: (localPath, src = null) => {
         return moduleInstance.ccall('rl_fileio_ensure_async', 'number', ['string', 'string'], [localPath, src ?? null]);
     },
-    ensureGroupAsync: (filenames) => {
+    fileioEnsureGroupAsync: (filenames) => {
         const count = moduleInstance.writeScratchStringTable(filenames);
         return moduleInstance.ccall('rl_fileio_ensure_group_from_scratch_async', 'number', ['number'], [count]);
     },
@@ -1141,7 +1141,7 @@ const RL = {
                 });
             },
             addImportTask(path, onSuccess = null, onTaskError = null) {
-                this.addTask(RL.ensureAsync(path), onSuccess, onTaskError);
+                this.addTask(RL.fileioEnsureAsync(path), onSuccess, onTaskError);
             },
             addImportTasks(paths, onSuccess = null, onTaskError = null) {
                 if (!Array.isArray(paths)) {
@@ -1228,14 +1228,14 @@ const RL = {
         RL.fileioFreeTask(task);
         return rc;
     },
-    restoreAsync: async () => {
-        return RL.waitForTask(RL.restoreAsync());
+    waitForRestoreAsync: async () => {
+        return RL.waitForTask(RL.fileioRestoreAsync());
     },
     waitForImportAssetAsync: async (filename) => {
-        return RL.waitForTask(RL.ensureAsync(filename));
+        return RL.waitForTask(RL.fileioEnsureAsync(filename));
     },
     waitForImportAssetsAsync: async (filenames) => {
-        return RL.waitForTask(RL.ensureGroupAsync(filenames));
+        return RL.waitForTask(RL.fileioEnsureGroupAsync(filenames));
     },
     emitEvent: (eventName, payload = 0) => {
         return moduleInstance.ccall('rl_event_emit', 'number', ['string', 'number'], [eventName, payload]);

@@ -731,11 +731,11 @@ class RLImpl {
 	}
 
 	public static function fileioRestoreAsync():RLHandle {
-		return binding == null ? 0 : cast binding.restoreAsync();
+		return binding == null ? 0 : cast binding.fileioRestoreAsync();
 	}
 
 	public static function fileioEnsureAsync(localPath:String, ?src:String):RLHandle {
-		return binding == null ? 0 : cast binding.ensureAsync(localPath, src);
+		return binding == null ? 0 : cast binding.fileioEnsureAsync(localPath, src);
 	}
 
 	public static function fileioEnsure(localPath:String, ?src:String):Promise<Int> {
@@ -746,7 +746,7 @@ class RLImpl {
 	}
 
 	public static function fileioEnsureGroupAsync(filenames:Array<String>):RLHandle
-		return binding == null ? 0 : cast binding.ensureGroupAsync(filenames);
+		return binding == null ? 0 : cast binding.fileioEnsureGroupAsync(filenames);
 
 	public static function fileioPollTask(task:RLHandle):Bool {
 		return binding != null && cast binding.fileioPollTask(task);
@@ -778,11 +778,11 @@ class RLImpl {
 
 	public static function fileioPingAssetHost(?assetHost:String):Float {
 		var host = assetHost == null ? "" : assetHost;
-		return binding == null ? -1 : cast binding.pingAssetHost(host);
+		return binding == null ? -1 : cast binding.fileioPingAssetHost(host);
 	}
 
 	public static function fileioGetBaseDir():String {
-		return binding == null ? "" : cast binding.getBaseDir();
+		return binding == null ? "" : cast binding.fileioGetBaseDir();
 	}
 
 	public static function fileioCreateTaskGroup<T>(?onComplete:RLTaskGroupCallback<T>, ?onError:RLTaskGroupCallback<T>, ?ctx:T):RLTaskGroup

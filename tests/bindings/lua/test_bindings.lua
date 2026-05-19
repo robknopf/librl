@@ -158,4 +158,37 @@ if tick_rc ~= rl.RL_TICK_FAILED then
 end
 print("OK: core tick API and RL_TICK_* constants available")
 
+-- Test text2d API availability
+print("\n=== Text2D API Test ===")
+local text2d_fns = {"text2d_create","text2d_set_font","text2d_set_size","text2d_set_content","text2d_set_position","text2d_set_color","text2d_draw","text2d_destroy"}
+for _, fn in ipairs(text2d_fns) do
+    if type(rl[fn]) ~= "function" then
+        print("FAIL: expected rl." .. fn .. " to be a function")
+        os.exit(1)
+    end
+end
+-- lifecycle: requires rl.init() to initialize the handle pool
+if rl.boot() ~= rl.RL_INIT_OK then
+    print("FAIL: rl.boot() failed before text2d lifecycle test")
+    os.exit(1)
+end
+if rl.init() ~= rl.RL_INIT_OK then
+    print("FAIL: rl.init() failed before text2d lifecycle test")
+    os.exit(1)
+end
+local label = rl.text2d_create(0, 16)
+if label == 0 then
+    print("FAIL: text2d_create returned 0")
+    rl.deinit()
+    os.exit(1)
+end
+rl.text2d_set_content(label, "hello text2d")
+rl.text2d_set_position(label, 10, 20)
+rl.text2d_set_color(label, 0)
+rl.text2d_set_size(label, 24)
+rl.text2d_set_font(label, 0)
+rl.text2d_destroy(label)
+rl.deinit()
+print("OK: text2d API available and lifecycle works")
+
 print("\n=== All Tests Passed ===")

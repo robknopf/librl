@@ -667,6 +667,38 @@ class RL {
 		rl.impl.RLImpl.sprite2dDestroy(sprite);
 	}
 
+	public static function text2dCreate(font:RLHandle, size:Float):RLHandle {
+		return rl.impl.RLImpl.text2dCreate(font, size);
+	}
+
+	public static function text2dSetFont(handle:RLHandle, font:RLHandle):Void {
+		rl.impl.RLImpl.text2dSetFont(handle, font);
+	}
+
+	public static function text2dSetSize(handle:RLHandle, size:Float):Void {
+		rl.impl.RLImpl.text2dSetSize(handle, size);
+	}
+
+	public static function text2dSetContent(handle:RLHandle, content:String):Void {
+		rl.impl.RLImpl.text2dSetContent(handle, content);
+	}
+
+	public static function text2dSetPosition(handle:RLHandle, x:Float, y:Float):Void {
+		rl.impl.RLImpl.text2dSetPosition(handle, x, y);
+	}
+
+	public static function text2dSetColor(handle:RLHandle, color:RLHandle):Void {
+		rl.impl.RLImpl.text2dSetColor(handle, color);
+	}
+
+	public static function text2dDraw(handle:RLHandle):Void {
+		rl.impl.RLImpl.text2dDraw(handle);
+	}
+
+	public static function text2dDestroy(handle:RLHandle):Void {
+		rl.impl.RLImpl.text2dDestroy(handle);
+	}
+
 	public static function textureCreate(filename:String):RLHandle {
 		return rl.impl.RLImpl.textureCreate(filename);
 	}

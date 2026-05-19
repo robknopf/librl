@@ -40,11 +40,11 @@ static rl_font_entry_t *rl_font_get_entry(rl_handle_t handle)
     uint16_t index = 0;
 
     if (!rl_handle_pool_resolve(&rl_font_pool, handle, &index)) {
-        log_error("Invalid font handle (%u)", (unsigned int)handle);
+        if (handle != 0) log_warn("Invalid font handle (%u)", (unsigned int)handle);
         return NULL;
     }
     if (!rl_fonts[index].in_use) {
-        log_error("Stale font handle (%u)", (unsigned int)handle);
+        log_warn("Stale font handle (%u)", (unsigned int)handle);
         return NULL;
     }
     return &rl_fonts[index];
@@ -195,7 +195,7 @@ void rl_font_set(rl_handle_t handle, Font font)
 {
     uint16_t index = 0;
     if (!rl_font_handle_to_index(handle, &index)) {
-        log_error("Invalid font handle (%u)", (unsigned int)handle);
+        if (handle != 0) log_warn("Invalid font handle (%u)", (unsigned int)handle);
         return;
     }
 

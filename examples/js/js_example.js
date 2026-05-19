@@ -31,6 +31,7 @@ import { rl } from "../../bindings/js/rl.js";
     const greyAlphaColor = rl.createColor(0, 0, 0, 128);
     let komika = 0;
     let komikaSmall = 0;
+    let labelText2d = 0;
     let bgm = 0;
     let gumshoe = 0;
     let sprite = 0;
@@ -46,6 +47,11 @@ import { rl } from "../../bindings/js/rl.js";
     rl.enableLighting();
     rl.setLightDirection(-0.6, -1.0, -0.5);
     rl.setLightAmbient(0.25);
+
+    labelText2d = rl.createText2D(0, fontSize);
+    rl.text2DSetContent(labelText2d, "rl_text2d: retained label");
+    rl.text2DSetPosition(labelText2d, 10, 136);
+    rl.text2DSetColor(labelText2d, rl.COLOR_GREEN);
 
     // using a task group to load assets asynchronously
     /*
@@ -106,6 +112,7 @@ import { rl } from "../../bindings/js/rl.js";
     importAssetTask(fontPath, (path) => {
       komika = rl.createFont(path, fontSize);
       komikaSmall = rl.createFont(path, smallFontSize);
+      if (labelText2d) rl.text2DSetFont(labelText2d, komika);
     }, (path, error) => {
       console.error(`asset import failed: ${path}: ${error}`);
     });
@@ -192,6 +199,9 @@ import { rl } from "../../bindings/js/rl.js";
         rl.drawTextEx(komikaSmall, `Elapsed: ${totalTime.toFixed(2)}`, 10, 56, smallFontSize, 1, rl.COLOR_BLACK);
         rl.drawTextEx(komikaSmall, `Mouse: (${mouse.x.toFixed(0)}, ${mouse.y.toFixed(0)})`, 10, 76, smallFontSize, 1, rl.COLOR_BLACK);
         rl.drawFPSEx(komikaSmall, 10, 10, smallFontSize, rl.COLOR_BLUE);
+      }
+      if (labelText2d) {
+        rl.drawText2D(labelText2d);
       }
       rl.endDrawing();
       animationFrameId = window.requestAnimationFrame(mainLoop);

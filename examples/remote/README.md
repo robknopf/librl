@@ -8,10 +8,10 @@ Server-driven rendering over WebSocket. Game logic runs on a Bun/TypeScript serv
 ┌─────────────────────────────┐    WebSocket (JSON)    ┌─────────────────────────────┐
 │  Server (Bun + TypeScript)  │◄──────────────────────►│  Thin Client (C + librl)    │
 │                             │                        │                             │
-│  game.ts    - scene logic   │  Frame commands ──────►│  rl_protocol - decode        │
-│  server.ts  - WS service    │  Resource requests ───►│  rl_resource_handler - load  │
-│  resource_manager.ts        │◄── Resource responses  │  rl_ws_client - transport    │
-│  resource_protocol.ts       │                        │  main.c - render loop        │
+│  game.ts    - scene logic   │  Frame commands ──────►│  rl_protocol - decode       │
+│  server.ts  - WS service    │  Resource requests ───►│  rl_resource_handler - load │
+│  resource_manager.ts        │◄── Resource responses  │  rl_ws_client - transport   │
+│  resource_protocol.ts       │                        │  main.c - render loop       │
 └─────────────────────────────┘                        └─────────────────────────────┘
 ```
 
@@ -52,10 +52,10 @@ File-based resources (fonts, textures, models, sounds, music, sprite3ds) use asy
 ## File Structure
 
 ### Server (`server/src/`)
-| File | Purpose |
-|------|---------|
-| `server.ts` | WebSocket service, connection management, frame loop |
-| `game.ts` | Scene logic, resource loading, frame generation |
+| File                  | Purpose |
+|-----------------------|---------|
+| `server.ts`           | WebSocket service, connection management, frame loop |
+| `game.ts`             | Scene logic, resource loading, frame generation |
 | `resource_manager.ts` | Tracks resource requests/responses with promises |
 | `resource_protocol.ts` | Resource request/response type definitions |
 | `protocol.ts` | Typed packet definitions for frame/resource traffic |

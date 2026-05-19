@@ -186,6 +186,14 @@ LDFLAGS_WASM = \
 	"_rl_sprite2d_set_transform", \
 	"_rl_sprite2d_draw", \
 	"_rl_sprite2d_destroy", \
+	"_rl_text2d_create", \
+	"_rl_text2d_set_font", \
+	"_rl_text2d_set_size", \
+	"_rl_text2d_set_content", \
+	"_rl_text2d_set_position", \
+	"_rl_text2d_set_color", \
+	"_rl_text2d_draw", \
+	"_rl_text2d_destroy", \
 	"_rl_sprite3d_create", \
 	"_rl_sprite3d_create_from_texture", \
 	"_rl_sprite3d_set_transform", \

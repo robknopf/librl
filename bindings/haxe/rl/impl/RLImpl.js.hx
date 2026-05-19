@@ -638,6 +638,44 @@ class RLImpl {
 			binding.destroySprite2D(sprite);
 	}
 
+	public static function text2dCreate(font:RLHandle, size:Float):RLHandle
+		return binding == null ? 0 : cast binding.createText2D(font, size);
+
+	public static function text2dSetFont(handle:RLHandle, font:RLHandle):Void {
+		if (binding != null)
+			binding.text2DSetFont(handle, font);
+	}
+
+	public static function text2dSetSize(handle:RLHandle, size:Float):Void {
+		if (binding != null)
+			binding.text2DSetSize(handle, size);
+	}
+
+	public static function text2dSetContent(handle:RLHandle, content:String):Void {
+		if (binding != null)
+			binding.text2DSetContent(handle, content);
+	}
+
+	public static function text2dSetPosition(handle:RLHandle, x:Float, y:Float):Void {
+		if (binding != null)
+			binding.text2DSetPosition(handle, x, y);
+	}
+
+	public static function text2dSetColor(handle:RLHandle, color:RLHandle):Void {
+		if (binding != null)
+			binding.text2DSetColor(handle, color);
+	}
+
+	public static function text2dDraw(handle:RLHandle):Void {
+		if (binding != null)
+			binding.drawText2D(handle);
+	}
+
+	public static function text2dDestroy(handle:RLHandle):Void {
+		if (binding != null)
+			binding.destroyText2D(handle);
+	}
+
 	public static function textureCreate(filename:String):RLHandle
 		return binding == null ? 0 : cast binding.createTexture(filename);
 

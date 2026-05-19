@@ -117,5 +117,18 @@ class TestRL extends utest.Test {
     Assert.isTrue(mouse.y >= 0 || mouse.y <= 0, "mouse.y is an Int");
     RL.deinit();
   }
+
+  public function testText2dCreateDestroy() {
+    Assert.equals(0, RL.init());
+    var label = RL.text2dCreate(0, 16.0);
+    Assert.notEquals(0, label, "text2d handle should be non-zero");
+    RL.text2dSetContent(label, "hello text2d");
+    RL.text2dSetPosition(label, 10.0, 20.0);
+    RL.text2dSetColor(label, 0);
+    RL.text2dSetSize(label, 24.0);
+    RL.text2dSetFont(label, 0);
+    RL.text2dDestroy(label);
+    RL.deinit();
+  }
   #end
 }

@@ -54,7 +54,7 @@ const rl_handle_t RL_COLOR_RAYWHITE = RL_HANDLE_MAKE(27, 1);
 static bool rl_color_resolve_index(rl_handle_t handle, uint16_t *index_out)
 {
     if (!rl_handle_pool_resolve(&rl_color_pool, handle, index_out)) {
-        log_error("Invalid color handle (%u)", (unsigned int)handle);
+        if (handle != 0) log_warn("Invalid color handle (%u)", (unsigned int)handle);
         return false;
     }
     return true;

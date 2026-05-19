@@ -21,6 +21,7 @@ typedef AppContext = {
 	var totalTime:Float;
 	var debugFont:RLHandle;
 	var komikaFont:RLHandle;
+	var labelText2d:RLHandle;
 	var sprite:RLHandle;
 	var camera:RLHandle;
 	var bgm:RLHandle;
@@ -73,6 +74,7 @@ class MainScript extends Script {
 			totalTime: 0.0,
 			debugFont: 0,
 			komikaFont: 0,
+			labelText2d: 0,
 			sprite: 0,
 			camera: 0,
 			bgm: 0,
@@ -107,6 +109,11 @@ class MainScript extends Script {
 		ctx.greyAlphaColor = RL.colorCreate(0, 0, 0, 128);
 		ctx.backgroundColor = RL.colorCreate(245, 245, 245, 255);
 
+		ctx.labelText2d = RL.text2dCreate(0, KOMIKA_FONT_SIZE);
+		RL.text2dSetContent(ctx.labelText2d, "rl_text2d: retained label");
+		RL.text2dSetPosition(ctx.labelText2d, 10, 136);
+		RL.text2dSetColor(ctx.labelText2d, RL.COLOR_GREEN);
+
 		loadAssets();
 
 		platformText = getPlatformText();
@@ -124,6 +131,9 @@ class MainScript extends Script {
 		}, null, ctx);
 		RL.fileioAddTask(RL.fileioEnsureAsync(KOMIKA_FONT_PATH), (path, _) -> {
 			ctx.komikaFont = RL.fontCreate(path, KOMIKA_FONT_SIZE);
+			if (ctx.labelText2d != 0) {
+				RL.text2dSetFont(ctx.labelText2d, ctx.komikaFont);
+			}
 		}, null, ctx);
 		RL.fileioAddTask(RL.fileioEnsureAsync(MODEL_PATH), (path, _) -> {
 			ctx.gumshoe = RL.modelCreate(path);
@@ -261,6 +271,10 @@ class MainScript extends Script {
 			RL.textDrawFpsEx(ctx.debugFont, 10, 10, DEBUG_FONT_SIZE, ctx.greyAlphaColor);
 		} else {
 			RL.textDrawFps(10, 10);
+		}
+
+		if (ctx.labelText2d != 0) {
+			RL.text2dDraw(ctx.labelText2d);
 		}
 
 		RL.renderEnd();

@@ -678,38 +678,6 @@ rl_logger_fatal(...)
 
 ---
 
-## Frame Commands (`include/rl_frame_command.h`)
-
-Fixed-capacity per-frame typed command buffer. Scripting runtimes and remote servers emit draw/audio commands into this buffer; the host drains it in phase order.
-
-```c
-#define RL_FRAME_COMMAND_CAPACITY 128
-
-typedef struct {
-    rl_render_command_t commands[RL_FRAME_COMMAND_CAPACITY];
-    int count;
-} rl_frame_command_buffer_t;
-
-void rl_frame_commands_reset(rl_frame_command_buffer_t *buf);
-void rl_frame_commands_append(void *user_data, const rl_render_command_t *command);
-
-// Ordered execution phases
-void rl_frame_commands_execute_clear(const rl_frame_command_buffer_t *buf);
-void rl_frame_commands_execute_audio(const rl_frame_command_buffer_t *buf);
-void rl_frame_commands_execute_state(const rl_frame_command_buffer_t *buf);
-void rl_frame_commands_execute_3d(const rl_frame_command_buffer_t *buf);
-void rl_frame_commands_execute_2d(const rl_frame_command_buffer_t *buf);
-```
-
-Supported command types (`rl_render_command_type_t`):
-`CLEAR`, `DRAW_TEXT`, `DRAW_SPRITE2D`, `DRAW_SPRITE3D`, `DRAW_MODEL`, `DRAW_TEXTURE`, `DRAW_GROUND_TEXTURE`, `DRAW_CUBE`, `PLAY_SOUND`, `PLAY_MUSIC`, `PAUSE_MUSIC`, `STOP_MUSIC`, `SET_MUSIC_LOOP`, `SET_MUSIC_VOLUME`, `SET_CAMERA3D`, `SET_ACTIVE_CAMERA3D`, `SET_MODEL_TRANSFORM`, `SET_SPRITE2D_TRANSFORM`, `SET_SPRITE3D_TRANSFORM`.
-
-Notes:
-- The buffer is host-owned; reset it each frame before the module's `update()` call.
-- The `c-lua` example drains commands in phase order: clear → audio → state → 3D → 2D.
-
----
-
 ## Wasm Build
 
 ### JSPI (JavaScript Promise Integration)

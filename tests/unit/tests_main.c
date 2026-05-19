@@ -1,6 +1,7 @@
 #include "rl_handle_pool_test.h"
 #include "rl_fileio_test.h"
 #include "rl_version_test.h"
+#include "rl_text2d_test.h"
 
 #include <stdio.h>
 
@@ -25,6 +26,13 @@ int main(void)
     }
 
     rc = test_rl_version_run();
+    if (rc == 0) {
+        passed++;
+    } else {
+        failed++;
+    }
+
+    rc = test_rl_text2d_run();
     if (rc == 0) {
         passed++;
     } else {

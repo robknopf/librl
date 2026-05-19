@@ -12,6 +12,7 @@
 #include "internal/rl_sound.h"
 #include "internal/rl_scratch.h"
 #include "internal/rl_sprite2d.h"
+#include "internal/rl_text2d.h"
 #include "internal/rl_sprite3d.h"
 #include "internal/rl_texture.h"
 #include "internal/rl_window.h"
@@ -90,6 +91,7 @@ int rl_init_async(const rl_init_config_t *config) {
     rl_texture_init();
     rl_sprite2d_init();
     rl_sprite3d_init();
+    rl_text2d_init();
     rl_debug_init();
     initialized = true;
     return 0;
@@ -143,6 +145,7 @@ int rl_init(const rl_init_config_t *config) {
     rl_texture_init();
     rl_sprite2d_init();
     rl_sprite3d_init();
+    rl_text2d_init();
     rl_debug_init();
     initialized = true;
     return 0;
@@ -211,6 +214,7 @@ void rl_deinit() {
     rl_debug_deinit();
     rl_sprite2d_deinit();
     rl_sprite3d_deinit();
+    rl_text2d_deinit();
     rl_texture_deinit();
     rl_model_deinit();
     rl_sound_deinit();

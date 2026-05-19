@@ -102,3 +102,16 @@ suite "rl bindings":
     let count = rl_window_get_monitor_count()
     check count >= 0.cint
     rl_deinit()
+
+  test "text2d lifecycle":
+    check rl_boot() == RL_INIT_OK
+    check rl_init() == RL_INIT_OK
+    let label = rl_text2d_create(0, 16.0)
+    check label != 0.RLHandle
+    rl_text2d_set_content(label, "hello text2d")
+    rl_text2d_set_position(label, 10.0, 20.0)
+    rl_text2d_set_color(label, 0)
+    rl_text2d_set_size(label, 24.0)
+    rl_text2d_set_font(label, 0)
+    rl_text2d_destroy(label)
+    rl_deinit()

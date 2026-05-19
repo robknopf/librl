@@ -377,6 +377,17 @@ proc rl_sprite2d_set_transform*(sprite: RLHandle, x, y, scale, rotation: float):
 proc rl_sprite2d_draw*(sprite: RLHandle, tint: RLHandle) {.importjs: "__gRl.drawSprite2D(#,#)".}
 proc rl_sprite2d_destroy*(sprite: RLHandle) {.importjs: "__gRl.destroySprite2D(#)".}
 
+# Text2D
+proc rl_text2d_create*(font: RLHandle, size: float): RLHandle {.importjs: "__gRl.createText2D(#,#)".}
+proc rl_text2d_set_font*(handle: RLHandle, font: RLHandle) {.importjs: "__gRl.text2DSetFont(#,#)".}
+proc rl_text2d_set_size*(handle: RLHandle, size: float) {.importjs: "__gRl.text2DSetSize(#,#)".}
+proc rl_text2d_set_content_impl(handle: RLHandle, content: cstring) {.importjs: "__gRl.text2DSetContent(#,#)".}
+proc rl_text2d_set_content*(handle: RLHandle, content: string) {.inline.} = rl_text2d_set_content_impl(handle, content.cstring)
+proc rl_text2d_set_position*(handle: RLHandle, x: float, y: float) {.importjs: "__gRl.text2DSetPosition(#,#,#)".}
+proc rl_text2d_set_color*(handle: RLHandle, color: RLHandle) {.importjs: "__gRl.text2DSetColor(#,#)".}
+proc rl_text2d_draw*(handle: RLHandle) {.importjs: "__gRl.drawText2D(#)".}
+proc rl_text2d_destroy*(handle: RLHandle) {.importjs: "__gRl.destroyText2D(#)".}
+
 # Music
 proc rl_music_create*(filename: cstring): RLHandle {.importjs: "__gRl.createMusic(#)".}
 proc rl_music_create*(filename: string): RLHandle {.inline.} = rl_music_create(filename.cstring)

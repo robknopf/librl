@@ -11,6 +11,7 @@ local ctx = {
   message        = "Nothing picked!",
   mono_font      = 0,
   small_font     = 0,
+  label_text2d   = 0,
   model          = 0,
   sprite         = 0,
   bgm            = 0,
@@ -36,6 +37,11 @@ local function setup_scene()
 
   ctx.bg_color         = rl.color_create(245, 245, 245, 255)
   ctx.grey_alpha_color = rl.color_create(0, 0, 0, 128)
+
+  ctx.label_text2d = rl.text2d_create(0, KomikaFontSize)
+  rl.text2d_set_content(ctx.label_text2d, "rl_text2d: retained label")
+  rl.text2d_set_position(ctx.label_text2d, 10, 136)
+  rl.text2d_set_color(ctx.label_text2d, rl.RL_COLOR_GREEN)
 
   ctx.camera = rl.camera3d_create(
     12.0, 12.0, 12.0,
@@ -95,6 +101,9 @@ local function on_init()
 
   rl.fileio_add_task(rl.fileio_ensure_async("assets/fonts/Komika/KOMIKAH_.ttf"), function(path)
     ctx.small_font = rl.font_create(path, KomikaFontSize)
+    if ctx.label_text2d and ctx.label_text2d ~= 0 then
+      rl.text2d_set_font(ctx.label_text2d, ctx.small_font)
+    end
   end, nil)
 
   return ResultCode.OK
@@ -182,6 +191,10 @@ local function on_tick(delta_time)
     rl.text_draw(elapsed_text,   10, 56, DebugFontSize, rl.RL_COLOR_BLACK)
     rl.text_draw(mouse_text,     10, 76, DebugFontSize, rl.RL_COLOR_BLACK)
     rl.text_draw(platform_text,  10, 96, DebugFontSize, rl.RL_COLOR_BLACK)
+  end
+
+  if ctx.label_text2d and ctx.label_text2d ~= 0 then
+    rl.text2d_draw(ctx.label_text2d)
   end
 
   rl.end_drawing()

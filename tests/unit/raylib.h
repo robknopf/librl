@@ -18,4 +18,10 @@ typedef void (*TraceLogCallback)(int log_level, const char *text, va_list args);
 void SetTraceLogCallback(TraceLogCallback callback);
 void SetTraceLogLevel(int level);
 
+typedef struct { float x; float y; } Vector2;
+typedef struct { unsigned char r, g, b, a; } Color;
+typedef struct { int baseSize; int glyphCount; int glyphPadding; void *texture; void *recs; void *glyphs; } Font;
+
+void DrawTextEx(Font font, const char *text, Vector2 position, float fontSize, float spacing, Color tint);
+
 #endif // RAYLIB_H

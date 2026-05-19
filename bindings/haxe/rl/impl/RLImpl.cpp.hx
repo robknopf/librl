@@ -454,6 +454,30 @@ private extern class RLExterns {
   @:native("rl_sprite2d_destroy")
   static function sprite2dDestroy(sprite: RLHandle): Void;
 
+  @:native("rl_text2d_create")
+  static function text2dCreate(font: RLHandle, size: Float): RLHandle;
+
+  @:native("rl_text2d_set_font")
+  static function text2dSetFont(handle: RLHandle, font: RLHandle): Void;
+
+  @:native("rl_text2d_set_size")
+  static function text2dSetSize(handle: RLHandle, size: Float): Void;
+
+  @:native("rl_text2d_set_content")
+  static function text2dSetContent(handle: RLHandle, content: String): Void;
+
+  @:native("rl_text2d_set_position")
+  static function text2dSetPosition(handle: RLHandle, x: Float, y: Float): Void;
+
+  @:native("rl_text2d_set_color")
+  static function text2dSetColor(handle: RLHandle, color: RLHandle): Void;
+
+  @:native("rl_text2d_draw")
+  static function text2dDraw(handle: RLHandle): Void;
+
+  @:native("rl_text2d_destroy")
+  static function text2dDestroy(handle: RLHandle): Void;
+
   @:native("rl_texture_create")
   static function textureCreate(filename: String): RLHandle;
 
@@ -848,6 +872,14 @@ abstract RLImpl(RLExterns) {
   public static function sprite2dSetTransform(sprite: RLHandle, x: Float, y: Float, scale: Float, rotation: Float): Bool { return RLExterns.sprite2dSetTransform(sprite, x, y, scale, rotation); }
   public static function sprite2dDraw(sprite: RLHandle, tint: RLHandle): Void { RLExterns.sprite2dDraw(sprite, tint); }
   public static function sprite2dDestroy(sprite: RLHandle): Void { RLExterns.sprite2dDestroy(sprite); }
+  public static function text2dCreate(font: RLHandle, size: Float): RLHandle { return RLExterns.text2dCreate(font, size); }
+  public static function text2dSetFont(handle: RLHandle, font: RLHandle): Void { RLExterns.text2dSetFont(handle, font); }
+  public static function text2dSetSize(handle: RLHandle, size: Float): Void { RLExterns.text2dSetSize(handle, size); }
+  public static function text2dSetContent(handle: RLHandle, content: String): Void { RLExterns.text2dSetContent(handle, content); }
+  public static function text2dSetPosition(handle: RLHandle, x: Float, y: Float): Void { RLExterns.text2dSetPosition(handle, x, y); }
+  public static function text2dSetColor(handle: RLHandle, color: RLHandle): Void { RLExterns.text2dSetColor(handle, color); }
+  public static function text2dDraw(handle: RLHandle): Void { RLExterns.text2dDraw(handle); }
+  public static function text2dDestroy(handle: RLHandle): Void { RLExterns.text2dDestroy(handle); }
   public static function textureCreate(filename: String): RLHandle { return RLExterns.textureCreate(filename); }
   public static function textureDestroy(texture: RLHandle): Void { RLExterns.textureDestroy(texture); }
   public static function textureDrawEx(texture: RLHandle, x: Float, y: Float, scale: Float, rotation: Float, tint: RLHandle): Void { RLExterns.textureDrawEx(texture, x, y, scale, rotation, tint); }

@@ -1,6 +1,26 @@
 #include "raylib.h"
+#include "rl_types.h"
 
 static LoadFileDataCallback g_load_file_data_callback = 0;
+
+void DrawTextEx(Font font, const char *text, Vector2 position, float fontSize, float spacing, Color tint)
+{
+    (void)font; (void)text; (void)position; (void)fontSize; (void)spacing; (void)tint;
+}
+
+Font rl_font_get(rl_handle_t handle)
+{
+    (void)handle;
+    Font f = {0};
+    return f;
+}
+
+Color rl_color_get(rl_handle_t handle)
+{
+    (void)handle;
+    Color c = {0};
+    return c;
+}
 
 void SetTraceLogCallback(TraceLogCallback callback)
 {

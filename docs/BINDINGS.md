@@ -31,25 +31,9 @@ proc rl_foo*(x: int): int {.inline.} = rl_foo_c(x.cint).int
 
 Constants follow the same rule: `RL_INIT_OK`, `RL_TICK_FAILED`, etc. must be the target language's native integer, not a C-cast literal.
 
-## Architecture: Direct API vs Frame Commands
+## Architecture: Direct API
 
-Native bindings (Nim, Haxe) call the C API directly. Frame commands are reserved for contexts where direct calls have overhead or serialization needs:
-
-| Context | Pattern | Rationale |
-|---------|---------|-----------|
-| Nim, Haxe | Direct C API calls (`rl_sprite2d_draw()`) | Native code, no boundary overhead |
-| Lua module | Frame commands (`RL_RENDER_CMD_DRAW_SPRITE2D`) | VM boundary, batching, host-managed buffer |
-| Remote server | Frame commands over WebSocket | Network serialization, protocol abstraction |
-
-**Rule of thumb:**
-- Writing C/Nim/Haxe? Use direct API calls.
-- Writing Lua or remote gameplay code? Emit frame commands into the host buffer.
-
-Frame command types (for Lua/remote contexts only):
-- `RL_RENDER_CMD_SET_SPRITE2D_TRANSFORM` (17)
-- `RL_RENDER_CMD_DRAW_SPRITE2D` (18)
-
-Native bindings do not define frame command structs — they are an implementation detail of the Lua/remote transport layer.
+All bindings (Nim, Haxe, Lua, JS) call the C API directly. There is no frame command layer in librl — that is an application-level concern handled by individual examples (e.g., `examples/remote/`).
 
 ## JavaScript Binding
 
@@ -112,7 +96,7 @@ Notes:
 - JS exposes `initValuesAsync(width, height, title, flags, assetHost, fileioBaseDir)` for direct flattened polling-style init.
 - In JS, polling-style `*Async` entrypoints keep the same immediate-return contract as the other bindings:
   - `initAsync(...)`, `initValuesAsync(...)`, and `fileioInitAsync(...)` return plain integer status codes.
-  - task-style fileio APIs like `fileioRestoreAsync()` / `ensureAsync()` return task handles immediately.
+  - task-style fileio APIs like `fileioRestoreAsync()` / `fileioEnsureAsync()` return task handles immediately.
 - JS exposes `isInitialized()` for `rl_is_initialized()`.
 - JS exposes `getPlatform()` for `rl_get_platform()`.
 - Version queries (`rl_version_*` in `rl_version.h`) are exposed on all bindings:

@@ -1790,6 +1790,30 @@ const RL = {
     destroySprite2D: (sprite) => moduleInstance.ccall(
         "rl_sprite2d_destroy", null, ["number"], [sprite]
     ),
+    createText2D: (font, size) => moduleInstance.ccall(
+        "rl_text2d_create", "number", ["number", "number"], [font, size]
+    ),
+    text2DSetFont: (handle, font) => moduleInstance.ccall(
+        "rl_text2d_set_font", null, ["number", "number"], [handle, font]
+    ),
+    text2DSetSize: (handle, size) => moduleInstance.ccall(
+        "rl_text2d_set_size", null, ["number", "number"], [handle, size]
+    ),
+    text2DSetContent: (handle, content) => moduleInstance.ccall(
+        "rl_text2d_set_content", null, ["number", "string"], [handle, content]
+    ),
+    text2DSetPosition: (handle, x, y) => moduleInstance.ccall(
+        "rl_text2d_set_position", null, ["number", "number", "number"], [handle, x, y]
+    ),
+    text2DSetColor: (handle, color) => moduleInstance.ccall(
+        "rl_text2d_set_color", null, ["number", "number"], [handle, color]
+    ),
+    drawText2D: (handle) => moduleInstance.ccall(
+        "rl_text2d_draw", null, ["number"], [handle]
+    ),
+    destroyText2D: (handle) => moduleInstance.ccall(
+        "rl_text2d_destroy", null, ["number"], [handle]
+    ),
     loggerMessage: (level, message) => moduleInstance.ccall(
         "rl_logger_message", null, ["number", "string"], [level, String(message ?? "").replaceAll("%", "%%")]
     ),

@@ -20,6 +20,7 @@
 #include "rl_sprite2d.h" // IWYU pragma: keep
 #include "rl_sprite3d.h" // IWYU pragma: keep
 #include "rl_text.h" // IWYU pragma: keep
+#include "rl_text2d.h" // IWYU pragma: keep
 #include "rl_texture.h" // IWYU pragma: keep
 #include "rl_types.h" // IWYU pragma: keep
 #include "rl_config.h"

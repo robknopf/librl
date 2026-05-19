@@ -17,6 +17,7 @@ typedef AppContext = {
 	var totalTime:Float;
 	var debugFont:RLHandle;
 	var komikaFont:RLHandle;
+	var labelText2d:RLHandle;
 	var sprite:RLHandle;
 	var camera:RLHandle;
 	var bgm:RLHandle;
@@ -103,6 +104,7 @@ class SimpleRuntime implements IRuntime {
 			totalTime: 0.0,
 			debugFont: 0,
 			komikaFont: 0,
+			labelText2d: 0,
 			sprite: 0,
 			camera: 0,
 			bgm: 0,
@@ -136,6 +138,13 @@ class SimpleRuntime implements IRuntime {
 		RL.camera3dSetActive(ctx.camera);
 		ctx.greyAlphaColor = RL.colorCreate(0, 0, 0, 128);
 		ctx.backgroundColor = RL.colorCreate(245, 245, 245, 255);
+
+
+		// create a text2d.  Note that it we will update the font when it is available
+		ctx.labelText2d = RL.text2dCreate(0, KOMIKA_FONT_SIZE);
+		RL.text2dSetContent(ctx.labelText2d, "rl_text2d: retained label");
+		RL.text2dSetPosition(ctx.labelText2d, 10, 136);
+		RL.text2dSetColor(ctx.labelText2d, RL.COLOR_GREEN);
 
 		queueAssets();
 
@@ -237,6 +246,10 @@ class SimpleRuntime implements IRuntime {
 			RL.textDrawFps(10, 10);
 		}
 
+		if (ctx.labelText2d != 0) {
+			RL.text2dDraw(ctx.labelText2d);
+		}
+
 		RL.renderEnd();
 
 		return RT_SUCCESS;
@@ -329,6 +342,9 @@ class SimpleRuntime implements IRuntime {
 		});
 		importAssetAsync(KOMIKA_FONT_PATH, (path, userData) -> {
 			ctx.komikaFont = RL.fontCreate(path, KOMIKA_FONT_SIZE);
+			if (ctx.labelText2d != 0) {
+				RL.text2dSetFont(ctx.labelText2d, ctx.komikaFont);
+			}
 		}, (path, userData) -> {
 			Log.error("Failed to import KOMIKA FONT: " + path);
 		});

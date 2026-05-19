@@ -564,6 +564,25 @@ proc rl_sprite2d_set_transform*(
 proc rl_sprite2d_draw*(sprite: RLHandle, tint: RLHandle) {.importc, cdecl, header: "rl_sprite2d.h".}
 proc rl_sprite2d_destroy*(sprite: RLHandle) {.importc, cdecl, header: "rl_sprite2d.h".}
 
+# Text2D
+proc rl_text2d_create_c(font: RLHandle, size: cfloat): RLHandle {.importc: "rl_text2d_create", cdecl, header: "rl_text2d.h".}
+proc rl_text2d_set_font*(handle: RLHandle, font: RLHandle) {.importc, cdecl, header: "rl_text2d.h".}
+proc rl_text2d_set_size_c(handle: RLHandle, size: cfloat) {.importc: "rl_text2d_set_size", cdecl, header: "rl_text2d.h".}
+proc rl_text2d_set_content_c(handle: RLHandle, content: cstring) {.importc: "rl_text2d_set_content", cdecl, header: "rl_text2d.h".}
+proc rl_text2d_set_position_c(handle: RLHandle, x: cfloat, y: cfloat) {.importc: "rl_text2d_set_position", cdecl, header: "rl_text2d.h".}
+proc rl_text2d_set_color*(handle: RLHandle, color: RLHandle) {.importc, cdecl, header: "rl_text2d.h".}
+proc rl_text2d_draw*(handle: RLHandle) {.importc, cdecl, header: "rl_text2d.h".}
+proc rl_text2d_destroy*(handle: RLHandle) {.importc, cdecl, header: "rl_text2d.h".}
+
+proc rl_text2d_create*(font: RLHandle, size: float): RLHandle {.inline.} =
+  rl_text2d_create_c(font, size.cfloat)
+proc rl_text2d_set_size*(handle: RLHandle, size: float) {.inline.} =
+  rl_text2d_set_size_c(handle, size.cfloat)
+proc rl_text2d_set_content*(handle: RLHandle, content: string) {.inline.} =
+  rl_text2d_set_content_c(handle, content.cstring)
+proc rl_text2d_set_position*(handle: RLHandle, x: float, y: float) {.inline.} =
+  rl_text2d_set_position_c(handle, x.cfloat, y.cfloat)
+
 proc rl_get_time*(): float {.inline.} =
   rl_get_time_raw().float
 

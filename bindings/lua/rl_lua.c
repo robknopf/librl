@@ -27,6 +27,7 @@
 #include "rl_lua_sprite2d.h"
 #include "rl_lua_sprite3d.h"
 #include "rl_lua_text.h"
+#include "rl_lua_text2d.h"
 #include "rl_lua_texture.h"
 #include "rl_lua_window.h"
 
@@ -464,6 +465,7 @@ int luaopen_rl(lua_State *L)
     rl_register_sprite2d_bindings(L);
     rl_register_sprite3d_bindings(L);
     rl_register_text_bindings(L);
+    rl_register_text2d_bindings(L);
     rl_register_texture_bindings(L);
     rl_register_window_bindings(L);
     rl_register_lua_task_group(L);

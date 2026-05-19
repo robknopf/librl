@@ -30,6 +30,7 @@ type
     totalTime: float
     debugFont: RLHandle
     komikaFont: RLHandle
+    labelText2d: RLHandle
     sprite: RLHandle
     camera: RLHandle
     bgm: RLHandle
@@ -99,7 +100,9 @@ proc queueAssets() =
 
   ctx.loadingGroup.addImportTask(KomikaFontPath,
     onSuccess = proc(path: string, loadedCtx: var AppContext) =
-      loadedCtx.komikaFont = rl_font_create(path, KomikaFontSize),
+      loadedCtx.komikaFont = rl_font_create(path, KomikaFontSize)
+      if loadedCtx.labelText2d != 0:
+        rl_text2d_set_font(loadedCtx.labelText2d, loadedCtx.komikaFont),
     onError = proc(path: string, loadedCtx: var AppContext) =
       log.error("Failed to import KOMIKA FONT: " & path)
   )
@@ -176,6 +179,11 @@ proc onInit(): int {.rlAsync.} =
   discard rl_camera3d_set_active(ctx.camera)
   ctx.greyAlphaColor = rl_color_create(0, 0, 0, 128)
   ctx.backgroundColor = rl_color_create(245, 245, 245, 255)
+
+  ctx.labelText2d = rl_text2d_create(0, KomikaFontSize.float)
+  rl_text2d_set_content(ctx.labelText2d, "rl_text2d: retained label")
+  rl_text2d_set_position(ctx.labelText2d, 10, 136)
+  rl_text2d_set_color(ctx.labelText2d, RL_COLOR_GREEN)
 
   queueAssets()
   platformText = getPlatformText()
@@ -266,6 +274,9 @@ proc onTick(hostDt: float): int =
     rl_text_draw_fps_ex(ctx.debugFont, 10, 10, DebugFontSize.float, ctx.greyAlphaColor)
   else:
     rl_text_draw_fps(10, 10)
+
+  if ctx.labelText2d != 0:
+    rl_text2d_draw(ctx.labelText2d)
 
   rl_render_end()
   ResultOk

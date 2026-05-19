@@ -466,12 +466,15 @@ bool rl_model_set_asset(rl_handle_t handle, rl_handle_t asset_handle)
     if (instance->asset_handle != 0) rl_model_asset_release(instance->asset_handle);
 
     instance->asset_handle = asset_handle;
-    instance->selected_animation = -1;
-    instance->animation_time = 0.0f;
-    instance->animation_playing = false;
+    
+    // the animation may have been set before we set the asset, honor it
+    // instance->selected_animation = -1;
+    //instance->animation_time = 0.0f;
+    //instance->animation_playing = false;
     instance->animation_gpu_warning_emitted = false;
 
-    if (asset_handle != 0) {
+    // auto play animation 0 (default/idle?) if another animation isn't already set
+    if (asset_handle != 0 && instance->selected_animation == -1) {
         rl_model_asset_t *asset = rl_model_asset_get(asset_handle);
         if (asset != NULL && asset->animation_count > 0) {
             instance->selected_animation = 0;
@@ -579,13 +582,14 @@ RL_KEEP
 bool rl_model_set_animation(rl_handle_t handle, int animation_index)
 {
     rl_model_instance_t *instance = rl_model_instance_get(handle);
-    rl_model_asset_t *asset = NULL;
 
     if (instance == NULL) {
         return false;
     }
 
-    asset = rl_model_asset_get(instance->asset_handle);
+    /*
+    // rjk: allow the animation to be set, even if we don't have an asset yet
+    rl_model_asset_t *asset = rl_model_asset_get(instance->asset_handle);
     if (asset == NULL || asset->animation_count <= 0) {
         return false;
     }
@@ -593,6 +597,7 @@ bool rl_model_set_animation(rl_handle_t handle, int animation_index)
     if (animation_index < 0 || animation_index >= asset->animation_count) {
         return false;
     }
+    */
 
     instance->selected_animation = animation_index;
     instance->animation_time = 0.0f;

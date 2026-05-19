@@ -70,6 +70,7 @@ static rl_handle_pool_t rl_model_instance_pool;
 static uint16_t rl_model_instance_free_indices[MAX_MODELS];
 static uint16_t rl_model_instance_generations[MAX_MODELS];
 static unsigned char rl_model_instance_occupied[MAX_MODELS];
+static Model rl_model_placeholder;
 
 static bool rl_model_is_valid_model(Model model)
 {
@@ -707,6 +708,13 @@ void rl_model_draw(rl_handle_t handle, rl_handle_t tint)
     float rotation_angle = 0.0f;
 
     if (instance == NULL) {
+        if (handle != 0) {
+            DrawModelEx(rl_model_placeholder,
+                        (Vector3){0.0f, 0.0f, 0.0f},
+                        (Vector3){0.0f, 1.0f, 0.0f}, 0.0f,
+                        (Vector3){1.0f, 1.0f, 1.0f},
+                        (Color){255, 0, 255, 255});
+        }
         return;
     }
 
@@ -853,6 +861,7 @@ void rl_model_init(void)
     for (int i = 0; i < MAX_MODELS; i++) {
         rl_model_instance_reset(&rl_model_instances[i]);
     }
+    rl_model_placeholder = LoadModelFromMesh(GenMeshCube(1.0f, 1.0f, 1.0f));
 }
 
 void rl_model_deinit(void)
@@ -883,6 +892,8 @@ void rl_model_deinit(void)
 
     rl_handle_pool_reset(&rl_model_asset_pool);
     rl_handle_pool_reset(&rl_model_instance_pool);
+    UnloadModel(rl_model_placeholder);
+    rl_model_placeholder = (Model){0};
 
     log_info("rl_model_deinit: Destroyed %d model instances", instances_destroyed);
     log_info("rl_model_deinit: Freed %d unused model assets", assets_freed);

@@ -34,6 +34,7 @@ static rl_handle_pool_t rl_texture_pool;
 static uint16_t rl_texture_free_indices[MAX_TEXTURES];
 static uint16_t rl_texture_generations[MAX_TEXTURES];
 static unsigned char rl_texture_occupied[MAX_TEXTURES];
+static Texture2D rl_texture_placeholder_singleton;
 
 static rl_texture_entry_t *rl_texture_get_entry(rl_handle_t handle)
 {
@@ -68,6 +69,11 @@ static Texture2D rl_texture_create_magenta_placeholder(void)
     Texture2D texture = LoadTextureFromImage(image);
     UnloadImage(image);
     return texture;
+}
+
+Texture2D *rl_texture_get_placeholder(void)
+{
+    return &rl_texture_placeholder_singleton;
 }
 
 Texture2D *rl_texture_get_ptr(rl_handle_t handle)
@@ -232,6 +238,7 @@ void rl_texture_init(void)
         rl_textures[i].ref_count = 0;
         rl_textures[i].path[0] = '\0';
     }
+    rl_texture_placeholder_singleton = rl_texture_create_magenta_placeholder();
 }
 
 void rl_texture_deinit(void)
@@ -249,5 +256,7 @@ void rl_texture_deinit(void)
         unloaded++;
     }
     rl_handle_pool_reset(&rl_texture_pool);
+    UnloadTexture(rl_texture_placeholder_singleton);
+    rl_texture_placeholder_singleton = (Texture2D){0};
     log_info("rl_texture_deinit: Freed %d textures", unloaded);
 }

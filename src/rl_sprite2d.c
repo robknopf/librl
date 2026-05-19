@@ -120,6 +120,11 @@ void rl_sprite2d_draw(rl_handle_t handle, rl_handle_t tint)
     rl_sprite2d_instance_t *sprite = rl_sprite2d_get(handle);
     Texture2D *texture = NULL;
     if (sprite == NULL) {
+        if (handle != 0) {
+            DrawTextureEx(*rl_texture_get_placeholder(),
+                          (Vector2){0.0f, 0.0f}, 0.0f, 1.0f,
+                          (Color){255, 0, 255, 255});
+        }
         return;
     }
     texture = rl_texture_get_ptr(sprite->texture);

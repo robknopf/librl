@@ -12,18 +12,18 @@ static int rl_model_get_default_asset_lua(lua_State *L)
     return 1;
 }
 
-static int rl_model_asset_load_lua(lua_State *L)
+static int rl_model_load_asset_lua(lua_State *L)
 {
     const char *filename = luaL_checkstring(L, 1);
-    rl_handle_t handle = rl_model_asset_load(filename);
+    rl_handle_t handle = rl_model_load_asset(filename);
     lua_pushinteger(L, handle);
     return 1;
 }
 
-static int rl_model_asset_destroy_lua(lua_State *L)
+static int rl_model_destroy_asset_lua(lua_State *L)
 {
     rl_handle_t asset = (rl_handle_t)luaL_checkinteger(L, 1);
-    rl_model_asset_destroy(asset);
+    rl_model_destroy_asset(asset);
     return 0;
 }
 
@@ -89,27 +89,27 @@ static int rl_model_is_valid_strict_lua(lua_State *L)
     return 1;
 }
 
-static int rl_model_animation_count_lua(lua_State *L)
+static int rl_model_get_animation_count_lua(lua_State *L)
 {
     rl_handle_t model = (rl_handle_t)luaL_checkinteger(L, 1);
-    lua_pushinteger(L, rl_model_animation_count(model));
+    lua_pushinteger(L, rl_model_get_animation_count(model));
     return 1;
 }
 
-static int rl_model_animation_frame_count_lua(lua_State *L)
+static int rl_model_get_animation_frame_count_lua(lua_State *L)
 {
     rl_handle_t model = (rl_handle_t)luaL_checkinteger(L, 1);
     int animation_index = (int)luaL_checkinteger(L, 2);
-    lua_pushinteger(L, rl_model_animation_frame_count(model, animation_index));
+    lua_pushinteger(L, rl_model_get_animation_frame_count(model, animation_index));
     return 1;
 }
 
-static int rl_model_animation_update_lua(lua_State *L)
+static int rl_model_update_animation_lua(lua_State *L)
 {
     rl_handle_t model = (rl_handle_t)luaL_checkinteger(L, 1);
     int animation_index = (int)luaL_checkinteger(L, 2);
     int frame = (int)luaL_checkinteger(L, 3);
-    rl_model_animation_update(model, animation_index, frame);
+    rl_model_update_animation(model, animation_index, frame);
     return 0;
 }
 
@@ -157,11 +157,11 @@ void rl_register_model_bindings(lua_State *L)
     lua_pushcfunction(L, rl_model_get_default_asset_lua);
     lua_setfield(L, -2, "model_get_default_asset");
 
-    lua_pushcfunction(L, rl_model_asset_load_lua);
-    lua_setfield(L, -2, "model_asset_load");
+    lua_pushcfunction(L, rl_model_load_asset_lua);
+    lua_setfield(L, -2, "model_load_asset");
 
-    lua_pushcfunction(L, rl_model_asset_destroy_lua);
-    lua_setfield(L, -2, "model_asset_destroy");
+    lua_pushcfunction(L, rl_model_destroy_asset_lua);
+    lua_setfield(L, -2, "model_destroy_asset");
 
     lua_pushcfunction(L, rl_model_create_lua);
     lua_setfield(L, -2, "model_create");
@@ -184,14 +184,14 @@ void rl_register_model_bindings(lua_State *L)
     lua_pushcfunction(L, rl_model_is_valid_strict_lua);
     lua_setfield(L, -2, "model_is_valid_strict");
 
-    lua_pushcfunction(L, rl_model_animation_count_lua);
-    lua_setfield(L, -2, "model_animation_count");
+    lua_pushcfunction(L, rl_model_get_animation_count_lua);
+    lua_setfield(L, -2, "model_get_animation_count");
 
-    lua_pushcfunction(L, rl_model_animation_frame_count_lua);
-    lua_setfield(L, -2, "model_animation_frame_count");
+    lua_pushcfunction(L, rl_model_get_animation_frame_count_lua);
+    lua_setfield(L, -2, "model_get_animation_frame_count");
 
-    lua_pushcfunction(L, rl_model_animation_update_lua);
-    lua_setfield(L, -2, "model_animation_update");
+    lua_pushcfunction(L, rl_model_update_animation_lua);
+    lua_setfield(L, -2, "model_update_animation");
 
     lua_pushcfunction(L, rl_model_set_animation_lua);
     lua_setfield(L, -2, "model_set_animation");

@@ -576,12 +576,12 @@ class RLImpl {
 	public static function modelGetDefaultAsset():RLHandle
 		return binding == null ? 0 : cast binding.modelGetDefaultAsset();
 
-	public static function modelAssetLoad(filename:String):RLHandle
-		return binding == null ? 0 : cast binding.loadModelAsset(filename);
+	public static function modelLoadAsset(filename:String):RLHandle
+		return binding == null ? 0 : cast binding.modelLoadAsset(filename);
 
-	public static function modelAssetDestroy(asset:RLHandle):Void {
+	public static function modelDestroyAsset(asset:RLHandle):Void {
 		if (binding != null)
-			binding.destroyModelAsset(asset);
+			binding.modelDestroyAsset(asset);
 	}
 
 	public static function modelCreate(asset:RLHandle):RLHandle

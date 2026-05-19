@@ -419,8 +419,8 @@ the asset once (shared/ref-counted), create instances from it, swap assets at an
 rl_handle_t rl_model_get_default_asset(void);
 
 // Asset lifecycle (shared, ref-counted)
-rl_handle_t rl_model_asset_load(const char *filename);   // load or reuse cached asset
-void        rl_model_asset_destroy(rl_handle_t asset);   // release asset ref
+rl_handle_t rl_model_load_asset(const char *filename);   // load or reuse cached asset
+void        rl_model_destroy_asset(rl_handle_t asset);   // release asset ref
 
 // Instance lifecycle
 rl_handle_t rl_model_create(rl_handle_t asset);          // asset=0: show placeholder until set
@@ -444,20 +444,20 @@ bool rl_model_is_valid(rl_handle_t handle);         // true if handle is live
 bool rl_model_is_valid_strict(rl_handle_t handle);  // also checks underlying raylib model
 
 // Animation queries
-int  rl_model_animation_count(rl_handle_t handle);
-int  rl_model_animation_frame_count(rl_handle_t handle, int animation_index);
+int  rl_model_get_animation_count(rl_handle_t handle);
+int  rl_model_get_animation_frame_count(rl_handle_t handle, int animation_index);
 
 // Animation control
 bool rl_model_set_animation(rl_handle_t handle, int animation_index);
 bool rl_model_set_animation_speed(rl_handle_t handle, float speed);
 bool rl_model_set_animation_loop(rl_handle_t handle, bool should_loop);
 bool rl_model_animate(rl_handle_t handle, float delta_seconds);  // call each frame
-void rl_model_animation_update(rl_handle_t handle, int animation_index, int frame); // manual frame
+void rl_model_update_animation(rl_handle_t handle, int animation_index, int frame); // manual frame
 ```
 
 Notes:
 - `rl_model_create(0)` creates a valid instance with no asset; draw is a silent no-op until `rl_model_set_asset` is called.
-- On load failure, `rl_model_asset_load()` substitutes a placeholder cube; the asset handle is still valid.
+- On load failure, `rl_model_load_asset()` substitutes a placeholder cube; the asset handle is still valid.
 - `rl_model_set_asset` retains the new asset, releases the old one, and resets animation state.
 - `rl_model_draw()` uses the transform stored by `rl_model_set_transform()`.
 

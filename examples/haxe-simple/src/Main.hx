@@ -328,7 +328,7 @@ class SimpleRuntime implements IRuntime {
 		});
 		importAssetAsync(MODEL_PATH, (path, userData) -> {
 			//ctx.gumshoe = RL.modelCreateFromFile(path);
-			var gumshoeAsset = RL.modelAssetLoad(path);
+			var gumshoeAsset = RL.modelLoadAsset(path);
 			if (ctx.gumshoe != 0) {
 				RL.modelSetAsset(ctx.gumshoe, gumshoeAsset);
 			}

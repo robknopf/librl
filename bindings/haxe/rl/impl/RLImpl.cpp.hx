@@ -393,11 +393,11 @@ private extern class RLExterns {
   @:native("rl_model_get_default_asset")
   static function modelGetDefaultAsset(): RLHandle;
 
-  @:native("rl_model_asset_load")
-  static function modelAssetLoad(filename: String): RLHandle;
+  @:native("rl_model_load_asset")
+  static function modelLoadAsset(filename: String): RLHandle;
 
-  @:native("rl_model_asset_destroy")
-  static function modelAssetDestroy(asset: RLHandle): Void;
+  @:native("rl_model_destroy_asset")
+  static function modelDestroyAsset(asset: RLHandle): Void;
 
   @:native("rl_model_create")
   static function modelCreate(asset: RLHandle): RLHandle;
@@ -886,8 +886,8 @@ abstract RLImpl(RLExterns) {
   public static function camera3dSetActive(camera: RLHandle): Bool { return RLExterns.camera3dSetActive(camera); }
   public static function camera3dDestroy(camera: RLHandle): Void { RLExterns.camera3dDestroy(camera); }
   public static function modelGetDefaultAsset(): RLHandle { return RLExterns.modelGetDefaultAsset(); }
-  public static function modelAssetLoad(filename: String): RLHandle { return RLExterns.modelAssetLoad(filename); }
-  public static function modelAssetDestroy(asset: RLHandle): Void { RLExterns.modelAssetDestroy(asset); }
+  public static function modelLoadAsset(filename: String): RLHandle { return RLExterns.modelLoadAsset(filename); }
+  public static function modelDestroyAsset(asset: RLHandle): Void { RLExterns.modelDestroyAsset(asset); }
   public static function modelCreate(asset: RLHandle): RLHandle { return RLExterns.modelCreate(asset); }
   public static function modelCreateFromFile(filename: String): RLHandle { return RLExterns.modelCreateFromFile(filename); }
   public static function modelSetAsset(model: RLHandle, asset: RLHandle): Bool { return RLExterns.modelSetAsset(model, asset); }

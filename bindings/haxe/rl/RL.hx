@@ -598,12 +598,12 @@ class RL {
 		rl.impl.RLImpl.camera3dDestroy(camera);
 	}
 
-	public static function modelAssetLoad(filename:String):RLHandle {
-		return rl.impl.RLImpl.modelAssetLoad(filename);
+	public static function modelLoadAsset(filename:String):RLHandle {
+		return rl.impl.RLImpl.modelLoadAsset(filename);
 	}
 
-	public static function modelAssetDestroy(asset:RLHandle):Void {
-		rl.impl.RLImpl.modelAssetDestroy(asset);
+	public static function modelDestroyAsset(asset:RLHandle):Void {
+		rl.impl.RLImpl.modelDestroyAsset(asset);
 	}
 
 	public static function modelGetDefaultAsset():RLHandle {

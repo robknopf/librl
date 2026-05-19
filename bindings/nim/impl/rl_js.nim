@@ -328,9 +328,9 @@ proc rl_texture_draw_ground*(texture: RLHandle, x, y, z, width, length: float, t
 
 # Model
 proc rl_model_get_default_asset*(): RLHandle {.importjs: "__gRl.modelGetDefaultAsset()".}
-proc rl_model_asset_load*(filename: cstring): RLHandle {.importjs: "__gRl.loadModelAsset(#)".}
-proc rl_model_asset_load*(filename: string): RLHandle {.inline.} = rl_model_asset_load(filename.cstring)
-proc rl_model_asset_destroy*(asset: RLHandle) {.importjs: "__gRl.destroyModelAsset(#)".}
+proc rl_model_load_asset*(filename: cstring): RLHandle {.importjs: "__gRl.modelLoadAsset(#)".}
+proc rl_model_load_asset*(filename: string): RLHandle {.inline.} = rl_model_load_asset(filename.cstring)
+proc rl_model_destroy_asset*(asset: RLHandle) {.importjs: "__gRl.modelDestroyAsset(#)".}
 proc rl_model_create*(asset: RLHandle): RLHandle {.importjs: "__gRl.createModel(#)".}
 proc rl_model_create_from_file*(filename: cstring): RLHandle {.importjs: "__gRl.createModelFromFile(#)".}
 proc rl_model_create_from_file*(filename: string): RLHandle {.inline.} = rl_model_create_from_file(filename.cstring)
@@ -344,11 +344,11 @@ proc rl_model_set_transform*(model: RLHandle,
                               rotationX, rotationY, rotationZ,
                               scaleX, scaleY, scaleZ: float): bool {.
   importjs: "__gRl.modelSetTransform(#,#,#,#,#,#,#,#,#,#)".}
-proc rl_model_animation_count*(model: RLHandle): int {.importjs: "__gRl.modelAnimationCount(#)".}
-proc rl_model_animation_frame_count*(model: RLHandle, animationIndex: int): int {.
-  importjs: "__gRl.modelAnimationFrameCount(#,#)".}
-proc rl_model_animation_update*(model: RLHandle, animationIndex, frame: int) {.
-  importjs: "__gRl.modelAnimationUpdate(#,#,#)".}
+proc rl_model_get_animation_count*(model: RLHandle): int {.importjs: "__gRl.modelGetAnimationCount(#)".}
+proc rl_model_get_animation_frame_count*(model: RLHandle, animationIndex: int): int {.
+  importjs: "__gRl.modelGetAnimationFrameCount(#,#)".}
+proc rl_model_update_animation*(model: RLHandle, animationIndex, frame: int) {.
+  importjs: "__gRl.modelUpdateAnimation(#,#,#)".}
 proc rl_model_set_animation*(model: RLHandle, animationIndex: int): bool {.
   importjs: "__gRl.modelSetAnimation(#,#)".}
 proc rl_model_set_animation_speed*(model: RLHandle, speed: float): bool {.

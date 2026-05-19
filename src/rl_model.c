@@ -73,12 +73,12 @@ static unsigned char rl_model_instance_occupied[MAX_MODELS];
 static Model rl_model_placeholder;
 static rl_handle_t rl_model_default_asset_handle = 0;
 
-static bool rl_model_is_valid_model(Model model)
+static bool is_valid_model(Model model)
 {
     return (model.meshCount > 0 && model.meshes != NULL);
 }
 
-static void rl_model_log_invalid_details(const char *filename, Model model)
+static void log_invalid_details(const char *filename, Model model)
 {
     log_error("Model validity check failed for %s", filename ? filename : "(null)");
     log_error("  model.meshes != NULL: %s", model.meshes ? "true" : "false");
@@ -88,7 +88,7 @@ static void rl_model_log_invalid_details(const char *filename, Model model)
     log_error("  model.materialCount: %d", model.materialCount);
 }
 
-static void rl_model_asset_reset(rl_model_asset_t *asset)
+static void reset_asset(rl_model_asset_t *asset)
 {
     if (asset == NULL) {
         return;
@@ -104,7 +104,7 @@ static void rl_model_asset_reset(rl_model_asset_t *asset)
     asset->has_local_bounds = false;
 }
 
-static BoundingBox rl_model_transform_bounding_box(BoundingBox box, Matrix transform)
+static BoundingBox transform_bounding_box(BoundingBox box, Matrix transform)
 {
     Vector3 corners[8] = {
         {box.min.x, box.min.y, box.min.z},
@@ -133,7 +133,7 @@ static BoundingBox rl_model_transform_bounding_box(BoundingBox box, Matrix trans
     return out;
 }
 
-static void rl_model_instance_reset(rl_model_instance_t *instance)
+static void reset_instance(rl_model_instance_t *instance)
 {
     if (instance == NULL) {
         return;
@@ -157,7 +157,7 @@ static void rl_model_instance_reset(rl_model_instance_t *instance)
     instance->animation_gpu_warning_emitted = false;
 }
 
-static rl_model_asset_t *rl_model_asset_get(rl_handle_t handle)
+static rl_model_asset_t *get_asset(rl_handle_t handle)
 {
     uint16_t index = 0;
 
@@ -172,7 +172,7 @@ static rl_model_asset_t *rl_model_asset_get(rl_handle_t handle)
     return &rl_model_assets[index];
 }
 
-static rl_model_instance_t *rl_model_instance_get(rl_handle_t handle)
+static rl_model_instance_t *get_instance(rl_handle_t handle)
 {
     uint16_t index = 0;
     if (!rl_handle_pool_resolve(&rl_model_instance_pool, handle, &index)) {
@@ -186,7 +186,7 @@ static rl_model_instance_t *rl_model_instance_get(rl_handle_t handle)
     return &rl_model_instances[index];
 }
 
-static rl_handle_t rl_model_find_asset_by_path(const char *normalized_path)
+static rl_handle_t find_asset_by_path(const char *normalized_path)
 {
     if (!normalized_path || normalized_path[0] == '\0') {
         return 0;
@@ -209,17 +209,17 @@ static rl_handle_t rl_model_find_asset_by_path(const char *normalized_path)
  * - one asset owns loaded model + optional animation clip array
  * - instances retain/release assets and keep per-entity playback state
  */
-static bool rl_model_asset_retain(rl_handle_t asset_handle)
+static bool retain_asset(rl_handle_t asset_handle)
 {
-    rl_model_asset_t *asset = rl_model_asset_get(asset_handle);
+    rl_model_asset_t *asset = get_asset(asset_handle);
     if (asset == NULL) return false;
     asset->ref_count++;
     return true;
 }
 
-static void rl_model_asset_release(rl_handle_t asset_handle)
+static void release_asset(rl_handle_t asset_handle)
 {
-    rl_model_asset_t *asset = rl_model_asset_get(asset_handle);
+    rl_model_asset_t *asset = get_asset(asset_handle);
     if (asset == NULL) {
         return;
     }
@@ -237,12 +237,12 @@ static void rl_model_asset_release(rl_handle_t asset_handle)
             UnloadModel(*(asset->model));
             free(asset->model);
         }
-        rl_model_asset_reset(asset);
+        reset_asset(asset);
         rl_handle_pool_free(&rl_model_asset_pool, asset_handle);
     }
 }
 
-static rl_handle_t rl_model_asset_create(Model model,
+static rl_handle_t create_asset(Model model,
                                          ModelAnimation *animations,
                                          int animation_count,
                                          const char *normalized_path,
@@ -263,7 +263,7 @@ static rl_handle_t rl_model_asset_create(Model model,
 
     rl_handle_pool_resolve(&rl_model_asset_pool, handle, &index);
     asset = &rl_model_assets[index];
-    rl_model_asset_reset(asset);
+    reset_asset(asset);
 
     asset->model = malloc(sizeof(Model));
     if (asset->model == NULL)
@@ -294,7 +294,7 @@ static rl_handle_t rl_model_asset_create(Model model,
     return handle;
 }
 
-static rl_handle_t rl_model_instance_create(rl_handle_t asset_handle)
+static rl_handle_t create_instance(rl_handle_t asset_handle)
 {
     rl_handle_t handle = rl_handle_pool_alloc(&rl_model_instance_pool);
     rl_model_instance_t *instance = NULL;
@@ -307,12 +307,12 @@ static rl_handle_t rl_model_instance_create(rl_handle_t asset_handle)
     rl_handle_pool_resolve(&rl_model_instance_pool, handle, &index);
 
     instance = &rl_model_instances[index];
-    rl_model_instance_reset(instance);
+    reset_instance(instance);
     instance->in_use = true;
     instance->asset_handle = asset_handle;
 
     if (asset_handle != 0) {
-        rl_model_asset_t *asset = rl_model_asset_get(asset_handle);
+        rl_model_asset_t *asset = get_asset(asset_handle);
         if (asset != NULL && asset->animation_count > 0) {
             instance->selected_animation = 0;
             instance->animation_playing = true;
@@ -322,7 +322,7 @@ static rl_handle_t rl_model_instance_create(rl_handle_t asset_handle)
     return handle;
 }
 
-static bool rl_model_prepare_animation_gpu_state(rl_model_instance_t *instance, Model *model, rl_handle_t handle)
+static bool prepare_animation_gpu_state(rl_model_instance_t *instance, Model *model, rl_handle_t handle)
 {
     if (instance == NULL || model == NULL || !IsWindowReady()) {
         return false;
@@ -373,7 +373,7 @@ rl_handle_t rl_model_get_default_asset(void)
 }
 
 RL_KEEP
-rl_handle_t rl_model_asset_load(const char *filename)
+rl_handle_t rl_model_load_asset(const char *filename)
 {
     char normalized_path[256] = {0};
     rl_handle_t asset_handle = 0;
@@ -386,28 +386,28 @@ rl_handle_t rl_model_asset_load(const char *filename)
         return 0;
     }
     if (!IsWindowReady()) {
-        log_error("rl_model_asset_load(%s) called before window/context is ready", filename);
+        log_error("rl_model_load_asset(%s) called before window/context is ready", filename);
         return 0;
     }
 
     path_normalize(filename, normalized_path, sizeof(normalized_path));
 
-    asset_handle = rl_model_find_asset_by_path(normalized_path);
+    asset_handle = find_asset_by_path(normalized_path);
     if (asset_handle != 0) {
-        rl_model_asset_retain(asset_handle);
+        retain_asset(asset_handle);
         return asset_handle;
     }
 
     loaded_model = LoadModel(normalized_path);
-    if (!rl_model_is_valid_model(loaded_model))
+    if (!is_valid_model(loaded_model))
     {
-        rl_model_log_invalid_details(normalized_path, loaded_model);
+        log_invalid_details(normalized_path, loaded_model);
         log_error("Failed to load model (%s). Substituting placeholder.", normalized_path);
         if (loaded_model.meshCount > 0 || loaded_model.materialCount > 0) {
             UnloadModel(loaded_model);
         }
         loaded_model = LoadModelFromMesh(GenMeshCube(1.0f, 1.0f, 1.0f));
-        if (!rl_model_is_valid_model(loaded_model)) {
+        if (!is_valid_model(loaded_model)) {
             log_error("Failed to create placeholder model for (%s)", normalized_path);
             return 0;
         }
@@ -422,14 +422,14 @@ rl_handle_t rl_model_asset_load(const char *filename)
         }
     }
 
-    return rl_model_asset_create(loaded_model, animations, animation_count,
+    return create_asset(loaded_model, animations, animation_count,
                                  normalized_path, !using_placeholder);
 }
 
 RL_KEEP
-void rl_model_asset_destroy(rl_handle_t asset_handle)
+void rl_model_destroy_asset(rl_handle_t asset_handle)
 {
-    rl_model_asset_release(asset_handle);
+    release_asset(asset_handle);
 }
 
 RL_KEEP
@@ -437,14 +437,14 @@ rl_handle_t rl_model_create(rl_handle_t asset_handle)
 {
     rl_handle_t instance_handle = 0;
 
-    if (asset_handle != 0 && !rl_model_asset_retain(asset_handle)) {
+    if (asset_handle != 0 && !retain_asset(asset_handle)) {
         log_warn("Invalid model asset handle (%u) for rl_model_create", asset_handle);
         return 0;
     }
 
-    instance_handle = rl_model_instance_create(asset_handle);
+    instance_handle = create_instance(asset_handle);
     if (instance_handle == 0 && asset_handle != 0) {
-        rl_model_asset_release(asset_handle);
+        release_asset(asset_handle);
     }
     return instance_handle;
 }
@@ -452,10 +452,10 @@ rl_handle_t rl_model_create(rl_handle_t asset_handle)
 RL_KEEP
 rl_handle_t rl_model_create_from_file(const char *filename)
 {
-    rl_handle_t asset_handle = rl_model_asset_load(filename);
-    rl_handle_t instance_handle = rl_model_instance_create(asset_handle);
+    rl_handle_t asset_handle = rl_model_load_asset(filename);
+    rl_handle_t instance_handle = create_instance(asset_handle);
     if (instance_handle == 0 && asset_handle != 0) {
-        rl_model_asset_release(asset_handle);
+        release_asset(asset_handle);
     }
     return instance_handle;
 }
@@ -463,14 +463,14 @@ rl_handle_t rl_model_create_from_file(const char *filename)
 RL_KEEP
 bool rl_model_set_asset(rl_handle_t handle, rl_handle_t asset_handle)
 {
-    rl_model_instance_t *instance = rl_model_instance_get(handle);
+    rl_model_instance_t *instance = get_instance(handle);
     if (instance == NULL) return false;
 
-    if (asset_handle != 0 && !rl_model_asset_retain(asset_handle)) {
+    if (asset_handle != 0 && !retain_asset(asset_handle)) {
         log_warn("Invalid model asset handle (%u) for rl_model_set_asset", asset_handle);
         return false;
     }
-    if (instance->asset_handle != 0) rl_model_asset_release(instance->asset_handle);
+    if (instance->asset_handle != 0) release_asset(instance->asset_handle);
 
     instance->asset_handle = asset_handle;
     
@@ -482,7 +482,7 @@ bool rl_model_set_asset(rl_handle_t handle, rl_handle_t asset_handle)
 
     // auto play animation 0 (default/idle?) if another animation isn't already set
     if (asset_handle != 0 && instance->selected_animation == -1) {
-        rl_model_asset_t *asset = rl_model_asset_get(asset_handle);
+        rl_model_asset_t *asset = get_asset(asset_handle);
         if (asset != NULL && asset->animation_count > 0) {
             instance->selected_animation = 0;
             instance->animation_playing = true;
@@ -494,27 +494,27 @@ bool rl_model_set_asset(rl_handle_t handle, rl_handle_t asset_handle)
 RL_KEEP
 void rl_model_destroy(rl_handle_t handle)
 {
-    rl_model_instance_t *instance = rl_model_instance_get(handle);
+    rl_model_instance_t *instance = get_instance(handle);
     if (instance == NULL) {
         return;
     }
 
-    rl_model_asset_release(instance->asset_handle);
-    rl_model_instance_reset(instance);
+    release_asset(instance->asset_handle);
+    reset_instance(instance);
     rl_handle_pool_free(&rl_model_instance_pool, handle);
 }
 
 RL_KEEP
-int rl_model_animation_count(rl_handle_t handle)
+int rl_model_get_animation_count(rl_handle_t handle)
 {
-    rl_model_instance_t *instance = rl_model_instance_get(handle);
+    rl_model_instance_t *instance = get_instance(handle);
     rl_model_asset_t *asset = NULL;
 
     if (instance == NULL) {
         return 0;
     }
 
-    asset = rl_model_asset_get(instance->asset_handle);
+    asset = get_asset(instance->asset_handle);
     if (asset == NULL) {
         return 0;
     }
@@ -523,16 +523,16 @@ int rl_model_animation_count(rl_handle_t handle)
 }
 
 RL_KEEP
-int rl_model_animation_frame_count(rl_handle_t handle, int animation_index)
+int rl_model_get_animation_frame_count(rl_handle_t handle, int animation_index)
 {
-    rl_model_instance_t *instance = rl_model_instance_get(handle);
+    rl_model_instance_t *instance = get_instance(handle);
     rl_model_asset_t *asset = NULL;
 
     if (instance == NULL) {
         return 0;
     }
 
-    asset = rl_model_asset_get(instance->asset_handle);
+    asset = get_asset(instance->asset_handle);
     if (asset == NULL) {
         return 0;
     }
@@ -545,9 +545,9 @@ int rl_model_animation_frame_count(rl_handle_t handle, int animation_index)
 }
 
 RL_KEEP
-void rl_model_animation_update(rl_handle_t handle, int animation_index, int frame)
+void rl_model_update_animation(rl_handle_t handle, int animation_index, int frame)
 {
-    rl_model_instance_t *instance = rl_model_instance_get(handle);
+    rl_model_instance_t *instance = get_instance(handle);
     rl_model_asset_t *asset = NULL;
     int frame_count = 0;
     int normalized_frame = 0;
@@ -556,7 +556,7 @@ void rl_model_animation_update(rl_handle_t handle, int animation_index, int fram
         return;
     }
 
-    asset = rl_model_asset_get(instance->asset_handle);
+    asset = get_asset(instance->asset_handle);
     if (asset == NULL) {
         return;
     }
@@ -570,7 +570,7 @@ void rl_model_animation_update(rl_handle_t handle, int animation_index, int fram
         return;
     }
 
-    if (!rl_model_prepare_animation_gpu_state(instance, asset->model, handle)) {
+    if (!prepare_animation_gpu_state(instance, asset->model, handle)) {
         return;
     }
 
@@ -588,7 +588,7 @@ void rl_model_animation_update(rl_handle_t handle, int animation_index, int fram
 RL_KEEP
 bool rl_model_set_animation(rl_handle_t handle, int animation_index)
 {
-    rl_model_instance_t *instance = rl_model_instance_get(handle);
+    rl_model_instance_t *instance = get_instance(handle);
 
     if (instance == NULL) {
         return false;
@@ -596,7 +596,7 @@ bool rl_model_set_animation(rl_handle_t handle, int animation_index)
 
     /*
     // rjk: allow the animation to be set, even if we don't have an asset yet
-    rl_model_asset_t *asset = rl_model_asset_get(instance->asset_handle);
+    rl_model_asset_t *asset = get_asset(instance->asset_handle);
     if (asset == NULL || asset->animation_count <= 0) {
         return false;
     }
@@ -615,7 +615,7 @@ bool rl_model_set_animation(rl_handle_t handle, int animation_index)
 RL_KEEP
 bool rl_model_set_animation_speed(rl_handle_t handle, float speed)
 {
-    rl_model_instance_t *instance = rl_model_instance_get(handle);
+    rl_model_instance_t *instance = get_instance(handle);
     if (instance == NULL) {
         return false;
     }
@@ -627,7 +627,7 @@ bool rl_model_set_animation_speed(rl_handle_t handle, float speed)
 RL_KEEP
 bool rl_model_set_animation_loop(rl_handle_t handle, bool should_loop)
 {
-    rl_model_instance_t *instance = rl_model_instance_get(handle);
+    rl_model_instance_t *instance = get_instance(handle);
     if (instance == NULL) {
         return false;
     }
@@ -639,7 +639,7 @@ bool rl_model_set_animation_loop(rl_handle_t handle, bool should_loop)
 RL_KEEP
 bool rl_model_animate(rl_handle_t handle, float delta_seconds)
 {
-    rl_model_instance_t *instance = rl_model_instance_get(handle);
+    rl_model_instance_t *instance = get_instance(handle);
     rl_model_asset_t *asset = NULL;
     int frame_count = 0;
     int frame = 0;
@@ -648,7 +648,7 @@ bool rl_model_animate(rl_handle_t handle, float delta_seconds)
         return false;
     }
 
-    asset = rl_model_asset_get(instance->asset_handle);
+    asset = get_asset(instance->asset_handle);
     if (asset == NULL || asset->animation_count <= 0) {
         return false;
     }
@@ -668,7 +668,7 @@ bool rl_model_animate(rl_handle_t handle, float delta_seconds)
         return false;
     }
 
-    if (!rl_model_prepare_animation_gpu_state(instance, asset->model, handle)) {
+    if (!prepare_animation_gpu_state(instance, asset->model, handle)) {
         return false;
     }
 
@@ -709,7 +709,7 @@ bool rl_model_get_transform(rl_handle_t handle,
                             float *scale_x, float *scale_y, float *scale_z,
                             float *rotation_x, float *rotation_y, float *rotation_z)
 {
-    rl_model_instance_t *instance = rl_model_instance_get(handle);
+    rl_model_instance_t *instance = get_instance(handle);
     if (instance == NULL)
         return false;
     if (position_x) *position_x = instance->position_x;
@@ -730,7 +730,7 @@ bool rl_model_set_transform(rl_handle_t handle,
                             float rotation_x, float rotation_y, float rotation_z,
                             float scale_x, float scale_y, float scale_z)
 {
-    rl_model_instance_t *instance = rl_model_instance_get(handle);
+    rl_model_instance_t *instance = get_instance(handle);
 
     if (instance == NULL) {
         return false;
@@ -751,7 +751,7 @@ bool rl_model_set_transform(rl_handle_t handle,
 RL_KEEP
 void rl_model_draw(rl_handle_t handle, rl_handle_t tint)
 {
-    rl_model_instance_t *instance = rl_model_instance_get(handle);
+    rl_model_instance_t *instance = get_instance(handle);
     rl_model_asset_t *asset = NULL;
     Quaternion rotation_quat = {0};
     Vector3 rotation_axis = {0.0f, 1.0f, 0.0f};
@@ -772,7 +772,7 @@ void rl_model_draw(rl_handle_t handle, rl_handle_t tint)
         return;
     }
 
-    asset = rl_model_asset_get(instance->asset_handle);
+    asset = get_asset(instance->asset_handle);
     if (asset == NULL || asset->model == NULL) {
         rotation_quat = QuaternionFromEuler(instance->rotation_x * DEG2RAD,
                                             instance->rotation_y * DEG2RAD,
@@ -808,7 +808,7 @@ bool rl_model_get_ray_collision_ex(rl_handle_t handle,
                                    bool *broadphase_rejected,
                                    bool *narrowphase_ran)
 {
-    rl_model_instance_t *instance = rl_model_instance_get(handle);
+    rl_model_instance_t *instance = get_instance(handle);
     rl_model_asset_t *asset = NULL;
     Matrix model_transform = {0};
     BoundingBox world_bounds = {0};
@@ -827,7 +827,7 @@ bool rl_model_get_ray_collision_ex(rl_handle_t handle,
         return false;
     }
 
-    asset = rl_model_asset_get(instance->asset_handle);
+    asset = get_asset(instance->asset_handle);
     if (asset == NULL || asset->model == NULL) {
         return false;
     }
@@ -837,7 +837,7 @@ bool rl_model_get_ray_collision_ex(rl_handle_t handle,
     if (asset->has_local_bounds) {
         RayCollision broad_hit = {0};
         if (broadphase_tested != NULL) *broadphase_tested = true;
-        world_bounds = rl_model_transform_bounding_box(asset->local_bounds, model_transform);
+        world_bounds = transform_bounding_box(asset->local_bounds, model_transform);
         broad_hit = GetRayCollisionBox(ray, world_bounds);
         if (!broad_hit.hit) {
             if (broadphase_rejected != NULL) *broadphase_rejected = true;
@@ -869,32 +869,32 @@ bool rl_model_get_ray_collision(rl_handle_t handle, Ray ray, Matrix transform, R
 RL_KEEP
 bool rl_model_is_valid(rl_handle_t handle)
 {
-    rl_model_instance_t *instance = rl_model_instance_get(handle);
+    rl_model_instance_t *instance = get_instance(handle);
     rl_model_asset_t *asset = NULL;
 
     if (instance == NULL) {
         return false;
     }
 
-    asset = rl_model_asset_get(instance->asset_handle);
+    asset = get_asset(instance->asset_handle);
     if (asset == NULL || asset->model == NULL) {
         return false;
     }
 
-    return rl_model_is_valid_model(*(asset->model));
+    return is_valid_model(*(asset->model));
 }
 
 RL_KEEP
 bool rl_model_is_valid_strict(rl_handle_t handle)
 {
-    rl_model_instance_t *instance = rl_model_instance_get(handle);
+    rl_model_instance_t *instance = get_instance(handle);
     rl_model_asset_t *asset = NULL;
 
     if (instance == NULL) {
         return false;
     }
 
-    asset = rl_model_asset_get(instance->asset_handle);
+    asset = get_asset(instance->asset_handle);
     if (asset == NULL || asset->model == NULL) {
         return false;
     }
@@ -917,11 +917,11 @@ void rl_model_init(void)
                         rl_model_asset_generations,
                         rl_model_asset_occupied);
     for (int i = 0; i < MAX_MODEL_ASSETS; i++) {
-        rl_model_asset_reset(&rl_model_assets[i]);
+        reset_asset(&rl_model_assets[i]);
     }
 
     for (int i = 0; i < MAX_MODELS; i++) {
-        rl_model_instance_reset(&rl_model_instances[i]);
+        reset_instance(&rl_model_instances[i]);
     }
     rl_model_placeholder = LoadModelFromMesh(GenMeshCube(1.0f, 1.0f, 1.0f));
 
@@ -974,7 +974,7 @@ void rl_model_deinit(void)
     for (uint16_t i = 1; i < MAX_MODEL_ASSETS; i++) {
         rl_handle_t asset_handle = rl_handle_pool_handle_from_index(&rl_model_asset_pool, i);
         if (asset_handle != 0) {
-            rl_model_asset_release(asset_handle);
+            release_asset(asset_handle);
             assets_freed++;
         }
     }

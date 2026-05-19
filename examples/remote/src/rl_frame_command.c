@@ -170,7 +170,7 @@ void rl_frame_commands_execute_3d(
         switch (command->type) {
         case RL_RENDER_CMD_DRAW_MODEL:
             if (command->data.draw_model.animation_index >= 0) {
-                rl_model_animation_update(command->data.draw_model.model,
+                rl_model_update_animation(command->data.draw_model.model,
                                           command->data.draw_model.animation_index,
                                           command->data.draw_model.animation_frame);
             }

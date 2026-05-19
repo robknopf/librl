@@ -136,8 +136,8 @@ LDFLAGS_WASM = \
 	"_rl_font_create", \
 	"_rl_font_destroy", \
 	"_rl_model_get_default_asset", \
-	"_rl_model_asset_load", \
-	"_rl_model_asset_destroy", \
+	"_rl_model_load_asset", \
+	"_rl_model_destroy_asset", \
 	"_rl_model_create", \
 	"_rl_model_create_from_file", \
 	"_rl_model_set_asset", \
@@ -145,9 +145,9 @@ LDFLAGS_WASM = \
 	"_rl_model_draw", \
 	"_rl_model_is_valid", \
 	"_rl_model_is_valid_strict", \
-	"_rl_model_animation_count", \
-	"_rl_model_animation_frame_count", \
-	"_rl_model_animation_update", \
+	"_rl_model_get_animation_count", \
+	"_rl_model_get_animation_frame_count", \
+	"_rl_model_update_animation", \
 	"_rl_model_set_animation", \
 	"_rl_model_set_animation_speed", \
 	"_rl_model_set_animation_loop", \

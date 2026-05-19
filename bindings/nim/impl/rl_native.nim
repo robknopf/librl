@@ -485,8 +485,8 @@ proc rl_font_create*(filename: cstring, fontSize: cint): RLHandle {.importc, cde
 proc rl_font_destroy*(font: RLHandle) {.importc, cdecl, header: "rl_font.h".}
 proc rl_font_get_default*(): RLHandle {.importc, cdecl, header: "rl_font.h".}
 proc rl_model_get_default_asset*(): RLHandle {.importc, cdecl, header: "rl_model.h".}
-proc rl_model_asset_load*(filename: cstring): RLHandle {.importc, cdecl, header: "rl_model.h".}
-proc rl_model_asset_destroy*(asset: RLHandle) {.importc, cdecl, header: "rl_model.h".}
+proc rl_model_load_asset*(filename: cstring): RLHandle {.importc, cdecl, header: "rl_model.h".}
+proc rl_model_destroy_asset*(asset: RLHandle) {.importc, cdecl, header: "rl_model.h".}
 proc rl_model_create*(asset: RLHandle): RLHandle {.importc, cdecl, header: "rl_model.h".}
 proc rl_model_create_from_file*(filename: cstring): RLHandle {.importc, cdecl, header: "rl_model.h".}
 proc rl_model_set_asset*(model: RLHandle, asset: RLHandle): bool {.importc, cdecl, header: "rl_model.h".}
@@ -499,9 +499,9 @@ proc rl_model_set_transform*(
 proc rl_model_draw*(model: RLHandle, tint: RLHandle) {.importc, cdecl, header: "rl_model.h".}
 proc rl_model_is_valid*(model: RLHandle): bool {.importc, cdecl, header: "rl_model.h".}
 proc rl_model_is_valid_strict*(model: RLHandle): bool {.importc, cdecl, header: "rl_model.h".}
-proc rl_model_animation_count_c(model: RLHandle): cint {.importc: "rl_model_animation_count", cdecl, header: "rl_model.h".}
-proc rl_model_animation_frame_count*(model: RLHandle, animationIndex: cint): cint {.importc, cdecl, header: "rl_model.h".}
-proc rl_model_animation_update*(model: RLHandle, animationIndex: cint, frame: cint) {.importc, cdecl, header: "rl_model.h".}
+proc rl_model_get_animation_count_c(model: RLHandle): cint {.importc: "rl_model_get_animation_count", cdecl, header: "rl_model.h".}
+proc rl_model_get_animation_frame_count*(model: RLHandle, animationIndex: cint): cint {.importc, cdecl, header: "rl_model.h".}
+proc rl_model_update_animation*(model: RLHandle, animationIndex: cint, frame: cint) {.importc, cdecl, header: "rl_model.h".}
 proc rl_model_set_animation*(model: RLHandle, animationIndex: cint): bool {.importc, cdecl, header: "rl_model.h".}
 proc rl_model_set_animation_speed*(model: RLHandle, speed: cfloat): bool {.importc, cdecl, header: "rl_model.h".}
 proc rl_model_set_animation_loop*(model: RLHandle, shouldLoop: bool): bool {.importc, cdecl, header: "rl_model.h".}
@@ -602,7 +602,7 @@ proc rl_tick*(): int {.inline.} = rl_tick_c().int
 
 proc rl_is_lighting_enabled*(): int {.inline.} = rl_is_lighting_enabled_c().int
 
-proc rl_model_animation_count*(model: RLHandle): int {.inline.} = rl_model_animation_count_c(model).int
+proc rl_model_get_animation_count*(model: RLHandle): int {.inline.} = rl_model_get_animation_count_c(model).int
 
 proc rl_fileio_finish_task*(task: RLHandle): int {.inline.} = rl_fileio_finish_c(task).int
 
@@ -708,8 +708,8 @@ proc rl_color_create*(r, g, b, a: int): RLHandle {.inline.} =
 proc rl_font_create*(filename: string, fontSize: int): RLHandle {.inline.} =
   rl_font_create(filename.cstring, fontSize.cint)
 
-proc rl_model_asset_load*(filename: string): RLHandle {.inline.} =
-  rl_model_asset_load(filename.cstring)
+proc rl_model_load_asset*(filename: string): RLHandle {.inline.} =
+  rl_model_load_asset(filename.cstring)
 
 proc rl_model_create_from_file*(filename: string): RLHandle {.inline.} =
   rl_model_create_from_file(filename.cstring)
@@ -727,11 +727,11 @@ proc rl_model_set_transform*(
     scaleX.cfloat, scaleY.cfloat, scaleZ.cfloat
   )
 
-proc rl_model_animation_frame_count*(model: RLHandle, animationIndex: int): int {.inline.} =
-  rl_model_animation_frame_count(model, animationIndex.cint).int
+proc rl_model_get_animation_frame_count*(model: RLHandle, animationIndex: int): int {.inline.} =
+  rl_model_get_animation_frame_count(model, animationIndex.cint).int
 
-proc rl_model_animation_update*(model: RLHandle, animationIndex, frame: int) {.inline.} =
-  rl_model_animation_update(model, animationIndex.cint, frame.cint)
+proc rl_model_update_animation*(model: RLHandle, animationIndex, frame: int) {.inline.} =
+  rl_model_update_animation(model, animationIndex.cint, frame.cint)
 
 proc rl_model_set_animation*(model: RLHandle, animationIndex: int): bool {.inline.} =
   rl_model_set_animation(model, animationIndex.cint)

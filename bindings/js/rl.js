@@ -1599,11 +1599,11 @@ const RL = {
     modelGetDefaultAsset: () => moduleInstance.ccall(
         "rl_model_get_default_asset", "number", [], []
     ),
-    loadModelAsset: (path) => moduleInstance.ccall(
-        "rl_model_asset_load", "number", ["string"], [path]
+    modelLoadAsset: (path) => moduleInstance.ccall(
+        "rl_model_load_asset", "number", ["string"], [path]
     ),
-    destroyModelAsset: (asset) => moduleInstance.ccall(
-        "rl_model_asset_destroy", null, ["number"], [asset]
+    modelDestroyAsset: (asset) => moduleInstance.ccall(
+        "rl_model_destroy_asset", null, ["number"], [asset]
     ),
     createModel: (asset) => moduleInstance.ccall(
         "rl_model_create", "number", ["number"], [asset]
@@ -1634,14 +1634,14 @@ const RL = {
     isModelValidStrict: (model) => moduleInstance.ccall(
         "rl_model_is_valid_strict", "number", ["number"], [model]
     ) !== 0,
-    modelAnimationCount: (model) => moduleInstance.ccall(
-        "rl_model_animation_count", "number", ["number"], [model]
+    modelGetAnimationCount: (model) => moduleInstance.ccall(
+        "rl_model_get_animation_count", "number", ["number"], [model]
     ),
-    modelAnimationFrameCount: (model, animationIndex) => moduleInstance.ccall(
-        "rl_model_animation_frame_count", "number", ["number", "number"], [model, animationIndex]
+    modelGetAnimationFrameCount: (model, animationIndex) => moduleInstance.ccall(
+        "rl_model_get_animation_frame_count", "number", ["number", "number"], [model, animationIndex]
     ),
-    modelAnimationUpdate: (model, animationIndex, frame) => moduleInstance.ccall(
-        "rl_model_animation_update", null, ["number", "number", "number"], [model, animationIndex, frame]
+    modelUpdateAnimation: (model, animationIndex, frame) => moduleInstance.ccall(
+        "rl_model_update_animation", null, ["number", "number", "number"], [model, animationIndex, frame]
     ),
     modelSetAnimation: (model, animationIndex) => moduleInstance.ccall(
         "rl_model_set_animation", "number", ["number", "number"], [model, animationIndex]

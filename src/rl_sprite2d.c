@@ -32,11 +32,11 @@ static rl_sprite2d_instance_t *rl_sprite2d_get(rl_handle_t handle)
 {
     uint16_t index = 0;
     if (!rl_handle_pool_resolve(&rl_sprite2d_pool, handle, &index)) {
-        log_error("Invalid sprite2d handle (%u)", (unsigned int)handle);
+        if (handle != 0) log_warn("Invalid sprite2d handle (%u)", (unsigned int)handle);
         return NULL;
     }
     if (!rl_sprite2d[index].in_use) {
-        log_error("Stale sprite2d handle (%u)", (unsigned int)handle);
+        log_warn("Stale sprite2d handle (%u)", (unsigned int)handle);
         return NULL;
     }
     return &rl_sprite2d[index];
@@ -76,7 +76,7 @@ rl_handle_t rl_sprite2d_create_from_texture(rl_handle_t texture)
     rl_handle_t handle = 0;
     uint16_t index = 0;
     if (!rl_texture_retain(texture)) {
-        log_error("Invalid texture handle (%u) for rl_sprite2d_create_from_texture", texture);
+        log_warn("Invalid texture handle (%u) for rl_sprite2d_create_from_texture", texture);
         return 0;
     }
 

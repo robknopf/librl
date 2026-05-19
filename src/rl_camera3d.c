@@ -58,11 +58,11 @@ static rl_camera3d_instance_t *rl_camera3d_get_entry(rl_handle_t handle)
 {
     uint16_t index = 0;
     if (!rl_handle_pool_resolve(&rl_camera3d_pool, handle, &index)) {
-        log_error("Invalid camera3d handle (%u)", (unsigned int)handle);
+        if (handle != 0) log_warn("Invalid camera3d handle (%u)", (unsigned int)handle);
         return NULL;
     }
     if (!rl_cameras[index].in_use) {
-        log_error("Stale camera3d handle (%u)", (unsigned int)handle);
+        log_warn("Stale camera3d handle (%u)", (unsigned int)handle);
         return NULL;
     }
     return &rl_cameras[index];

@@ -46,12 +46,13 @@ static rl_sprite3d_instance_t *rl_sprite3d_get(rl_handle_t handle)
 }
 
 RL_KEEP
-rl_handle_t rl_sprite3d_create(const char *filename)
+rl_handle_t rl_sprite3d_create(rl_handle_t texture)
 {
-    rl_handle_t texture = rl_texture_create(filename);
     rl_handle_t handle = 0;
     uint16_t index = 0;
-    if (texture == 0) {
+
+    if (texture != 0 && !rl_texture_retain(texture)) {
+        log_warn("Invalid texture handle (%u) for rl_sprite3d_create", texture);
         return 0;
     }
 
@@ -59,7 +60,7 @@ rl_handle_t rl_sprite3d_create(const char *filename)
     if (handle == 0)
     {
         log_error("MAX_SPRITE3D reached (%u)", MAX_SPRITE3D);
-        rl_texture_destroy(texture);
+        if (texture != 0) rl_texture_release(texture);
         return 0;
     }
     rl_handle_pool_resolve(&rl_sprite3d_pool, handle, &index);
@@ -75,19 +76,20 @@ rl_handle_t rl_sprite3d_create(const char *filename)
 }
 
 RL_KEEP
-rl_handle_t rl_sprite3d_create_from_texture(rl_handle_t texture)
+rl_handle_t rl_sprite3d_create_from_file(const char *filename)
 {
+    rl_handle_t texture = rl_texture_create(filename);
     rl_handle_t handle = 0;
     uint16_t index = 0;
-    if (!rl_texture_retain(texture)) {
-        log_warn("Invalid texture handle (%u) for rl_sprite3d_create_from_texture", texture);
+
+    if (texture == 0) {
         return 0;
     }
 
     handle = rl_handle_pool_alloc(&rl_sprite3d_pool);
     if (handle == 0) {
         log_error("MAX_SPRITE3D reached (%u)", MAX_SPRITE3D);
-        rl_texture_release(texture);
+        rl_texture_destroy(texture);
         return 0;
     }
     rl_handle_pool_resolve(&rl_sprite3d_pool, handle, &index);
@@ -99,6 +101,20 @@ rl_handle_t rl_sprite3d_create_from_texture(rl_handle_t texture)
     rl_sprite3d[index].size = 1.0f;
     rl_sprite3d[index].in_use = true;
     return handle;
+}
+
+RL_KEEP
+bool rl_sprite3d_set_texture(rl_handle_t handle, rl_handle_t texture)
+{
+    rl_sprite3d_instance_t *sprite = rl_sprite3d_get(handle);
+    if (sprite == NULL) return false;
+    if (texture != 0 && !rl_texture_retain(texture)) {
+        log_warn("Invalid texture handle (%u) for rl_sprite3d_set_texture", texture);
+        return false;
+    }
+    if (sprite->texture != 0) rl_texture_release(sprite->texture);
+    sprite->texture = texture;
+    return true;
 }
 
 RL_KEEP
@@ -149,6 +165,9 @@ void rl_sprite3d_draw(rl_handle_t handle, rl_handle_t tint)
         }
         return;
     }
+    if (sprite->texture == 0) {
+        return;
+    }
     texture = rl_texture_get_ptr(sprite->texture);
     if (texture == NULL) {
         log_error("Missing texture for sprite3d handle (%u)", handle);
@@ -175,7 +194,7 @@ void rl_sprite3d_destroy(rl_handle_t handle)
     {
         return;
     }
-    rl_texture_release(sprite->texture);
+    if (sprite->texture != 0) rl_texture_release(sprite->texture);
     sprite->texture = 0;
     sprite->in_use = false;
     rl_handle_pool_free(&rl_sprite3d_pool, handle);

@@ -6,11 +6,42 @@
 #include "rl.h"
 #include "rl_lua_model.h"
 
-static int rl_model_create_lua(lua_State *L)
+static int rl_model_asset_load_lua(lua_State *L)
 {
     const char *filename = luaL_checkstring(L, 1);
-    rl_handle_t handle = rl_model_create(filename);
+    rl_handle_t handle = rl_model_asset_load(filename);
     lua_pushinteger(L, handle);
+    return 1;
+}
+
+static int rl_model_asset_destroy_lua(lua_State *L)
+{
+    rl_handle_t asset = (rl_handle_t)luaL_checkinteger(L, 1);
+    rl_model_asset_destroy(asset);
+    return 0;
+}
+
+static int rl_model_create_lua(lua_State *L)
+{
+    rl_handle_t asset = (rl_handle_t)luaL_optinteger(L, 1, 0);
+    rl_handle_t handle = rl_model_create(asset);
+    lua_pushinteger(L, handle);
+    return 1;
+}
+
+static int rl_model_create_from_file_lua(lua_State *L)
+{
+    const char *filename = luaL_checkstring(L, 1);
+    rl_handle_t handle = rl_model_create_from_file(filename);
+    lua_pushinteger(L, handle);
+    return 1;
+}
+
+static int rl_model_set_asset_lua(lua_State *L)
+{
+    rl_handle_t model = (rl_handle_t)luaL_checkinteger(L, 1);
+    rl_handle_t asset = (rl_handle_t)luaL_checkinteger(L, 2);
+    lua_pushboolean(L, rl_model_set_asset(model, asset) ? 1 : 0);
     return 1;
 }
 
@@ -117,8 +148,20 @@ static int rl_model_destroy_lua(lua_State *L)
 
 void rl_register_model_bindings(lua_State *L)
 {
+    lua_pushcfunction(L, rl_model_asset_load_lua);
+    lua_setfield(L, -2, "model_asset_load");
+
+    lua_pushcfunction(L, rl_model_asset_destroy_lua);
+    lua_setfield(L, -2, "model_asset_destroy");
+
     lua_pushcfunction(L, rl_model_create_lua);
     lua_setfield(L, -2, "model_create");
+
+    lua_pushcfunction(L, rl_model_create_from_file_lua);
+    lua_setfield(L, -2, "model_create_from_file");
+
+    lua_pushcfunction(L, rl_model_set_asset_lua);
+    lua_setfield(L, -2, "model_set_asset");
 
     lua_pushcfunction(L, rl_model_set_transform_lua);
     lua_setfield(L, -2, "model_set_transform");

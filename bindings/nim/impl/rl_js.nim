@@ -327,8 +327,13 @@ proc rl_texture_draw_ground*(texture: RLHandle, x, y, z, width, length: float, t
   importjs: "__gRl.drawTextureGround(#,#,#,#,#,#,#)".}
 
 # Model
-proc rl_model_create*(filename: cstring): RLHandle {.importjs: "__gRl.createModel(#)".}
-proc rl_model_create*(filename: string): RLHandle {.inline.} = rl_model_create(filename.cstring)
+proc rl_model_asset_load*(filename: cstring): RLHandle {.importjs: "__gRl.loadModelAsset(#)".}
+proc rl_model_asset_load*(filename: string): RLHandle {.inline.} = rl_model_asset_load(filename.cstring)
+proc rl_model_asset_destroy*(asset: RLHandle) {.importjs: "__gRl.destroyModelAsset(#)".}
+proc rl_model_create*(asset: RLHandle): RLHandle {.importjs: "__gRl.createModel(#)".}
+proc rl_model_create_from_file*(filename: cstring): RLHandle {.importjs: "__gRl.createModelFromFile(#)".}
+proc rl_model_create_from_file*(filename: string): RLHandle {.inline.} = rl_model_create_from_file(filename.cstring)
+proc rl_model_set_asset*(model: RLHandle, asset: RLHandle): bool {.importjs: "__gRl.modelSetAsset(#,#)".}
 proc rl_model_destroy*(model: RLHandle) {.importjs: "__gRl.destroyModel(#)".}
 proc rl_model_draw*(model: RLHandle, tint: RLHandle) {.importjs: "__gRl.drawModel(#,#)".}
 proc rl_model_is_valid*(model: RLHandle): bool {.importjs: "__gRl.isModelValid(#)".}
@@ -355,10 +360,11 @@ proc rl_pick_model*(camera, model: RLHandle, mouseX, mouseY: float): RLPickResul
   importjs: "__gRl.pickModel(#,#,#,#)".}
 
 # Sprite3D
-proc rl_sprite3d_create*(filename: cstring): RLHandle {.importjs: "__gRl.createSprite3d(#)".}
-proc rl_sprite3d_create*(filename: string): RLHandle {.inline.} = rl_sprite3d_create(filename.cstring)
-proc rl_sprite3d_create_from_texture*(texture: RLHandle): RLHandle {.
-  importjs: "__gRl.createSprite3dFromTexture(#)".}
+proc rl_sprite3d_create*(texture: RLHandle): RLHandle {.importjs: "__gRl.createSprite3d(#)".}
+proc rl_sprite3d_create_from_file*(filename: cstring): RLHandle {.importjs: "__gRl.createSprite3dFromFile(#)".}
+proc rl_sprite3d_create_from_file*(filename: string): RLHandle {.inline.} = rl_sprite3d_create_from_file(filename.cstring)
+proc rl_sprite3d_set_texture*(sprite: RLHandle, texture: RLHandle): bool {.
+  importjs: "__gRl.sprite3dSetTexture(#,#)".}
 proc rl_sprite3d_set_transform*(sprite: RLHandle,
                                 positionX, positionY, positionZ, size: float): bool {.
   importjs: "__gRl.sprite3dSetTransform(#,#,#,#,#)".}
@@ -368,10 +374,11 @@ proc rl_pick_sprite3d*(camera, sprite3d: RLHandle, mouseX, mouseY: float): RLPic
   importjs: "__gRl.pickSprite3d(#,#,#,#)".}
 
 # Sprite2D
-proc rl_sprite2d_create*(filename: cstring): RLHandle {.importjs: "__gRl.createSprite2D(#)".}
-proc rl_sprite2d_create*(filename: string): RLHandle {.inline.} = rl_sprite2d_create(filename.cstring)
-proc rl_sprite2d_create_from_texture*(texture: RLHandle): RLHandle {.
-  importjs: "__gRl.createSprite2DFromTexture(#)".}
+proc rl_sprite2d_create*(texture: RLHandle): RLHandle {.importjs: "__gRl.createSprite2D(#)".}
+proc rl_sprite2d_create_from_file*(filename: cstring): RLHandle {.importjs: "__gRl.createSprite2DFromFile(#)".}
+proc rl_sprite2d_create_from_file*(filename: string): RLHandle {.inline.} = rl_sprite2d_create_from_file(filename.cstring)
+proc rl_sprite2d_set_texture*(sprite: RLHandle, texture: RLHandle): bool {.
+  importjs: "__gRl.sprite2DSetTexture(#,#)".}
 proc rl_sprite2d_set_transform*(sprite: RLHandle, x, y, scale, rotation: float): bool {.
   importjs: "__gRl.sprite2DSetTransform(#,#,#,#,#)".}
 proc rl_sprite2d_draw*(sprite: RLHandle, tint: RLHandle) {.importjs: "__gRl.drawSprite2D(#,#)".}

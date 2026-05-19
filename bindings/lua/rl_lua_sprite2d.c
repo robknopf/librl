@@ -8,17 +8,25 @@
 
 static int rl_sprite2d_create_lua(lua_State *L)
 {
-    const char *filename = luaL_checkstring(L, 1);
-    rl_handle_t handle = rl_sprite2d_create(filename);
+    rl_handle_t texture = (rl_handle_t)luaL_optinteger(L, 1, 0);
+    rl_handle_t handle = rl_sprite2d_create(texture);
     lua_pushinteger(L, handle);
     return 1;
 }
 
-static int rl_sprite2d_create_from_texture_lua(lua_State *L)
+static int rl_sprite2d_create_from_file_lua(lua_State *L)
 {
-    rl_handle_t texture = (rl_handle_t)luaL_checkinteger(L, 1);
-    rl_handle_t handle = rl_sprite2d_create_from_texture(texture);
+    const char *filename = luaL_checkstring(L, 1);
+    rl_handle_t handle = rl_sprite2d_create_from_file(filename);
     lua_pushinteger(L, handle);
+    return 1;
+}
+
+static int rl_sprite2d_set_texture_lua(lua_State *L)
+{
+    rl_handle_t sprite = (rl_handle_t)luaL_checkinteger(L, 1);
+    rl_handle_t texture = (rl_handle_t)luaL_checkinteger(L, 2);
+    lua_pushboolean(L, rl_sprite2d_set_texture(sprite, texture) ? 1 : 0);
     return 1;
 }
 
@@ -53,8 +61,11 @@ void rl_register_sprite2d_bindings(lua_State *L)
     lua_pushcfunction(L, rl_sprite2d_create_lua);
     lua_setfield(L, -2, "sprite2d_create");
 
-    lua_pushcfunction(L, rl_sprite2d_create_from_texture_lua);
-    lua_setfield(L, -2, "sprite2d_create_from_texture");
+    lua_pushcfunction(L, rl_sprite2d_create_from_file_lua);
+    lua_setfield(L, -2, "sprite2d_create_from_file");
+
+    lua_pushcfunction(L, rl_sprite2d_set_texture_lua);
+    lua_setfield(L, -2, "sprite2d_set_texture");
 
     lua_pushcfunction(L, rl_sprite2d_set_transform_lua);
     lua_setfield(L, -2, "sprite2d_set_transform");

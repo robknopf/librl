@@ -135,7 +135,11 @@ LDFLAGS_WASM = \
 	"_rl_font_get_default", \
 	"_rl_font_create", \
 	"_rl_font_destroy", \
+	"_rl_model_asset_load", \
+	"_rl_model_asset_destroy", \
 	"_rl_model_create", \
+	"_rl_model_create_from_file", \
+	"_rl_model_set_asset", \
 	"_rl_model_set_transform", \
 	"_rl_model_draw", \
 	"_rl_model_is_valid", \
@@ -182,7 +186,8 @@ LDFLAGS_WASM = \
 	"_rl_texture_draw_ex", \
 	"_rl_texture_draw_ground", \
 	"_rl_sprite2d_create", \
-	"_rl_sprite2d_create_from_texture", \
+	"_rl_sprite2d_create_from_file", \
+	"_rl_sprite2d_set_texture", \
 	"_rl_sprite2d_set_transform", \
 	"_rl_sprite2d_draw", \
 	"_rl_sprite2d_destroy", \
@@ -195,7 +200,8 @@ LDFLAGS_WASM = \
 	"_rl_text2d_draw", \
 	"_rl_text2d_destroy", \
 	"_rl_sprite3d_create", \
-	"_rl_sprite3d_create_from_texture", \
+	"_rl_sprite3d_create_from_file", \
+	"_rl_sprite3d_set_texture", \
 	"_rl_sprite3d_set_transform", \
 	"_rl_sprite3d_draw", \
 	"_rl_sprite3d_destroy", \

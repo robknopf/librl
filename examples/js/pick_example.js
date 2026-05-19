@@ -39,8 +39,8 @@ import { rl } from "../../bindings/js/rl.js";
 
     const komika = rl.createFont(fontPath, fontSize);
     const komikaSmall = rl.createFont(fontPath, smallFontSize);
-    const gumshoe = rl.createModel(modelPath);
-    const sprite = rl.createSprite3D(spritePath);
+    const gumshoe = rl.createModelFromFile(modelPath);
+    const sprite = rl.createSprite3dFromFile(spritePath);
     const camera = rl.createCamera3D(
       12.0, 12.0, 12.0,
       0.0, 1.0, 0.0,

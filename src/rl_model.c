@@ -208,6 +208,14 @@ static rl_handle_t rl_model_find_asset_by_path(const char *normalized_path)
  * - one asset owns loaded model + optional animation clip array
  * - instances retain/release assets and keep per-entity playback state
  */
+static bool rl_model_asset_retain(rl_handle_t asset_handle)
+{
+    rl_model_asset_t *asset = rl_model_asset_get(asset_handle);
+    if (asset == NULL) return false;
+    asset->ref_count++;
+    return true;
+}
+
 static void rl_model_asset_release(rl_handle_t asset_handle)
 {
     rl_model_asset_t *asset = rl_model_asset_get(asset_handle);
@@ -289,12 +297,7 @@ static rl_handle_t rl_model_instance_create(rl_handle_t asset_handle)
 {
     rl_handle_t handle = rl_handle_pool_alloc(&rl_model_instance_pool);
     rl_model_instance_t *instance = NULL;
-    rl_model_asset_t *asset = rl_model_asset_get(asset_handle);
     uint16_t index = 0;
-
-    if (asset == NULL) {
-        return 0;
-    }
 
     if (handle == 0) {
         log_error("MAX_MODELS reached (%d)", MAX_MODELS);
@@ -307,9 +310,12 @@ static rl_handle_t rl_model_instance_create(rl_handle_t asset_handle)
     instance->in_use = true;
     instance->asset_handle = asset_handle;
 
-    if (asset->animation_count > 0) {
-        instance->selected_animation = 0;
-        instance->animation_playing = true;
+    if (asset_handle != 0) {
+        rl_model_asset_t *asset = rl_model_asset_get(asset_handle);
+        if (asset != NULL && asset->animation_count > 0) {
+            instance->selected_animation = 0;
+            instance->animation_playing = true;
+        }
     }
 
     return handle;
@@ -360,11 +366,10 @@ static bool rl_model_prepare_animation_gpu_state(rl_model_instance_t *instance, 
 }
 
 RL_KEEP
-rl_handle_t rl_model_create(const char *filename)
+rl_handle_t rl_model_asset_load(const char *filename)
 {
     char normalized_path[256] = {0};
     rl_handle_t asset_handle = 0;
-    rl_handle_t instance_handle = 0;
     Model loaded_model = {0};
     ModelAnimation *animations = NULL;
     int animation_count = 0;
@@ -373,28 +378,17 @@ rl_handle_t rl_model_create(const char *filename)
     if (!filename || filename[0] == '\0') {
         return 0;
     }
-
     if (!IsWindowReady()) {
-        log_error("rl_model_create(%s) called before window/context is ready", filename);
+        log_error("rl_model_asset_load(%s) called before window/context is ready", filename);
         return 0;
     }
 
     path_normalize(filename, normalized_path, sizeof(normalized_path));
 
-    // Reuse successfully loaded source assets by path.
     asset_handle = rl_model_find_asset_by_path(normalized_path);
-    if (asset_handle != 0)
-    {
-        rl_model_asset_t *asset = rl_model_asset_get(asset_handle);
-        if (asset == NULL) {
-            return 0;
-        }
-        asset->ref_count++;
-        instance_handle = rl_model_instance_create(asset_handle);
-        if (instance_handle == 0) {
-            rl_model_asset_release(asset_handle);
-        }
-        return instance_handle;
+    if (asset_handle != 0) {
+        rl_model_asset_retain(asset_handle);
+        return asset_handle;
     }
 
     loaded_model = LoadModel(normalized_path);
@@ -405,17 +399,15 @@ rl_handle_t rl_model_create(const char *filename)
         if (loaded_model.meshCount > 0 || loaded_model.materialCount > 0) {
             UnloadModel(loaded_model);
         }
-
         loaded_model = LoadModelFromMesh(GenMeshCube(1.0f, 1.0f, 1.0f));
         if (!rl_model_is_valid_model(loaded_model)) {
             log_error("Failed to create placeholder model for (%s)", normalized_path);
             return 0;
         }
-        using_placeholder = true; // Placeholder instance; caller can still render something visible.
+        using_placeholder = true;
     }
 
-    if (!using_placeholder)
-    {
+    if (!using_placeholder) {
         animations = LoadModelAnimations(normalized_path, &animation_count);
         if (animations == NULL || animation_count <= 0) {
             animations = NULL;
@@ -423,24 +415,70 @@ rl_handle_t rl_model_create(const char *filename)
         }
     }
 
-    // Do not cache placeholder assets by path so future create calls can retry real loads.
-    asset_handle = rl_model_asset_create(loaded_model,
-                                         animations,
-                                         animation_count,
-                                         normalized_path,
-                                         !using_placeholder);
-    if (asset_handle == 0) {
+    return rl_model_asset_create(loaded_model, animations, animation_count,
+                                 normalized_path, !using_placeholder);
+}
+
+RL_KEEP
+void rl_model_asset_destroy(rl_handle_t asset_handle)
+{
+    rl_model_asset_release(asset_handle);
+}
+
+RL_KEEP
+rl_handle_t rl_model_create(rl_handle_t asset_handle)
+{
+    rl_handle_t instance_handle = 0;
+
+    if (asset_handle != 0 && !rl_model_asset_retain(asset_handle)) {
+        log_warn("Invalid model asset handle (%u) for rl_model_create", asset_handle);
         return 0;
     }
 
     instance_handle = rl_model_instance_create(asset_handle);
-    if (instance_handle == 0)
-    {
+    if (instance_handle == 0 && asset_handle != 0) {
         rl_model_asset_release(asset_handle);
-        return 0;
     }
-
     return instance_handle;
+}
+
+RL_KEEP
+rl_handle_t rl_model_create_from_file(const char *filename)
+{
+    rl_handle_t asset_handle = rl_model_asset_load(filename);
+    rl_handle_t instance_handle = rl_model_instance_create(asset_handle);
+    if (instance_handle == 0 && asset_handle != 0) {
+        rl_model_asset_release(asset_handle);
+    }
+    return instance_handle;
+}
+
+RL_KEEP
+bool rl_model_set_asset(rl_handle_t handle, rl_handle_t asset_handle)
+{
+    rl_model_instance_t *instance = rl_model_instance_get(handle);
+    if (instance == NULL) return false;
+
+    if (asset_handle != 0 && !rl_model_asset_retain(asset_handle)) {
+        log_warn("Invalid model asset handle (%u) for rl_model_set_asset", asset_handle);
+        return false;
+    }
+    if (instance->asset_handle != 0) rl_model_asset_release(instance->asset_handle);
+
+    instance->asset_handle = asset_handle;
+    instance->selected_animation = -1;
+    instance->animation_time = 0.0f;
+    instance->animation_playing = false;
+    instance->animation_gpu_warning_emitted = false;
+
+    if (asset_handle != 0) {
+        rl_model_asset_t *asset = rl_model_asset_get(asset_handle);
+        if (asset != NULL && asset->animation_count > 0) {
+            instance->selected_animation = 0;
+            instance->animation_playing = true;
+        }
+    }
+    return true;
 }
 
 RL_KEEP
@@ -718,9 +756,21 @@ void rl_model_draw(rl_handle_t handle, rl_handle_t tint)
         return;
     }
 
+    if (instance->asset_handle == 0) {
+        return;
+    }
+
     asset = rl_model_asset_get(instance->asset_handle);
     if (asset == NULL || asset->model == NULL) {
-        log_error("Missing model asset for handle (%d)", handle);
+        rotation_quat = QuaternionFromEuler(instance->rotation_x * DEG2RAD,
+                                            instance->rotation_y * DEG2RAD,
+                                            instance->rotation_z * DEG2RAD);
+        QuaternionToAxisAngle(rotation_quat, &rotation_axis, &rotation_angle);
+        DrawModelEx(rl_model_placeholder,
+                    (Vector3){instance->position_x, instance->position_y, instance->position_z},
+                    rotation_axis, rotation_angle * RAD2DEG,
+                    (Vector3){instance->scale_x, instance->scale_y, instance->scale_z},
+                    (Color){255, 0, 255, 255});
         return;
     }
 

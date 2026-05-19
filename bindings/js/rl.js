@@ -1596,9 +1596,21 @@ const RL = {
     setTargetFPS: (fps) => moduleInstance.ccall(
         "rl_set_target_fps", null, ["number"], [fps]
     ),
-    createModel: (path) => moduleInstance.ccall(
-        "rl_model_create", "number", ["string"], [path]
+    loadModelAsset: (path) => moduleInstance.ccall(
+        "rl_model_asset_load", "number", ["string"], [path]
     ),
+    destroyModelAsset: (asset) => moduleInstance.ccall(
+        "rl_model_asset_destroy", null, ["number"], [asset]
+    ),
+    createModel: (asset) => moduleInstance.ccall(
+        "rl_model_create", "number", ["number"], [asset]
+    ),
+    createModelFromFile: (path) => moduleInstance.ccall(
+        "rl_model_create_from_file", "number", ["string"], [path]
+    ),
+    modelSetAsset: (model, asset) => moduleInstance.ccall(
+        "rl_model_set_asset", "number", ["number", "number"], [model, asset]
+    ) !== 0,
     modelSetTransform: (
         model,
         positionX, positionY, positionZ,
@@ -1760,12 +1772,15 @@ const RL = {
     destroyTexture: (texture) => moduleInstance.ccall(
         "rl_texture_destroy", null, ["number"], [texture]
     ),
-    createSprite3d: (path) => moduleInstance.ccall(
-        "rl_sprite3d_create", "number", ["string"], [path]
+    createSprite3d: (texture) => moduleInstance.ccall(
+        "rl_sprite3d_create", "number", ["number"], [texture]
     ),
-    createSprite3dFromTexture: (texture) => moduleInstance.ccall(
-        "rl_sprite3d_create_from_texture", "number", ["number"], [texture]
+    createSprite3dFromFile: (path) => moduleInstance.ccall(
+        "rl_sprite3d_create_from_file", "number", ["string"], [path]
     ),
+    sprite3dSetTexture: (sprite, texture) => moduleInstance.ccall(
+        "rl_sprite3d_set_texture", "number", ["number", "number"], [sprite, texture]
+    ) !== 0,
     sprite3dSetTransform: (sprite, positionX, positionY, positionZ, size) => moduleInstance.ccall(
         "rl_sprite3d_set_transform", "number", ["number", "number", "number", "number", "number"], [sprite, positionX, positionY, positionZ, size]
     ) !== 0,
@@ -1775,12 +1790,15 @@ const RL = {
     destroySprite3d: (sprite) => moduleInstance.ccall(
         "rl_sprite3d_destroy", null, ["number"], [sprite]
     ),
-    createSprite2D: (path) => moduleInstance.ccall(
-        "rl_sprite2d_create", "number", ["string"], [path]
+    createSprite2D: (texture) => moduleInstance.ccall(
+        "rl_sprite2d_create", "number", ["number"], [texture]
     ),
-    createSprite2DFromTexture: (texture) => moduleInstance.ccall(
-        "rl_sprite2d_create_from_texture", "number", ["number"], [texture]
+    createSprite2DFromFile: (path) => moduleInstance.ccall(
+        "rl_sprite2d_create_from_file", "number", ["string"], [path]
     ),
+    sprite2DSetTexture: (sprite, texture) => moduleInstance.ccall(
+        "rl_sprite2d_set_texture", "number", ["number", "number"], [sprite, texture]
+    ) !== 0,
     sprite2DSetTransform: (sprite, x, y, scale, rotation) => moduleInstance.ccall(
         "rl_sprite2d_set_transform", "number", ["number", "number", "number", "number", "number"], [sprite, x, y, scale, rotation]
     ) !== 0,

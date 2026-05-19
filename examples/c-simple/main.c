@@ -96,7 +96,7 @@ static void on_import_model_ready(const char *path, void *user_data) {
   if (ctx == NULL) {
     return;
   }
-  ctx->gumshoe = rl_model_create(path);
+  ctx->gumshoe = rl_model_create_from_file(path);
   (void)rl_model_set_animation(ctx->gumshoe, 1);
   (void)rl_model_set_animation_speed(ctx->gumshoe, 1.0f);
   (void)rl_model_set_animation_loop(ctx->gumshoe, true);
@@ -109,7 +109,7 @@ static void on_import_sprite_ready(const char *path, void *user_data) {
   if (ctx == NULL) {
     return;
   }
-  ctx->sprite = rl_sprite3d_create(path);
+  ctx->sprite = rl_sprite3d_create_from_file(path);
   (void)rl_sprite3d_set_transform(ctx->sprite, 0.0f, 0.0f, ctx->sprite_y_offset,
                                   1.0f);
 }

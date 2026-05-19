@@ -69,7 +69,7 @@ proc queueAssets() =
 
   ctx.loadingGroup.addImportTask(ModelPath,
     onSuccess = proc(path: string, loadedCtx: var AppContext) =
-      loadedCtx.gumshoe = rl_model_create(path)
+      loadedCtx.gumshoe = rl_model_create_from_file(path)
       discard rl_model_set_animation(loadedCtx.gumshoe, 1)
       discard rl_model_set_animation_speed(loadedCtx.gumshoe, 1.0)
       discard rl_model_set_animation_loop(loadedCtx.gumshoe, true)
@@ -85,7 +85,7 @@ proc queueAssets() =
 
   ctx.loadingGroup.addImportTask(SpritePath,
     onSuccess = proc(path: string, loadedCtx: var AppContext) =
-      loadedCtx.sprite = rl_sprite3d_create(path)
+      loadedCtx.sprite = rl_sprite3d_create_from_file(path)
       discard rl_sprite3d_set_transform(loadedCtx.sprite, 0.0, 0.0, loadedCtx.spriteYOffset, 1.0),
     onError = proc(path: string, loadedCtx: var AppContext) =
       log.error("Failed to import SPRITE: " & path)

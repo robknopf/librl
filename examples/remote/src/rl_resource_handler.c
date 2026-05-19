@@ -184,13 +184,13 @@ static rl_handle_t create_handle_for_type(rl_resource_request_type_t type,
     case RL_RESOURCE_REQUEST_CREATE_TEXTURE:
       return rl_texture_create(filename);
     case RL_RESOURCE_REQUEST_CREATE_MODEL:
-      return rl_model_create(filename);
+      return rl_model_create_from_file(filename);
     case RL_RESOURCE_REQUEST_CREATE_SOUND:
       return rl_sound_create(filename);
     case RL_RESOURCE_REQUEST_CREATE_MUSIC:
       return rl_music_create(filename);
     case RL_RESOURCE_REQUEST_CREATE_SPRITE3D:
-      return rl_sprite3d_create(filename);
+      return rl_sprite3d_create_from_file(filename);
     default:
       return 0;
   }

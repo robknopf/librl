@@ -146,6 +146,16 @@ class SimpleRuntime implements IRuntime {
 		RL.text2dSetPosition(ctx.labelText2d, 10, 136);
 		RL.text2dSetColor(ctx.labelText2d, RL.COLOR_GREEN);
 
+		// create a model3d.  Note that it we will update the model asset (mesh/skeleton/animation) when it is available
+		ctx.gumshoe = RL.modelCreate(0);
+		RL.modelSetAnimation(ctx.gumshoe, 1);
+		RL.modelSetAnimationSpeed(ctx.gumshoe, 1.0);
+		RL.modelSetAnimationLoop(ctx.gumshoe, true);
+		RL.modelSetTransform(ctx.gumshoe, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+
+		// set the fonts to the default font, they will be replaced when the real fonts come in
+		//var defaultFont = RL.fontGetDefault();
+
 		queueAssets();
 
 		platformText = getPlatformText();
@@ -201,12 +211,8 @@ class SimpleRuntime implements IRuntime {
 
 		// 3D render
 		RL.renderBeginMode3d();
-		if (ctx.gumshoe != 0) {
-			RL.modelDraw(ctx.gumshoe, RL.COLOR_RAYWHITE);
-		}
-		if (ctx.sprite != 0) {
-			RL.sprite3dDraw(ctx.sprite, RL.COLOR_RAYWHITE);
-		}
+		RL.modelDraw(ctx.gumshoe, RL.COLOR_RAYWHITE);
+		RL.sprite3dDraw(ctx.sprite, RL.COLOR_RAYWHITE);
 		RL.renderEndMode3d();
 
 		// 2D UI overlay
@@ -321,16 +327,16 @@ class SimpleRuntime implements IRuntime {
 			Log.error("Failed to import BGM: " + path);
 		});
 		importAssetAsync(MODEL_PATH, (path, userData) -> {
-			ctx.gumshoe = RL.modelCreate(path);
-			RL.modelSetAnimation(ctx.gumshoe, 1);
-			RL.modelSetAnimationSpeed(ctx.gumshoe, 1.0);
-			RL.modelSetAnimationLoop(ctx.gumshoe, true);
-			RL.modelSetTransform(ctx.gumshoe, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+			//ctx.gumshoe = RL.modelCreateFromFile(path);
+			var gumshoeAsset = RL.modelAssetLoad(path);
+			if (ctx.gumshoe != 0) {
+				RL.modelSetAsset(ctx.gumshoe, gumshoeAsset);
+			}
 		}, (path, userData) -> {
 			Log.error("Failed to import MODEL: " + path);
 		});
 		importAssetAsync(SPRITE_PATH, (path, userData) -> {
-			ctx.sprite = RL.sprite3dCreate(path);
+			ctx.sprite = RL.sprite3dCreateFromFile(path);
 			RL.sprite3dSetTransform(ctx.sprite, 0, 0, ctx.spriteYOffset, 1.0);
 		}, (path, userData) -> {
 			Log.error("Failed to import SPRITE: " + path);

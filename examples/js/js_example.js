@@ -67,13 +67,13 @@ import { rl } from "../../bindings/js/rl.js";
       {}
     );
     loadingGroup.addImportTask(modelPath, (path) => {
-      gumshoe = rl.createModel(path);
+      gumshoe = rl.createModelFromFile(path);
       rl.modelSetAnimation(gumshoe, 1);
       rl.modelSetAnimationSpeed(gumshoe, 1.0);
       rl.modelSetAnimationLoop(gumshoe, true);
     });
     loadingGroup.addImportTask(spritePath, (path) => {
-      sprite = rl.createSprite3d(path);
+      sprite = rl.createSprite3dFromFile(path);
     });
     loadingGroup.addImportTask(fontPath, (path) => {
       komika = rl.createFont(path, fontSize);
@@ -97,7 +97,7 @@ import { rl } from "../../bindings/js/rl.js";
     };
 
     importAssetTask(modelPath, (path) => {
-      gumshoe = rl.createModel(path);
+      gumshoe = rl.createModelFromFile(path);
       rl.modelSetAnimation(gumshoe, 1);
       rl.modelSetAnimationSpeed(gumshoe, 1.0);
       rl.modelSetAnimationLoop(gumshoe, true);
@@ -105,7 +105,7 @@ import { rl } from "../../bindings/js/rl.js";
       console.error(`asset import failed: ${path}: ${error}`);
     });
     importAssetTask(spritePath, (path) => {
-      sprite = rl.createSprite3d(path);
+      sprite = rl.createSprite3dFromFile(path);
     }, (path, error) => {
       console.error(`asset import failed: ${path}: ${error}`);
     });

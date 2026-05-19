@@ -136,14 +136,14 @@ class MainScript extends Script {
 			}
 		}, null, ctx);
 		RL.fileioAddTask(RL.fileioEnsureAsync(MODEL_PATH), (path, _) -> {
-			ctx.gumshoe = RL.modelCreate(path);
+			ctx.gumshoe = RL.modelCreateFromFile(path);
 			RL.modelSetTransform(ctx.gumshoe, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
 			RL.modelSetAnimation(ctx.gumshoe, 1);
 			RL.modelSetAnimationSpeed(ctx.gumshoe, 1.0);
 			RL.modelSetAnimationLoop(ctx.gumshoe, true);
 		}, null, ctx);
 		RL.fileioAddTask(RL.fileioEnsureAsync(SPRITE_PATH), (path, _) -> {
-			ctx.sprite = RL.sprite3dCreate(path);
+			ctx.sprite = RL.sprite3dCreateFromFile(path);
 			RL.sprite3dSetTransform(ctx.sprite, 0.0, 0.0, ctx.spriteYOffset, 1.0);
 		}, null, ctx);
 		RL.fileioAddTask(RL.fileioEnsureAsync(BGM_PATH), (path, _) -> {

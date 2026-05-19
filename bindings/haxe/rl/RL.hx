@@ -598,8 +598,24 @@ class RL {
 		rl.impl.RLImpl.camera3dDestroy(camera);
 	}
 
-	public static function modelCreate(filename:String):RLHandle {
-		return rl.impl.RLImpl.modelCreate(filename);
+	public static function modelAssetLoad(filename:String):RLHandle {
+		return rl.impl.RLImpl.modelAssetLoad(filename);
+	}
+
+	public static function modelAssetDestroy(asset:RLHandle):Void {
+		rl.impl.RLImpl.modelAssetDestroy(asset);
+	}
+
+	public static function modelCreate(asset:RLHandle):RLHandle {
+		return rl.impl.RLImpl.modelCreate(asset);
+	}
+
+	public static function modelCreateFromFile(filename:String):RLHandle {
+		return rl.impl.RLImpl.modelCreateFromFile(filename);
+	}
+
+	public static function modelSetAsset(model:RLHandle, asset:RLHandle):Bool {
+		return rl.impl.RLImpl.modelSetAsset(model, asset);
 	}
 
 	public static function modelSetTransform(model:RLHandle, positionX:Float, positionY:Float, positionZ:Float, rotationX:Float, rotationY:Float,
@@ -631,8 +647,16 @@ class RL {
 		rl.impl.RLImpl.modelDestroy(model);
 	}
 
-	public static function sprite3dCreate(filename:String):RLHandle {
-		return rl.impl.RLImpl.sprite3dCreate(filename);
+	public static function sprite3dCreate(texture:RLHandle):RLHandle {
+		return rl.impl.RLImpl.sprite3dCreate(texture);
+	}
+
+	public static function sprite3dCreateFromFile(filename:String):RLHandle {
+		return rl.impl.RLImpl.sprite3dCreateFromFile(filename);
+	}
+
+	public static function sprite3dSetTexture(sprite:RLHandle, texture:RLHandle):Bool {
+		return rl.impl.RLImpl.sprite3dSetTexture(sprite, texture);
 	}
 
 	public static function sprite3dSetTransform(sprite:RLHandle, positionX:Float, positionY:Float, positionZ:Float, size:Float):Bool {
@@ -647,12 +671,16 @@ class RL {
 		rl.impl.RLImpl.sprite3dDestroy(sprite);
 	}
 
-	public static function sprite2dCreate(filename:String):RLHandle {
-		return rl.impl.RLImpl.sprite2dCreate(filename);
+	public static function sprite2dCreate(texture:RLHandle):RLHandle {
+		return rl.impl.RLImpl.sprite2dCreate(texture);
 	}
 
-	public static function sprite2dCreateFromTexture(texture:RLHandle):RLHandle {
-		return rl.impl.RLImpl.sprite2dCreateFromTexture(texture);
+	public static function sprite2dCreateFromFile(filename:String):RLHandle {
+		return rl.impl.RLImpl.sprite2dCreateFromFile(filename);
+	}
+
+	public static function sprite2dSetTexture(sprite:RLHandle, texture:RLHandle):Bool {
+		return rl.impl.RLImpl.sprite2dSetTexture(sprite, texture);
 	}
 
 	public static function sprite2dSetTransform(sprite:RLHandle, x:Float, y:Float, scale:Float, rotation:Float):Bool {

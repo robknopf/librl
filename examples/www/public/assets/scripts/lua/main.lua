@@ -82,7 +82,7 @@ local function on_init()
   platform_text = "Platform: " .. tostring(rl.get_platform())
 
   rl.fileio_add_task(rl.fileio_ensure_async("assets/models/gumshoe/gumshoe.glb"), function(path)
-    ctx.model = rl.model_create(path)
+    ctx.model = rl.model_create_from_file(path)
     rl.model_set_animation(ctx.model, 1)
     rl.model_set_animation_speed(ctx.model, 1.0)
     rl.model_set_animation_loop(ctx.model, true)
@@ -90,7 +90,7 @@ local function on_init()
   end, nil)
 
   rl.fileio_add_task(rl.fileio_ensure_async("assets/sprites/logo/wg-logo-bw-alpha.png"), function(path)
-    ctx.sprite = rl.sprite3d_create(path)
+    ctx.sprite = rl.sprite3d_create_from_file(path)
   end, nil)
 
   rl.fileio_add_task(

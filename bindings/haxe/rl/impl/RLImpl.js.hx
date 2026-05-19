@@ -573,8 +573,22 @@ class RLImpl {
 			binding.destroyCamera3d(camera);
 	}
 
-	public static function modelCreate(filename:String):RLHandle
-		return binding == null ? 0 : cast binding.createModel(filename);
+	public static function modelAssetLoad(filename:String):RLHandle
+		return binding == null ? 0 : cast binding.loadModelAsset(filename);
+
+	public static function modelAssetDestroy(asset:RLHandle):Void {
+		if (binding != null)
+			binding.destroyModelAsset(asset);
+	}
+
+	public static function modelCreate(asset:RLHandle):RLHandle
+		return binding == null ? 0 : cast binding.createModel(asset);
+
+	public static function modelCreateFromFile(filename:String):RLHandle
+		return binding == null ? 0 : cast binding.createModelFromFile(filename);
+
+	public static function modelSetAsset(model:RLHandle, asset:RLHandle):Bool
+		return binding != null && cast binding.modelSetAsset(model, asset);
 
 	public static function modelSetTransform(model:RLHandle, positionX:Float, positionY:Float, positionZ:Float, rotationX:Float, rotationY:Float,
 			rotationZ:Float, scaleX:Float, scaleY:Float, scaleZ:Float):Bool
@@ -603,8 +617,14 @@ class RLImpl {
 			binding.destroyModel(model);
 	}
 
-	public static function sprite3dCreate(filename:String):RLHandle
-		return binding == null ? 0 : cast binding.createSprite3d(filename);
+	public static function sprite3dCreate(texture:RLHandle):RLHandle
+		return binding == null ? 0 : cast binding.createSprite3d(texture);
+
+	public static function sprite3dCreateFromFile(filename:String):RLHandle
+		return binding == null ? 0 : cast binding.createSprite3dFromFile(filename);
+
+	public static function sprite3dSetTexture(sprite:RLHandle, texture:RLHandle):Bool
+		return binding != null && cast binding.sprite3dSetTexture(sprite, texture);
 
 	public static function sprite3dSetTransform(sprite:RLHandle, positionX:Float, positionY:Float, positionZ:Float, size:Float):Bool
 		return binding != null && cast binding.sprite3dSetTransform(sprite, positionX, positionY, positionZ, size);
@@ -619,11 +639,14 @@ class RLImpl {
 			binding.destroySprite3d(sprite);
 	}
 
-	public static function sprite2dCreate(filename:String):RLHandle
-		return binding == null ? 0 : cast binding.createSprite2D(filename);
+	public static function sprite2dCreate(texture:RLHandle):RLHandle
+		return binding == null ? 0 : cast binding.createSprite2D(texture);
 
-	public static function sprite2dCreateFromTexture(texture:RLHandle):RLHandle
-		return binding == null ? 0 : cast binding.createSprite2DFromTexture(texture);
+	public static function sprite2dCreateFromFile(filename:String):RLHandle
+		return binding == null ? 0 : cast binding.createSprite2DFromFile(filename);
+
+	public static function sprite2dSetTexture(sprite:RLHandle, texture:RLHandle):Bool
+		return binding != null && cast binding.sprite2DSetTexture(sprite, texture);
 
 	public static function sprite2dSetTransform(sprite:RLHandle, x:Float, y:Float, scale:Float, rotation:Float):Bool
 		return binding != null && cast binding.sprite2DSetTransform(sprite, x, y, scale, rotation);

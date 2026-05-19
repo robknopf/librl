@@ -347,16 +347,29 @@ void        rl_texture_draw_ground(rl_handle_t texture,
 
 ## Sprite2D (`include/rl_sprite2d.h`)
 
-2D billboard sprite with instance-owned transform.
+2D billboard sprite with instance-owned transform. Asset (texture) and instance are separate — create
+the instance immediately, swap the texture when the asset arrives.
 
 ```c
-rl_handle_t rl_sprite2d_create(const char *filename);
-rl_handle_t rl_sprite2d_create_from_texture(rl_handle_t texture);
-bool        rl_sprite2d_set_transform(rl_handle_t handle, float x, float y,
-                                      float scale, float rotation);
-void        rl_sprite2d_draw(rl_handle_t handle, rl_handle_t tint);
+// Instance lifecycle
+rl_handle_t rl_sprite2d_create(rl_handle_t texture);           // texture=0: no-op on draw until set
+rl_handle_t rl_sprite2d_create_from_file(const char *filename); // convenience: texture_create + create
 void        rl_sprite2d_destroy(rl_handle_t handle);
+
+// Asset swap
+bool rl_sprite2d_set_texture(rl_handle_t handle, rl_handle_t texture); // swap texture on live instance
+
+// Transform
+bool rl_sprite2d_set_transform(rl_handle_t handle, float x, float y,
+                               float scale, float rotation);
+
+// Draw
+void rl_sprite2d_draw(rl_handle_t handle, rl_handle_t tint);
 ```
+
+Notes:
+- `rl_sprite2d_create(0)` creates a valid instance with no texture; draw is a silent no-op until `rl_sprite2d_set_texture` is called.
+- `rl_sprite2d_set_texture` retains the new texture and releases the old one.
 
 ---
 
@@ -365,24 +378,48 @@ void        rl_sprite2d_destroy(rl_handle_t handle);
 3D billboard sprite with instance-owned transform. Must be drawn within a `rl_render_begin_mode_3d()` block.
 
 ```c
-rl_handle_t rl_sprite3d_create(const char *filename);
-rl_handle_t rl_sprite3d_create_from_texture(rl_handle_t texture);
-bool        rl_sprite3d_set_transform(rl_handle_t handle,
-                                      float position_x, float position_y,
-                                      float position_z, float size);
-void        rl_sprite3d_draw(rl_handle_t handle, rl_handle_t tint);
+// Instance lifecycle
+rl_handle_t rl_sprite3d_create(rl_handle_t texture);           // texture=0: no-op on draw until set
+rl_handle_t rl_sprite3d_create_from_file(const char *filename); // convenience: texture_create + create
 void        rl_sprite3d_destroy(rl_handle_t handle);
+
+// Asset swap
+bool rl_sprite3d_set_texture(rl_handle_t handle, rl_handle_t texture); // swap texture on live instance
+
+// Transform
+bool rl_sprite3d_get_transform(rl_handle_t handle,
+                               float *position_x, float *position_y,
+                               float *position_z, float *size);
+bool rl_sprite3d_set_transform(rl_handle_t handle,
+                               float position_x, float position_y,
+                               float position_z, float size);
+
+// Draw
+void rl_sprite3d_draw(rl_handle_t handle, rl_handle_t tint);
 ```
+
+Notes:
+- `rl_sprite3d_create(0)` creates a valid instance with no texture; draw is a silent no-op until `rl_sprite3d_set_texture` is called.
 
 ---
 
 ## Model (`include/rl_model.h`)
 
-3D model with instance-owned transform and animation state.
+3D model with instance-owned transform and animation state. Assets and instances are separate — load
+the asset once (shared/ref-counted), create instances from it, swap assets at any time.
 
 ```c
-rl_handle_t rl_model_create(const char *filename);
+// Asset lifecycle (shared, ref-counted)
+rl_handle_t rl_model_asset_load(const char *filename);   // load or reuse cached asset
+void        rl_model_asset_destroy(rl_handle_t asset);   // release asset ref
+
+// Instance lifecycle
+rl_handle_t rl_model_create(rl_handle_t asset);          // asset=0: show placeholder until set
+rl_handle_t rl_model_create_from_file(const char *filename); // convenience: asset_load + create
 void        rl_model_destroy(rl_handle_t handle);
+
+// Asset swap
+bool rl_model_set_asset(rl_handle_t handle, rl_handle_t asset); // swap asset, resets animation state
 
 // Transform
 bool rl_model_set_transform(rl_handle_t handle,
@@ -410,7 +447,9 @@ void rl_model_animation_update(rl_handle_t handle, int animation_index, int fram
 ```
 
 Notes:
-- On load failure, `rl_model_create()` substitutes a visible placeholder cube; the handle is still valid.
+- `rl_model_create(0)` creates a valid instance with no asset; draw is a silent no-op until `rl_model_set_asset` is called.
+- On load failure, `rl_model_asset_load()` substitutes a placeholder cube; the asset handle is still valid.
+- `rl_model_set_asset` retains the new asset, releases the old one, and resets animation state.
 - `rl_model_draw()` uses the transform stored by `rl_model_set_transform()`.
 
 ---

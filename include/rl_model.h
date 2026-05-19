@@ -8,7 +8,11 @@ extern "C" {
 #include <stdbool.h>
 #include "rl_types.h"
 
-rl_handle_t rl_model_create(const char *filename) ;
+rl_handle_t rl_model_asset_load(const char *filename);
+void rl_model_asset_destroy(rl_handle_t asset_handle);
+rl_handle_t rl_model_create(rl_handle_t asset_handle);
+rl_handle_t rl_model_create_from_file(const char *filename);
+bool rl_model_set_asset(rl_handle_t handle, rl_handle_t asset_handle);
 bool rl_model_set_transform(rl_handle_t handle,
                             float position_x, float position_y, float position_z,
                             float rotation_x, float rotation_y, float rotation_z,

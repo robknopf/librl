@@ -484,6 +484,7 @@ proc rl_color_destroy*(color: RLHandle) {.importc, cdecl, header: "rl_color.h".}
 proc rl_font_create*(filename: cstring, fontSize: cint): RLHandle {.importc, cdecl, header: "rl_font.h".}
 proc rl_font_destroy*(font: RLHandle) {.importc, cdecl, header: "rl_font.h".}
 proc rl_font_get_default*(): RLHandle {.importc, cdecl, header: "rl_font.h".}
+proc rl_model_get_default_asset*(): RLHandle {.importc, cdecl, header: "rl_model.h".}
 proc rl_model_asset_load*(filename: cstring): RLHandle {.importc, cdecl, header: "rl_model.h".}
 proc rl_model_asset_destroy*(asset: RLHandle) {.importc, cdecl, header: "rl_model.h".}
 proc rl_model_create*(asset: RLHandle): RLHandle {.importc, cdecl, header: "rl_model.h".}
@@ -549,6 +550,7 @@ proc rl_texture_draw_ex*(texture: RLHandle, x: cfloat, y: cfloat, scale: cfloat,
                          rotation: cfloat, tint: RLHandle) {.importc, cdecl, header: "rl_texture.h".}
 proc rl_texture_draw_ground*(texture: RLHandle, x: cfloat, y: cfloat, z: cfloat,
                              width: cfloat, length: cfloat, tint: RLHandle) {.importc, cdecl, header: "rl_texture.h".}
+proc rl_sprite3d_get_default_texture*(): RLHandle {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_create*(texture: RLHandle): RLHandle {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_create_from_file*(filename: cstring): RLHandle {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_set_texture*(sprite: RLHandle, texture: RLHandle): bool {.importc, cdecl, header: "rl_sprite3d.h".}
@@ -559,6 +561,7 @@ proc rl_sprite3d_set_transform*(
 ): bool {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_draw*(sprite: RLHandle, tint: RLHandle) {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_destroy*(sprite: RLHandle) {.importc, cdecl, header: "rl_sprite3d.h".}
+proc rl_sprite2d_get_default_texture*(): RLHandle {.importc, cdecl, header: "rl_sprite2d.h".}
 proc rl_sprite2d_create*(texture: RLHandle): RLHandle {.importc, cdecl, header: "rl_sprite2d.h".}
 proc rl_sprite2d_create_from_file*(filename: cstring): RLHandle {.importc, cdecl, header: "rl_sprite2d.h".}
 proc rl_sprite2d_set_texture*(sprite: RLHandle, texture: RLHandle): bool {.importc, cdecl, header: "rl_sprite2d.h".}

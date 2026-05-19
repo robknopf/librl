@@ -35,6 +35,7 @@ static uint16_t rl_texture_free_indices[MAX_TEXTURES];
 static uint16_t rl_texture_generations[MAX_TEXTURES];
 static unsigned char rl_texture_occupied[MAX_TEXTURES];
 static Texture2D rl_texture_placeholder_singleton;
+static rl_handle_t rl_texture_default_handle = 0;
 
 static rl_texture_entry_t *rl_texture_get_entry(rl_handle_t handle)
 {
@@ -74,6 +75,12 @@ static Texture2D rl_texture_create_magenta_placeholder(void)
 Texture2D *rl_texture_get_placeholder(void)
 {
     return &rl_texture_placeholder_singleton;
+}
+
+RL_KEEP
+rl_handle_t rl_texture_get_default(void)
+{
+    return rl_texture_default_handle;
 }
 
 Texture2D *rl_texture_get_ptr(rl_handle_t handle)
@@ -239,6 +246,23 @@ void rl_texture_init(void)
         rl_textures[i].path[0] = '\0';
     }
     rl_texture_placeholder_singleton = rl_texture_create_magenta_placeholder();
+
+    {
+        Texture2D default_tex = rl_texture_create_magenta_placeholder();
+        rl_handle_t h = rl_handle_pool_alloc(&rl_texture_pool);
+        if (h != 0) {
+            uint16_t idx = 0;
+            rl_handle_pool_resolve(&rl_texture_pool, h, &idx);
+            rl_textures[idx].texture = default_tex;
+            rl_textures[idx].ref_count = 1;
+            rl_textures[idx].in_use = true;
+            snprintf(rl_textures[idx].path, sizeof(rl_textures[idx].path), "<default:texture>");
+            rl_texture_default_handle = h;
+        } else {
+            UnloadTexture(default_tex);
+            log_error("rl_texture_init: failed to register default texture handle");
+        }
+    }
 }
 
 void rl_texture_deinit(void)

@@ -6,6 +6,12 @@
 #include "rl.h"
 #include "rl_lua_sprite3d.h"
 
+static int rl_sprite3d_get_default_texture_lua(lua_State *L)
+{
+    lua_pushinteger(L, rl_sprite3d_get_default_texture());
+    return 1;
+}
+
 static int rl_sprite3d_create_lua(lua_State *L)
 {
     rl_handle_t texture = (rl_handle_t)luaL_optinteger(L, 1, 0);
@@ -58,6 +64,9 @@ static int rl_sprite3d_destroy_lua(lua_State *L)
 
 void rl_register_sprite3d_bindings(lua_State *L)
 {
+    lua_pushcfunction(L, rl_sprite3d_get_default_texture_lua);
+    lua_setfield(L, -2, "sprite3d_get_default_texture");
+
     lua_pushcfunction(L, rl_sprite3d_create_lua);
     lua_setfield(L, -2, "sprite3d_create");
 

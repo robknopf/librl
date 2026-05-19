@@ -71,6 +71,7 @@ static uint16_t rl_model_instance_free_indices[MAX_MODELS];
 static uint16_t rl_model_instance_generations[MAX_MODELS];
 static unsigned char rl_model_instance_occupied[MAX_MODELS];
 static Model rl_model_placeholder;
+static rl_handle_t rl_model_default_asset_handle = 0;
 
 static bool rl_model_is_valid_model(Model model)
 {
@@ -363,6 +364,12 @@ static bool rl_model_prepare_animation_gpu_state(rl_model_instance_t *instance, 
     }
 
     return true;
+}
+
+RL_KEEP
+rl_handle_t rl_model_get_default_asset(void)
+{
+    return rl_model_default_asset_handle;
 }
 
 RL_KEEP
@@ -917,6 +924,33 @@ void rl_model_init(void)
         rl_model_instance_reset(&rl_model_instances[i]);
     }
     rl_model_placeholder = LoadModelFromMesh(GenMeshCube(1.0f, 1.0f, 1.0f));
+
+    {
+        Model default_model = LoadModelFromMesh(GenMeshCube(1.0f, 1.0f, 1.0f));
+        Model *default_model_ptr = (Model*)malloc(sizeof(Model));
+        rl_handle_t h = rl_handle_pool_alloc(&rl_model_asset_pool);
+        if (default_model_ptr != NULL && h != 0) {
+            uint16_t idx = 0;
+            *default_model_ptr = default_model;
+            rl_handle_pool_resolve(&rl_model_asset_pool, h, &idx);
+            rl_model_assets[idx].model = default_model_ptr;
+            rl_model_assets[idx].ref_count = 1;
+            rl_model_assets[idx].in_use = true;
+            rl_model_assets[idx].animations = NULL;
+            rl_model_assets[idx].animation_count = 0;
+            rl_model_assets[idx].has_source_path = false;
+            rl_model_assets[idx].has_local_bounds = false;
+            rl_model_default_asset_handle = h;
+        } else {
+            if (default_model_ptr != NULL) {
+                free(default_model_ptr);
+            } else {
+                UnloadModel(default_model);
+            }
+            if (h != 0) rl_handle_pool_free(&rl_model_asset_pool, h);
+            log_error("rl_model_init: failed to register default asset handle");
+        }
+    }
 }
 
 void rl_model_deinit(void)

@@ -8,6 +8,7 @@ extern "C" {
 #include <stdbool.h>
 #include "rl_types.h"
 
+rl_handle_t rl_model_get_default_asset(void);
 rl_handle_t rl_model_asset_load(const char *filename);
 void rl_model_asset_destroy(rl_handle_t asset_handle);
 rl_handle_t rl_model_create(rl_handle_t asset_handle);

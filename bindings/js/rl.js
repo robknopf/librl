@@ -1596,6 +1596,9 @@ const RL = {
     setTargetFPS: (fps) => moduleInstance.ccall(
         "rl_set_target_fps", null, ["number"], [fps]
     ),
+    modelGetDefaultAsset: () => moduleInstance.ccall(
+        "rl_model_get_default_asset", "number", [], []
+    ),
     loadModelAsset: (path) => moduleInstance.ccall(
         "rl_model_asset_load", "number", ["string"], [path]
     ),
@@ -1772,6 +1775,9 @@ const RL = {
     destroyTexture: (texture) => moduleInstance.ccall(
         "rl_texture_destroy", null, ["number"], [texture]
     ),
+    sprite3dGetDefaultTexture: () => moduleInstance.ccall(
+        "rl_sprite3d_get_default_texture", "number", [], []
+    ),
     createSprite3d: (texture) => moduleInstance.ccall(
         "rl_sprite3d_create", "number", ["number"], [texture]
     ),
@@ -1789,6 +1795,9 @@ const RL = {
     ),
     destroySprite3d: (sprite) => moduleInstance.ccall(
         "rl_sprite3d_destroy", null, ["number"], [sprite]
+    ),
+    sprite2dGetDefaultTexture: () => moduleInstance.ccall(
+        "rl_sprite2d_get_default_texture", "number", [], []
     ),
     createSprite2D: (texture) => moduleInstance.ccall(
         "rl_sprite2d_create", "number", ["number"], [texture]

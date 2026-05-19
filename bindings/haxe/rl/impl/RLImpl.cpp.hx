@@ -390,6 +390,9 @@ private extern class RLExterns {
   @:native("rl_camera3d_destroy")
   static function camera3dDestroy(camera: RLHandle): Void;
 
+  @:native("rl_model_get_default_asset")
+  static function modelGetDefaultAsset(): RLHandle;
+
   @:native("rl_model_asset_load")
   static function modelAssetLoad(filename: String): RLHandle;
 
@@ -431,6 +434,9 @@ private extern class RLExterns {
   @:native("rl_model_destroy")
   static function modelDestroy(model: RLHandle): Void;
 
+  @:native("rl_sprite3d_get_default_texture")
+  static function sprite3dGetDefaultTexture(): RLHandle;
+
   @:native("rl_sprite3d_create")
   static function sprite3dCreate(texture: RLHandle): RLHandle;
 
@@ -452,6 +458,9 @@ private extern class RLExterns {
 
   @:native("rl_sprite3d_destroy")
   static function sprite3dDestroy(sprite: RLHandle): Void;
+
+  @:native("rl_sprite2d_get_default_texture")
+  static function sprite2dGetDefaultTexture(): RLHandle;
 
   @:native("rl_sprite2d_create")
   static function sprite2dCreate(texture: RLHandle): RLHandle;
@@ -876,6 +885,7 @@ abstract RLImpl(RLExterns) {
   public static function camera3dSet(camera: RLHandle, positionX: Float, positionY: Float, positionZ: Float, targetX: Float, targetY: Float, targetZ: Float, upX: Float, upY: Float, upZ: Float, fovy: Float, projection: Int): Bool { return RLExterns.camera3dSet(camera, positionX, positionY, positionZ, targetX, targetY, targetZ, upX, upY, upZ, fovy, projection); }
   public static function camera3dSetActive(camera: RLHandle): Bool { return RLExterns.camera3dSetActive(camera); }
   public static function camera3dDestroy(camera: RLHandle): Void { RLExterns.camera3dDestroy(camera); }
+  public static function modelGetDefaultAsset(): RLHandle { return RLExterns.modelGetDefaultAsset(); }
   public static function modelAssetLoad(filename: String): RLHandle { return RLExterns.modelAssetLoad(filename); }
   public static function modelAssetDestroy(asset: RLHandle): Void { RLExterns.modelAssetDestroy(asset); }
   public static function modelCreate(asset: RLHandle): RLHandle { return RLExterns.modelCreate(asset); }
@@ -888,12 +898,14 @@ abstract RLImpl(RLExterns) {
   public static function modelSetAnimationLoop(model: RLHandle, shouldLoop: Bool): Bool { return RLExterns.modelSetAnimationLoop(model, shouldLoop); }
   public static function modelAnimate(model: RLHandle, deltaSeconds: Float): Bool { return RLExterns.modelAnimate(model, deltaSeconds); }
   public static function modelDestroy(model: RLHandle): Void { RLExterns.modelDestroy(model); }
+  public static function sprite3dGetDefaultTexture(): RLHandle { return RLExterns.sprite3dGetDefaultTexture(); }
   public static function sprite3dCreate(texture: RLHandle): RLHandle { return RLExterns.sprite3dCreate(texture); }
   public static function sprite3dCreateFromFile(filename: String): RLHandle { return RLExterns.sprite3dCreateFromFile(filename); }
   public static function sprite3dSetTexture(sprite: RLHandle, texture: RLHandle): Bool { return RLExterns.sprite3dSetTexture(sprite, texture); }
   public static function sprite3dSetTransform(sprite: RLHandle, positionX: Float, positionY: Float, positionZ: Float, size: Float): Bool { return RLExterns.sprite3dSetTransform(sprite, positionX, positionY, positionZ, size); }
   public static function sprite3dDraw(sprite: RLHandle, tint: RLHandle): Void { RLExterns.sprite3dDraw(sprite, tint); }
   public static function sprite3dDestroy(sprite: RLHandle): Void { RLExterns.sprite3dDestroy(sprite); }
+  public static function sprite2dGetDefaultTexture(): RLHandle { return RLExterns.sprite2dGetDefaultTexture(); }
   public static function sprite2dCreate(texture: RLHandle): RLHandle { return RLExterns.sprite2dCreate(texture); }
   public static function sprite2dCreateFromFile(filename: String): RLHandle { return RLExterns.sprite2dCreateFromFile(filename); }
   public static function sprite2dSetTexture(sprite: RLHandle, texture: RLHandle): Bool { return RLExterns.sprite2dSetTexture(sprite, texture); }

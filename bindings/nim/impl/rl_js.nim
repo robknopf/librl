@@ -327,6 +327,7 @@ proc rl_texture_draw_ground*(texture: RLHandle, x, y, z, width, length: float, t
   importjs: "__gRl.drawTextureGround(#,#,#,#,#,#,#)".}
 
 # Model
+proc rl_model_get_default_asset*(): RLHandle {.importjs: "__gRl.modelGetDefaultAsset()".}
 proc rl_model_asset_load*(filename: cstring): RLHandle {.importjs: "__gRl.loadModelAsset(#)".}
 proc rl_model_asset_load*(filename: string): RLHandle {.inline.} = rl_model_asset_load(filename.cstring)
 proc rl_model_asset_destroy*(asset: RLHandle) {.importjs: "__gRl.destroyModelAsset(#)".}
@@ -360,6 +361,7 @@ proc rl_pick_model*(camera, model: RLHandle, mouseX, mouseY: float): RLPickResul
   importjs: "__gRl.pickModel(#,#,#,#)".}
 
 # Sprite3D
+proc rl_sprite3d_get_default_texture*(): RLHandle {.importjs: "__gRl.sprite3dGetDefaultTexture()".}
 proc rl_sprite3d_create*(texture: RLHandle): RLHandle {.importjs: "__gRl.createSprite3d(#)".}
 proc rl_sprite3d_create_from_file*(filename: cstring): RLHandle {.importjs: "__gRl.createSprite3dFromFile(#)".}
 proc rl_sprite3d_create_from_file*(filename: string): RLHandle {.inline.} = rl_sprite3d_create_from_file(filename.cstring)
@@ -374,6 +376,7 @@ proc rl_pick_sprite3d*(camera, sprite3d: RLHandle, mouseX, mouseY: float): RLPic
   importjs: "__gRl.pickSprite3d(#,#,#,#)".}
 
 # Sprite2D
+proc rl_sprite2d_get_default_texture*(): RLHandle {.importjs: "__gRl.sprite2dGetDefaultTexture()".}
 proc rl_sprite2d_create*(texture: RLHandle): RLHandle {.importjs: "__gRl.createSprite2D(#)".}
 proc rl_sprite2d_create_from_file*(filename: cstring): RLHandle {.importjs: "__gRl.createSprite2DFromFile(#)".}
 proc rl_sprite2d_create_from_file*(filename: string): RLHandle {.inline.} = rl_sprite2d_create_from_file(filename.cstring)

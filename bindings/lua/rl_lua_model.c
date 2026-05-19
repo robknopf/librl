@@ -6,6 +6,12 @@
 #include "rl.h"
 #include "rl_lua_model.h"
 
+static int rl_model_get_default_asset_lua(lua_State *L)
+{
+    lua_pushinteger(L, rl_model_get_default_asset());
+    return 1;
+}
+
 static int rl_model_asset_load_lua(lua_State *L)
 {
     const char *filename = luaL_checkstring(L, 1);
@@ -148,6 +154,9 @@ static int rl_model_destroy_lua(lua_State *L)
 
 void rl_register_model_bindings(lua_State *L)
 {
+    lua_pushcfunction(L, rl_model_get_default_asset_lua);
+    lua_setfield(L, -2, "model_get_default_asset");
+
     lua_pushcfunction(L, rl_model_asset_load_lua);
     lua_setfield(L, -2, "model_asset_load");
 

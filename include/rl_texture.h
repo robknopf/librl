@@ -7,6 +7,7 @@ extern "C" {
 
 #include "rl_types.h"
 
+rl_handle_t rl_texture_get_default(void);
 rl_handle_t rl_texture_create(const char *filename);
 void rl_texture_destroy(rl_handle_t handle);
 void rl_texture_draw_ex(rl_handle_t texture, float x, float y, float scale,

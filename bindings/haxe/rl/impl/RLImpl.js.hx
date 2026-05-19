@@ -573,6 +573,9 @@ class RLImpl {
 			binding.destroyCamera3d(camera);
 	}
 
+	public static function modelGetDefaultAsset():RLHandle
+		return binding == null ? 0 : cast binding.modelGetDefaultAsset();
+
 	public static function modelAssetLoad(filename:String):RLHandle
 		return binding == null ? 0 : cast binding.loadModelAsset(filename);
 
@@ -617,6 +620,9 @@ class RLImpl {
 			binding.destroyModel(model);
 	}
 
+	public static function sprite3dGetDefaultTexture():RLHandle
+		return binding == null ? 0 : cast binding.sprite3dGetDefaultTexture();
+
 	public static function sprite3dCreate(texture:RLHandle):RLHandle
 		return binding == null ? 0 : cast binding.createSprite3d(texture);
 
@@ -638,6 +644,9 @@ class RLImpl {
 		if (binding != null)
 			binding.destroySprite3d(sprite);
 	}
+
+	public static function sprite2dGetDefaultTexture():RLHandle
+		return binding == null ? 0 : cast binding.sprite2dGetDefaultTexture();
 
 	public static function sprite2dCreate(texture:RLHandle):RLHandle
 		return binding == null ? 0 : cast binding.createSprite2D(texture);

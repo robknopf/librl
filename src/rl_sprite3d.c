@@ -46,6 +46,12 @@ static rl_sprite3d_instance_t *rl_sprite3d_get(rl_handle_t handle)
 }
 
 RL_KEEP
+rl_handle_t rl_sprite3d_get_default_texture(void)
+{
+    return rl_texture_get_default();
+}
+
+RL_KEEP
 rl_handle_t rl_sprite3d_create(rl_handle_t texture)
 {
     rl_handle_t handle = 0;

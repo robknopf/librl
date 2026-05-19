@@ -606,6 +606,10 @@ class RL {
 		rl.impl.RLImpl.modelAssetDestroy(asset);
 	}
 
+	public static function modelGetDefaultAsset():RLHandle {
+		return rl.impl.RLImpl.modelGetDefaultAsset();
+	}
+
 	public static function modelCreate(asset:RLHandle):RLHandle {
 		return rl.impl.RLImpl.modelCreate(asset);
 	}
@@ -647,6 +651,10 @@ class RL {
 		rl.impl.RLImpl.modelDestroy(model);
 	}
 
+	public static function sprite3dGetDefaultTexture():RLHandle {
+		return rl.impl.RLImpl.sprite3dGetDefaultTexture();
+	}
+
 	public static function sprite3dCreate(texture:RLHandle):RLHandle {
 		return rl.impl.RLImpl.sprite3dCreate(texture);
 	}
@@ -669,6 +677,10 @@ class RL {
 
 	public static function sprite3dDestroy(sprite:RLHandle):Void {
 		rl.impl.RLImpl.sprite3dDestroy(sprite);
+	}
+
+	public static function sprite2dGetDefaultTexture():RLHandle {
+		return rl.impl.RLImpl.sprite2dGetDefaultTexture();
 	}
 
 	public static function sprite2dCreate(texture:RLHandle):RLHandle {

@@ -351,6 +351,9 @@ void        rl_texture_draw_ground(rl_handle_t texture,
 the instance immediately, swap the texture when the asset arrives.
 
 ```c
+// Default texture (magenta placeholder, always valid)
+rl_handle_t rl_sprite2d_get_default_texture(void);
+
 // Instance lifecycle
 rl_handle_t rl_sprite2d_create(rl_handle_t texture);           // texture=0: no-op on draw until set
 rl_handle_t rl_sprite2d_create_from_file(const char *filename); // convenience: texture_create + create
@@ -378,6 +381,9 @@ Notes:
 3D billboard sprite with instance-owned transform. Must be drawn within a `rl_render_begin_mode_3d()` block.
 
 ```c
+// Default texture (magenta placeholder, always valid)
+rl_handle_t rl_sprite3d_get_default_texture(void);
+
 // Instance lifecycle
 rl_handle_t rl_sprite3d_create(rl_handle_t texture);           // texture=0: no-op on draw until set
 rl_handle_t rl_sprite3d_create_from_file(const char *filename); // convenience: texture_create + create
@@ -409,6 +415,9 @@ Notes:
 the asset once (shared/ref-counted), create instances from it, swap assets at any time.
 
 ```c
+// Default asset (magenta cube placeholder, always valid)
+rl_handle_t rl_model_get_default_asset(void);
+
 // Asset lifecycle (shared, ref-counted)
 rl_handle_t rl_model_asset_load(const char *filename);   // load or reuse cached asset
 void        rl_model_asset_destroy(rl_handle_t asset);   // release asset ref

@@ -1,4 +1,5 @@
-import { defineConfig } from "vite";
+import { defineConfig, Connect } from "vite";
+import type { ServerResponse } from 'http';
 import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
@@ -64,12 +65,26 @@ export default defineConfig({
   plugins: [
     ViteRestart({
       reload: [
-        '../nim/out/wasm/**/*.wasm',
-        '../nim/out/wasm/**/*.js',
+        '../nim-simple/out/wasm/**/*.wasm',
+        '../nim-simple/out/wasm/**/*.js',
+        '../nim-simple/out/js/main.js',
+
+        '../haxe-simple/out/wasm/**/*.wasm',
+        '../haxe-simple/out/wasm/**/*.js',
+        '../haxe-simple/out/js/main.js',
       ],
       "contentCheck": true,
-      "delay": 2000
+      "delay": 500  // may need to be longer if compiling haxe, since the macro will edit the generated .js and resave it (two loads triggered)
     }),
+    {
+      name: "suppress-output-hmr",
+      handleHotUpdate({ file }) {
+        if (file.includes("/out/")) {
+          // vite-plugin-restart handles these with debounce; suppress Vite's default HMR
+          return [];
+        }
+      },
+    },
     {
       name: "examples-mount",
       configureServer(server) {
@@ -79,11 +94,12 @@ export default defineConfig({
 
         // Ensure files outside `root` that are imported via aliases or custom mounts
         // are watched for HMR/full-reload updates.
-        server.watcher.add(path.join(examplesRoot, "**/*"));
-        server.watcher.add(path.join(bindingsRoot, "**/*"));
-        server.watcher.add(path.join(libRoot, "**/*"));
+        // disabled for now, we are using ViteRestart plugin
+        //server.watcher.add(path.join(examplesRoot, "**/*"));
+        //server.watcher.add(path.join(bindingsRoot, "**/*"));
+        //server.watcher.add(path.join(libRoot, "**/*"));
 
-        const mountExternalDir = (mountPrefix: string, dirRoot: string) => (req, _res, next) => {
+        const mountExternalDir = (mountPrefix: string, dirRoot: string) => (req: Connect.IncomingMessage, _res: ServerResponse, next: Connect.NextFunction) => {
           const reqUrl = req.url || "";
           const [cleanUrl, query = ""] = reqUrl.split("?");
           if (!cleanUrl.startsWith(mountPrefix)) {

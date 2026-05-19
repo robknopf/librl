@@ -1,6 +1,61 @@
 import std/os except getCurrentDir, paramCount, paramStr, dirExists
 
 when declared(switch):
+  import std/[strutils, unicode]
+  import os except paramCount
+
+  # helper function to echo colored text
+  type Color = enum
+    blue, red, green, yellow, white, gray, defaultColor
+  proc echo_colored*(msg: string, color: Color) =
+    var color_val = "0"
+    case color:
+    of Color.red:
+      color_val = "31"
+    of Color.green:
+      color_val = "32"
+    of Color.yellow:
+      color_val = "33"
+    of Color.blue:
+      color_val = "34"
+    of Color.white:
+      color_val = "37"
+    of Color.gray:
+      color_val = "90"
+    of Color.defaultColor:
+      color_val = "0"
+
+    let esc = chr(27)
+    echo $esc & "[" & color_val & "m" & msg & $esc & "[0m"
+
+  proc info(msg:string) =
+    echo_colored("> " & msg, Color.gray)
+
+  proc warn(msg:string) =
+    echo_colored("> " & msg, Color.yellow)
+
+  proc success(msg:string) =
+    echo_colored("> " & msg, Color.green)
+
+  proc error(msg:string) =
+    echo_colored("> " & msg, Color.red)
+
+  # helper function to get the current time in seconds, since epoch and systime is not available in nimscript
+  proc nowSeconds(): float =
+    parseFloat(gorge("date +%s.%N").strip())
+
+  # helper to get all the define flags that were passed in on the command line
+  # useful if you need to pass them on to another exec shell
+  proc getDefineFlags(): string =
+    var defs: seq[string]
+    for i in 1..paramCount():
+      let p = paramStr(i)
+      if p.startsWith("-d:") or p.startsWith("--define:"):
+        defs.add(p
+          .replace("--define:", "-d:")
+        )
+    result = defs.join(" ")
+
   proc hasDefineFlag(name: string): bool =
     for i in 1..paramCount():
       let p = paramStr(i)
@@ -10,24 +65,42 @@ when declared(switch):
         return true
     result = false
 
+  proc defineEnabled(name: string; defaultValue: bool): bool =
+    if hasDefineFlag("no_" & name):
+      return false
+    if hasDefineFlag(name):
+      return true
+    result = defaultValue
+
   type BuildType = enum
     debug, release
 
-  let buildType = if hasDefineFlag("debug"): BuildType.debug else: BuildType.release
+  var  
+    buildType: BuildType = BuildType.release # default to release
 
-  switch("path", "src")
-  switch("path", "../../bindings/nim")
-  switch("hints", "off")
+    
+  proc setBuildType() =
+    if hasDefineFlag("debug"):
+      buildType = BuildType.debug
+    else:
+      buildType = BuildType.release  
+
+
 
 const
   thisDir = currentSourcePath().parentDir()
   librlRoot = absolutePath("../..", thisDir)
   includeDir = librlRoot / "include"
+  bindingsDir = librlRoot / "bindings" / "nim"
   libDir = librlRoot / "lib"
   outDir = getCurrentDir() / "out"
   mainEntry = "src/main.nim"
   outFile = "main"
   nimCacheDir = ".nimcache"
+
+switch("path", "src")
+switch("path", bindingsDir)
+switch("hints", "off")
 
 when defined(emscripten):
   switch("nimcache", nimCacheDir / "wasm")
@@ -79,19 +152,21 @@ when defined(emscripten):
   switch("passL", "-fwasm-exceptions")
 
 # Default to release unless debug is explicitly requested via -d:debug
-if buildType == BuildType.debug:
-  switch("define", "debug")
-else:
-  switch("define", "release")
+#if buildType == BuildType.debug:
+#  switch("define", "debug")
+#else:
+#  switch("define", "release")
 
 
 proc getBuildModeFlags(): string =
-  if buildType == BuildType.release:
-    result = "-d:release"
-  else:
+  if buildType == BuildType.debug or hasDefineFlag("debug"):
     result = "-d:debug"
-    if defined(js):
-      result = result & " --sourcemaps"
+    #if defined(js):
+    result = result & " --sourceMap"
+  else:
+    result = "-d:release"
+
+  echo "BuildModeFlags: " & result
 
 proc getOptimizationFlags(): string =
   if buildType == BuildType.release:

@@ -139,7 +139,6 @@ class SimpleRuntime implements IRuntime {
 		ctx.greyAlphaColor = RL.colorCreate(0, 0, 0, 128);
 		ctx.backgroundColor = RL.colorCreate(245, 245, 245, 255);
 
-
 		// create a text2d.  Note that it we will update the font when it is available
 		ctx.labelText2d = RL.text2dCreate(0, KOMIKA_FONT_SIZE);
 		RL.text2dSetContent(ctx.labelText2d, "rl_text2d: retained label");
@@ -147,12 +146,13 @@ class SimpleRuntime implements IRuntime {
 		RL.text2dSetColor(ctx.labelText2d, RL.COLOR_GREEN);
 
 		// create a model3d.  Note that it we will update the model asset (mesh/skeleton/animation) when it is available
-		ctx.gumshoe = RL.modelCreate(0);
+		ctx.gumshoe = RL.modelCreate(RL.modelGetDefaultAsset());
+		RL.modelSetTint(ctx.gumshoe, RL.COLOR_BLUE);
 		RL.modelSetAnimation(ctx.gumshoe, 1);
 		RL.modelSetAnimationSpeed(ctx.gumshoe, 1.0);
 		RL.modelSetAnimationLoop(ctx.gumshoe, true);
 		RL.modelSetTransform(ctx.gumshoe, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
-
+		
 		// set the fonts to the default font, they will be replaced when the real fonts come in
 		//var defaultFont = RL.fontGetDefault();
 
@@ -211,8 +211,8 @@ class SimpleRuntime implements IRuntime {
 
 		// 3D render
 		RL.renderBeginMode3d();
-		RL.modelDraw(ctx.gumshoe, RL.COLOR_RAYWHITE);
-		RL.sprite3dDraw(ctx.sprite, RL.COLOR_RAYWHITE);
+		RL.modelDraw(ctx.gumshoe);
+		RL.sprite3dDraw(ctx.sprite);
 		RL.renderEndMode3d();
 
 		// 2D UI overlay
@@ -330,7 +330,7 @@ class SimpleRuntime implements IRuntime {
 			//ctx.gumshoe = RL.modelCreateFromFile(path);
 			var gumshoeAsset = RL.modelLoadAsset(path);
 			if (ctx.gumshoe != 0) {
-				RL.modelSetAsset(ctx.gumshoe, gumshoeAsset);
+			//	RL.modelSetAsset(ctx.gumshoe, gumshoeAsset);
 			}
 		}, (path, userData) -> {
 			Log.error("Failed to import MODEL: " + path);

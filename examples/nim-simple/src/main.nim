@@ -50,6 +50,7 @@ proc getPlatformText(): string =
   "Platform: " & $rl_get_platform()
 
 proc queueAssets() =
+  echo "queuing assets!!"
   ctx.loadingGroup = fileioCreateTaskGroup(
     addr ctx,
     onComplete = proc(group: RLTaskGroup[AppContext], loadedCtx: var AppContext) =

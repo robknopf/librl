@@ -1,4 +1,4 @@
-import std/os except getCurrentDir, paramCount
+import std/os except getCurrentDir, paramCount, paramStr
 
 when declared(switch):
   proc hasDefineFlag(name: string): bool =

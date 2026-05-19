@@ -1,5 +1,8 @@
 ## Native (desktop / emscripten-wasm) binding.
 ## Included by rl.nim when not defined(js).  Do not import directly.
+when not declared(rl_async):
+  import ../rl_async
+
 
 include ../gen/rl_version
 
@@ -47,6 +50,30 @@ type
   RLFileioClosureTask = ref object
     onSuccess: RLFileioClosureCallback
     onFailure: RLFileioClosureCallback
+
+
+type
+  RLLogCallback* = proc(message: string)
+  RLLocateFileCallback* = proc(path: string, prefix: string): string
+
+type RLBootConfig* = object
+  bindingsPath*: string
+  canvasId*: string
+  modulePath*: string
+  wasmPath*: string
+  idealWidth*: int
+  idealHeight*: int
+  print*: RLLogCallback
+  printErr*: RLLogCallback
+  locateFile*: RLLocateFileCallback    
+
+type RLInitConfig* = object
+  windowWidth*: int
+  windowHeight*: int
+  windowTitle*: string
+  windowFlags*: RLWindowFlags
+  assetHost*: string
+  fileioBaseDir*: string
 
 var rlFileioClosureTasks: seq[RLFileioClosureTask] = @[]
 
@@ -215,6 +242,11 @@ proc rl_init_values_async*(windowWidth, windowHeight: int, windowTitle: string,
   rl_init_values_async_raw(windowWidth.cint, windowHeight.cint, windowTitle.cstring, windowFlags,
                            assetHost.cstring, fileioBaseDir.cstring).int
 
+proc rl_init*(config = RLInitConfig()): int {.rlAsync.} =
+  return rlAwait rl_init_values(config.windowWidth, config.windowHeight,
+                                config.windowTitle, config.windowFlags,
+                                config.assetHost, config.fileioBaseDir)
+                                
 proc rl_set_asset_host*(assetHost: string): int {.inline.} =
   rl_set_asset_host(assetHost.cstring).int
 

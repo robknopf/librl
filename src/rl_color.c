@@ -113,9 +113,8 @@ Color rl_color_get(rl_handle_t handle)
 {
     uint16_t index = 0;
 
-    if (!rl_color_resolve_index(handle, &index)) {
-        return MAGENTA;
-    }
+    if (handle == 0) return WHITE;
+    if (!rl_color_resolve_index(handle, &index)) return MAGENTA;
 
     return rl_colors[index];
 }

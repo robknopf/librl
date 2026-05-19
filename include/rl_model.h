@@ -27,6 +27,7 @@ void rl_model_update_animation(rl_handle_t handle, int animation_index, int fram
 bool rl_model_set_animation(rl_handle_t handle, int animation_index);
 bool rl_model_set_animation_speed(rl_handle_t handle, float speed);
 bool rl_model_set_animation_loop(rl_handle_t handle, bool should_loop);
+bool rl_model_set_tint(rl_handle_t handle, rl_handle_t color_handle);
 bool rl_model_animate(rl_handle_t handle, float delta_seconds);
 void rl_model_destroy(rl_handle_t handle);
 

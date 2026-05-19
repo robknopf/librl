@@ -3,7 +3,7 @@
 #include <lua.h>
 #include <lauxlib.h>
 
-#include "rl.h"
+#include "rl_sprite3d.h"
 #include "rl_lua_sprite3d.h"
 
 static int rl_sprite3d_get_default_texture_lua(lua_State *L)
@@ -47,10 +47,18 @@ static int rl_sprite3d_set_transform_lua(lua_State *L)
     return 0;
 }
 
+static int rl_sprite3d_set_tint_lua(lua_State *L)
+{
+    rl_handle_t sprite = (rl_handle_t)luaL_checkinteger(L, 1);
+    rl_handle_t color = (rl_handle_t)luaL_optinteger(L, 2, 0);
+    lua_pushboolean(L, rl_sprite3d_set_tint(sprite, color) ? 1 : 0);
+    return 1;
+}
+
 static int rl_sprite3d_draw_lua(lua_State *L)
 {
     rl_handle_t sprite = (rl_handle_t)luaL_checkinteger(L, 1);
-    rl_handle_t tint = (rl_handle_t)luaL_checkinteger(L, 2);
+    rl_handle_t tint = (rl_handle_t)luaL_optinteger(L, 2, 0);
     rl_sprite3d_draw(sprite, tint);
     return 0;
 }
@@ -78,6 +86,9 @@ void rl_register_sprite3d_bindings(lua_State *L)
 
     lua_pushcfunction(L, rl_sprite3d_set_transform_lua);
     lua_setfield(L, -2, "sprite3d_set_transform");
+
+    lua_pushcfunction(L, rl_sprite3d_set_tint_lua);
+    lua_setfield(L, -2, "sprite3d_set_tint");
 
     lua_pushcfunction(L, rl_sprite3d_draw_lua);
     lua_setfield(L, -2, "sprite3d_draw");

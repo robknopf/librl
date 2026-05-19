@@ -428,6 +428,9 @@ private extern class RLExterns {
   @:native("rl_model_set_animation_loop")
   static function modelSetAnimationLoop(model: RLHandle, shouldLoop: Bool): Bool;
 
+  @:native("rl_model_set_tint")
+  static function modelSetTint(model: RLHandle, color: RLHandle): Bool;
+
   @:native("rl_model_animate")
   static function modelAnimate(model: RLHandle, deltaSeconds: Float): Bool;
 
@@ -453,6 +456,9 @@ private extern class RLExterns {
     size: Float
   ): Bool;
 
+  @:native("rl_sprite3d_set_tint")
+  static function sprite3dSetTint(sprite: RLHandle, color: RLHandle): Bool;
+
   @:native("rl_sprite3d_draw")
   static function sprite3dDraw(sprite: RLHandle, tint: RLHandle): Void;
 
@@ -477,6 +483,9 @@ private extern class RLExterns {
     x: Float, y: Float,
     scale: Float, rotation: Float
   ): Bool;
+
+  @:native("rl_sprite2d_set_tint")
+  static function sprite2dSetTint(sprite: RLHandle, color: RLHandle): Bool;
 
   @:native("rl_sprite2d_draw")
   static function sprite2dDraw(sprite: RLHandle, tint: RLHandle): Void;
@@ -892,10 +901,11 @@ abstract RLImpl(RLExterns) {
   public static function modelCreateFromFile(filename: String): RLHandle { return RLExterns.modelCreateFromFile(filename); }
   public static function modelSetAsset(model: RLHandle, asset: RLHandle): Bool { return RLExterns.modelSetAsset(model, asset); }
   public static function modelSetTransform(model: RLHandle, positionX: Float, positionY: Float, positionZ: Float, rotationX: Float, rotationY: Float, rotationZ: Float, scaleX: Float, scaleY: Float, scaleZ: Float): Bool { return RLExterns.modelSetTransform(model, positionX, positionY, positionZ, rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ); }
-  public static function modelDraw(model: RLHandle, tint: RLHandle): Void { RLExterns.modelDraw(model, tint); }
+  public static function modelDraw(model: RLHandle, tint: RLHandle = 0): Void { RLExterns.modelDraw(model, tint); }
   public static function modelSetAnimation(model: RLHandle, animationIndex: Int): Bool { return RLExterns.modelSetAnimation(model, animationIndex); }
   public static function modelSetAnimationSpeed(model: RLHandle, speed: Float): Bool { return RLExterns.modelSetAnimationSpeed(model, speed); }
   public static function modelSetAnimationLoop(model: RLHandle, shouldLoop: Bool): Bool { return RLExterns.modelSetAnimationLoop(model, shouldLoop); }
+  public static function modelSetTint(model: RLHandle, color: RLHandle = 0): Bool { return RLExterns.modelSetTint(model, color); }
   public static function modelAnimate(model: RLHandle, deltaSeconds: Float): Bool { return RLExterns.modelAnimate(model, deltaSeconds); }
   public static function modelDestroy(model: RLHandle): Void { RLExterns.modelDestroy(model); }
   public static function sprite3dGetDefaultTexture(): RLHandle { return RLExterns.sprite3dGetDefaultTexture(); }
@@ -903,14 +913,16 @@ abstract RLImpl(RLExterns) {
   public static function sprite3dCreateFromFile(filename: String): RLHandle { return RLExterns.sprite3dCreateFromFile(filename); }
   public static function sprite3dSetTexture(sprite: RLHandle, texture: RLHandle): Bool { return RLExterns.sprite3dSetTexture(sprite, texture); }
   public static function sprite3dSetTransform(sprite: RLHandle, positionX: Float, positionY: Float, positionZ: Float, size: Float): Bool { return RLExterns.sprite3dSetTransform(sprite, positionX, positionY, positionZ, size); }
-  public static function sprite3dDraw(sprite: RLHandle, tint: RLHandle): Void { RLExterns.sprite3dDraw(sprite, tint); }
+  public static function sprite3dSetTint(sprite: RLHandle, color: RLHandle = 0): Bool { return RLExterns.sprite3dSetTint(sprite, color); }
+  public static function sprite3dDraw(sprite: RLHandle, tint: RLHandle = 0): Void { RLExterns.sprite3dDraw(sprite, tint); }
   public static function sprite3dDestroy(sprite: RLHandle): Void { RLExterns.sprite3dDestroy(sprite); }
   public static function sprite2dGetDefaultTexture(): RLHandle { return RLExterns.sprite2dGetDefaultTexture(); }
   public static function sprite2dCreate(texture: RLHandle): RLHandle { return RLExterns.sprite2dCreate(texture); }
   public static function sprite2dCreateFromFile(filename: String): RLHandle { return RLExterns.sprite2dCreateFromFile(filename); }
   public static function sprite2dSetTexture(sprite: RLHandle, texture: RLHandle): Bool { return RLExterns.sprite2dSetTexture(sprite, texture); }
   public static function sprite2dSetTransform(sprite: RLHandle, x: Float, y: Float, scale: Float, rotation: Float): Bool { return RLExterns.sprite2dSetTransform(sprite, x, y, scale, rotation); }
-  public static function sprite2dDraw(sprite: RLHandle, tint: RLHandle): Void { RLExterns.sprite2dDraw(sprite, tint); }
+  public static function sprite2dSetTint(sprite: RLHandle, color: RLHandle = 0): Bool { return RLExterns.sprite2dSetTint(sprite, color); }
+  public static function sprite2dDraw(sprite: RLHandle, tint: RLHandle = 0): Void { RLExterns.sprite2dDraw(sprite, tint); }
   public static function sprite2dDestroy(sprite: RLHandle): Void { RLExterns.sprite2dDestroy(sprite); }
   public static function text2dCreate(font: RLHandle, size: Float): RLHandle { return RLExterns.text2dCreate(font, size); }
   public static function text2dSetFont(handle: RLHandle, font: RLHandle): Void { RLExterns.text2dSetFont(handle, font); }

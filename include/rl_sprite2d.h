@@ -15,6 +15,7 @@ bool rl_sprite2d_set_texture(rl_handle_t handle, rl_handle_t texture);
 bool rl_sprite2d_set_transform(rl_handle_t handle,
                                float x, float y,
                                float scale, float rotation);
+bool rl_sprite2d_set_tint(rl_handle_t handle, rl_handle_t color_handle);
 void rl_sprite2d_draw(rl_handle_t handle, rl_handle_t tint);
 void rl_sprite2d_destroy(rl_handle_t handle);
 

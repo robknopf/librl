@@ -1652,6 +1652,9 @@ const RL = {
     modelSetAnimationLoop: (model, shouldLoop) => moduleInstance.ccall(
         "rl_model_set_animation_loop", "number", ["number", "number"], [model, shouldLoop ? 1 : 0]
     ) !== 0,
+    modelSetTint: (model, color = 0) => moduleInstance.ccall(
+        "rl_model_set_tint", "number", ["number", "number"], [model, color]
+    ) !== 0,
     modelAnimate: (model, deltaSeconds) => moduleInstance.ccall(
         "rl_model_animate", "number", ["number", "number"], [model, deltaSeconds]
     ) !== 0,
@@ -1790,7 +1793,10 @@ const RL = {
     sprite3dSetTransform: (sprite, positionX, positionY, positionZ, size) => moduleInstance.ccall(
         "rl_sprite3d_set_transform", "number", ["number", "number", "number", "number", "number"], [sprite, positionX, positionY, positionZ, size]
     ) !== 0,
-    drawSprite3d: (sprite, tint) => moduleInstance.ccall(
+    sprite3dSetTint: (sprite, color = 0) => moduleInstance.ccall(
+        "rl_sprite3d_set_tint", "number", ["number", "number"], [sprite, color]
+    ) !== 0,
+    drawSprite3d: (sprite, tint = 0) => moduleInstance.ccall(
         "rl_sprite3d_draw", null, ["number", "number"], [sprite, tint]
     ),
     destroySprite3d: (sprite) => moduleInstance.ccall(
@@ -1811,7 +1817,10 @@ const RL = {
     sprite2DSetTransform: (sprite, x, y, scale, rotation) => moduleInstance.ccall(
         "rl_sprite2d_set_transform", "number", ["number", "number", "number", "number", "number"], [sprite, x, y, scale, rotation]
     ) !== 0,
-    drawSprite2D: (sprite, tint) => moduleInstance.ccall(
+    sprite2DSetTint: (sprite, color = 0) => moduleInstance.ccall(
+        "rl_sprite2d_set_tint", "number", ["number", "number"], [sprite, color]
+    ) !== 0,
+    drawSprite2D: (sprite, tint = 0) => moduleInstance.ccall(
         "rl_sprite2d_draw", null, ["number", "number"], [sprite, tint]
     ),
     destroySprite2D: (sprite) => moduleInstance.ccall(

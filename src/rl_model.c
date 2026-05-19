@@ -58,6 +58,7 @@ typedef struct
     bool animation_loop;
     bool animation_playing;
     bool animation_gpu_warning_emitted;
+    rl_handle_t tint_handle;
 } rl_model_instance_t;
 
 static rl_model_asset_t rl_model_assets[MAX_MODEL_ASSETS];
@@ -155,6 +156,7 @@ static void reset_instance(rl_model_instance_t *instance)
     instance->animation_loop = true;
     instance->animation_playing = false;
     instance->animation_gpu_warning_emitted = false;
+    instance->tint_handle = 0;
 }
 
 static rl_model_asset_t *get_asset(rl_handle_t handle)
@@ -637,6 +639,18 @@ bool rl_model_set_animation_loop(rl_handle_t handle, bool should_loop)
 }
 
 RL_KEEP
+bool rl_model_set_tint(rl_handle_t handle, rl_handle_t color_handle)
+{
+    rl_model_instance_t *instance = get_instance(handle);
+    if (instance == NULL) {
+        return false;
+    }
+
+    instance->tint_handle = color_handle;
+    return true;
+}
+
+RL_KEEP
 bool rl_model_animate(rl_handle_t handle, float delta_seconds)
 {
     rl_model_instance_t *instance = get_instance(handle);
@@ -796,7 +810,7 @@ void rl_model_draw(rl_handle_t handle, rl_handle_t tint)
                 rotation_axis,
                 rotation_angle * RAD2DEG,
                 (Vector3){instance->scale_x, instance->scale_y, instance->scale_z},
-                rl_color_get(tint));
+                rl_color_get(instance->tint_handle != 0 ? instance->tint_handle : tint));
 }
 
 bool rl_model_get_ray_collision_ex(rl_handle_t handle,

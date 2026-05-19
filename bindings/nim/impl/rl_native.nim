@@ -528,7 +528,7 @@ proc rl_model_set_transform*(
   rotationX: cfloat, rotationY: cfloat, rotationZ: cfloat,
   scaleX: cfloat, scaleY: cfloat, scaleZ: cfloat
 ): bool {.importc, cdecl, header: "rl_model.h".}
-proc rl_model_draw*(model: RLHandle, tint: RLHandle) {.importc, cdecl, header: "rl_model.h".}
+proc rl_model_draw*(model: RLHandle, tint: RLHandle = 0) {.importc, cdecl, header: "rl_model.h".}
 proc rl_model_is_valid*(model: RLHandle): bool {.importc, cdecl, header: "rl_model.h".}
 proc rl_model_is_valid_strict*(model: RLHandle): bool {.importc, cdecl, header: "rl_model.h".}
 proc rl_model_get_animation_count_c(model: RLHandle): cint {.importc: "rl_model_get_animation_count", cdecl, header: "rl_model.h".}
@@ -537,6 +537,7 @@ proc rl_model_update_animation*(model: RLHandle, animationIndex: cint, frame: ci
 proc rl_model_set_animation*(model: RLHandle, animationIndex: cint): bool {.importc, cdecl, header: "rl_model.h".}
 proc rl_model_set_animation_speed*(model: RLHandle, speed: cfloat): bool {.importc, cdecl, header: "rl_model.h".}
 proc rl_model_set_animation_loop*(model: RLHandle, shouldLoop: bool): bool {.importc, cdecl, header: "rl_model.h".}
+proc rl_model_set_tint*(model: RLHandle, color: RLHandle = 0): bool {.importc, cdecl, header: "rl_model.h".}
 proc rl_model_animate*(model: RLHandle, deltaSeconds: cfloat): bool {.importc, cdecl, header: "rl_model.h".}
 proc rl_model_destroy*(model: RLHandle) {.importc, cdecl, header: "rl_model.h".}
 proc rl_pick_model*(
@@ -591,7 +592,8 @@ proc rl_sprite3d_set_transform*(
   positionX: cfloat, positionY: cfloat, positionZ: cfloat,
   size: cfloat
 ): bool {.importc, cdecl, header: "rl_sprite3d.h".}
-proc rl_sprite3d_draw*(sprite: RLHandle, tint: RLHandle) {.importc, cdecl, header: "rl_sprite3d.h".}
+proc rl_sprite3d_set_tint*(sprite: RLHandle, color: RLHandle = 0): bool {.importc, cdecl, header: "rl_sprite3d.h".}
+proc rl_sprite3d_draw*(sprite: RLHandle, tint: RLHandle = 0) {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_destroy*(sprite: RLHandle) {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite2d_get_default_texture*(): RLHandle {.importc, cdecl, header: "rl_sprite2d.h".}
 proc rl_sprite2d_create*(texture: RLHandle): RLHandle {.importc, cdecl, header: "rl_sprite2d.h".}
@@ -602,7 +604,8 @@ proc rl_sprite2d_set_transform*(
   x: cfloat, y: cfloat,
   scale: cfloat, rotation: cfloat
 ): bool {.importc, cdecl, header: "rl_sprite2d.h".}
-proc rl_sprite2d_draw*(sprite: RLHandle, tint: RLHandle) {.importc, cdecl, header: "rl_sprite2d.h".}
+proc rl_sprite2d_set_tint*(sprite: RLHandle, color: RLHandle = 0): bool {.importc, cdecl, header: "rl_sprite2d.h".}
+proc rl_sprite2d_draw*(sprite: RLHandle, tint: RLHandle = 0) {.importc, cdecl, header: "rl_sprite2d.h".}
 proc rl_sprite2d_destroy*(sprite: RLHandle) {.importc, cdecl, header: "rl_sprite2d.h".}
 
 # Text2D

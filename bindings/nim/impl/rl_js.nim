@@ -369,7 +369,7 @@ when defined(js):
   proc rl_model_create_from_file*(filename: string): RLHandle {.inline.} = rl_model_create_from_file(filename.cstring)
   proc rl_model_set_asset*(model: RLHandle, asset: RLHandle): bool {.importjs: "__gRl.modelSetAsset(#,#)".}
   proc rl_model_destroy*(model: RLHandle) {.importjs: "__gRl.destroyModel(#)".}
-  proc rl_model_draw*(model: RLHandle, tint: RLHandle) {.importjs: "__gRl.drawModel(#,#)".}
+  proc rl_model_draw*(model: RLHandle, tint: RLHandle = 0) {.importjs: "__gRl.drawModel(#,#)".}
   proc rl_model_is_valid*(model: RLHandle): bool {.importjs: "__gRl.isModelValid(#)".}
   proc rl_model_is_valid_strict*(model: RLHandle): bool {.importjs: "__gRl.isModelValidStrict(#)".}
   proc rl_model_set_transform*(model: RLHandle,
@@ -388,6 +388,8 @@ when defined(js):
     importjs: "__gRl.modelSetAnimationSpeed(#,#)".}
   proc rl_model_set_animation_loop*(model: RLHandle, shouldLoop: bool): bool {.
     importjs: "__gRl.modelSetAnimationLoop(#,#)".}
+  proc rl_model_set_tint*(model: RLHandle, color: RLHandle = 0): bool {.
+    importjs: "__gRl.modelSetTint(#,#)".}
   proc rl_model_animate*(model: RLHandle, deltaSeconds: float): bool {.
     importjs: "__gRl.modelAnimate(#,#)".}
   proc rl_pick_model*(camera, model: RLHandle, mouseX, mouseY: float): RLPickResult {.
@@ -403,7 +405,8 @@ when defined(js):
   proc rl_sprite3d_set_transform*(sprite: RLHandle,
                                   positionX, positionY, positionZ, size: float): bool {.
     importjs: "__gRl.sprite3dSetTransform(#,#,#,#,#)".}
-  proc rl_sprite3d_draw*(sprite: RLHandle, tint: RLHandle) {.importjs: "__gRl.drawSprite3d(#,#)".}
+  proc rl_sprite3d_set_tint*(sprite: RLHandle, color: RLHandle = 0): bool {.importjs: "__gRl.sprite3dSetTint(#,#)".}
+  proc rl_sprite3d_draw*(sprite: RLHandle, tint: RLHandle = 0) {.importjs: "__gRl.drawSprite3d(#,#)".}
   proc rl_sprite3d_destroy*(sprite: RLHandle) {.importjs: "__gRl.destroySprite3d(#)".}
   proc rl_pick_sprite3d*(camera, sprite3d: RLHandle, mouseX, mouseY: float): RLPickResult {.
     importjs: "__gRl.pickSprite3d(#,#,#,#)".}
@@ -417,7 +420,8 @@ when defined(js):
     importjs: "__gRl.sprite2DSetTexture(#,#)".}
   proc rl_sprite2d_set_transform*(sprite: RLHandle, x, y, scale, rotation: float): bool {.
     importjs: "__gRl.sprite2DSetTransform(#,#,#,#,#)".}
-  proc rl_sprite2d_draw*(sprite: RLHandle, tint: RLHandle) {.importjs: "__gRl.drawSprite2D(#,#)".}
+  proc rl_sprite2d_set_tint*(sprite: RLHandle, color: RLHandle = 0): bool {.importjs: "__gRl.sprite2DSetTint(#,#)".}
+  proc rl_sprite2d_draw*(sprite: RLHandle, tint: RLHandle = 0) {.importjs: "__gRl.drawSprite2D(#,#)".}
   proc rl_sprite2d_destroy*(sprite: RLHandle) {.importjs: "__gRl.destroySprite2D(#)".}
 
   # Text2D

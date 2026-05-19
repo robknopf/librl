@@ -3,7 +3,8 @@
 #include <lua.h>
 #include <lauxlib.h>
 
-#include "rl.h"
+//#include "rl.h"
+#include "rl_model.h"
 #include "rl_lua_model.h"
 
 static int rl_model_get_default_asset_lua(lua_State *L)
@@ -137,6 +138,14 @@ static int rl_model_set_animation_loop_lua(lua_State *L)
     return 1;
 }
 
+static int rl_model_set_tint_lua(lua_State *L)
+{
+    rl_handle_t model = (rl_handle_t)luaL_checkinteger(L, 1);
+    rl_handle_t color = (rl_handle_t)luaL_optinteger(L, 2, 0);
+    lua_pushboolean(L, rl_model_set_tint(model, color) ? 1 : 0);
+    return 1;
+}
+
 static int rl_model_animate_lua(lua_State *L)
 {
     rl_handle_t model = (rl_handle_t)luaL_checkinteger(L, 1);
@@ -201,6 +210,9 @@ void rl_register_model_bindings(lua_State *L)
 
     lua_pushcfunction(L, rl_model_set_animation_loop_lua);
     lua_setfield(L, -2, "model_set_animation_loop");
+
+    lua_pushcfunction(L, rl_model_set_tint_lua);
+    lua_setfield(L, -2, "model_set_tint");
 
     lua_pushcfunction(L, rl_model_animate_lua);
     lua_setfield(L, -2, "model_animate");

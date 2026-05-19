@@ -598,7 +598,7 @@ class RLImpl {
 		return binding != null
 			&& cast binding.modelSetTransform(model, positionX, positionY, positionZ, rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ);
 
-	public static function modelDraw(model:RLHandle, tint:RLHandle):Void {
+	public static function modelDraw(model:RLHandle, tint:RLHandle = 0):Void {
 		if (binding != null)
 			binding.drawModel(model, tint);
 	}
@@ -611,6 +611,9 @@ class RLImpl {
 
 	public static function modelSetAnimationLoop(model:RLHandle, shouldLoop:Bool):Bool
 		return binding != null && cast binding.modelSetAnimationLoop(model, shouldLoop);
+
+	public static function modelSetTint(model:RLHandle, color:RLHandle):Bool
+		return binding != null && cast binding.modelSetTint(model, color);
 
 	public static function modelAnimate(model:RLHandle, deltaSeconds:Float):Bool
 		return binding != null && cast binding.modelAnimate(model, deltaSeconds);
@@ -635,7 +638,10 @@ class RLImpl {
 	public static function sprite3dSetTransform(sprite:RLHandle, positionX:Float, positionY:Float, positionZ:Float, size:Float):Bool
 		return binding != null && cast binding.sprite3dSetTransform(sprite, positionX, positionY, positionZ, size);
 
-	public static function sprite3dDraw(sprite:RLHandle, tint:RLHandle):Void {
+	public static function sprite3dSetTint(sprite:RLHandle, color:RLHandle = 0):Bool
+		return binding != null && cast binding.sprite3dSetTint(sprite, color);
+
+	public static function sprite3dDraw(sprite:RLHandle, tint:RLHandle = 0):Void {
 		if (binding != null)
 			binding.drawSprite3d(sprite, tint);
 	}
@@ -660,7 +666,10 @@ class RLImpl {
 	public static function sprite2dSetTransform(sprite:RLHandle, x:Float, y:Float, scale:Float, rotation:Float):Bool
 		return binding != null && cast binding.sprite2DSetTransform(sprite, x, y, scale, rotation);
 
-	public static function sprite2dDraw(sprite:RLHandle, tint:RLHandle):Void {
+	public static function sprite2dSetTint(sprite:RLHandle, color:RLHandle = 0):Bool
+		return binding != null && cast binding.sprite2DSetTint(sprite, color);
+
+	public static function sprite2dDraw(sprite:RLHandle, tint:RLHandle = 0):Void {
 		if (binding != null)
 			binding.drawSprite2D(sprite, tint);
 	}

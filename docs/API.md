@@ -366,6 +366,9 @@ bool rl_sprite2d_set_texture(rl_handle_t handle, rl_handle_t texture); // swap t
 bool rl_sprite2d_set_transform(rl_handle_t handle, float x, float y,
                                float scale, float rotation);
 
+// Tint
+bool rl_sprite2d_set_tint(rl_handle_t handle, rl_handle_t color_handle); // 0 clears stored tint
+
 // Draw
 void rl_sprite2d_draw(rl_handle_t handle, rl_handle_t tint);
 ```
@@ -373,6 +376,7 @@ void rl_sprite2d_draw(rl_handle_t handle, rl_handle_t tint);
 Notes:
 - `rl_sprite2d_create(0)` creates a valid instance with no texture; draw is a silent no-op until `rl_sprite2d_set_texture` is called.
 - `rl_sprite2d_set_texture` retains the new texture and releases the old one.
+- `rl_sprite2d_set_tint` stores a tint on the instance. When non-zero it overrides the `tint` argument passed to `rl_sprite2d_draw`. Pass `0` to clear and restore draw-time tint.
 
 ---
 
@@ -400,12 +404,16 @@ bool rl_sprite3d_set_transform(rl_handle_t handle,
                                float position_x, float position_y,
                                float position_z, float size);
 
+// Tint
+bool rl_sprite3d_set_tint(rl_handle_t handle, rl_handle_t color_handle); // 0 clears stored tint
+
 // Draw
 void rl_sprite3d_draw(rl_handle_t handle, rl_handle_t tint);
 ```
 
 Notes:
 - `rl_sprite3d_create(0)` creates a valid instance with no texture; draw is a silent no-op until `rl_sprite3d_set_texture` is called.
+- `rl_sprite3d_set_tint` stores a tint on the instance. When non-zero it overrides the `tint` argument passed to `rl_sprite3d_draw`. Pass `0` to clear and restore draw-time tint.
 
 ---
 
@@ -436,6 +444,9 @@ bool rl_model_set_transform(rl_handle_t handle,
                             float rotation_x, float rotation_y, float rotation_z,
                             float scale_x, float scale_y, float scale_z);
 
+// Tint
+bool rl_model_set_tint(rl_handle_t handle, rl_handle_t color_handle); // 0 clears stored tint
+
 // Draw
 void rl_model_draw(rl_handle_t handle, rl_handle_t tint);
 
@@ -460,6 +471,7 @@ Notes:
 - On load failure, `rl_model_load_asset()` substitutes a placeholder cube; the asset handle is still valid.
 - `rl_model_set_asset` retains the new asset, releases the old one, and resets animation state.
 - `rl_model_draw()` uses the transform stored by `rl_model_set_transform()`.
+- `rl_model_set_tint` stores a tint on the instance. When non-zero it overrides the `tint` argument passed to `rl_model_draw`. Pass `0` to clear and restore draw-time tint.
 
 ---
 

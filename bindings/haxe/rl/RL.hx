@@ -627,7 +627,7 @@ class RL {
 		return rl.impl.RLImpl.modelSetTransform(model, positionX, positionY, positionZ, rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ);
 	}
 
-	public static function modelDraw(model:RLHandle, tint:RLHandle):Void {
+	public static function modelDraw(model:RLHandle, tint:RLHandle = 0):Void {
 		rl.impl.RLImpl.modelDraw(model, tint);
 	}
 
@@ -641,6 +641,10 @@ class RL {
 
 	public static function modelSetAnimationLoop(model:RLHandle, shouldLoop:Bool):Bool {
 		return rl.impl.RLImpl.modelSetAnimationLoop(model, shouldLoop);
+	}
+
+	public static function modelSetTint(model:RLHandle, color:RLHandle = 0):Bool {
+		return rl.impl.RLImpl.modelSetTint(model, color);
 	}
 
 	public static function modelAnimate(model:RLHandle, deltaSeconds:Float):Bool {
@@ -671,7 +675,11 @@ class RL {
 		return rl.impl.RLImpl.sprite3dSetTransform(sprite, positionX, positionY, positionZ, size);
 	}
 
-	public static function sprite3dDraw(sprite:RLHandle, tint:RLHandle):Void {
+	public static function sprite3dSetTint(sprite:RLHandle, color:RLHandle = 0):Bool {
+		return rl.impl.RLImpl.sprite3dSetTint(sprite, color);
+	}
+
+	public static function sprite3dDraw(sprite:RLHandle, tint:RLHandle = 0):Void {
 		rl.impl.RLImpl.sprite3dDraw(sprite, tint);
 	}
 
@@ -699,7 +707,11 @@ class RL {
 		return rl.impl.RLImpl.sprite2dSetTransform(sprite, x, y, scale, rotation);
 	}
 
-	public static function sprite2dDraw(sprite:RLHandle, tint:RLHandle):Void {
+	public static function sprite2dSetTint(sprite:RLHandle, color:RLHandle = 0):Bool {
+		return rl.impl.RLImpl.sprite2dSetTint(sprite, color);
+	}
+
+	public static function sprite2dDraw(sprite:RLHandle, tint:RLHandle = 0):Void {
 		rl.impl.RLImpl.sprite2dDraw(sprite, tint);
 	}
 

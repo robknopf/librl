@@ -20,6 +20,7 @@ typedef struct
     float y;
     float scale;
     float rotation;
+    rl_handle_t tint_handle;
 } rl_sprite2d_instance_t;
 
 static rl_sprite2d_instance_t rl_sprite2d[MAX_SPRITE2D];
@@ -72,6 +73,7 @@ rl_handle_t rl_sprite2d_create(rl_handle_t texture)
     rl_sprite2d[index].y = 0.0f;
     rl_sprite2d[index].scale = 1.0f;
     rl_sprite2d[index].rotation = 0.0f;
+    rl_sprite2d[index].tint_handle = 0;
     rl_sprite2d[index].in_use = true;
 
     return handle;
@@ -101,6 +103,7 @@ rl_handle_t rl_sprite2d_create_from_file(const char *filename)
     rl_sprite2d[index].y = 0.0f;
     rl_sprite2d[index].scale = 1.0f;
     rl_sprite2d[index].rotation = 0.0f;
+    rl_sprite2d[index].tint_handle = 0;
     rl_sprite2d[index].in_use = true;
 
     return handle;
@@ -161,7 +164,16 @@ void rl_sprite2d_draw(rl_handle_t handle, rl_handle_t tint)
                   (Vector2){sprite->x, sprite->y},
                   sprite->rotation,
                   sprite->scale,
-                  rl_color_get(tint));
+                  rl_color_get(sprite->tint_handle != 0 ? sprite->tint_handle : tint));
+}
+
+RL_KEEP
+bool rl_sprite2d_set_tint(rl_handle_t handle, rl_handle_t color_handle)
+{
+    rl_sprite2d_instance_t *sprite = rl_sprite2d_get(handle);
+    if (sprite == NULL) return false;
+    sprite->tint_handle = color_handle;
+    return true;
 }
 
 RL_KEEP
@@ -192,6 +204,7 @@ void rl_sprite2d_init(void)
         rl_sprite2d[i].y = 0.0f;
         rl_sprite2d[i].scale = 1.0f;
         rl_sprite2d[i].rotation = 0.0f;
+        rl_sprite2d[i].tint_handle = 0;
     }
 }
 

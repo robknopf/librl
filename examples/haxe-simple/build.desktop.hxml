@@ -1,0 +1,16 @@
+common.hxml
+
+-cpp out/desktop
+
+-D PLATFORM_DESKTOP
+-D HXCPP_M64
+
+-lib hxcpp-debug-server
+--debug
+
+--macro hxasync.AsyncMacro.makeAsyncable("")
+--macro macros.ExportCABI.apply()
+
+#--times
+
+--cmd echo "Build (desktop) complete."

@@ -146,6 +146,7 @@ class SimpleRuntime implements IRuntime {
 		RL.text2dSetColor(ctx.labelText2d, RL.COLOR_GREEN);
 
 		// create a model3d.  Note that it we will update the model asset (mesh/skeleton/animation) when it is available
+		// we could pass 0 for the assetHandleId, in which case it won't get rendered ( 0 = noop)
 		ctx.gumshoe = RL.modelCreate(RL.modelGetDefaultAsset());
 		RL.modelSetTint(ctx.gumshoe, RL.COLOR_BLUE);
 		RL.modelSetAnimation(ctx.gumshoe, 1);
@@ -361,7 +362,7 @@ class SimpleRuntime implements IRuntime {
 			RL.modelAnimate(ctx.gumshoe, deltaTimeSec);
 		}
 
-		// trace("335");
+		//trace("335");
 
 		var spriteX = 0.0;
 		var spriteY = 0.0;
@@ -476,8 +477,10 @@ class Main {
 			_instance = new Runtime();
 		}
 
-		// fake a host
-		// @await startLocalHost();
+		// fake a host for debugging locally
+		#if !(emscripten || PLATFORM_WEB || js)
+		@await startLocalHost();
+		#end
 		return;
 	}
 

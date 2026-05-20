@@ -77,16 +77,9 @@ function createGameClient(ws: ServerWebSocket<ClientData>): GameClient {
   };
 }
 
-// Map a file extension to a websocket message type. Keep `cppia_reload` for
-// back-compat with existing clients; everything else uses a generic
-// `file_changed` message containing the extension.
+// Map a file extension to a websocket message type. 
 function messageTypeForExt(ext: string): string {
-  switch (ext) {
-    case ".cppia":
-      return "cppia_reload";
-    default:
-      return "file_changed";
-  }
+  return "file_changed";
 }
 
 function notifyClient(ws: ServerWebSocket<ClientData>, assetPath: string, ext: string): void {

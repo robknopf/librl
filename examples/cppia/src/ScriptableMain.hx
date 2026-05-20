@@ -136,7 +136,7 @@ class ScriptableRuntime implements IRuntime {
 		try {
 			var s = payload.toString();
 			var obj:Dynamic = haxe.Json.parse(s);
-			if (Reflect.field(obj, "type") != "cppia_reload")
+			if (Reflect.field(obj, "type") != "file_changed")
 				return;
 			var data = Reflect.field(obj, "data");
 			if (data == null)
@@ -149,7 +149,7 @@ class ScriptableRuntime implements IRuntime {
 				Log.debug('[script_watcher] ignoring reload for $assetPath (springboard watches $MAIN_CPPIA_FILE)');
 				return;
 			}
-			Log.info('[script_watcher] cppia_reload: $assetPath');
+			Log.info('[script_watcher] file_changed: $assetPath');
 			fetchAndReload(assetPath);
 		} catch (e:Dynamic) {
 			Log.debug('[script_watcher] message ignored: $e');

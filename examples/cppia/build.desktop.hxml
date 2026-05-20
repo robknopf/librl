@@ -3,4 +3,10 @@ common.hxml
 #--library hxcpp-debug-server
 #-D debug
 
+-D PLATFORM_DESKTOP
+-D HXCPP_M64
+
+-lib hxcpp-debug-server
+--debug
+
 -cpp out/desktop

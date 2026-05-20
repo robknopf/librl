@@ -27,14 +27,15 @@ class CompileScript {
 	static var sysArgs = Sys.args();
 	static var scriptClassName = (sysArgs.length > 0) ? sysArgs[sysArgs.length - 1] : "";
 	static var verbosity:Verbosity = Verbosity.Silent; // HXCPP_SILENT, HXCPP_VERBOSE, HXCPP_QUIET
-	static var buildMode:BuildMode = Release;
+	static var buildMode:BuildMode = Debug;
 	static var scriptsDir = joinPath(librlRoot, "examples", "www", "public", "assets", "scripts", "haxe");
 	static var srcDir = joinPath(projectRoot, "src");
 	static var bindingsDir = joinPath(librlRoot, "bindings", "haxe");
 
 	static var debugArgs = [
 		"--debug", 
-		"--dce", "no"
+		"--dce", "no",
+		"-lib",  "hxcpp-debug-server"
 	];
 	static var releaseArgs = [
 		"--dce", "full",

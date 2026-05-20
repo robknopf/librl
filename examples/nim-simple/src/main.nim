@@ -166,6 +166,9 @@ proc onInit(): int {.rlAsync.} =
     log.error("Main: onInit failed with error: " & $rc)
     return ResultError
 
+  # move the window to the other screen 
+  rl_window_set_monitor(1)
+
   discard rl_fileio_clear()
 
   rl_enable_lighting()

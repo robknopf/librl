@@ -344,7 +344,7 @@ proc addImportTask*[T](
 ) =
   if group.isNil:
     return
-  group.addTask(rl_fileio_ensure_async(path, ""), onSuccess, onError)
+  group.addTask(rl_fileio_ensure_async(path), onSuccess, onError)
 
 proc addImportTasks*[T](group: RLTaskGroup[T], paths: openArray[string]) =
   for path in paths:

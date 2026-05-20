@@ -474,6 +474,10 @@ when defined(js):
     rl_fileio_remove(filename.cstring)
   proc rl_fileio_clear*(): int {.importjs: "__gRl.fileioClear()".}
   proc rl_fileio_restore_async*(): RLHandle {.importjs: "__gRl.fileioRestoreAsync()".}
+  proc rl_fileio_ensure*(localPath: string, src: string = ""): Future[int] =
+    let localPathCstr = localPath.cstring
+    let srcCstr = if src.len == 0: cstring(nil) else: src.cstring
+    {.emit: "return (async function() { return await __gRl.ensure(`localPathCstr`, `srcCstr`) | 0; })();".}
   proc rl_fileio_ensure_async*(localPath: cstring, src: cstring): RLHandle {.importjs: "__gRl.fileioEnsureAsync(#,#)".}
   proc rl_fileio_ensure_async*(localPath: string, src: string = ""): RLHandle {.inline.} =
     let srcPtr = if src.len == 0: cstring(nil) else: src.cstring
@@ -548,7 +552,7 @@ when defined(js):
                         onSuccess: RLTaskGroupTaskCallback[T] = nil,
                         onError: RLTaskGroupTaskCallback[T] = nil) =
     if group.isNil: return
-    group.addTask(rl_fileio_ensure_async(path, ""), onSuccess, onError)
+    group.addTask(rl_fileio_ensure_async(path), onSuccess, onError)
 
   proc addImportTasks*[T](group: RLTaskGroup[T], paths: openArray[string]) =
     for path in paths: group.addImportTask(path)

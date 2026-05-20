@@ -163,6 +163,9 @@ proc getBuildModeFlags(): string =
     result = "-d:debug"
     #if defined(js):
     result = result & " --sourceMap"
+    result = result & " --stackTrace:on"
+    result = result & " --lineTrace:on"
+    result = result & " --debugger:native"
   else:
     result = "-d:release"
 

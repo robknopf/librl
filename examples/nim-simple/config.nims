@@ -2,7 +2,7 @@ import std/os except getCurrentDir, paramCount, paramStr, dirExists
 
 when declared(switch):
   import std/[strutils, unicode]
-  import os except paramCount
+  import os except paramCount, paramStr, getCurrentDir
 
   # helper function to echo colored text
   type Color = enum
@@ -198,6 +198,10 @@ proc buildDesktop() =
     " --passL:-lnghttp2" &
     " " & getBuildModeFlags() &
     " " & getOptimizationFlags() &
+    " --hotCodeReloading:on" & 
+    #" -d:nimDebugDlOpen" &
+    " --mm:refc" & 
+    " --threads:off" &
     " " & entry
 
 

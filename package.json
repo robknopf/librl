@@ -3,8 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "npm-run-all --parallel serve watch:c:wasm watch:remote:wasm watch:nim:js watch:haxe:js",
+    "dev": "npm-run-all --parallel serve script-watcher watch:c:wasm watch:remote:wasm watch:nim:js watch:haxe:js",
     "serve": "vite",
+    "script-watcher":"cd examples/script_watcher && npm run dev",
     "build:remote:release": "npm run build:remote:wasm && vite build && mkdir -p examples/www/dist/examples/remote/out && cp examples/remote/out/main.js examples/remote/out/main.wasm examples/www/dist/examples/remote/out/",
     "build:remote:wasm": "make -C examples/remote wasm",
     "watch:remote:wasm": "onchange \"src/**/*.c\" \"src/**/*.h\" \"include/**/*.h\" \"examples/remote/**/*.c\" \"examples/remote/**/*.h\" --exclude \"examples/remote/out/**\" -- npm run build:remote:wasm",

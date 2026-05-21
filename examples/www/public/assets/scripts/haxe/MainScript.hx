@@ -26,7 +26,7 @@ typedef AppContext = {
 	var camera:RLHandle;
 	var bgm:RLHandle;
 	var greyAlphaColor:RLHandle;
-	var gumshoe:RLHandle;
+	var model:RLHandle;
 	var reloadCount:Int;
 	var spriteYOffset:Float;
 	var backgroundColor:RLHandle;
@@ -79,7 +79,7 @@ class MainScript extends Script {
 			camera: 0,
 			bgm: 0,
 			greyAlphaColor: 0,
-			gumshoe: 0,
+			model: 0,
 			reloadCount: 0,
 			spriteYOffset: 3.0,
 			backgroundColor: 0
@@ -98,6 +98,8 @@ class MainScript extends Script {
 			return RT_FAILED;
 		}
 
+		RL.windowSetMonitor(1);
+
 		RL.fileioClear();
 
 		// Setup lighting and camera
@@ -113,6 +115,12 @@ class MainScript extends Script {
 		RL.text2dSetContent(ctx.labelText2d, "rl_text2d: retained label");
 		RL.text2dSetPosition(ctx.labelText2d, 10, 136);
 		RL.text2dSetColor(ctx.labelText2d, RL.COLOR_GREEN);
+
+		ctx.model = RL.modelCreate(0);
+					RL.modelSetTransform(ctx.model, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+			RL.modelSetAnimation(ctx.model, 1);
+			RL.modelSetAnimationSpeed(ctx.model, 1.0);
+			RL.modelSetAnimationLoop(ctx.model, true);
 
 		loadAssets();
 
@@ -136,11 +144,8 @@ class MainScript extends Script {
 			}
 		}, null, ctx);
 		RL.fileioAddTask(RL.fileioEnsureAsync(MODEL_PATH), (path, _) -> {
-			ctx.gumshoe = RL.modelCreateFromFile(path);
-			RL.modelSetTransform(ctx.gumshoe, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
-			RL.modelSetAnimation(ctx.gumshoe, 1);
-			RL.modelSetAnimationSpeed(ctx.gumshoe, 1.0);
-			RL.modelSetAnimationLoop(ctx.gumshoe, true);
+			var modelAsset = RL.modelLoadAsset(MODEL_PATH);	
+			RL.modelSetAsset(ctx.model, modelAsset);
 		}, null, ctx);
 		RL.fileioAddTask(RL.fileioEnsureAsync(SPRITE_PATH), (path, _) -> {
 			ctx.sprite = RL.sprite3dCreateFromFile(path);
@@ -154,8 +159,8 @@ class MainScript extends Script {
 	}
 
 	public function animateFrame(deltaTimeSec:Float):Void {
-		if (ctx.gumshoe != 0) {
-			RL.modelAnimate(ctx.gumshoe, deltaTimeSec);
+		if (ctx.model != 0) {
+			RL.modelAnimate(ctx.model, deltaTimeSec);
 		}
 
 		var spriteX = 0.0;
@@ -207,8 +212,8 @@ class MainScript extends Script {
 
 		var pickResult:RLPickResult;
 
-		if (ctx.gumshoe != 0) {
-			pickResult = RL.pickModel(ctx.camera, ctx.gumshoe, mouse.x, mouse.y);
+		if (ctx.model != 0) {
+			pickResult = RL.pickModel(ctx.camera, ctx.model, mouse.x, mouse.y);
 			if (pickResult.hit) {
 				trace('Model pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y);
 				msg = 'Model pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y;
@@ -228,8 +233,8 @@ class MainScript extends Script {
 
 		// 3d render
 		RL.renderBeginMode3d();
-		if (ctx.gumshoe != 0) {
-			RL.modelDraw(ctx.gumshoe, RL.COLOR_RAYWHITE);
+		if (ctx.model != 0) {
+			RL.modelDraw(ctx.model, RL.COLOR_RAYWHITE);
 		}
 		if (ctx.sprite != 0) {
 			RL.sprite3dDraw(ctx.sprite, RL.COLOR_RAYWHITE);
@@ -301,6 +306,26 @@ class MainScript extends Script {
 		ctx.reloadCount++;
 
 		platformText = getPlatformText();
+
+		// if we wanted to swap models on load (for giggles) 
+		var modelPath:String = "";
+		if (ctx.reloadCount %2 == 0) {
+			modelPath = "assets/models/cultist/cultist.glb";
+		} else {
+			modelPath = "assets/models/gumshoe/gumshoe.glb";
+		}
+
+		RL.fileioAddTask(RL.fileioEnsureAsync(modelPath), (path, _) -> {
+			var modelAsset = RL.modelLoadAsset(path);
+			trace(modelAsset);
+			RL.modelSetAsset(ctx.model, modelAsset);
+		}, (path, _) -> {
+			Log.error('Failed to ensure asset: ${path}');
+		}, ctx);
+		
+		
+
+
 		return RT_SUCCESS;
 	}
 

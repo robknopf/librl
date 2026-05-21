@@ -425,7 +425,7 @@ rl_handle_t rl_model_load_asset(const char *filename)
     }
 
     return create_asset(loaded_model, animations, animation_count,
-                                 normalized_path, !using_placeholder);
+                                 normalized_path, true);
 }
 
 RL_KEEP

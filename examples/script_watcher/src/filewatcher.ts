@@ -205,7 +205,7 @@ export function startPerClientWatcher(options: PerClientWatchOptions): () => voi
 /** Default `nimrltest/public` when running from `reload_server/src`. */
 export function defaultPublicRoot(): string {
   // import.meta.dir = .../nimrltest/reload_server/src → up 2 → nimrltest/, then public/
-  return path.resolve(import.meta.dir, "../../../www/public");
+  return path.resolve(import.meta.dir, "../../www/public");
 }
 
 /** Default watch root: the project's `public/assets` tree. */

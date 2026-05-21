@@ -1,5 +1,5 @@
 import type { ServerWebSocket } from "bun";
-import { readFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, statSync } from "fs";
 import * as path from "path";
 import {
   defaultPublicRoot,
@@ -29,6 +29,9 @@ interface GameClient {
 
 const DEFAULT_ENABLE_TLS = false;
 const REQUESTED_PROTOCOL = process.env.RL_REMOTE_WS_PROTOCOL?.toLowerCase();
+if (REQUESTED_PROTOCOL && !(["wss", "ws"].includes(REQUESTED_PROTOCOL))) {
+    throw new Error(`[ERROR] "Unknown protocol from env.RL_REMOTE_WS_PROTOCOL: ${REQUESTED_PROTOCOL}`)
+}
 const ENABLE_TLS =
   REQUESTED_PROTOCOL === "wss"
     ? true
@@ -45,11 +48,17 @@ const TLS_KEY = path.join(keysDir, "privkey.pem");
 const DEFAULT_PORT = 9001;
 const PORT = (() => {
   const raw = process.env.RL_REMOTE_WS_PORT || process.env.PORT;
-  const parsed = raw ? Number.parseInt(raw, 10) : NaN;
-  if (Number.isFinite(parsed) && parsed > 0) {
+  if (!raw) {
+    return DEFAULT_PORT;
+  }
+
+  // ensure the provided value is a number (parseInt() will truncate it if it discovers invalid digits)
+  let parsed = Number(raw);
+  if (Number.isFinite(parsed) && Number.isInteger(parsed) && parsed > 0) {
     return parsed;
   }
-  return DEFAULT_PORT;
+      throw new Error(`[ERROR] "Invalid port from env.RL_REMOTE_WS_PORT: ${raw}`)
+
 })();
 
 const DEFAULT_HOST = "0.0.0.0";
@@ -77,7 +86,7 @@ function createGameClient(ws: ServerWebSocket<ClientData>): GameClient {
   };
 }
 
-// Map a file extension to a websocket message type. 
+// Map watched file changes to the websocket message type clients consume.
 function messageTypeForExt(ext: string): string {
   return "file_changed";
 }
@@ -89,7 +98,16 @@ function notifyClient(ws: ServerWebSocket<ClientData>, assetPath: string, ext: s
   console.log(`[watch] ${type} → ${ws.data.id}: ${assetPath}`);
 }
 
-const publicRoot = Bun.env.RL_REMOTE_PUBLIC_ROOT ?? defaultPublicRoot();
+var publicRoot = Bun.env.RL_REMOTE_PUBLIC_ROOT ?? defaultPublicRoot();
+
+// make sure the publicRoot dir is absolute
+publicRoot = path.isAbsolute(publicRoot) ? publicRoot : path.resolve(publicRoot);
+
+// verify it exists
+if (!existsSync(publicRoot) || !statSync(publicRoot).isDirectory()) {
+  throw new Error(`[ERROR] Watcher public root is not a directory: ${publicRoot}`);
+}
+console.log("Watcher public root directory: ", publicRoot)
 const watchDebounceMs = (() => {
   const v = Number.parseInt(Bun.env.RL_REMOTE_WATCH_DEBOUNCE_MS ?? "150", 10);
   return Number.isFinite(v) ? v : 150;
@@ -149,6 +167,7 @@ const server = Bun.serve<ClientData>({
     },
 
     message(ws, message) {
+      console.log("got message:", message)
       if (typeof message !== "string") return;
       try {
         const msg = JSON.parse(message) as ClientMessage;

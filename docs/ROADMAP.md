@@ -32,20 +32,12 @@ Committed near-term work — pick up when Now is clear.
   - rename `async/wg_*` to drop the `wg_` prefix (align with `websocket_`, `fetch_url_`)
   - optional: verb-first pass on `debug*` / `logger*` (currently kept section-first as module namespaces)
 
-### Lua / scripting host
+### Lua / scripting host (thin host — no HCR)
 
-- Lua event listener ownership across reloads:
-  - current script-facing API: `event_on`, `event_off`, `event_emit`
-  - current temporary policy is script-managed listener teardown
-  - add ownership/generation tracking so reload cleanup can be selective
 - Decide whether the host fallback `ClearBackground(RAYWHITE)` remains in `examples/c-lua/main.c` or Lua fully owns frame clear.
-- Hot reload / HCR follow-up (`load/unload/serialize/unserialize` exist):
-  - define what survives reload vs what is reconstructed
-  - decide exact persistence rules for script globals vs restored state
-  - decide whether reload should stay in the same VM or move toward new-VM swap later
-  - decide whether unload/load should become mandatory for script modules or remain optional hooks
-  - make error/reporting behavior predictable during reload
-- Document the Lua script-facing surface in a smaller user-facing note once lifecycle and wrappers stabilize.
+- Light docs for the current Lua script surface (`runtime_wrapper.lua`, wrapper modules under `examples/www/public/assets/scripts/lua/`) — document what exists today; no HCR lifecycle promises.
+
+**Deferred:** Lua hot reload / HCR — see **Parked → Lua hot reload / HCR**. Prefer the working Haxe/cppia reload path (`examples/cppia/`, `ScriptableMain`) until scripting strategy is decided in **Research**.
 
 ### Platform / infrastructure
 
@@ -114,11 +106,12 @@ Designed enough to implement when prioritized.
 
 Needs evaluation or a design decision before implementation.
 
-- Scripting backend evaluation:
-  - keep Lua as the reference implementation for module-hosted scripting
-  - compare TinyCC, daslang, and Haxe/cppia against the same flat `rl_*` API
-  - evaluate: hot reload latency, host API friction, debugging quality, wasm feasibility, native production story without a permanent interpreter, ergonomics for handle-based host calls
-  - Haxe/cppia-specific: does it provide a strong "same source in dev + native production later" path without unacceptable C++/toolchain friction?
+- **Scripting backend strategy** (current leaning hypothesis):
+  - **Preferred path:** Haxe host (`hxcpp` → emcc on wasm) + `MainScript.cppia` for dev iteration (`onUnload` / `onLoad` state handoff, file-watcher reload in `examples/cppia/ScriptableMain`) + compile script into the host for production (no permanent interpreter at ship time).
+  - **Lua:** keep as reference thin-host and desktop option (`examples/c-lua`, `bindings/lua`); not the default wasm gameplay path unless evaluation overturns this.
+  - **Open tradeoff:** always-on Lua VM (wasm bundle size, permanent interpreter, HCR design cost — VM lifecycle, `require` cache, event/handle ownership across reload) vs cppia-in-dev / compiled-in-for-prod.
+  - Still compare if needed: TinyCC, daslang, embedded Lua on wasm vs JS-side Lua bridge.
+  - Criteria: hot reload latency, host API friction, debugging quality, wasm feasibility and size, native production story without interpreter, ergonomics for handle-based host calls.
 - Event payload bridge for JS:
   - add scratch-area read/write helpers for event payloads so JS can exchange structured payload data with C listeners
   - define a stable payload layout/versioning strategy for JS/Nim/C safety
@@ -152,12 +145,28 @@ Explicitly deferred — not on the near-term path.
 - Desktop LuaJIT path: FFI bindings loading `librl.so` directly, bypassing C bindings
 - PUC Lua path: standard `luaopen_rl` C binding
 
-### Scripting backend candidates (beyond Lua)
+### Scripting backend candidates
 
-- **hxcpp + cppia**: typed Haxe in dev (cppia fast reload), compiled native in prod
+- **hxcpp + cppia** — **active in `examples/cppia/`** (typed Haxe in dev, cppia reload, compile-in for prod); not a hypothetical
 - **TinyCC**: C scripts compiled at runtime
 - **daslang**: statically typed scripting
 - All backends should call the same flat `rl_*` C API (same as current bindings)
+
+### Lua hot reload / HCR
+
+Deferred until scripting strategy settles (see **Research → Scripting backend strategy**). Do not prioritize over the working cppia reload loop.
+
+- Lua event listener ownership across reloads:
+  - current script-facing API: `event_on`, `event_off`, `event_emit`
+  - current temporary policy is script-managed listener teardown
+  - add ownership/generation tracking so reload cleanup can be selective
+- Hot reload / HCR follow-up (`load` / `unload` / `serialize` / `unserialize` sketched in `lua_demo.lua`; host sequence documented in `docs/MAINTAINER.md`):
+  - define what survives reload vs what is reconstructed
+  - decide exact persistence rules for script globals vs restored state
+  - decide whether reload should stay in the same VM or move toward new-VM swap later
+  - decide whether unload/load should become mandatory for script modules or remain optional hooks
+  - make error/reporting behavior predictable during reload
+- Document the full Lua script-facing surface (including HCR hooks) once lifecycle and boot/import ownership are stable
 
 ### Lua bootstrap / import cleanup
 
@@ -173,8 +182,8 @@ Explicitly deferred — not on the near-term path.
 
 ### Wasm + embedded scripting
 
-- Decide later whether wasm Lua should be: embedded Lua VM, JS-side Lua bridge, or something else
-- Keep the thin-host boundary stable enough that this can be swapped without redesigning the runtime
+- Default hypothesis: wasm gameplay scripting via Haxe/cppia (see **Research**), not a permanent embedded Lua VM — unless evaluation says otherwise.
+- If Lua on wasm is revisited: embedded Lua VM vs JS-side Lua bridge vs other; keep the thin-host boundary stable enough that this can be swapped without redesigning the runtime
 
 ### Build / tooling
 

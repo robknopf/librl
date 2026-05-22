@@ -62,6 +62,36 @@ Scratch design goals:
 - Reduce boundary overhead:
   - For vec/struct-like return values, one wasm call + one scratch read is preferred over many scalar calls.
 
+Wasm-only scratch bridge table (maintainer reference; JS callers use the right-hand `RL.*` methods only):
+
+| C export | Direction | JS public API | Scratch read |
+|----------|-----------|---------------|--------------|
+| `rl_scratch_refresh` | C → scratch (input snapshot) | `refreshScratch()`, also called at start of `tick()` | mouse, keyboard, gamepads, touchpoints |
+| `rl_window_get_screen_size_to_scratch` | C → scratch | `getScreenSize()` | `vector2` |
+| `rl_window_get_position_to_scratch` | C → scratch | `getWindowPosition()` | `vector2` |
+| `rl_window_get_monitor_position_to_scratch` | C → scratch | `getMonitorPosition(monitor?)` | `vector2` |
+| `rl_input_get_mouse_position_to_scratch` | C → scratch | `getMousePosition()` | `vector2` |
+| `rl_text_measure_ex_to_scratch` | C → scratch | `measureTextEx(font, text, fontSize, spacing?)` | `vector2` (width/height) |
+| `rl_pick_model_to_scratch` | C → scratch | `pickModel(camera, model, mouseX, mouseY)` | `vector3` (point), `vector4` (normal xyz + distance w) |
+| `rl_pick_sprite3d_to_scratch` | C → scratch | `pickSprite3d(camera, sprite3d, mouseX, mouseY)` | `vector3` (point), `vector4` (normal xyz + distance w) |
+| `rl_fileio_ensure_group_from_scratch_async` | scratch → C | `fileioEnsureGroupAsync(filenames)` | JS writes string table via internal `writeScratchStringTable()` first |
+
+Direct scratch reads (no `*_to_scratch` call; require `refreshScratch()` or `tick()` first so C has populated the snapshot):
+
+| JS public API | Scratch region |
+|---------------|----------------|
+| `getMouseState()` | mouse (x, y, wheel, buttons) |
+| `getKeyboardState()` | keyboard keys/queues |
+| `getGamepads()` / `getGamepad(id)` | gamepad array |
+| `getTouchpoints()` / `getTouchpoint(id)` | touchpoint array |
+
+Notes:
+
+- C symbols in the first table are wasm export/implementation details — do not call them from application JS; use the `RL.*` wrapper.
+- `bindings/js/rl.js` reads scratch through internal module helpers (`getVector2`, `getVector3`, `getVector4`, `getMouseState`, …) initialized at boot from `rl_scratch_get_base()` and `rl_scratch_get_offsets()`.
+- Haxe JS maps `RL.scratchRefresh()` → `refreshScratch()`; Lua exposes `scratch_refresh` (calls C directly on desktop/wasm). Nim/Haxe/Lua desktop paths use normal C struct returns where available and should not expose `*_to_scratch` / `*_from_scratch` on their public surfaces.
+- Layout and lifecycle details: `docs/API.md` § Scratch Area.
+
 Used by:
 
 - `examples/www/js_example.js`

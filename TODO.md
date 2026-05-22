@@ -17,26 +17,19 @@
   - use that path to improve automated runtime verification beyond compile-only checks
 - API/docs sync:
   - keep examples current as APIs change
-  - add a short wasm-only bridge table for scratch helpers (`*_to_scratch` and JS wrapper names)
   - keep `README.md`, `docs/API.md`, `docs/BINDINGS.md`, and `docs/DEV_NOTES.md` aligned when the Lua/module surface changes
-- Binding parity policy:
-  - when public C API in `include/*.h` changes, update bindings in the same pass:
-    - JavaScript (`bindings/js/*`)
-    - Nim (`bindings/nim/*`)
-    - Haxe (`bindings/haxe/*`)
-    - Lua (`bindings/lua/*`)
-  - default policy is clean updates only (no aliases/backward-compat shims) unless explicitly requested
-  - if a binding intentionally does not expose an API, document that decision in `docs/BINDINGS.md`
+  - expand `tools/gen_librl_dts.py` `SIGNATURE_OVERRIDES` for model/sprite/camera methods (most still emit generic `unknown` signatures)
+- Binding parity policy: documented in `AGENTS.md` (update all four bindings in the same pass when C API changes; no aliases unless requested).
 - Binding parity follow-up (current backlog):
   - run a full parity audit for Nim and Haxe against current public C API (same exclusions as Lua: no `rl_frame_command*`, no scratch/SAB APIs)
   - remove scratch/ABI bindings from non-JS bindings; bindings that do not use the JS SAB scratch bridge should not expose `rl_update_to_scratch`, `*_to_scratch`, `*_from_scratch`, or other scratch-only helpers
   - add missing Nim APIs to `bindings/nim/` with idiomatic wrappers where appropriate
   - add missing Haxe APIs to `bindings/haxe/` with idiomatic lowerCamelCase surface
   - align logging ergonomics across Nim/Haxe/Lua (`log.debug/info/warn/error/...` style)
-  - **JS binding tests:** add automated coverage for `bindings/js/*` (e.g. `tests/bindings/js` with Node or a small headless harness calling `rl.init` / core `RL` APIs). Today `make test` runs Haxe and Nim binding smoke tests and wasm C unit tests, but nothing equivalent for the JS wrapper layer.
-- Naming convention cleanup:
+  - **JS binding tests:** extend `tests/bindings/js` beyond version stamps (e.g. headless `rl.init` / core `RL` API smoke with Node ≥25 / JSPI). Version validate/binding/mismatch tests exist; full wrapper coverage does not.
+- Naming convention cleanup (remaining):
   - Rename `async/wg_*` to drop the `wg_` prefix (align with `websocket_`, `fetch_url_`)
-- Audit bindings to ensure they haven't gotten stale (JS + Nim)
+  - optional: verb-first pass on `debug*` / `logger*` (currently kept section-first as module namespaces)
 - Frame command path hardening:
   - current typed command path exists through `rl_render_command_t` and the C example host buffer
   - **v2 encoding proposal**: Lua table batch submission for reduced crossing overhead
@@ -260,6 +253,14 @@
 
 ## Done
 
+- JS binding naming + types (2025-05):
+  - verb-first handle/instance methods on `bindings/js/rl.js` (`setText2d*`, `setModel*`, `getVersion*`, `getDefaultTexture`, …); `fileio*` / `logger*` stay section-first
+  - Haxe/Nim/Lua keep section-first public names; Haxe/Nim JS bridges map to JS verb-first at the boundary
+  - default handles: getters only (`getDefaultFont`, `getDefaultCamera3d`, `getDefaultTexture`); removed binding-level `FONT_DEFAULT` / `CAMERA3D_DEFAULT` and sprite default-texture helpers
+  - `text2d` lowercase-`d` casing aligned across JS, examples, and generated types
+  - auto-generated `types/librl.d.ts` via `tools/gen_librl_dts.py` + `make binding-types` (wired into `wasm` / `desktop` / `shared`)
+  - documented in `docs/BINDINGS.md` (Binding Naming) and `AGENTS.md` (Binding Naming Policy, commit workflow, Node ≥25 / JSPI testing for wasm tests)
+  - wasm scratch bridge table in `docs/BINDINGS.md` (C `*_to_scratch` / `*_from_scratch` ↔ JS `RL.*` mapping)
 - Sprite2D module:
   - C implementation with handle pool, split transform/draw pattern
   - Lua bindings and wrapper (`sprite2d.lua`)

@@ -215,12 +215,19 @@ static int rl_version_string_lua(lua_State *L)
     return 1;
 }
 
+/*
+ * Intentionally not registered: rl_scratch_refresh is a wasm/JS SAB bridge helper.
+ * Use bindings/js/rl.js refreshScratch() or RL.tick() on web; desktop callers use direct C input/window APIs.
+ * Do not re-expose on Lua/Haxe/Nim without a cross-binding design (docs/BINDINGS.md scratch bridge table).
+ */
+#if 0
 static int rl_scratch_refresh_lua(lua_State *L)
 {
     (void)L;  /* Unused */
     rl_scratch_refresh();
     return 0;
 }
+#endif
 
 static int rl_begin_drawing_lua(lua_State *L)
 {
@@ -350,7 +357,7 @@ static const luaL_Reg rl_functions[] = {
     {"version_label", rl_version_label_lua},
     {"version_number", rl_version_number_lua},
     {"version_string", rl_version_string_lua},
-    {"scratch_refresh", rl_scratch_refresh_lua},
+    /* scratch_refresh: intentionally omitted — wasm/JS SAB bridge only (see docs/BINDINGS.md) */
     {"begin_drawing", rl_begin_drawing_lua},
     {"end_drawing", rl_end_drawing_lua},
     {"clear_background", rl_clear_background_lua},

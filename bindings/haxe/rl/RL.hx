@@ -332,9 +332,11 @@ class RL {
 		return rl.impl.RLImpl.versionString();
 	}
 
-	public static function scratchRefresh():Void {
-		rl.impl.RLImpl.scratchRefresh();
-	}
+	// Intentionally not exposed: scratch/SAB bridge is JS/wasm-only (see docs/BINDINGS.md).
+	// Use RL.tick() on Haxe JS (forwards to bindings/js refreshScratch); desktop uses direct C APIs.
+	// public static function scratchRefresh():Void {
+	// 	rl.impl.RLImpl.scratchRefresh();
+	// }
 
 	public static function tick():Int {
 		return rl.impl.RLImpl.tick();

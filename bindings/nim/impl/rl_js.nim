@@ -253,7 +253,9 @@ when defined(js):
   proc rl_version_label*(): string {.importjs: "__gRl.getVersionLabel()".}
   proc rl_version_number*(): uint32 {.importjs: "__gRl.getVersionNumber()".}
   proc rl_version_string*(): string {.importjs: "__gRl.getVersionString()".}
-  proc rl_scratch_refresh*() {.importjs: "__gRl.refreshScratch()".}
+  # Intentionally not exposed: scratch/SAB bridge is JS/wasm-only (see docs/BINDINGS.md).
+  # Haxe/Nim JS callers use rl_tick() → bindings/js/rl.js tick(), which refreshes scratch internally.
+  # proc rl_scratch_refresh*() {.importjs: "__gRl.refreshScratch()".}
   proc rl_fileio_set_asset_host_impl(assetHost: cstring): int {.importjs: "__gRl.fileioSetAssetHost(#)".}
   proc rl_fileio_set_asset_host*(assetHost: string): int {.inline.} = rl_fileio_set_asset_host_impl(assetHost.cstring)
   proc rl_fileio_get_asset_host*(): cstring {.importjs: "__gRl.fileioGetAssetHost()".}

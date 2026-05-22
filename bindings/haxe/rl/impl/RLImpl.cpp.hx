@@ -104,8 +104,9 @@ private extern class RLExterns {
     return untyped __cpp__("::String(::rl_version_string())");
   }
 
-  @:native("rl_scratch_refresh")
-  static function scratchRefresh(): Void;
+  // Intentionally not exposed: scratch/SAB bridge is JS/wasm-only (see docs/BINDINGS.md).
+  // @:native("rl_scratch_refresh")
+  // static function scratchRefresh(): Void;
 
   @:native("rl_tick")
   static function tick(): Int;
@@ -806,7 +807,8 @@ abstract RLImpl(RLExterns) {
     return BOOT_OK;
   }
   public static function deinit(): Void { RLExterns.deinit(); }
-  public static function scratchRefresh(): Void { RLExterns.scratchRefresh(); }
+  // Intentionally not exposed: scratch/SAB bridge is JS/wasm-only (see docs/BINDINGS.md).
+  // public static function scratchRefresh(): Void { RLExterns.scratchRefresh(); }
   public static function tick(): Int { return RLExterns.tick(); }
   public static function getDeltaTime(): Float { return RLExterns.getDeltaTime(); }
   public static function getTime(): Float { return RLExterns.getTime(); }

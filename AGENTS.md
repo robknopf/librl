@@ -18,6 +18,7 @@
 - If a binding intentionally does not expose an API, document that decision in `docs/BINDINGS.md`.
 - When changing the JS binding (`bindings/js/rl.js`), run `make binding-types` in the same pass to regenerate `types/librl.d.ts` (also runs automatically with `make wasm`, `make desktop`, and `make shared`). Do not edit `types/librl.d.ts` by hand.
 - **Init API:** public binding surfaces expose only `init(config)` and `initAsync(config)` with native config types. Do not expose `rl_init_values` / `rl_init_values_async` (or positional `initValues*` wrappers) on binding public APIs — bindings flatten config and call those C helpers internally. See `docs/BINDINGS.md` init contract.
+- **Scratch / SAB bridge (JS/wasm only):** do not expose `rl_scratch_refresh`, `*_to_scratch`, `*_from_scratch`, or other scratch-only wasm bridge symbols on **Haxe, Lua, or Nim** public surfaces. JavaScript (`bindings/js/rl.js`) owns the scratch area and maps bridges to normal methods (`refreshScratch()`, `getScreenSize()`, `pickModel()`, …). Desktop Haxe/Lua/Nim use direct C struct returns where available; wasm Haxe/Nim rely on `tick()` forwarding to the JS binding (which calls `refreshScratch()` internally). If a symbol looks “missing” during parity review, check for commented-out stubs with rationale in binding sources before re-adding. See `docs/BINDINGS.md` (wasm scratch bridge table).
 
 ## Binding Naming Policy
 

@@ -49,7 +49,7 @@ Role:
 - Initializes and reads the scratch area bridge for vectors/input state.
 - Provides browser-oriented runtime setup helpers (`canvas`, module boot/init flow).
 - Window/viewport resize and letterboxing are host/runner concerns (for example `examples/www/public/js/example_runner.js`); the JS binding does not install browser resize listeners or call `rl_window_set_size` during init.
-- Exposes explicit scratch refresh helpers for wasm input snapshot refresh (`refreshScratch()` in JS, `scratchRefresh()` in Haxe, `scratch_refresh` in Lua).
+- Exposes explicit scratch refresh on JS only (`refreshScratch()` in `bindings/js/rl.js`, invoked automatically at the start of `tick()`). Haxe/Lua/Nim do not expose scratch-bridge entry points — desktop uses direct C struct returns; wasm Haxe/Nim use `tick()` which forwards to the JS binding.
 
 Scratch design goals:
 
@@ -89,8 +89,7 @@ Notes:
 
 - C symbols in the first table are wasm export/implementation details — do not call them from application JS; use the `RL.*` wrapper.
 - `bindings/js/rl.js` reads scratch through internal module helpers (`getVector2`, `getVector3`, `getVector4`, `getMouseState`, …) initialized at boot from `rl_scratch_get_base()` and `rl_scratch_get_offsets()`.
-- Haxe JS maps `RL.scratchRefresh()` → `refreshScratch()`; Lua exposes `scratch_refresh` (calls C directly on desktop/wasm). Nim/Haxe/Lua desktop paths use normal C struct returns where available and should not expose `*_to_scratch` / `*_from_scratch` on their public surfaces.
-- Layout and lifecycle details: `docs/API.md` § Scratch Area.
+- Haxe/Lua/Nim intentionally omit `scratch_refresh` / `scratchRefresh` / `rl_scratch_refresh` on their public surfaces (commented in binding sources with rationale). Wasm Haxe/Nim callers rely on `tick()` → JS `refreshScratch()`. Layout and lifecycle details: `docs/API.md` § Scratch Area.
 
 Used by:
 
@@ -306,7 +305,7 @@ Current state:
   - `RL.fileioInit(...)`, `RL.fileioDeinit()`, `RL.fileioEnsure(...)`
   - The `*Async` task-starting APIs keep their C semantics: they return immediate status/task handles and are polled/finished through the fileio task API.
 - The Haxe JS backend now reuses `bindings/js/*` exclusively. `RLImpl.js.hx` no longer calls the wasm exports directly; all browser-side behavior flows through the JS binding layer.
-- On Haxe JS, `RL.scratchRefresh()` forwards to the JS binding's scratch refresh path. Call it in the tick/frame loop before reading scratch-backed state such as mouse or keyboard snapshots.
+- On Haxe JS, scratch refresh is internal to `RL.tick()` (forwards to `bindings/js/rl.js` `refreshScratch()`). `RL.scratchRefresh()` is intentionally not on the Haxe public surface.
 - `RLImpl.cpp.hx` keeps the raw C extern table private as `RLExterns`; authored code never imports it directly.
 - There is no generic runtime fallback. New targets must add an explicit backend such as `RLImpl.lua.hx`.
 - `examples/haxe-js-simple` is the current compile/run smoke test for the Haxe `js` backend. It exercises `RL.boot()` and fileio init/deinit; in runtimes without JSPI support, boot returns an error code without instantiating wasm.

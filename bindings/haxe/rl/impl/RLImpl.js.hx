@@ -312,10 +312,12 @@ class RLImpl {
 		return 0;
 	}
 
-	public static function scratchRefresh():Void {
-		if (binding != null)
-			binding.refreshScratch();
-	}
+	// Intentionally not exposed on Haxe public API: scratch/SAB bridge is JS/wasm-only.
+	// Haxe JS tick() forwards to bindings/js/rl.js, which calls refreshScratch() internally.
+	// public static function scratchRefresh():Void {
+	// 	if (binding != null)
+	// 		binding.refreshScratch();
+	// }
 
 	public static function tick():Int {
 		return binding == null ? TICK_FAILED : cast binding.tick();

@@ -22,7 +22,7 @@
 - Binding parity policy: documented in `AGENTS.md` (update all four bindings in the same pass when C API changes; no aliases unless requested).
 - Binding parity follow-up (current backlog):
   - run a full parity audit for Nim and Haxe against current public C API (same exclusions as Lua: no `rl_frame_command*`, no scratch/SAB APIs)
-  - remove scratch/ABI bindings from non-JS bindings; bindings that do not use the JS SAB scratch bridge should not expose `rl_update_to_scratch`, `*_to_scratch`, `*_from_scratch`, or other scratch-only helpers
+  - remove scratch/ABI bindings from non-JS bindings — done for `scratch_refresh` / `scratchRefresh` / `rl_scratch_refresh` (commented in sources; see docs/BINDINGS.md); audit for any other `*_to_scratch` / `*_from_scratch` if added later
   - add missing Nim APIs to `bindings/nim/` with idiomatic wrappers where appropriate
   - add missing Haxe APIs to `bindings/haxe/` with idiomatic lowerCamelCase surface
   - align logging ergonomics across Nim/Haxe/Lua (`log.debug/info/warn/error/...` style)

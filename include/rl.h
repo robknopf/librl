@@ -22,7 +22,6 @@
 #include "rl_text2d.h" // IWYU pragma: keep
 #include "rl_texture.h" // IWYU pragma: keep
 #include "rl_types.h" // IWYU pragma: keep
-#include "rl_config.h"
 #include "rl_version.h" // IWYU pragma: keep
 #include "rl_window.h" // IWYU pragma: keep
 
@@ -45,8 +44,6 @@ typedef enum rl_tick_result_t {
   RL_TICK_FAILED = -1,
 } rl_tick_result_t;
 
-int rl_init(const rl_init_config_t *config);
-int rl_init_async(const rl_init_config_t *config);
 int rl_init_values(int window_width,
                    int window_height,
                    const char *window_title,

@@ -24,7 +24,7 @@ extern "C" {
 
 /*
  * Window lifecycle is owned by core runtime:
- * - rl_init(...) opens/configures the window
+ * - rl_init_values(...) opens/configures the window
  * - rl_deinit() closes the window
  *
  * These entry points are intentionally internal and should not be exposed

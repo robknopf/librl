@@ -67,17 +67,14 @@ CFLAGS_WASM = \
 LDFLAGS_WASM = \
 	$(WASM_COMMON_LDFLAGS) \
 	-s JSPI=1 \
-	-s JSPI_EXPORTS='["rl_init","rl_init_values","rl_fs_init","rl_asset_ensure","rl_deinit","rl_fs_deinit"]' \
+	-s JSPI_EXPORTS='["rl_init_values","rl_fs_init","rl_asset_ensure","rl_deinit","rl_fs_deinit"]' \
 	-fwasm-exceptions \
 	-s INITIAL_MEMORY=67108864 \
 	-s EXPORTED_FUNCTIONS='[ \
 	"_malloc", \
 	"_free", \
-	"_rl_init", \
-	"_rl_init_async", \
 	"_rl_init_values", \
 	"_rl_init_values_async", \
-	"_rl_init_config_sizeof", \
 	"_rl_is_initialized", \
 	"_rl_get_platform", \
 	"_rl_version_major", \

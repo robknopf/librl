@@ -41,75 +41,78 @@
  * ============================================================================ */
 
 /* Core lifecycle */
-static int rl_init_lua(lua_State *L)
+static void read_init_table(lua_State *L, int idx,
+                            int *window_width, int *window_height,
+                            const char **window_title, unsigned int *window_flags,
+                            const char **asset_host, const char **fs_root_dir)
 {
-    rl_init_config_t cfg;
-    const int have_table = lua_istable(L, 1);
+    *window_width = 0;
+    *window_height = 0;
+    *window_title = NULL;
+    *window_flags = 0;
+    *asset_host = NULL;
+    *fs_root_dir = NULL;
 
-    memset(&cfg, 0, sizeof(cfg));
-    if (have_table) {
-        lua_getfield(L, 1, "window_width");
-        cfg.window_width = (int)luaL_optinteger(L, -1, 0);
-        lua_pop(L, 1);
-
-        lua_getfield(L, 1, "window_height");
-        cfg.window_height = (int)luaL_optinteger(L, -1, 0);
-        lua_pop(L, 1);
-
-        lua_getfield(L, 1, "window_title");
-        cfg.window_title = lua_isstring(L, -1) ? lua_tostring(L, -1) : NULL;
-        lua_pop(L, 1);
-
-        lua_getfield(L, 1, "window_flags");
-        cfg.window_flags = (unsigned int)luaL_optinteger(L, -1, 0);
-        lua_pop(L, 1);
-
-        lua_getfield(L, 1, "asset_host");
-        cfg.asset_host = lua_isstring(L, -1) ? lua_tostring(L, -1) : NULL;
-        lua_pop(L, 1);
-
-        lua_getfield(L, 1, "fs_root_dir");
-        cfg.fs_root_dir = lua_isstring(L, -1) ? lua_tostring(L, -1) : NULL;
-        lua_pop(L, 1);
+    if (!lua_istable(L, idx)) {
+        return;
     }
 
-    lua_pushinteger(L, (lua_Integer)rl_init(have_table ? &cfg : NULL));
+    lua_getfield(L, idx, "window_width");
+    *window_width = (int)luaL_optinteger(L, -1, 0);
+    lua_pop(L, 1);
+
+    lua_getfield(L, idx, "window_height");
+    *window_height = (int)luaL_optinteger(L, -1, 0);
+    lua_pop(L, 1);
+
+    lua_getfield(L, idx, "window_title");
+    *window_title = lua_isstring(L, -1) ? lua_tostring(L, -1) : NULL;
+    lua_pop(L, 1);
+
+    lua_getfield(L, idx, "window_flags");
+    *window_flags = (unsigned int)luaL_optinteger(L, -1, 0);
+    lua_pop(L, 1);
+
+    lua_getfield(L, idx, "asset_host");
+    *asset_host = lua_isstring(L, -1) ? lua_tostring(L, -1) : NULL;
+    lua_pop(L, 1);
+
+    lua_getfield(L, idx, "fs_root_dir");
+    *fs_root_dir = lua_isstring(L, -1) ? lua_tostring(L, -1) : NULL;
+    lua_pop(L, 1);
+}
+
+static int rl_init_lua(lua_State *L)
+{
+    int window_width = 0;
+    int window_height = 0;
+    const char *window_title = NULL;
+    unsigned int window_flags = 0;
+    const char *asset_host = NULL;
+    const char *fs_root_dir = NULL;
+
+    read_init_table(L, 1, &window_width, &window_height, &window_title,
+                    &window_flags, &asset_host, &fs_root_dir);
+
+    lua_pushinteger(L, (lua_Integer)rl_init_values(
+        window_width, window_height, window_title, window_flags, asset_host, fs_root_dir));
     return 1;
 }
 
 static int rl_init_async_lua(lua_State *L)
 {
-    rl_init_config_t cfg;
-    const int have_table = lua_istable(L, 1);
+    int window_width = 0;
+    int window_height = 0;
+    const char *window_title = NULL;
+    unsigned int window_flags = 0;
+    const char *asset_host = NULL;
+    const char *fs_root_dir = NULL;
 
-    memset(&cfg, 0, sizeof(cfg));
-    if (have_table) {
-        lua_getfield(L, 1, "window_width");
-        cfg.window_width = (int)luaL_optinteger(L, -1, 0);
-        lua_pop(L, 1);
+    read_init_table(L, 1, &window_width, &window_height, &window_title,
+                    &window_flags, &asset_host, &fs_root_dir);
 
-        lua_getfield(L, 1, "window_height");
-        cfg.window_height = (int)luaL_optinteger(L, -1, 0);
-        lua_pop(L, 1);
-
-        lua_getfield(L, 1, "window_title");
-        cfg.window_title = lua_isstring(L, -1) ? lua_tostring(L, -1) : NULL;
-        lua_pop(L, 1);
-
-        lua_getfield(L, 1, "window_flags");
-        cfg.window_flags = (unsigned int)luaL_optinteger(L, -1, 0);
-        lua_pop(L, 1);
-
-        lua_getfield(L, 1, "asset_host");
-        cfg.asset_host = lua_isstring(L, -1) ? lua_tostring(L, -1) : NULL;
-        lua_pop(L, 1);
-
-        lua_getfield(L, 1, "fs_root_dir");
-        cfg.fs_root_dir = lua_isstring(L, -1) ? lua_tostring(L, -1) : NULL;
-        lua_pop(L, 1);
-    }
-
-    lua_pushinteger(L, (lua_Integer)rl_init_async(have_table ? &cfg : NULL));
+    lua_pushinteger(L, (lua_Integer)rl_init_values_async(
+        window_width, window_height, window_title, window_flags, asset_host, fs_root_dir));
     return 1;
 }
 

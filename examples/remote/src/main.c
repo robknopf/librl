@@ -101,15 +101,9 @@ int rt_init(void *user_data) {
   remote_context_t *context = &g_remote_context;
   const char *ws_url = get_remote_ws_url();
   rl_asset_add_task_result_t loader_rc = RL_ASSET_ADD_TASK_OK;
-  rl_init_config_t init_cfg;
 
-  memset(&init_cfg, 0, sizeof(init_cfg));
-  init_cfg.window_width = 1024;
-  init_cfg.window_height = 1280;
-  init_cfg.window_title = "librl Remote Client";
-  init_cfg.window_flags = RL_WINDOW_FLAG_MSAA_4X_HINT;
-  init_cfg.asset_host = ASSET_HOST;
-  if (rl_init(&init_cfg) != 0) {
+  if (rl_init_values(1024, 1280, "librl Remote Client",
+                     RL_WINDOW_FLAG_MSAA_4X_HINT, ASSET_HOST, NULL) != 0) {
     return RESULT_ERROR;
   }
 

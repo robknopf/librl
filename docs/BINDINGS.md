@@ -112,14 +112,14 @@ Notes:
   - `pickSprite3d(...)`
   - `resetPickStats()` on `rl` (C API)
   - aggregated pick telemetry on `rl.helpers.getPickStats()`
-- JS `boot(opts)` instantiates the Emscripten module and prepares the scratch/color helpers without calling `rl_init(...)`.
+- JS `boot(opts)` instantiates the Emscripten module and prepares the scratch/color helpers without calling init.
   - Returns `BOOT_*` codes (not `INIT_*`): `BOOT_OK` (0), `BOOT_ERR_UNKNOWN` (-10), `BOOT_ERR_LOADER` (-11), `BOOT_ERR_VERSION_MISMATCH` (-12).
   - This is useful when callers need the loader-only/bootstrap path first, for example `boot() -> RL.fs.init() -> init()`.
   - `boot(...)` is the canonical place for module/browser options such as `canvasId`, `modulePath`, `wasmPath`, `idealWidth`, `idealHeight`, and optional callback hooks like `print`, `printErr`, and `locateFile`.
   - `modulePath` selects the raw Emscripten JS runtime module (`lib/librl.js` by default, resolved relative to `bindings/js/rl.js`).
   - `init(...)` and `initAsync(...)` reuse the booted module instance when one already exists.
-- **Init contract (all bindings):** public API is config/table/object only — `init(config)` (run to completion; JS/wasm returns a Promise because init may suspend on fs/JSPI) and `initAsync(config)` (immediate return; poll `tick()` until `RL_TICK_RUNNING`). Bindings accept native config types (`RLInitOptions`, `RLInitConfig`, Nim `RLInitConfig`, Lua init table, etc.) and marshal internally.
-- **`rl_init_values` / `rl_init_values_async` are intentionally not exposed on binding public surfaces.** They remain in the C API and wasm exports for internal FFI (bindings flatten config and call them from implementation code). Do not re-add `initValues`, `initValuesAsync`, `initConfigAsync`, `init_values`, or positional init wrappers to user-facing binding APIs.
+- **C init entry points:** `rl_init_values` / `rl_init_values_async` (scalar args; see `docs/API.md`). **`rl_init` / `rl_init_async` (struct pointer) and `rl_init_config_sizeof` are removed** — no struct-based init in the public C ABI.
+- **Init contract (all bindings):** public API is config/table/object only — `init(config)` (run to completion; JS/wasm returns a Promise because init may suspend on fs/JSPI) and `initAsync(config)` (immediate return; poll `tick()` until `RL_TICK_RUNNING`). Bindings accept native config types and call `rl_init_values*` internally. Do not re-add positional `initValues*` wrappers on user-facing binding APIs.
 - JS `init(opts)` and `initAsync(opts)` flatten opts and call `rl_init_values(...)` / `rl_init_values_async(...)` internally (`init` may suspend via JSPI during fs restore).
 - Example: `await rl.init({ windowWidth: 800, windowHeight: 600, windowTitle: "Title", windowFlags: rl.FLAG_MSAA_4X_HINT, assetHost })`
 - Init result constants are exposed (`INIT_OK`, `INIT_ERR_UNKNOWN`, `INIT_ERR_ALREADY_INITIALIZED`, `INIT_ERR_LOADER`, `INIT_ERR_ASSET_HOST`, `INIT_ERR_WINDOW`).

@@ -18,7 +18,7 @@ Committed near-term work — pick up when Now is clear.
 
 ### Bindings and docs
 
-- **Binding parity (audit snapshot)** — `python3 tools/audit_binding_parity.py` (172 public C functions in `docs/API.md`; excludes scratch/SAB, `rl_init_values*`, `rl_init_config_sizeof`, logger macros, `examples/remote/`):
+- **Binding parity (audit snapshot)** — `python3 tools/audit_binding_parity.py` (172 public C functions in `docs/API.md`; excludes scratch/SAB, logger macros, `examples/remote/`):
 
   | Binding | Covered | Gaps |
   |---------|--------:|-----:|
@@ -34,7 +34,7 @@ Committed near-term work — pick up when Now is clear.
   **Fix (Lua — 3):**
   - `rl_sprite2d_get_default_texture`, `rl_sprite3d_get_default_texture`, `rl_sprite3d_get_transform`
 
-  Re-run the audit script after binding changes. Intentional non-gaps: scratch/SAB, `rl_init_values*`, `rl_init_config_sizeof`, `rl_frame_command*` — see `docs/BINDINGS.md`.
+  Re-run the audit script after binding changes. Intentional non-gaps: scratch/SAB, `rl_frame_command*` — see `docs/BINDINGS.md`.
 
 - Binding tooling for agents/maintainers — see `docs/MAINTAINER.md` § Tools (Python-first policy; generators, parity audit, `make binding-types` / `binding-version`).
 - remove scratch/ABI bindings from non-JS bindings — done for `scratch_refresh` / `scratchRefresh` / `rl_scratch_refresh` (commented in sources; see `docs/BINDINGS.md`); audit for any other `*_to_scratch` / `*_from_scratch` if added later
@@ -116,20 +116,6 @@ Designed enough to implement when prioritized.
   - reuse cached model local bounds + sprite3d position/size for `FrustumContainsBox` / sphere tests against active camera
   - candidates: opt-in on `pick_group`; optional skip in `rl_model_draw` / `rl_sprite3d_draw`
   - raylib frustum helpers live outside core API (e.g. raylib-extras / rcamera discussion in [raylib#4114](https://github.com/raysan5/raylib/issues/4114)) — decide vendoring vs small internal helper
-
-### Init / C ABI (wasm-friendly flattening)
-
-**Done (bindings only):** JS `RL.init()` and `RL.initAsync()` both flatten config and call `rl_init_values` / `rl_init_values_async`; struct packing and `rl_init_config_sizeof` usage removed from `bindings/js/rl.js`.
-
-**Consider (C ABI reshape — needs explicit approval per `AGENTS.md`):**
-- Make **`rl_init_values` / `rl_init_values_async`** the primary **exported** init entry points for wasm (FFI-friendly scalars + strings).
-- Demote **`rl_init` / `rl_init_async`** (`const rl_init_config_t *`) from the public wasm ABI:
-  - keep as **desktop C helpers** (inline or `static inline` in header, or internal symbols) that build config and call the values functions, **or**
-  - keep in `include/rl.h` for native hosts (`examples/c-simple`, `examples/remote`, Nim/Lua desktop) but **drop from `EXPORTED_FUNCTIONS`** / wasm link.
-- Remove **`rl_init_config_sizeof`** from public C API + wasm exports if nothing else needs struct sizing.
-- Bindings unchanged at the user surface: still `init(config)` / `initAsync(config)` with native config types; impl always flattens to values API internally.
-- Audit callers: `examples/*`, `tests/bindings/nim`, Lua `rl_init(&cfg)` — migrate to values API or struct helper as needed.
-- Empty-string → NULL normalization in `rl_init_values` may fix subtle default-title/cache differences vs current JS struct path (verify in tests).
 
 ### API consistency
 
@@ -226,6 +212,7 @@ Explicitly deferred — not on the near-term path.
 
 Changelog — trim periodically.
 
+- C init ABI flattening (2025-05): public init is `rl_init_values` / `rl_init_values_async`; removed struct-based `rl_init*` and `rl_config.h`
 - JS init flattening (2025-05): `RL.init()` calls `rl_init_values`; struct marshaling removed from `bindings/js/rl.js`
 - Binding parity audit (2025-05):
   - `tools/audit_binding_parity.py` added; 172 C functions audited (excludes `rl_init_config_sizeof`, scratch, init values helpers)

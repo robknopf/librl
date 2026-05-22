@@ -24,7 +24,6 @@ import rl.gen.RLVersion;
 
 @:keep
 @:include("rl.h")
-@:include("rl_config.h")
 private extern class RLExterns {
 
   // --- Init result codes (rl.h) ---

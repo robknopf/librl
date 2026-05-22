@@ -87,9 +87,11 @@ async function run() {
 
   try {
     const mod = await ModuleFactory({ noInitialRun: true, print: () => {}, printErr: () => {} });
-    const initRc = mod.ccall('rl_init', 'number', ['number'], [0]);
+    const initRc = mod.ccall('rl_init_values', 'number',
+      ['number', 'number', 'string', 'number', 'string', 'string'],
+      [0, 0, '', 0, '', '']);
     if (initRc !== 0) {
-      throw new Error(`rl_init failed: ${initRc}`);
+      throw new Error(`rl_init_values failed: ${initRc}`);
     }
 
     final.step = 'wait-ready';

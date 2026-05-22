@@ -211,7 +211,6 @@ int rt_boot(void) {
 
 int rt_init(void *user_data) {
   app_context_t *ctx = &g_app_context;
-  rl_init_config_t init_cfg;
 
   (void)user_data;
 
@@ -223,13 +222,8 @@ int rt_init(void *user_data) {
   set_message(ctx, INITIAL_MESSAGE);
   set_platform_text(ctx);
 
-  memset(&init_cfg, 0, sizeof(init_cfg));
-  init_cfg.window_width = SCREEN_WIDTH;
-  init_cfg.window_height = SCREEN_HEIGHT;
-  init_cfg.window_title = "c-simple (C runtime)";
-  init_cfg.window_flags = SCREEN_FLAGS;
-  init_cfg.asset_host = ASSET_HOST;
-  if (rl_init(&init_cfg) != 0) {
+  if (rl_init_values(SCREEN_WIDTH, SCREEN_HEIGHT, "c-simple (C runtime)",
+                     SCREEN_FLAGS, ASSET_HOST, NULL) != 0) {
     return RESULT_ERROR;
   }
 

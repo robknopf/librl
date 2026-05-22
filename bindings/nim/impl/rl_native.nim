@@ -40,13 +40,6 @@ type
   RLEventListenerFn* = proc(payload: pointer, userData: pointer) {.cdecl.}
   RLFileioCallbackFn* = proc(path: cstring, userData: pointer) {.cdecl.}
   RLFileioClosureCallback* = proc(path: string) {.closure.}
-  RLInitConfigC {.importc: "rl_init_config_t", header: "rl_config.h", bycopy.} = object
-    window_width: cint
-    window_height: cint
-    window_title: cstring
-    window_flags: RLWindowFlags
-    asset_host: cstring
-    fs_root_dir: cstring
   RLAssetClosureTask = ref object
     onSuccess: RLFileioClosureCallback
     onFailure: RLFileioClosureCallback
@@ -133,8 +126,6 @@ const
   RL_ASSET_ADD_TASK_OK* = 0
   RL_ASSET_ADD_TASK_ERR_INVALID* = -1
   RL_ASSET_ADD_TASK_ERR_QUEUE_FULL* = -2
-proc rl_init_raw(config: ptr RLInitConfigC): cint {.importc: "rl_init", cdecl, header: "rl.h".}
-proc rl_init_async_raw(config: ptr RLInitConfigC): cint {.importc: "rl_init_async", cdecl, header: "rl.h".}
 proc rl_init_values_raw(windowWidth: cint, windowHeight: cint, windowTitle: cstring,
                         windowFlags: RLWindowFlags, assetHost: cstring,
                         fsRootDir: cstring): cint {.importc: "rl_init_values", cdecl, header: "rl.h".}

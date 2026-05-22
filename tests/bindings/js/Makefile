@@ -10,16 +10,39 @@ NODE := $(shell \
 export NODE
 SCRIPT_DIR := $(abspath .)
 
-.PHONY: test build test_version_validate test_version_binding test_version_mismatch check_node
+SMOKE_TESTS := \
+	test_boot_smoke.mjs \
+	test_namespace_smoke.mjs \
+	test_init_smoke.mjs
+
+VERSION_TESTS := \
+	test_version_validate.mjs \
+	test_version_binding.mjs \
+	test_version_mismatch.mjs
+
+.PHONY: test build check_node \
+	test_smoke test_version_validate test_version_binding test_version_mismatch
 
 test: check_node build
-	@$(NODE) "$(SCRIPT_DIR)/test_version_validate.mjs"
-	@$(NODE) "$(SCRIPT_DIR)/test_version_binding.mjs"
-	@$(NODE) "$(SCRIPT_DIR)/test_version_mismatch.mjs"
-	@echo "JS binding version tests passed."
+	@for t in $(SMOKE_TESTS); do \
+		echo "==> $$t"; \
+		$(NODE) "$(SCRIPT_DIR)/$$t" || exit 1; \
+	done
+	@for t in $(VERSION_TESTS); do \
+		echo "==> $$t"; \
+		$(NODE) "$(SCRIPT_DIR)/$$t" || exit 1; \
+	done
+	@echo "JS binding tests passed."
 
 build:
-	@$(MAKE) -C $(ROOT_DIR) wasm
+	@$(MAKE) -C $(ROOT_DIR) wasm binding-types
+
+test_smoke: check_node build
+	@for t in $(SMOKE_TESTS); do \
+		echo "==> $$t"; \
+		$(NODE) "$(SCRIPT_DIR)/$$t" || exit 1; \
+	done
+	@echo "JS binding smoke tests passed."
 
 test_version_validate: check_node build
 	@$(NODE) "$(SCRIPT_DIR)/test_version_validate.mjs"

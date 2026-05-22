@@ -7,7 +7,7 @@ Test orchestration for this project lives in `tests/Makefile`.
 - `make`
 - Desktop C toolchain (`gcc`)
 - Emscripten (`emcc`) for wasm tests
-- Node.js for wasm unit tests
+- Node.js **≥25 with JSPI** (`WebAssembly.Suspending`) for wasm unit tests and `tests/bindings/js`
 - Chrome/Chromium for headless IDBFS probe
 - Python `websocket-client` module (`import websocket`)
 
@@ -41,6 +41,7 @@ make -C tests test_wasm
 
 - `unit_test_desktop`: runs librl desktop unit tests.
 - `unit_test_wasm`: runs librl wasm unit tests under Node.
+- `tests/bindings/js`: boot/namespace/init smoke + version stamp tests (`make -C tests/bindings/js test`).
 - `probe_idbfs_build`: builds headless IDBFS probe wasm/js.
 - `probe_idbfs`: executes headless browser IDBFS persistence probe.
 

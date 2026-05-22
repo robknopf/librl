@@ -23,7 +23,11 @@ Committed near-term work — pick up when Now is clear.
 - Binding tooling for agents/maintainers — see `docs/MAINTAINER.md` § Tools (Python-first policy; generators, parity audit, `make binding-types` / `binding-version`).
 - remove scratch/ABI bindings from non-JS bindings — done for `scratch_refresh` / `scratchRefresh` / `rl_scratch_refresh` (commented in sources; see `docs/BINDINGS.md`); audit for any other `*_to_scratch` / `*_from_scratch` if added later
 - align logging ergonomics across Nim/Haxe/Lua (`log.debug/info/warn/error/...` style)
-- **JS binding tests:** extend `tests/bindings/js` beyond version stamps (e.g. headless `rl.init` / core `RL` API smoke with Node ≥25 / JSPI)
+- **JS binding tests** (`tests/bindings/js/` — Node ≥25 / JSPI):
+  - done: boot smoke (`test_boot_smoke.mjs`), namespace shape (`test_namespace_smoke.mjs`), init preconditions / window boundary in Node (`test_init_smoke.mjs`), version stamp suite (existing)
+  - next: browser headless init → tick → deinit smoke (wire `tests/headless/idbfs_probe_rl.html` or Puppeteer equivalent into `make test`)
+  - next: fs restore / asset ensure smoke (Node or browser)
+  - next: handle create/destroy round-trips for one resource type (e.g. `color`, `camera3d`) once init runs in CI
 - API/docs sync:
   - keep examples current as APIs change
   - keep `README.md`, `docs/API.md`, `docs/BINDINGS.md`, and `docs/MAINTAINER.md` aligned when the Lua/module surface changes

@@ -24,6 +24,7 @@ local load_generation = 0
 local IDEAL_W = 1024
 local IDEAL_H = 1280
 
+local rl = require("rl")
 
 require("input_mapping")
 local Model = require("model")
@@ -74,10 +75,10 @@ local function ly(y, sy)
   return y * sy
 end
 
-log("info", "lua_module: loaded lua_demo.lua")
+rl.info("lua_module: loaded lua_demo.lua")
 local function init()
   constructor_runs = 1
-  log("info", "lua_demo: init() constructor")
+  rl.info("lua_demo: init() constructor")
 end
 
 local function load()
@@ -85,7 +86,7 @@ local function load()
     if err == nil then
       sprite3d_logo = resource
     else
-      log("error", "sprite3d load failed: " .. tostring(err))
+      rl.error("sprite3d load failed: " .. tostring(err))
     end
   end)
 
@@ -93,7 +94,7 @@ local function load()
     if err == nil then
       logo_texture = resource
     else
-      log("error", "logo texture load failed: " .. tostring(err))
+      rl.error("logo texture load failed: " .. tostring(err))
     end
   end)
 
@@ -101,7 +102,7 @@ local function load()
     if err == nil then
       blob_shadow_texture = resource
     else
-      log("error", "shadow texture load failed: " .. tostring(err))
+      rl.error("shadow texture load failed: " .. tostring(err))
     end
   end)
 
@@ -111,7 +112,7 @@ local function load()
       gumshoe_model.animation_index = 1
       gumshoe_model.animation_fps = 60.0
     else
-      log("error", "model load failed: " .. tostring(err))
+      rl.error("model load failed: " .. tostring(err))
     end
   end)
 
@@ -122,7 +123,7 @@ local function load()
       bg_music:set_volume(0.25)
       bg_music:play()
     else
-      log("error", "music load failed: " .. tostring(err))
+      rl.error("music load failed: " .. tostring(err))
     end
   end)
 
@@ -130,7 +131,7 @@ local function load()
     if err == nil then
       click_sound = resource
     else
-      log("error", "sound load failed: " .. tostring(err))
+      rl.error("sound load failed: " .. tostring(err))
     end
   end)
 
@@ -138,7 +139,7 @@ local function load()
     if err == nil then
       ui_font = resource
     else
-      log("error", "font load failed: " .. tostring(err))
+      rl.error("font load failed: " .. tostring(err))
     end
   end)
   accent_color = Color.create(221, 87, 54, 255)
@@ -147,7 +148,7 @@ local function load()
   main_camera = Camera3D.create(12.0, 12.0, 12.0,
     0.0, 1.0, 0.0,
     0.0, 1.0, 0.0,
-    45.0, CAMERA_PERSPECTIVE)
+    45.0, 0)
 
   if bg_music ~= nil then
     bg_music:set_loop(true)
@@ -161,7 +162,7 @@ local function load()
   end
 
   load_generation = load_generation + 1
-  log("info", "lua_demo: load()")
+rl.info("lua_demo: load()")
 end
 
 local function serialize()
@@ -230,7 +231,7 @@ local function unload()
 end
 
 local function shutdown()
-  log("info", "lua_demo: shutdown() destructor")
+  rl.info("lua_demo: shutdown() destructor")
 end
 
 local function update(frame)
@@ -342,32 +343,32 @@ local function update(frame)
     main_camera.up.y = 1.0
     main_camera.up.z = 0.0
     main_camera.fovy = 45.0
-    main_camera.projection = CAMERA_PERSPECTIVE
+    main_camera.projection = 0
     main_camera:mark_dirty()
     main_camera:apply()
   end
 
-  clear(COLOR_RAYWHITE)
+  rl.clear_background(rl.COLOR_RAYWHITE)
   if ui_font ~= nil and ui_font.handle ~= 0 then
     ui_font:draw("lua-driven frame", lx(24, sx), ly(140, sy) + wobble * sy, 32 * su, su,
-      accent_color ~= nil and accent_color.handle or COLOR_DARKBLUE)
+      accent_color ~= nil and accent_color.handle or rl.COLOR_DARKBLUE)
     ui_font:draw(string.format("constructor=%d load_generation=%d", constructor_runs, load_generation), lx(24, sx),
-      ly(170, sy), 20 * su, su, accent_color ~= nil and accent_color.handle or COLOR_DARKBLUE)
+      ly(170, sy), 20 * su, su, accent_color ~= nil and accent_color.handle or rl.COLOR_DARKBLUE)
     ui_font:draw(
     string.format("screen=(%d, %d) t=%.2f mouse=(%d, %d) buttons=(L:%s R:%s M:%s) wheel=%d", screen_w, screen_h, time_s,
       mouse_x, mouse_y, mouse_left and "down" or "up", mouse_right and "down" or "up", mouse_middle and "down" or "up",
       Input.mouse_wheel(mouse)), lx(24, sx), ly(200, sy), 20 * su, su,
-      panel_color ~= nil and panel_color.handle or COLOR_BLUE)
+      panel_color ~= nil and panel_color.handle or rl.COLOR_BLUE)
     ui_font:draw(
     string.format("kbd space=%s arrows=(%s %s %s %s)", Input.key_down(keyboard, Input.KEY_SPACE) and "down" or "up",
       Input.key_down(keyboard, Input.KEY_LEFT) and "L" or "-", Input.key_down(keyboard, Input.KEY_RIGHT) and "R" or "-",
       Input.key_down(keyboard, Input.KEY_UP) and "U" or "-", Input.key_down(keyboard, Input.KEY_DOWN) and "D" or "-"),
-      lx(24, sx), ly(230, sy), 20 * su, su, panel_color ~= nil and panel_color.handle or COLOR_BLUE)
+      lx(24, sx), ly(230, sy), 20 * su, su, panel_color ~= nil and panel_color.handle or rl.COLOR_BLUE)
     ui_font:draw(
     string.format("pressed key=%d tracked=%d down=%s char=%d counts=(%d/%d) backspace=%d", keyboard.pressed_key,
       tracked_key, tracked_key_down and "yes" or "no", keyboard.pressed_char, keyboard.num_pressed_keys or 0,
       keyboard.num_pressed_chars or 0, backspace_presses), lx(24, sx), ly(260, sy), 20 * su, su,
-      panel_color ~= nil and panel_color.handle or COLOR_BLUE)
+      panel_color ~= nil and panel_color.handle or rl.COLOR_BLUE)
     ui_font:draw(
     string.format("mods shift=%s ctrl=%s alt=%s",
       (Input.key_down(keyboard, Input.KEY_LEFT_SHIFT) or Input.key_down(keyboard, Input.KEY_RIGHT_SHIFT)) and "down" or
@@ -375,11 +376,11 @@ local function update(frame)
       (Input.key_down(keyboard, Input.KEY_LEFT_CONTROL) or Input.key_down(keyboard, Input.KEY_RIGHT_CONTROL)) and "down" or
       "up",
       (Input.key_down(keyboard, Input.KEY_LEFT_ALT) or Input.key_down(keyboard, Input.KEY_RIGHT_ALT)) and "down" or "up"),
-      lx(24, sx), ly(290, sy), 20 * su, su, panel_color ~= nil and panel_color.handle or COLOR_BLUE)
+      lx(24, sx), ly(290, sy), 20 * su, su, panel_color ~= nil and panel_color.handle or rl.COLOR_BLUE)
     ui_font:draw(string.format("text: %s_", text_buffer), lx(24, sx), ly(320, sy), 20 * su, su,
-      accent_color ~= nil and accent_color.handle or COLOR_DARKBLUE)
+      accent_color ~= nil and accent_color.handle or rl.COLOR_DARKBLUE)
     ui_font:draw(string.format("music(M): %s", (bg_music ~= nil and bg_music:is_playing()) and "playing" or "paused"),
-      lx(24, sx), ly(350, sy), 20 * su, su, accent_color ~= nil and accent_color.handle or COLOR_DARKBLUE)
+      lx(24, sx), ly(350, sy), 20 * su, su, accent_color ~= nil and accent_color.handle or rl.COLOR_DARKBLUE)
     if last_pick_result ~= nil then
       if last_pick_result.hit then
         ui_font:draw(string.format("pick: hit d=%.2f @ (%.2f, %.2f, %.2f)",
@@ -387,10 +388,10 @@ local function update(frame)
             last_pick_result.point.x,
             last_pick_result.point.y,
             last_pick_result.point.z),
-          lx(24, sx), ly(380, sy), 20 * su, su, accent_color ~= nil and accent_color.handle or COLOR_DARKBLUE)
+          lx(24, sx), ly(380, sy), 20 * su, su, accent_color ~= nil and accent_color.handle or rl.COLOR_DARKBLUE)
       else
         ui_font:draw("pick: miss", lx(24, sx), ly(380, sy), 20 * su, su,
-          accent_color ~= nil and accent_color.handle or COLOR_DARKBLUE)
+          accent_color ~= nil and accent_color.handle or rl.COLOR_DARKBLUE)
       end
     end
   end
@@ -409,7 +410,7 @@ local function update(frame)
         shadow_color ~= nil and shadow_color.handle ~= 0 then
       Shadow.draw_blob(blob_shadow_texture, sprite3d_logo, 1.35, shadow_color.handle, 0.0)
     end
-    sprite3d_logo:draw(COLOR_WHITE)
+    sprite3d_logo:draw(rl.COLOR_WHITE)
   end
 
   if logo_texture ~= nil and logo_texture.handle ~= 0 then
@@ -417,11 +418,11 @@ local function update(frame)
     logo_texture.y = ly(36.0, sy)
     logo_texture.scale = 0.35 * su
     logo_texture.rotation = math.sin(time_s * 1.5) * 8.0
-    logo_texture:draw(COLOR_WHITE)
+    logo_texture:draw(rl.COLOR_WHITE)
   end
 
   if gumshoe_model ~= nil and gumshoe_model.handle ~= 0 then
-    gumshoe_model:draw(COLOR_WHITE)
+    gumshoe_model:draw(rl.COLOR_WHITE)
   end
 end
 

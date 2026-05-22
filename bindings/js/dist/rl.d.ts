@@ -221,7 +221,11 @@ export interface RLInput {
     getTouchpoint(id: number): RLTouchpoint | null;
     getMousePosition(): RLVector2;
 }
-export interface RLColor {
+export type RLColorPreset = "DEFAULT" | "LIGHTGRAY" | "GRAY" | "DARKGRAY" | "YELLOW" | "GOLD" | "ORANGE" | "PINK" | "RED" | "MAROON" | "GREEN" | "LIME" | "DARKGREEN" | "SKYBLUE" | "BLUE" | "DARKBLUE" | "PURPLE" | "VIOLET" | "DARKPURPLE" | "BEIGE" | "BROWN" | "DARKBROWN" | "WHITE" | "BLACK" | "BLANK" | "MAGENTA" | "RAYWHITE";
+export type RLColorPresets = {
+    [K in RLColorPreset]: RLHandle;
+};
+export interface RLColor extends RLColorPresets {
     create(r: number, g: number, b: number, a: number): RLHandle;
     destroy(color: RLHandle): void;
 }
@@ -385,33 +389,6 @@ export interface RLApi {
     BUTTON_PRESSED: number;
     BUTTON_DOWN: number;
     BUTTON_RELEASED: number;
-    COLOR_DEFAULT: number;
-    COLOR_LIGHTGRAY: number;
-    COLOR_GRAY: number;
-    COLOR_DARKGRAY: number;
-    COLOR_YELLOW: number;
-    COLOR_GOLD: number;
-    COLOR_ORANGE: number;
-    COLOR_PINK: number;
-    COLOR_RED: number;
-    COLOR_MAROON: number;
-    COLOR_GREEN: number;
-    COLOR_LIME: number;
-    COLOR_DARKGREEN: number;
-    COLOR_SKYBLUE: number;
-    COLOR_BLUE: number;
-    COLOR_DARKBLUE: number;
-    COLOR_PURPLE: number;
-    COLOR_VIOLET: number;
-    COLOR_DARKPURPLE: number;
-    COLOR_BEIGE: number;
-    COLOR_BROWN: number;
-    COLOR_DARKBROWN: number;
-    COLOR_WHITE: number;
-    COLOR_BLACK: number;
-    COLOR_BLANK: number;
-    COLOR_MAGENTA: number;
-    COLOR_RAYWHITE: number;
     fs: RLFs;
     asset: RLAsset;
     event: RLEvent;

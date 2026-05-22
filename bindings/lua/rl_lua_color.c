@@ -3,8 +3,9 @@
 #include <lua.h>
 #include <lauxlib.h>
 
-#include "rl.h"
 #include "rl_lua_color.h"
+#include "rl_color.h"
+#include "rl_types.h"
 
 static int rl_color_create_lua(lua_State *L)
 {
@@ -33,57 +34,57 @@ void rl_register_color_bindings(lua_State *L)
     lua_setfield(L, -2, "color_destroy");
 
     lua_pushinteger(L, (lua_Integer)RL_COLOR_DEFAULT);
-    lua_setfield(L, -2, "RL_COLOR_DEFAULT");
+    lua_setfield(L, -2, "COLOR_DEFAULT");
     lua_pushinteger(L, (lua_Integer)RL_COLOR_LIGHTGRAY);
-    lua_setfield(L, -2, "RL_COLOR_LIGHTGRAY");
+    lua_setfield(L, -2, "COLOR_LIGHTGRAY");
     lua_pushinteger(L, (lua_Integer)RL_COLOR_GRAY);
-    lua_setfield(L, -2, "RL_COLOR_GRAY");
+    lua_setfield(L, -2, "COLOR_GRAY");
     lua_pushinteger(L, (lua_Integer)RL_COLOR_DARKGRAY);
-    lua_setfield(L, -2, "RL_COLOR_DARKGRAY");
+    lua_setfield(L, -2, "COLOR_DARKGRAY");
     lua_pushinteger(L, (lua_Integer)RL_COLOR_YELLOW);
-    lua_setfield(L, -2, "RL_COLOR_YELLOW");
+    lua_setfield(L, -2, "COLOR_YELLOW");
     lua_pushinteger(L, (lua_Integer)RL_COLOR_GOLD);
-    lua_setfield(L, -2, "RL_COLOR_GOLD");
+    lua_setfield(L, -2, "COLOR_GOLD");
     lua_pushinteger(L, (lua_Integer)RL_COLOR_ORANGE);
-    lua_setfield(L, -2, "RL_COLOR_ORANGE");
+    lua_setfield(L, -2, "COLOR_ORANGE");
     lua_pushinteger(L, (lua_Integer)RL_COLOR_PINK);
-    lua_setfield(L, -2, "RL_COLOR_PINK");
+    lua_setfield(L, -2, "COLOR_PINK");
     lua_pushinteger(L, (lua_Integer)RL_COLOR_RED);
-    lua_setfield(L, -2, "RL_COLOR_RED");
+    lua_setfield(L, -2, "COLOR_RED");
     lua_pushinteger(L, (lua_Integer)RL_COLOR_MAROON);
-    lua_setfield(L, -2, "RL_COLOR_MAROON");
+    lua_setfield(L, -2, "COLOR_MAROON");
     lua_pushinteger(L, (lua_Integer)RL_COLOR_GREEN);
-    lua_setfield(L, -2, "RL_COLOR_GREEN");
+    lua_setfield(L, -2, "COLOR_GREEN");
     lua_pushinteger(L, (lua_Integer)RL_COLOR_LIME);
-    lua_setfield(L, -2, "RL_COLOR_LIME");
+    lua_setfield(L, -2, "COLOR_LIME");
     lua_pushinteger(L, (lua_Integer)RL_COLOR_DARKGREEN);
-    lua_setfield(L, -2, "RL_COLOR_DARKGREEN");
+    lua_setfield(L, -2, "COLOR_DARKGREEN");
     lua_pushinteger(L, (lua_Integer)RL_COLOR_SKYBLUE);
-    lua_setfield(L, -2, "RL_COLOR_SKYBLUE");
+    lua_setfield(L, -2, "COLOR_SKYBLUE");
     lua_pushinteger(L, (lua_Integer)RL_COLOR_BLUE);
-    lua_setfield(L, -2, "RL_COLOR_BLUE");
+    lua_setfield(L, -2, "COLOR_BLUE");
     lua_pushinteger(L, (lua_Integer)RL_COLOR_DARKBLUE);
-    lua_setfield(L, -2, "RL_COLOR_DARKBLUE");
+    lua_setfield(L, -2, "COLOR_DARKBLUE");
     lua_pushinteger(L, (lua_Integer)RL_COLOR_PURPLE);
-    lua_setfield(L, -2, "RL_COLOR_PURPLE");
+    lua_setfield(L, -2, "COLOR_PURPLE");
     lua_pushinteger(L, (lua_Integer)RL_COLOR_VIOLET);
-    lua_setfield(L, -2, "RL_COLOR_VIOLET");
+    lua_setfield(L, -2, "COLOR_VIOLET");
     lua_pushinteger(L, (lua_Integer)RL_COLOR_DARKPURPLE);
-    lua_setfield(L, -2, "RL_COLOR_DARKPURPLE");
+    lua_setfield(L, -2, "COLOR_DARKPURPLE");
     lua_pushinteger(L, (lua_Integer)RL_COLOR_BEIGE);
-    lua_setfield(L, -2, "RL_COLOR_BEIGE");
+    lua_setfield(L, -2, "COLOR_BEIGE");
     lua_pushinteger(L, (lua_Integer)RL_COLOR_BROWN);
-    lua_setfield(L, -2, "RL_COLOR_BROWN");
+    lua_setfield(L, -2, "COLOR_BROWN");
     lua_pushinteger(L, (lua_Integer)RL_COLOR_DARKBROWN);
-    lua_setfield(L, -2, "RL_COLOR_DARKBROWN");
+    lua_setfield(L, -2, "COLOR_DARKBROWN");
     lua_pushinteger(L, (lua_Integer)RL_COLOR_WHITE);
-    lua_setfield(L, -2, "RL_COLOR_WHITE");
+    lua_setfield(L, -2, "COLOR_WHITE");
     lua_pushinteger(L, (lua_Integer)RL_COLOR_BLACK);
-    lua_setfield(L, -2, "RL_COLOR_BLACK");
+    lua_setfield(L, -2, "COLOR_BLACK");
     lua_pushinteger(L, (lua_Integer)RL_COLOR_BLANK);
-    lua_setfield(L, -2, "RL_COLOR_BLANK");
+    lua_setfield(L, -2, "COLOR_BLANK");
     lua_pushinteger(L, (lua_Integer)RL_COLOR_MAGENTA);
-    lua_setfield(L, -2, "RL_COLOR_MAGENTA");
+    lua_setfield(L, -2, "COLOR_MAGENTA");
     lua_pushinteger(L, (lua_Integer)RL_COLOR_RAYWHITE);
-    lua_setfield(L, -2, "RL_COLOR_RAYWHITE");
+    lua_setfield(L, -2, "COLOR_RAYWHITE");
 }

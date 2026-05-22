@@ -54,8 +54,9 @@ const stats = RL.helpers.getPickStats();
 assertType(stats.broadphaseTests, 'number', 'pickStats.broadphaseTests');
 assertType(stats.narrowphaseHits, 'number', 'pickStats.narrowphaseHits');
 
-assertType(RL.COLOR_WHITE, 'number', 'COLOR_WHITE patched after boot');
-assertType(RL.COLOR_BLACK, 'number', 'COLOR_BLACK patched after boot');
+assertType(RL.color.WHITE, 'number', 'color.WHITE patched after boot');
+assertType(RL.color.BLACK, 'number', 'color.BLACK patched after boot');
+assertTrue(RL.color.WHITE !== 0, 'color.WHITE is non-zero after boot');
 
 function assertEqPath(actual, expected, label) {
     if (actual !== expected) {

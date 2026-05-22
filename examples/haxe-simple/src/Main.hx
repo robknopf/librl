@@ -79,12 +79,7 @@ class SimpleRuntime implements IRuntime {
 			},
 			*/
 
-			// site path to the js binding module, relative to this module
-			// bindingsPath: "../../../../bindings/js/rl.js"
-
-			// absolute path to the js binding module (served from site root).
-			// Note that this is the default fallback.  See wRLImpl.js.hx::boot()
-			bindingsPath: "/bindings/js/dist/rl.js",
+			// bindingsPath defaults to page-relative bindings/js/dist/rl.js (see RLImpl.js.hx).
 
 			// optional override for the raw emscripten runtime module that the
 			// js binding boots internally. Defaults to ../../lib/librl.js relative

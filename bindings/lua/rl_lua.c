@@ -36,6 +36,12 @@
 #define luaL_newlib(L, l) (lua_newtable(L), luaL_register(L, NULL, l))
 #endif
 
+/* Binding-only boot result codes (same values as JS/Haxe; not in the C API). */
+#define RL_LUA_BOOT_OK 0
+#define RL_LUA_BOOT_ERR_UNKNOWN -10
+#define RL_LUA_BOOT_ERR_LOADER -11
+#define RL_LUA_BOOT_ERR_VERSION_MISMATCH -12
+
 /* ============================================================================
  * Individual function bindings for vanilla Lua
  * ============================================================================ */
@@ -151,7 +157,8 @@ static void rl_lua_enforce_version(lua_State *L)
 
 static int rl_boot_lua(lua_State *L)
 {
-    lua_pushinteger(L, (lua_Integer)RL_INIT_OK);
+    (void)L;
+    lua_pushinteger(L, (lua_Integer)RL_LUA_BOOT_OK);
     return 1;
 }
 
@@ -386,24 +393,32 @@ int luaopen_rl(lua_State *L)
     rl_lua_enforce_version(L);
 
     luaL_newlib(L, rl_functions);
+    lua_pushinteger(L, RL_LUA_BOOT_OK);
+    lua_setfield(L, -2, "BOOT_OK");
+    lua_pushinteger(L, RL_LUA_BOOT_ERR_UNKNOWN);
+    lua_setfield(L, -2, "BOOT_ERR_UNKNOWN");
+    lua_pushinteger(L, RL_LUA_BOOT_ERR_LOADER);
+    lua_setfield(L, -2, "BOOT_ERR_LOADER");
+    lua_pushinteger(L, RL_LUA_BOOT_ERR_VERSION_MISMATCH);
+    lua_setfield(L, -2, "BOOT_ERR_VERSION_MISMATCH");
     lua_pushinteger(L, RL_INIT_OK);
-    lua_setfield(L, -2, "RL_INIT_OK");
+    lua_setfield(L, -2, "INIT_OK");
     lua_pushinteger(L, RL_INIT_ERR_UNKNOWN);
-    lua_setfield(L, -2, "RL_INIT_ERR_UNKNOWN");
+    lua_setfield(L, -2, "INIT_ERR_UNKNOWN");
     lua_pushinteger(L, RL_INIT_ERR_ALREADY_INITIALIZED);
-    lua_setfield(L, -2, "RL_INIT_ERR_ALREADY_INITIALIZED");
+    lua_setfield(L, -2, "INIT_ERR_ALREADY_INITIALIZED");
     lua_pushinteger(L, RL_INIT_ERR_LOADER);
-    lua_setfield(L, -2, "RL_INIT_ERR_LOADER");
+    lua_setfield(L, -2, "INIT_ERR_LOADER");
     lua_pushinteger(L, RL_INIT_ERR_ASSET_HOST);
-    lua_setfield(L, -2, "RL_INIT_ERR_ASSET_HOST");
+    lua_setfield(L, -2, "INIT_ERR_ASSET_HOST");
     lua_pushinteger(L, RL_INIT_ERR_WINDOW);
-    lua_setfield(L, -2, "RL_INIT_ERR_WINDOW");
+    lua_setfield(L, -2, "INIT_ERR_WINDOW");
     lua_pushinteger(L, RL_TICK_RUNNING);
-    lua_setfield(L, -2, "RL_TICK_RUNNING");
+    lua_setfield(L, -2, "TICK_RUNNING");
     lua_pushinteger(L, RL_TICK_WAITING);
-    lua_setfield(L, -2, "RL_TICK_WAITING");
+    lua_setfield(L, -2, "TICK_WAITING");
     lua_pushinteger(L, RL_TICK_FAILED);
-    lua_setfield(L, -2, "RL_TICK_FAILED");
+    lua_setfield(L, -2, "TICK_FAILED");
     rl_register_camera3d_bindings(L);
     rl_register_color_bindings(L);
     rl_register_debug_bindings(L);

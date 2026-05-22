@@ -1,3 +1,5 @@
+local rl = require("rl")
+
 local Font = {}
 Font.__index = Font
 local ResourceAsync = require("resource_async")
@@ -14,7 +16,7 @@ local function wrap_handle(handle, size)
 end
 
 local function load_sync(path, size)
-  return wrap_handle(load_font(path, size), size)
+  return wrap_handle(rl.font_create(path, size), size)
 end
 
 function Font.load(path, size, callback)
@@ -32,17 +34,17 @@ function Font:draw(text, x, y, size, scale, tint)
     return
   end
 
-  draw_text(self.handle,
-            text,
-            x, y,
-            size or self.size,
-            scale or 1.0,
-            tint or COLOR_WHITE)
+  rl.text_draw_ex(self.handle,
+                  text,
+                  x, y,
+                  size or self.size,
+                  scale or 1.0,
+                  tint or rl.COLOR_WHITE)
 end
 
 function Font:destroy()
   if self.handle ~= nil and self.handle ~= 0 then
-    destroy_font(self.handle)
+    rl.font_destroy(self.handle)
     self.handle = 0
   end
 end

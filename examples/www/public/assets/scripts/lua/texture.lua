@@ -1,3 +1,5 @@
+local rl = require("rl")
+
 local Texture = {}
 Texture.__index = Texture
 local ResourceAsync = require("resource_async")
@@ -17,7 +19,7 @@ local function wrap_handle(handle)
 end
 
 local function load_sync(path)
-  return wrap_handle(load_texture(path))
+  return wrap_handle(rl.texture_create(path))
 end
 
 function Texture.load(path, callback)
@@ -33,16 +35,16 @@ function Texture:draw(tint)
     return
   end
 
-  draw_texture(self.handle,
-               self.x, self.y,
-               self.scale,
-               self.rotation,
-               tint or COLOR_WHITE)
+  rl.texture_draw_ex(self.handle,
+                     self.x, self.y,
+                     self.scale,
+                     self.rotation,
+                     tint or rl.COLOR_WHITE)
 end
 
 function Texture:destroy()
   if self.handle ~= nil and self.handle ~= 0 then
-    destroy_texture(self.handle)
+    rl.texture_destroy(self.handle)
     self.handle = 0
   end
 end

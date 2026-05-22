@@ -1,3 +1,5 @@
+local rl = require("rl")
+
 local Camera3D = {}
 Camera3D.__index = Camera3D
 
@@ -5,10 +7,10 @@ function Camera3D.create(px, py, pz,
                          tx, ty, tz,
                          ux, uy, uz,
                          fovy, projection)
-  local handle = create_camera3d(px, py, pz,
-                                 tx, ty, tz,
-                                 ux, uy, uz,
-                                 fovy, projection)
+  local handle = rl.camera3d_create(px, py, pz,
+                                    tx, ty, tz,
+                                    ux, uy, uz,
+                                    fovy, projection)
   if handle == nil or handle == 0 then
     return nil
   end
@@ -31,17 +33,17 @@ function Camera3D:apply()
   if not self._transform_dirty then
     return
   end
-  set_camera3d(self.handle,
-               self.position.x, self.position.y, self.position.z,
-               self.target.x, self.target.y, self.target.z,
-               self.up.x, self.up.y, self.up.z,
-               self.fovy, self.projection)
+  rl.camera3d_set(self.handle,
+                  self.position.x, self.position.y, self.position.z,
+                  self.target.x, self.target.y, self.target.z,
+                  self.up.x, self.up.y, self.up.z,
+                  self.fovy, self.projection)
   self._transform_dirty = false
 end
 
 function Camera3D:set_active()
   if self.handle ~= nil and self.handle ~= 0 then
-    set_active_camera3d(self.handle)
+    rl.camera3d_set_active(self.handle)
   end
 end
 

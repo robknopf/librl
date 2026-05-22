@@ -1,3 +1,5 @@
+local rl = require("rl")
+
 local ResourceAsync = {}
 
 local next_rid = 1
@@ -33,7 +35,7 @@ local function parse_error_payload(payload)
   return rid, message
 end
 
-event_on("resource.loaded", function(payload)
+rl.event_on("resource.loaded", function(payload)
   local rid, handle = parse_loaded_payload(payload)
   local request = rid ~= nil and pending[rid] or nil
   local resource = nil
@@ -52,7 +54,7 @@ event_on("resource.loaded", function(payload)
   request.callback(resource, nil)
 end)
 
-event_on("resource.error", function(payload)
+rl.event_on("resource.error", function(payload)
   local rid, message = parse_error_payload(payload)
   local request = rid ~= nil and pending[rid] or nil
 
@@ -83,7 +85,7 @@ function ResourceAsync.request(kind, path, options, resolve, callback)
     parts[#parts + 1] = tostring(options.size)
   end
 
-  if not event_emit("resource.load", table.concat(parts, "|")) then
+  if not rl.event_emit("resource.load", table.concat(parts, "|")) then
     pending[rid] = nil
     callback(nil, "resource request emit failed")
     return nil

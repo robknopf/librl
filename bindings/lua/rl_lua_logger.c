@@ -104,22 +104,22 @@ void rl_register_logger_bindings(lua_State *L)
     lua_setfield(L, -2, "logger_fatal");
 
     lua_pushinteger(L, RL_LOGGER_LEVEL_TRACE);
-    lua_setfield(L, -2, "RL_LOGGER_LEVEL_TRACE");
+    lua_setfield(L, -2, "LOGGER_LEVEL_TRACE");
 
     lua_pushinteger(L, RL_LOGGER_LEVEL_DEBUG);
-    lua_setfield(L, -2, "RL_LOGGER_LEVEL_DEBUG");
+    lua_setfield(L, -2, "LOGGER_LEVEL_DEBUG");
 
     lua_pushinteger(L, RL_LOGGER_LEVEL_INFO);
-    lua_setfield(L, -2, "RL_LOGGER_LEVEL_INFO");
+    lua_setfield(L, -2, "LOGGER_LEVEL_INFO");
 
     lua_pushinteger(L, RL_LOGGER_LEVEL_WARN);
-    lua_setfield(L, -2, "RL_LOGGER_LEVEL_WARN");
+    lua_setfield(L, -2, "LOGGER_LEVEL_WARN");
 
     lua_pushinteger(L, RL_LOGGER_LEVEL_ERROR);
-    lua_setfield(L, -2, "RL_LOGGER_LEVEL_ERROR");
+    lua_setfield(L, -2, "LOGGER_LEVEL_ERROR");
 
     lua_pushinteger(L, RL_LOGGER_LEVEL_FATAL);
-    lua_setfield(L, -2, "RL_LOGGER_LEVEL_FATAL");
+    lua_setfield(L, -2, "LOGGER_LEVEL_FATAL");
 
     // alias for log_info, allows for `rl.log("Hello, world!")`
     lua_pushcfunction(L, rl_logger_info_lua);

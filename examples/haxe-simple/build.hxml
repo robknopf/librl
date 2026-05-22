@@ -6,3 +6,4 @@ build.js.hxml
 --next
 build.wasm.hxml
 
+--next build.desktop.hxml

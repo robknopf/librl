@@ -12,9 +12,7 @@
 -D analyzer-optimize
 --dce std
 
-#-D source-map-content
--D source-map
--D js-es=6
+
 
 
 

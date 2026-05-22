@@ -22,7 +22,7 @@ end
 
 prepend_libs_cpath(this_dir())
 local rl = require("rl")
-rl.logger_set_level(rl.RL_LOGGER_LEVEL_DEBUG)
+rl.logger_set_level(rl.LOGGER_LEVEL_DEBUG)
 
 local SCRIPTS_ROOT = "assets/scripts/lua"
 local RUNTIME_MODULE = "main"

@@ -34,11 +34,21 @@ end
 
 print("OK: Loaded rl module")
 
-if rl.RL_INIT_OK ~= 0 or rl.RL_INIT_ERR_UNKNOWN ~= -1 or rl.RL_INIT_ERR_ALREADY_INITIALIZED ~= -2 then
+if rl.INIT_OK ~= 0 or rl.INIT_ERR_UNKNOWN ~= -1 or rl.INIT_ERR_ALREADY_INITIALIZED ~= -2 then
     print("FAIL: Expected rl init result constants")
     os.exit(1)
 end
 print("OK: init result constants available")
+
+if rl.BOOT_OK ~= 0 or rl.BOOT_ERR_UNKNOWN ~= -10 or rl.BOOT_ERR_LOADER ~= -11 or rl.BOOT_ERR_VERSION_MISMATCH ~= -12 then
+    print("FAIL: Expected rl boot result constants")
+    os.exit(1)
+end
+if rl.boot() ~= rl.BOOT_OK then
+    print("FAIL: rl.boot() should return BOOT_OK")
+    os.exit(1)
+end
+print("OK: boot result constants and rl.boot()")
 
 if type(rl.is_initialized) ~= "function" or rl.is_initialized() ~= false then
     print("FAIL: Expected rl.is_initialized function returning false before init")
@@ -143,8 +153,8 @@ else
     print("OK: Consumed expected element count")
 end
 
-if rl.RL_TICK_RUNNING ~= 0 or rl.RL_TICK_WAITING ~= 1 or rl.RL_TICK_FAILED ~= -1 then
-    print("FAIL: Expected rl.RL_TICK_* tick result constants")
+if rl.TICK_RUNNING ~= 0 or rl.TICK_WAITING ~= 1 or rl.TICK_FAILED ~= -1 then
+    print("FAIL: Expected rl.TICK_* tick result constants")
     os.exit(1)
 end
 if type(rl.tick) ~= "function" then
@@ -152,11 +162,11 @@ if type(rl.tick) ~= "function" then
     os.exit(1)
 end
 local tick_rc = rl.tick()
-if tick_rc ~= rl.RL_TICK_FAILED then
-    print("FAIL: rl.tick before init should return RL_TICK_FAILED, got", tick_rc)
+if tick_rc ~= rl.TICK_FAILED then
+    print("FAIL: rl.tick before init should return TICK_FAILED, got", tick_rc)
     os.exit(1)
 end
-print("OK: core tick API and RL_TICK_* constants available")
+print("OK: core tick API and TICK_* constants available")
 
 -- Test text2d API availability
 print("\n=== Text2D API Test ===")
@@ -168,11 +178,11 @@ for _, fn in ipairs(text2d_fns) do
     end
 end
 -- lifecycle: requires rl.init() to initialize the handle pool
-if rl.boot() ~= rl.RL_INIT_OK then
+if rl.boot() ~= rl.BOOT_OK then
     print("FAIL: rl.boot() failed before text2d lifecycle test")
     os.exit(1)
 end
-if rl.init() ~= rl.RL_INIT_OK then
+if rl.init() ~= rl.INIT_OK then
     print("FAIL: rl.init() failed before text2d lifecycle test")
     os.exit(1)
 end

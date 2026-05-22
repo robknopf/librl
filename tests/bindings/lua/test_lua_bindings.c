@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
     }
 
     status = luaL_dostring(L,
-        "if rl.RL_INIT_OK ~= 0 or rl.RL_INIT_ERR_UNKNOWN ~= -1 or rl.RL_INIT_ERR_ALREADY_INITIALIZED ~= -2 then\n"
+        "if rl.INIT_OK ~= 0 or rl.INIT_ERR_UNKNOWN ~= -1 or rl.INIT_ERR_ALREADY_INITIALIZED ~= -2 then\n"
         "  error('rl init result constants missing')\n"
         "end\n"
         "print('OK: init result constants')");
@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
     }
 
     status = luaL_dostring(L,
-        "if rl.RL_TICK_RUNNING ~= 0 or rl.RL_TICK_WAITING ~= 1 or rl.RL_TICK_FAILED ~= -1 then\n"
+        "if rl.TICK_RUNNING ~= 0 or rl.TICK_WAITING ~= 1 or rl.TICK_FAILED ~= -1 then\n"
         "  error('rl tick result constants missing')\n"
         "end\n"
         "print('OK: tick result constants')");

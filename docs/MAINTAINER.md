@@ -182,7 +182,7 @@ Approximate sizes for the example builds (release/optimized, no debug symbols). 
 
 ## Web/Vite Workflow Notes
 
-- Web examples use `/bindings/js/dist/rl.js` as the JS binding entrypoint, which instantiates the raw `/lib/librl.js` runtime. If `make clean` removes generated outputs while Vite is running, browser requests can fail until rebuild completes.
+- Web examples resolve `bindings/js/dist/rl.js` relative to `document.baseURI` (works under subpath deploys like `/testbed/librl/`). Override via `bindingsPath` in boot config if needed. The wrapper instantiates the raw `lib/librl.js` runtime. If `make clean` removes generated outputs while Vite is running, browser requests can fail until rebuild completes.
 - Vite may not always recover automatically from a missing generated entry file (`main.js`/bundled artifacts) without a new file-change trigger.
 - Practical flow:
   1. Rebuild wasm/js outputs (`make wasm` or target-specific make).

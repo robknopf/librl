@@ -1,3 +1,5 @@
+local rl = require("rl")
+
 local Sprite3D = {}
 Sprite3D.__index = Sprite3D
 local ResourceAsync = require("resource_async")
@@ -27,7 +29,7 @@ function Sprite3D:__newindex(k, v)
 end
 
 local function load_sync(path)
-  return wrap_handle(load_sprite3d(path))
+  return wrap_handle(rl.sprite3d_create_from_file(path))
 end
 
 function Sprite3D.load(path, callback)
@@ -45,7 +47,7 @@ function Sprite3D:sync()
   if not self._transform_dirty then
     return
   end
-  set_sprite3d_transform(self.handle, self.x, self.y, self.z, self.size)
+  rl.sprite3d_set_transform(self.handle, self.x, self.y, self.z, self.size)
   self._transform_dirty = false
 end
 
@@ -54,12 +56,12 @@ function Sprite3D:draw(tint)
     return
   end
   self:sync()
-  draw_sprite3d(self.handle, tint or COLOR_WHITE)
+  rl.sprite3d_draw(self.handle, tint or rl.COLOR_WHITE)
 end
 
 function Sprite3D:destroy()
   if self.handle ~= nil and self.handle ~= 0 then
-    destroy_sprite3d(self.handle)
+    rl.sprite3d_destroy(self.handle)
     self.handle = 0
   end
 end

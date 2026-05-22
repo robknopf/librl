@@ -51,7 +51,7 @@ import { rl } from "../../bindings/js/dist/rl.js";
     labelText2d = rl.text2d.create(rl.font.getDefault(), fontSize);
     rl.text2d.setContent(labelText2d, "rl_text2d: retained label");
     rl.text2d.setPosition(labelText2d, 10, 136);
-    rl.text2d.setColor(labelText2d, rl.COLOR_GREEN);
+    rl.text2d.setColor(labelText2d, rl.color.GREEN);
 
     const importAssetTask = (path, onSuccess, onError) => {
       const task = rl.asset.ensureAsync(path, null);
@@ -128,14 +128,14 @@ import { rl } from "../../bindings/js/dist/rl.js";
       const message = "Hello World!";
       const mouse = rl.input.getMouseState();
       rl.render.begin();
-      rl.render.clearBackground(rl.COLOR_RAYWHITE);
+      rl.render.clearBackground(rl.color.RAYWHITE);
       rl.render.beginMode3D();
       if (gumshoe) {
         rl.model.animate(gumshoe, deltaTime);
-        rl.model.draw(gumshoe, rl.COLOR_WHITE);
+        rl.model.draw(gumshoe, rl.color.WHITE);
       }
       if (sprite) {
-        rl.sprite3d.draw(sprite, rl.COLOR_WHITE);
+        rl.sprite3d.draw(sprite, rl.color.WHITE);
       }
       rl.render.endMode3D();
 
@@ -143,13 +143,13 @@ import { rl } from "../../bindings/js/dist/rl.js";
       const h = rl.helpers.getScreenHeight();
       if (komika) {
         const textSize = rl.text.measureEx(komika, message, fontSize, 0);
-        rl.text.drawEx(komika, message, (w - textSize.x) / 2, (h - textSize.y) / 2, fontSize, 1, rl.COLOR_BLUE);
+        rl.text.drawEx(komika, message, (w - textSize.x) / 2, (h - textSize.y) / 2, fontSize, 1, rl.color.BLUE);
       }
       if (komikaSmall) {
-        rl.text.drawEx(komikaSmall, `Remaining: ${countdownTimer.toFixed(2)}`, 10, 36, smallFontSize, 1, rl.COLOR_BLACK);
-        rl.text.drawEx(komikaSmall, `Elapsed: ${totalTime.toFixed(2)}`, 10, 56, smallFontSize, 1, rl.COLOR_BLACK);
-        rl.text.drawEx(komikaSmall, `Mouse: (${mouse.x.toFixed(0)}, ${mouse.y.toFixed(0)})`, 10, 76, smallFontSize, 1, rl.COLOR_BLACK);
-        rl.text.drawFpsEx(komikaSmall, 10, 10, smallFontSize, rl.COLOR_BLUE);
+        rl.text.drawEx(komikaSmall, `Remaining: ${countdownTimer.toFixed(2)}`, 10, 36, smallFontSize, 1, rl.color.BLACK);
+        rl.text.drawEx(komikaSmall, `Elapsed: ${totalTime.toFixed(2)}`, 10, 56, smallFontSize, 1, rl.color.BLACK);
+        rl.text.drawEx(komikaSmall, `Mouse: (${mouse.x.toFixed(0)}, ${mouse.y.toFixed(0)})`, 10, 76, smallFontSize, 1, rl.color.BLACK);
+        rl.text.drawFpsEx(komikaSmall, 10, 10, smallFontSize, rl.color.BLUE);
       }
       if (labelText2d) {
         rl.text2d.draw(labelText2d);

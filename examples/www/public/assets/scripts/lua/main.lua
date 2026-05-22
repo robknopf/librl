@@ -1,6 +1,6 @@
 local rl = require("rl")
 
-rl.logger_set_level(rl.RL_LOGGER_LEVEL_WARN)
+rl.logger_set_level(rl.LOGGER_LEVEL_WARN)
 
 local DebugFontSize  = 18
 local KomikaFontSize = 24
@@ -41,7 +41,7 @@ local function setup_scene()
   ctx.label_text2d = rl.text2d_create(0, KomikaFontSize)
   rl.text2d_set_content(ctx.label_text2d, "rl_text2d: retained label")
   rl.text2d_set_position(ctx.label_text2d, 10, 136)
-  rl.text2d_set_color(ctx.label_text2d, rl.RL_COLOR_GREEN)
+  rl.text2d_set_color(ctx.label_text2d, rl.COLOR_GREEN)
 
   ctx.camera = rl.camera3d_create(
     12.0, 12.0, 12.0,
@@ -66,10 +66,10 @@ local function on_init()
     window_width  = 1024,
     window_height = 1280,
     window_title  = "Hello, World! (Lua)",
-    window_flags  = rl.RL_WINDOW_FLAG_MSAA_4X_HINT,
+    window_flags  = rl.WINDOW_FLAG_MSAA_4X_HINT,
     asset_host    = "https://localhost:4444",
   })
-  if rc ~= rl.RL_INIT_OK then
+  if rc ~= rl.INIT_OK then
     error("rl.init failed: " .. tostring(rc))
     return ResultCode.ERROR
   end
@@ -149,10 +149,10 @@ local function on_tick(delta_time)
 
   rl.render_begin_mode_3d()
   if ctx.model and ctx.model ~= 0 then
-    rl.model_draw(ctx.model, rl.RL_COLOR_RAYWHITE)
+    rl.model_draw(ctx.model, rl.COLOR_RAYWHITE)
   end
   if ctx.sprite and ctx.sprite ~= 0 then
-    rl.sprite3d_draw(ctx.sprite, rl.RL_COLOR_RAYWHITE)
+    rl.sprite3d_draw(ctx.sprite, rl.COLOR_RAYWHITE)
   end
   rl.render_end_mode_3d()
 
@@ -165,12 +165,12 @@ local function on_tick(delta_time)
     local tw, th = rl.text_measure_ex(ctx.small_font, ctx.message, KomikaFontSize, 1.0)
     local tx = math.floor((screen_w - tw) / 2)
     local ty = math.floor((screen_h - th) / 2)
-    rl.text_draw_ex(ctx.small_font, ctx.message, tx, ty, KomikaFontSize, 1.0, rl.RL_COLOR_BLUE)
+    rl.text_draw_ex(ctx.small_font, ctx.message, tx, ty, KomikaFontSize, 1.0, rl.COLOR_BLUE)
   else
     local tw = rl.text_measure(ctx.message, KomikaFontSize)
     local tx = math.floor((screen_w - tw) / 2)
     local ty = math.floor(screen_h / 2)
-    rl.text_draw(ctx.message, tx, ty, KomikaFontSize, rl.RL_COLOR_BLUE)
+    rl.text_draw(ctx.message, tx, ty, KomikaFontSize, rl.COLOR_BLUE)
   end
 
   -- debug overlay (mono font)
@@ -181,16 +181,16 @@ local function on_tick(delta_time)
 
   if ctx.mono_font and ctx.mono_font ~= 0 then
     rl.text_draw_fps_ex(ctx.mono_font, 10, 10, DebugFontSize, ctx.grey_alpha_color)
-    rl.text_draw_ex(ctx.mono_font, remaining_text, 10,  36, DebugFontSize, 1.0, rl.RL_COLOR_BLACK)
-    rl.text_draw_ex(ctx.mono_font, elapsed_text,   10,  56, DebugFontSize, 1.0, rl.RL_COLOR_BLACK)
-    rl.text_draw_ex(ctx.mono_font, mouse_text,     10,  76, DebugFontSize, 1.0, rl.RL_COLOR_BLACK)
-    rl.text_draw_ex(ctx.mono_font, platform_text,  10,  96, DebugFontSize, 1.0, rl.RL_COLOR_BLACK)
+    rl.text_draw_ex(ctx.mono_font, remaining_text, 10,  36, DebugFontSize, 1.0, rl.COLOR_BLACK)
+    rl.text_draw_ex(ctx.mono_font, elapsed_text,   10,  56, DebugFontSize, 1.0, rl.COLOR_BLACK)
+    rl.text_draw_ex(ctx.mono_font, mouse_text,     10,  76, DebugFontSize, 1.0, rl.COLOR_BLACK)
+    rl.text_draw_ex(ctx.mono_font, platform_text,  10,  96, DebugFontSize, 1.0, rl.COLOR_BLACK)
   else
     rl.text_draw_fps(10, 10)
-    rl.text_draw(remaining_text, 10, 36, DebugFontSize, rl.RL_COLOR_BLACK)
-    rl.text_draw(elapsed_text,   10, 56, DebugFontSize, rl.RL_COLOR_BLACK)
-    rl.text_draw(mouse_text,     10, 76, DebugFontSize, rl.RL_COLOR_BLACK)
-    rl.text_draw(platform_text,  10, 96, DebugFontSize, rl.RL_COLOR_BLACK)
+    rl.text_draw(remaining_text, 10, 36, DebugFontSize, rl.COLOR_BLACK)
+    rl.text_draw(elapsed_text,   10, 56, DebugFontSize, rl.COLOR_BLACK)
+    rl.text_draw(mouse_text,     10, 76, DebugFontSize, rl.COLOR_BLACK)
+    rl.text_draw(platform_text,  10, 96, DebugFontSize, rl.COLOR_BLACK)
   end
 
   if ctx.label_text2d and ctx.label_text2d ~= 0 then
@@ -208,8 +208,8 @@ end
 
 local function on_tick_wrapper(delta_time)
   local rc = rl.tick()
-  if rc == rl.RL_TICK_FAILED then return ResultCode.ERROR end
-  if rc == rl.RL_TICK_WAITING then return ResultCode.OK end
+  if rc == rl.TICK_FAILED then return ResultCode.ERROR end
+  if rc == rl.TICK_WAITING then return ResultCode.OK end
   if rl.window_close_requested() then return ResultCode.QUIT end
   return on_tick(delta_time)
 end

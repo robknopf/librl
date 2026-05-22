@@ -1,3 +1,5 @@
+local rl = require("rl")
+
 local Sound = {}
 Sound.__index = Sound
 local ResourceAsync = require("resource_async")
@@ -13,7 +15,7 @@ local function wrap_handle(handle)
 end
 
 local function load_sync(path)
-  return wrap_handle(load_sound(path))
+  return wrap_handle(rl.sound_create(path))
 end
 
 function Sound.load(path, callback)
@@ -26,13 +28,13 @@ end
 
 function Sound:play()
   if self.handle ~= nil and self.handle ~= 0 then
-    play_sound(self.handle)
+    rl.sound_play(self.handle)
   end
 end
 
 function Sound:destroy()
   if self.handle ~= nil and self.handle ~= 0 then
-    destroy_sound(self.handle)
+    rl.sound_destroy(self.handle)
     self.handle = 0
   end
 end

@@ -140,7 +140,7 @@ when defined(js):
 
   proc rl_boot_js_load*(config = RLBootConfig()): Future[int] =
     ## Load bindings/js/rl.js, call rl.boot(), patch color constants.
-    let bindingsPath = (if config.bindingsPath.len > 0: config.bindingsPath else: "/bindings/js/dist/rl.js").cstring
+    let bindingsPath = config.bindingsPath.cstring
     let canvasId = config.canvasId.cstring
     let modulePath = config.modulePath.cstring
     let wasmPath = config.wasmPath.cstring
@@ -149,7 +149,11 @@ when defined(js):
     let printFn = config.print
     let printErrFn = config.printErr
     let hasLocateFile = not config.locateFile.isNil
-    {.emit: "var __rl_boot_url = `bindingsPath`;".}
+    {.emit: """
+var __rl_boot_url = (`bindingsPath`.length > 0)
+  ? `bindingsPath`
+  : new URL('bindings/js/dist/rl.js', document.baseURI).href;
+""".}
     {.emit: """var __rl_boot_opts = { env: {} };
   if (`canvasId`.length > 0) __rl_boot_opts.canvasId = `canvasId`;
   if (`modulePath`.length > 0) __rl_boot_opts.modulePath = `modulePath`;
@@ -167,33 +171,33 @@ when defined(js):
       __gRl = lib.rl || lib.default;
       var rc = await __gRl.boot(__rl_boot_opts);
       if (!rc) {
-        `RL_COLOR_DEFAULT` = __gRl.COLOR_DEFAULT >>> 0;
-        `RL_COLOR_LIGHTGRAY` = __gRl.COLOR_LIGHTGRAY >>> 0;
-        `RL_COLOR_GRAY` = __gRl.COLOR_GRAY >>> 0;
-        `RL_COLOR_DARKGRAY` = __gRl.COLOR_DARKGRAY >>> 0;
-        `RL_COLOR_YELLOW` = __gRl.COLOR_YELLOW >>> 0;
-        `RL_COLOR_GOLD` = __gRl.COLOR_GOLD >>> 0;
-        `RL_COLOR_ORANGE` = __gRl.COLOR_ORANGE >>> 0;
-        `RL_COLOR_PINK` = __gRl.COLOR_PINK >>> 0;
-        `RL_COLOR_RED` = __gRl.COLOR_RED >>> 0;
-        `RL_COLOR_MAROON` = __gRl.COLOR_MAROON >>> 0;
-        `RL_COLOR_GREEN` = __gRl.COLOR_GREEN >>> 0;
-        `RL_COLOR_LIME` = __gRl.COLOR_LIME >>> 0;
-        `RL_COLOR_DARKGREEN` = __gRl.COLOR_DARKGREEN >>> 0;
-        `RL_COLOR_SKYBLUE` = __gRl.COLOR_SKYBLUE >>> 0;
-        `RL_COLOR_BLUE` = __gRl.COLOR_BLUE >>> 0;
-        `RL_COLOR_DARKBLUE` = __gRl.COLOR_DARKBLUE >>> 0;
-        `RL_COLOR_PURPLE` = __gRl.COLOR_PURPLE >>> 0;
-        `RL_COLOR_VIOLET` = __gRl.COLOR_VIOLET >>> 0;
-        `RL_COLOR_DARKPURPLE` = __gRl.COLOR_DARKPURPLE >>> 0;
-        `RL_COLOR_BEIGE` = __gRl.COLOR_BEIGE >>> 0;
-        `RL_COLOR_BROWN` = __gRl.COLOR_BROWN >>> 0;
-        `RL_COLOR_DARKBROWN` = __gRl.COLOR_DARKBROWN >>> 0;
-        `RL_COLOR_WHITE` = __gRl.COLOR_WHITE >>> 0;
-        `RL_COLOR_BLACK` = __gRl.COLOR_BLACK >>> 0;
-        `RL_COLOR_BLANK` = __gRl.COLOR_BLANK >>> 0;
-        `RL_COLOR_MAGENTA` = __gRl.COLOR_MAGENTA >>> 0;
-        `RL_COLOR_RAYWHITE` = __gRl.COLOR_RAYWHITE >>> 0;
+        `RL_COLOR_DEFAULT` = __gRl.color.DEFAULT >>> 0;
+        `RL_COLOR_LIGHTGRAY` = __gRl.color.LIGHTGRAY >>> 0;
+        `RL_COLOR_GRAY` = __gRl.color.GRAY >>> 0;
+        `RL_COLOR_DARKGRAY` = __gRl.color.DARKGRAY >>> 0;
+        `RL_COLOR_YELLOW` = __gRl.color.YELLOW >>> 0;
+        `RL_COLOR_GOLD` = __gRl.color.GOLD >>> 0;
+        `RL_COLOR_ORANGE` = __gRl.color.ORANGE >>> 0;
+        `RL_COLOR_PINK` = __gRl.color.PINK >>> 0;
+        `RL_COLOR_RED` = __gRl.color.RED >>> 0;
+        `RL_COLOR_MAROON` = __gRl.color.MAROON >>> 0;
+        `RL_COLOR_GREEN` = __gRl.color.GREEN >>> 0;
+        `RL_COLOR_LIME` = __gRl.color.LIME >>> 0;
+        `RL_COLOR_DARKGREEN` = __gRl.color.DARKGREEN >>> 0;
+        `RL_COLOR_SKYBLUE` = __gRl.color.SKYBLUE >>> 0;
+        `RL_COLOR_BLUE` = __gRl.color.BLUE >>> 0;
+        `RL_COLOR_DARKBLUE` = __gRl.color.DARKBLUE >>> 0;
+        `RL_COLOR_PURPLE` = __gRl.color.PURPLE >>> 0;
+        `RL_COLOR_VIOLET` = __gRl.color.VIOLET >>> 0;
+        `RL_COLOR_DARKPURPLE` = __gRl.color.DARKPURPLE >>> 0;
+        `RL_COLOR_BEIGE` = __gRl.color.BEIGE >>> 0;
+        `RL_COLOR_BROWN` = __gRl.color.BROWN >>> 0;
+        `RL_COLOR_DARKBROWN` = __gRl.color.DARKBROWN >>> 0;
+        `RL_COLOR_WHITE` = __gRl.color.WHITE >>> 0;
+        `RL_COLOR_BLACK` = __gRl.color.BLACK >>> 0;
+        `RL_COLOR_BLANK` = __gRl.color.BLANK >>> 0;
+        `RL_COLOR_MAGENTA` = __gRl.color.MAGENTA >>> 0;
+        `RL_COLOR_RAYWHITE` = __gRl.color.RAYWHITE >>> 0;
       }
       return rc | 0;
     })();""".}

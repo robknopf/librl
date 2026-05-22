@@ -101,6 +101,11 @@ class RLImpl {
 		#end
 	}
 
+	/** Page-relative default so subpath deploys (e.g. `/testbed/librl/`) resolve correctly. */
+	private static function defaultBindingsPath():String {
+		return cast js.Syntax.code("new URL('bindings/js/dist/rl.js', document.baseURI).href");
+	}
+
 	@async
 	public static function boot(?config:RLBootConfig):Promise<Int> {
 		if (binding != null) {
@@ -115,7 +120,7 @@ class RLImpl {
 		}
 
 		var bootOptions = buildBootOptions(config);
-		var bindingsPath = maybeCacheBustBindingsPath(optionString(bootOptions, "bindingsPath", "/bindings/js/dist/rl.js"));
+		var bindingsPath = maybeCacheBustBindingsPath(optionString(bootOptions, "bindingsPath", defaultBindingsPath()));
 
 		bootPromise = cast js.Syntax.code("(async () => {
         try {
@@ -193,33 +198,33 @@ class RLImpl {
 	private static function setColorConstants():Void {
 		if (binding == null)
 			return;
-		COLOR_DEFAULT = cast js.Syntax.code("{0}.COLOR_DEFAULT", binding);
-		COLOR_LIGHTGRAY = cast js.Syntax.code("{0}.COLOR_LIGHTGRAY", binding);
-		COLOR_GRAY = cast js.Syntax.code("{0}.COLOR_GRAY", binding);
-		COLOR_YELLOW = cast js.Syntax.code("{0}.COLOR_YELLOW", binding);
-		COLOR_GOLD = cast js.Syntax.code("{0}.COLOR_GOLD", binding);
-		COLOR_ORANGE = cast js.Syntax.code("{0}.COLOR_ORANGE", binding);
-		COLOR_PINK = cast js.Syntax.code("{0}.COLOR_PINK", binding);
-		COLOR_RED = cast js.Syntax.code("{0}.COLOR_RED", binding);
-		COLOR_MAROON = cast js.Syntax.code("{0}.COLOR_MAROON", binding);
-		COLOR_GREEN = cast js.Syntax.code("{0}.COLOR_GREEN", binding);
-		COLOR_LIME = cast js.Syntax.code("{0}.COLOR_LIME", binding);
-		COLOR_DARKGREEN = cast js.Syntax.code("{0}.COLOR_DARKGREEN", binding);
-		COLOR_SKYBLUE = cast js.Syntax.code("{0}.COLOR_SKYBLUE", binding);
-		COLOR_BLUE = cast js.Syntax.code("{0}.COLOR_BLUE", binding);
-		COLOR_DARKBLUE = cast js.Syntax.code("{0}.COLOR_DARKBLUE", binding);
-		COLOR_PURPLE = cast js.Syntax.code("{0}.COLOR_PURPLE", binding);
-		COLOR_VIOLET = cast js.Syntax.code("{0}.COLOR_VIOLET", binding);
-		COLOR_DARKPURPLE = cast js.Syntax.code("{0}.COLOR_DARKPURPLE", binding);
-		COLOR_BEIGE = cast js.Syntax.code("{0}.COLOR_BEIGE", binding);
-		COLOR_BROWN = cast js.Syntax.code("{0}.COLOR_BROWN", binding);
-		COLOR_DARKBROWN = cast js.Syntax.code("{0}.COLOR_DARKBROWN", binding);
-		COLOR_DARKGRAY = cast js.Syntax.code("{0}.COLOR_DARKGRAY", binding);
-		COLOR_WHITE = cast js.Syntax.code("{0}.COLOR_WHITE", binding);
-		COLOR_BLANK = cast js.Syntax.code("{0}.COLOR_BLANK", binding);
-		COLOR_MAGENTA = cast js.Syntax.code("{0}.COLOR_MAGENTA", binding);
-		COLOR_RAYWHITE = cast js.Syntax.code("{0}.COLOR_RAYWHITE", binding);
-		COLOR_BLACK = cast js.Syntax.code("{0}.COLOR_BLACK", binding);
+		COLOR_DEFAULT = cast js.Syntax.code("{0}.color.DEFAULT", binding);
+		COLOR_LIGHTGRAY = cast js.Syntax.code("{0}.color.LIGHTGRAY", binding);
+		COLOR_GRAY = cast js.Syntax.code("{0}.color.GRAY", binding);
+		COLOR_YELLOW = cast js.Syntax.code("{0}.color.YELLOW", binding);
+		COLOR_GOLD = cast js.Syntax.code("{0}.color.GOLD", binding);
+		COLOR_ORANGE = cast js.Syntax.code("{0}.color.ORANGE", binding);
+		COLOR_PINK = cast js.Syntax.code("{0}.color.PINK", binding);
+		COLOR_RED = cast js.Syntax.code("{0}.color.RED", binding);
+		COLOR_MAROON = cast js.Syntax.code("{0}.color.MAROON", binding);
+		COLOR_GREEN = cast js.Syntax.code("{0}.color.GREEN", binding);
+		COLOR_LIME = cast js.Syntax.code("{0}.color.LIME", binding);
+		COLOR_DARKGREEN = cast js.Syntax.code("{0}.color.DARKGREEN", binding);
+		COLOR_SKYBLUE = cast js.Syntax.code("{0}.color.SKYBLUE", binding);
+		COLOR_BLUE = cast js.Syntax.code("{0}.color.BLUE", binding);
+		COLOR_DARKBLUE = cast js.Syntax.code("{0}.color.DARKBLUE", binding);
+		COLOR_PURPLE = cast js.Syntax.code("{0}.color.PURPLE", binding);
+		COLOR_VIOLET = cast js.Syntax.code("{0}.color.VIOLET", binding);
+		COLOR_DARKPURPLE = cast js.Syntax.code("{0}.color.DARKPURPLE", binding);
+		COLOR_BEIGE = cast js.Syntax.code("{0}.color.BEIGE", binding);
+		COLOR_BROWN = cast js.Syntax.code("{0}.color.BROWN", binding);
+		COLOR_DARKBROWN = cast js.Syntax.code("{0}.color.DARKBROWN", binding);
+		COLOR_DARKGRAY = cast js.Syntax.code("{0}.color.DARKGRAY", binding);
+		COLOR_WHITE = cast js.Syntax.code("{0}.color.WHITE", binding);
+		COLOR_BLANK = cast js.Syntax.code("{0}.color.BLANK", binding);
+		COLOR_MAGENTA = cast js.Syntax.code("{0}.color.MAGENTA", binding);
+		COLOR_RAYWHITE = cast js.Syntax.code("{0}.color.RAYWHITE", binding);
+		COLOR_BLACK = cast js.Syntax.code("{0}.color.BLACK", binding);
 	}
 
 	public static function init(?config:RLInitConfig):Promise<Int> {

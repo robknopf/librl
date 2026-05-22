@@ -127,7 +127,6 @@ proc animateFrame(deltaTimeSec: float) =
 
 proc onBoot(): int {.rlAsync.} =
   let rc = rlAwait rl_boot(RLBootConfig(
-    bindingsPath: "/bindings/js/dist/rl.js",
     canvasId: "renderCanvas",
   ))
   if rc != 0:

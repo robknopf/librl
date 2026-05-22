@@ -113,6 +113,7 @@ Notes:
   - `resetPickStats()` on `rl` (C API)
   - aggregated pick telemetry on `rl.helpers.getPickStats()`
 - JS `boot(opts)` instantiates the Emscripten module and prepares the scratch/color helpers without calling init.
+  - Named palette handles live on `rl.color` (e.g. `rl.color.GREEN`, `rl.color.RAYWHITE`); `boot()` patches them from wasm exports.
   - Returns `BOOT_*` codes (not `INIT_*`): `BOOT_OK` (0), `BOOT_ERR_UNKNOWN` (-10), `BOOT_ERR_LOADER` (-11), `BOOT_ERR_VERSION_MISMATCH` (-12).
   - This is useful when callers need the loader-only/bootstrap path first, for example `boot() -> RL.fs.init() -> init()`.
   - `boot(...)` is the canonical place for module/browser options such as `canvasId`, `modulePath`, `wasmPath`, `idealWidth`, `idealHeight`, and optional callback hooks like `print`, `printErr`, and `locateFile`.
@@ -216,7 +217,7 @@ Notes:
   - `RL_FLAG_MSAA_4X_HINT`
 - Window close polling is exposed in Nim as `rl_window_close_requested()`.
 - Nim exposes `rl_boot([config])`.
-  - On JS, `rl_boot` dynamically imports `bindings/js/dist/rl.js`, boots the wrapper, and patches color constants.
+  - On JS, `rl_boot` dynamically imports `bindings/js/dist/rl.js`, boots the wrapper, and patches `rl.color.*` preset handles.
   - `RLBootConfig` on JS currently exposes:
     - `bindingsPath`
     - `canvasId`
@@ -227,7 +228,7 @@ Notes:
     - `print`
     - `printErr`
     - `locateFile`
-  - `bindingsPath` lets callers override the runtime path to `bindings/js/dist/rl.js`; if omitted, Nim JS defaults to `"/bindings/js/dist/rl.js"`.
+  - `bindingsPath` lets callers override the runtime path to `bindings/js/dist/rl.js`; if omitted, Haxe JS and Nim JS resolve it relative to `document.baseURI` (subpath-safe).
   - On Nim JS, `print` and `printErr` are forwarded into the wrapper `env` object. `locateFile` is currently accepted for API parity but ignored with a warning.
   - On native targets, `rl_boot` loads nothing (static link) but still runs the binding/core version check, then returns `RL_INIT_OK`.
 - Fs/asset helpers in Nim (all return native `int` or `bool`):
@@ -411,10 +412,12 @@ Role:
 Notes:
 
 - The returned userdata exposes `add_task`, `add_import_task`, `add_import_tasks`, `tick`, `process`, `failed_paths`, etc.
-- Lua exposes mouse button state constants (`rl.RL_BUTTON_UP`, `rl.RL_BUTTON_PRESSED`, `rl.RL_BUTTON_DOWN`, `rl.RL_BUTTON_RELEASED`).
-- Lua exposes `rl.font_get_default()`, `rl.camera3d_get_default()`, and `rl.texture_get_default()` (no `RL_*_DEFAULT` handle constants).
+- Lua module constants drop the C `RL_` prefix on the `rl` table (e.g. `rl.INIT_OK`, `rl.COLOR_GREEN`, `rl.BUTTON_UP`, `rl.WINDOW_FLAG_MSAA_4X_HINT`). Boot codes use the binding-only `rl.BOOT_*` names (same values as JS/Haxe).
+- Lua exposes mouse button state constants (`rl.BUTTON_UP`, `rl.BUTTON_PRESSED`, `rl.BUTTON_DOWN`, `rl.BUTTON_RELEASED`).
+- Lua exposes `rl.font_get_default()`, `rl.camera3d_get_default()`, and `rl.texture_get_default()` (no default handle constants on the module table).
 - Lua exposes `rl.init({...})` and `rl.init_async({...})` with a config table (same init contract as other bindings; no `init_values` / `init_values_async`).
-- Lua exposes `rl.boot()`, which runs the binding/core version check and returns `rl.RL_INIT_OK` (same check as `require("rl")`). Use `boot() -> fs_init() -> init()` when mirroring JS/Haxe lifecycle; `require` alone already validated at load.
+- Lua exposes `rl.boot()`, a lifecycle stub on native/desktop (version check runs at `require("rl")`; fatal mismatch throws). Returns `rl.BOOT_OK`. Compare boot against `rl.BOOT_*`, init against `rl.INIT_*`. Use `boot() -> fs_init() -> init()` when mirroring JS/Haxe lifecycle.
+- Boot result constants (binding-only; same values as JS/Haxe): `rl.BOOT_OK`, `rl.BOOT_ERR_UNKNOWN`, `rl.BOOT_ERR_LOADER`, `rl.BOOT_ERR_VERSION_MISMATCH`.
 - Lua exposes `rl.asset_set_host(asset_host)` and `rl.asset_get_host()`.
 - Lua exposes `rl.asset_ping_host([asset_host])`, returning RTT ms or `< 0` on failure, for proactive asset-host diagnostics before importing.
 - Lua exposes `rl.fs_init([root_dir])` and `rl.fs_deinit()` for fs-only bootstrap without full `rl.init()`.
@@ -424,8 +427,9 @@ Notes:
 - Lua exposes `rl.asset_ensure_async(local_path, src?)` for `rl_asset_ensure_async()`.
 - Lua exposes `rl.asset_ensure(local_path, src?)` → integer return code (`0` success); on wasm this follows the same constraints as the C API (see `rl_asset_ensure` in `rl_asset.h`).
 - Lua `rl.asset_add_task(task, on_success?, on_failure?, ctx?)` derives the callback path from `rl_asset_get_task_path(task)`. Asset callbacks receive `(path, ctx)`.
-- Lua exposes asset queue result constants (`rl.RL_ASSET_ADD_TASK_OK`, `rl.RL_ASSET_ADD_TASK_ERR_INVALID`, `rl.RL_ASSET_ADD_TASK_ERR_QUEUE_FULL`).
-- Lua exposes init result constants (`rl.RL_INIT_OK`, `rl.RL_INIT_ERR_UNKNOWN`, `rl.RL_INIT_ERR_ALREADY_INITIALIZED`, `rl.RL_INIT_ERR_LOADER`, `rl.RL_INIT_ERR_ASSET_HOST`, `rl.RL_INIT_ERR_WINDOW`).
+- Lua exposes asset queue result constants (`rl.ASSET_ADD_TASK_OK`, `rl.ASSET_ADD_TASK_ERR_INVALID`, `rl.ASSET_ADD_TASK_ERR_QUEUE_FULL`).
+- Lua exposes init result constants (`rl.INIT_OK`, `rl.INIT_ERR_UNKNOWN`, `rl.INIT_ERR_ALREADY_INITIALIZED`, `rl.INIT_ERR_LOADER`, `rl.INIT_ERR_ASSET_HOST`, `rl.INIT_ERR_WINDOW`).
+- Lua exposes tick result constants (`rl.TICK_RUNNING`, `rl.TICK_WAITING`, `rl.TICK_FAILED`).
 - Lua exposes `rl.is_initialized()` for `rl_is_initialized()`.
 - Lua exposes `rl.get_platform()` for `rl_get_platform()`.
 - Lua exposes `rl.window_close_requested()` for `rl_window_close_requested()`.

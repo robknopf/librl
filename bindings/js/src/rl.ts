@@ -11,6 +11,8 @@ import type {
     RLAsset,
     RLCamera3d,
     RLColor,
+    RLColorPreset,
+    RLColorPresets,
     RLDebug,
     RLEvent,
     RLFont,
@@ -637,7 +639,6 @@ const compareVersion = () => {
         }
         return 0;
     };
-const colorHandle = (index: number, generation: number) => ((generation << 16) | index) >>> 0;
 const RL_COLOR_NAMES = [
         "DEFAULT", "LIGHTGRAY", "GRAY", "DARKGRAY",
         "YELLOW", "GOLD", "ORANGE", "PINK",
@@ -646,19 +647,7 @@ const RL_COLOR_NAMES = [
         "PURPLE", "VIOLET", "DARKPURPLE",
         "BEIGE", "BROWN", "DARKBROWN",
         "WHITE", "BLACK", "BLANK", "MAGENTA", "RAYWHITE"
-    ];
-const patchColorConstants = () => {
-        if (!moduleInstance || !(moduleInstance.HEAPU32 || moduleInstance.HEAP32)) {
-            return;
-        }
-        const heap = moduleInstance.HEAPU32 || moduleInstance.HEAP32;
-        for (const name of RL_COLOR_NAMES) {
-            const ptr = moduleInstance["_RL_COLOR_" + name] as number | undefined;
-            if (ptr == null) continue;
-            const value = heap[(ptr >>> 2)] >>> 0;
-            (rlCore as unknown as Record<string, number>)["COLOR_" + name] = value;
-        }
-    };
+    ] as const satisfies readonly RLColorPreset[];
 
 const rlCore = {
     TICK_RUNNING: 0,
@@ -749,33 +738,6 @@ const rlCore = {
     BUTTON_PRESSED: 1,
     BUTTON_DOWN: 2,
     BUTTON_RELEASED: 3,
-    COLOR_DEFAULT: 0,
-    COLOR_LIGHTGRAY: 0,
-    COLOR_GRAY: 0,
-    COLOR_DARKGRAY: 0,
-    COLOR_YELLOW: 0,
-    COLOR_GOLD: 0,
-    COLOR_ORANGE: 0,
-    COLOR_PINK: 0,
-    COLOR_RED: 0,
-    COLOR_MAROON: 0,
-    COLOR_GREEN: 0,
-    COLOR_LIME: 0,
-    COLOR_DARKGREEN: 0,
-    COLOR_SKYBLUE: 0,
-    COLOR_BLUE: 0,
-    COLOR_DARKBLUE: 0,
-    COLOR_PURPLE: 0,
-    COLOR_VIOLET: 0,
-    COLOR_DARKPURPLE: 0,
-    COLOR_BEIGE: 0,
-    COLOR_BROWN: 0,
-    COLOR_DARKBROWN: 0,
-    COLOR_WHITE: 0,
-    COLOR_BLACK: 0,
-    COLOR_BLANK: 0,
-    COLOR_MAGENTA: 0,
-    COLOR_RAYWHITE: 0,
 };
 
 const fs = {
@@ -1365,12 +1327,25 @@ const input = {
 } satisfies RLInput;
 
 const color = {
+    ...Object.fromEntries(RL_COLOR_NAMES.map((name) => [name, 0])) as RLColorPresets,
     create: (r: number, g: number, b: number, a: number) =>
         ccHandle("rl_color_create", ["number", "number", "number", "number"], [r, g, b, a]),
-    destroy: (color: RLHandle) => reqModule().ccall(
-        "rl_color_destroy", null, ["number"], [color]
+    destroy: (colorHandle: RLHandle) => reqModule().ccall(
+        "rl_color_destroy", null, ["number"], [colorHandle]
     )
 } satisfies RLColor;
+
+const patchColorConstants = () => {
+        if (!moduleInstance || !(moduleInstance.HEAPU32 || moduleInstance.HEAP32)) {
+            return;
+        }
+        const heap = moduleInstance.HEAPU32 || moduleInstance.HEAP32;
+        for (const name of RL_COLOR_NAMES) {
+            const ptr = moduleInstance["_RL_COLOR_" + name] as number | undefined;
+            if (ptr == null) continue;
+            color[name] = heap[(ptr >>> 2)] >>> 0;
+        }
+    };
 
 const font = {
     create: (path: string, fontSize: number) =>

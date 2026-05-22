@@ -458,13 +458,13 @@ void rl_register_fileio_bindings(lua_State *L)
     rl_lua_fileio_state = L;
 
     lua_pushinteger(L, RL_ASSET_ADD_TASK_OK);
-    lua_setfield(L, -2, "RL_ASSET_ADD_TASK_OK");
+    lua_setfield(L, -2, "ASSET_ADD_TASK_OK");
 
     lua_pushinteger(L, RL_ASSET_ADD_TASK_ERR_INVALID);
-    lua_setfield(L, -2, "RL_ASSET_ADD_TASK_ERR_INVALID");
+    lua_setfield(L, -2, "ASSET_ADD_TASK_ERR_INVALID");
 
     lua_pushinteger(L, RL_ASSET_ADD_TASK_ERR_QUEUE_FULL);
-    lua_setfield(L, -2, "RL_ASSET_ADD_TASK_ERR_QUEUE_FULL");
+    lua_setfield(L, -2, "ASSET_ADD_TASK_ERR_QUEUE_FULL");
 
     lua_pushcfunction(L, rl_fs_init_lua);
     lua_setfield(L, -2, "fs_init");

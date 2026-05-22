@@ -1,3 +1,5 @@
+local rl = require("rl")
+
 local Sprite2D = {}
 Sprite2D.__index = Sprite2D
 local ResourceAsync = require("resource_async")
@@ -27,7 +29,7 @@ function Sprite2D:__newindex(k, v)
 end
 
 local function load_sync(path)
-  return wrap_handle(load_sprite2d(path))
+  return wrap_handle(rl.sprite2d_create_from_file(path))
 end
 
 function Sprite2D.load(path, callback)
@@ -45,7 +47,7 @@ function Sprite2D:sync()
   if not self._transform_dirty then
     return
   end
-  set_sprite2d_transform(self.handle, self.x, self.y, self.scale, self.rotation)
+  rl.sprite2d_set_transform(self.handle, self.x, self.y, self.scale, self.rotation)
   self._transform_dirty = false
 end
 
@@ -54,12 +56,12 @@ function Sprite2D:draw(tint)
     return
   end
   self:sync()
-  draw_sprite2d(self.handle, tint or COLOR_WHITE)
+  rl.sprite2d_draw(self.handle, tint or rl.COLOR_WHITE)
 end
 
 function Sprite2D:destroy()
   if self.handle ~= nil and self.handle ~= 0 then
-    destroy_sprite2d(self.handle)
+    rl.sprite2d_destroy(self.handle)
     self.handle = 0
   end
 end

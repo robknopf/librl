@@ -1,3 +1,5 @@
+local rl = require("rl")
+
 local Model = {}
 Model.__index = Model
 local ResourceAsync = require("resource_async")
@@ -34,7 +36,7 @@ function Model:__newindex(k, v)
 end
 
 local function load_sync(path)
-  return wrap_handle(load_model(path))
+  return wrap_handle(rl.model_create_from_file(path))
 end
 
 function Model.load(path, callback)
@@ -52,10 +54,10 @@ function Model:sync()
   if not self._transform_dirty then
     return
   end
-  set_model_transform(self.handle,
-                      self.x, self.y, self.z,
-                      self.rot_x, self.rot_y, self.rot_z,
-                      self.scale, self.scale, self.scale)
+  rl.model_set_transform(self.handle,
+                         self.x, self.y, self.z,
+                         self.rot_x, self.rot_y, self.rot_z,
+                         self.scale, self.scale, self.scale)
   self._transform_dirty = false
 end
 
@@ -64,8 +66,10 @@ function Model:draw(tint)
     return
   end
   self:sync()
-  draw_model(self.handle, tint or COLOR_WHITE,
-             self.animation_index, self.animation_frame)
+  if self.animation_index ~= nil and self.animation_index >= 0 then
+    rl.model_update_animation(self.handle, self.animation_index, self.animation_frame)
+  end
+  rl.model_draw(self.handle, tint or rl.COLOR_WHITE)
 end
 
 function Model:pick(mouse_x, mouse_y, camera)
@@ -73,25 +77,21 @@ function Model:pick(mouse_x, mouse_y, camera)
     return nil
   end
 
+  self:sync()
   if camera ~= nil and camera ~= 0 then
-    return pick_model(self.handle,
-                      mouse_x, mouse_y,
-                      self.x, self.y, self.z,
-                      self.scale,
-                      self.rot_x, self.rot_y, self.rot_z,
-                      camera)
+    return rl.pick_model(camera, self.handle, mouse_x, mouse_y)
   end
 
-  return pick_model(self.handle,
-                    mouse_x, mouse_y,
-                    self.x, self.y, self.z,
-                    self.scale,
-                    self.rot_x, self.rot_y, self.rot_z)
+  local active = rl.camera3d_get_active()
+  if active == nil or active == 0 then
+    return nil
+  end
+  return rl.pick_model(active, self.handle, mouse_x, mouse_y)
 end
 
 function Model:destroy()
   if self.handle ~= nil and self.handle ~= 0 then
-    destroy_model(self.handle)
+    rl.model_destroy(self.handle)
     self.handle = 0
   end
 end

@@ -1,3 +1,5 @@
+local rl = require("rl")
+
 local Shadow = {}
 
 local function clamp(v, lo, hi)
@@ -40,21 +42,16 @@ function Shadow.draw_blob(texture, entity, base_size, tint, ground_y)
   height = math.max(0.0, y - ground_y)
   t = clamp(height / (base_size * 2.5 + 0.0001), 0.0, 1.0)
 
-  -- squished
-  --width = base_size * size * (1.25 - t * 0.55)
-  --depth = base_size * size * (0.95 - t * 0.40)
-
-  -- square for now, with a larger falloff
   width = math.max(base_size * size * ((1 - t) * (1 - t)), 0.05)
   depth = width
 
-  draw_ground_texture(texture_handle,
-    x,
-    ground_y + 0.01,
-    z,
-    math.max(width, 0.05),
-    math.max(depth, 0.05),
-    tint)
+  rl.texture_draw_ground(texture_handle,
+                         x,
+                         ground_y + 0.01,
+                         z,
+                         math.max(width, 0.05),
+                         math.max(depth, 0.05),
+                         tint)
 end
 
 return Shadow

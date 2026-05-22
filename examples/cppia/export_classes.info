@@ -48,6 +48,9 @@ class rl.impl._RLImpl.RLEventBridge
 class rl.impl._RLImpl.RLSprite3dBridge
 class rl.impl._RLImpl.RLLoggerBridge
 class rl.impl.RLFileio
+class rl.helpers.Wait
+class rl.helpers.TaskGroup
+class rl.helpers.Log
 class rl.gen.RLVersion
 class rl.Window
 class rl.RLKeyboardState
@@ -60,13 +63,11 @@ class rl.Sprite2d
 class rl.Sound
 class rl.Shape
 class rl.Render
-class rl.helpers.TaskGroup
 class rl.RL
 class rl.Pick
 class rl.Music
 class rl.Model
 class rl.Logger
-class rl.helpers.Log
 class rl.Input
 class rl.InjectLibRL
 class rl.Fs
@@ -401,13 +402,11 @@ file rl/Event.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bi
 file rl/Font.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Font.hx
 file rl/Fs.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Fs.hx
 file rl/Input.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Input.hx
-file rl/helpers/Log.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/helpers/Log.hx
 file rl/Logger.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Logger.hx
 file rl/Model.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Model.hx
 file rl/Music.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Music.hx
 file rl/Pick.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Pick.hx
 file rl/RL.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/RL.hx
-file rl/helpers/TaskGroup.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/helpers/TaskGroup.hx
 file rl/Render.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Render.hx
 file rl/Shape.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Shape.hx
 file rl/Sound.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Sound.hx
@@ -419,6 +418,9 @@ file rl/Texture.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/
 file rl/Types.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Types.hx
 file rl/Window.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Window.hx
 file rl/gen/RLVersion.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/gen/RLVersion.hx
+file rl/helpers/Log.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/helpers/Log.hx
+file rl/helpers/TaskGroup.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/helpers/TaskGroup.hx
+file rl/helpers/Wait.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/helpers/Wait.hx
 file rl/impl/RLFileioImpl.cpp.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/cppia/rl/impl/RLFileioImpl.cpp.hx
 file rl/impl/RLImpl.cpp.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/cppia/rl/impl/RLImpl.cpp.hx
 file tools/PathUtil.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/cppia/tools/PathUtil.hx

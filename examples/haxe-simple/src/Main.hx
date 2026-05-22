@@ -90,7 +90,7 @@ class SimpleRuntime implements IRuntime {
 			// to bindings/js/rl.js.
 			// modulePath: "/lib/librl.js"
 		});
-		if (rc != 0) {
+		if (rc != RL.BOOT_OK) {
 			Log.error("RL.boot failed: " + rc);
 			return RT_FAILED;
 		}
@@ -139,7 +139,7 @@ class SimpleRuntime implements IRuntime {
 			assetHost: ASSET_HOST,
 			// fsRootDir: LOADER_CACHE_DIR
 		});
-		if (rc != 0) {
+		if (rc != RL.INIT_OK) {
 			Log.error("Main: onInit failed with error: " + rc);
 			return RT_FAILED;
 		}

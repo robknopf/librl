@@ -178,8 +178,14 @@ class ScriptableRuntime implements IRuntime {
 		trace("Using script: " + PathUtil.joinPath("./", MAIN_CPPIA_FILE));
 		trace("Edit " + PathUtil.joinPath("./", Path.withoutExtension(MAIN_CPPIA_FILE)) + ".hx to change the script");
 
+		var rc = RL.boot();
+		if (rc != RL.BOOT_OK) {
+			Log.error('[script] RL.boot failed (code $rc)');
+			return RT_FAILED;
+		}
+
 		// start the loader so we can cache the main script
-		var rc = Fs.init();
+		rc = Fs.init();
 		if (rc != 0) {
 			Log.error("[script] Loader init failed");
 			return RT_FAILED;

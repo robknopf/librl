@@ -7,7 +7,7 @@ import { rl } from "../../bindings/js/rl.js";
       idealWidth: 1024,
       idealHeight: 1280,
     });
-    if (bootRc !== 0) {
+    if (bootRc !== rl.BOOT_OK) {
       throw new Error(`rl.boot failed: ${bootRc}`);
     }
     const initRc = await rl.init({
@@ -17,7 +17,7 @@ import { rl } from "../../bindings/js/rl.js";
       windowFlags: rl.FLAG_MSAA_4X_HINT,
       assetHost: assetHost,
     });
-    if (initRc !== 0) {
+    if (initRc !== rl.INIT_OK) {
       throw new Error(`rl.init failed: ${initRc}`);
     }
     rl.setTargetFPS(60);

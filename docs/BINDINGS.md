@@ -113,6 +113,7 @@ Notes:
   - `resetPickStats()` on `rl` (C API)
   - aggregated pick telemetry on `rl.helpers.getPickStats()`
 - JS `boot(opts)` instantiates the Emscripten module and prepares the scratch/color helpers without calling `rl_init(...)`.
+  - Returns `BOOT_*` codes (not `INIT_*`): `BOOT_OK` (0), `BOOT_ERR_UNKNOWN` (-10), `BOOT_ERR_LOADER` (-11), `BOOT_ERR_VERSION_MISMATCH` (-12).
   - This is useful when callers need the loader-only/bootstrap path first, for example `boot() -> RL.fs.init() -> init()`.
   - `boot(...)` is the canonical place for module/browser options such as `canvasId`, `modulePath`, `wasmPath`, `idealWidth`, `idealHeight`, and optional callback hooks like `print`, `printErr`, and `locateFile`.
   - `modulePath` selects the raw Emscripten JS runtime module (`lib/librl.js` by default, resolved relative to `bindings/js/rl.js`).
@@ -202,7 +203,7 @@ Notes:
   - `rl_pick_model(...)`
   - `rl_pick_sprite3d(...)`
 - Nim `rl_pick_model(camera, model, mouseX, mouseY)` and `rl_pick_sprite3d(camera, sprite3d, mouseX, mouseY)` read stored instance transforms; no explicit transform args remain.
-- Picking helpers available in Haxe: `RL.pickModel(camera, model, mouseX, mouseY)` and `RL.pickSprite3d(camera, sprite3d, mouseX, mouseY)`, returning `RLPickResult` (`hit`, `distance`, `point: RLVec3`, `normal: RLVec3`). Transform is read from the stored instance. Stats helpers: `pickResetStats`, `pickGetBroadphaseTests`, `pickGetBroadphaseRejects`, `pickGetNarrowphaseTests`, `pickGetNarrowphaseHits`.
+- Picking helpers available in Haxe: `Pick.model(camera, model, mouseX, mouseY)` and `Pick.sprite3d(camera, sprite3d, mouseX, mouseY)`, returning `RLPickResult` (`hit`, `distance`, `point: RLVec3`, `normal: RLVec3`). Transform is read from the stored instance. Stats helpers: `Pick.resetStats`, `Pick.getBroadphaseTests`, `Pick.getBroadphaseRejects`, `Pick.getNarrowphaseTests`, `Pick.getNarrowphaseHits`.
 - **`point` and `normal` in `RLPickResult` / `rl_pick_result_t` are in local (object) space, not world space:**
   - For `pickModel`: world hit point inverse-transformed by the model's world matrix (position + rotation + scale). Origin is the model's local origin.
   - For `pickSprite3d`: `(local_x, local_y, 0)` on the billboard surface, with normal on local `+/-Z`. `local_x` and `local_y` are signed offsets from the sprite center in world units — e.g. `(-0.5, -0.5)` is bottom-left corner, `(+0.5, +0.5)` is top-right corner for a size-1 sprite.
@@ -261,7 +262,7 @@ Files:
 
 - `bindings/haxe/rl/RL.hx` — core lifecycle only: `boot`, `init`, `deinit`, `tick`, version, timing, shared init/tick constants.
 - `bindings/haxe/rl/{Fs,Asset,Window,Render,Model,...}.hx` — one public class per C API section in `package rl` (e.g. `rl.Fs.init()`, `rl.Asset.ensure()`). Method names are verb-first within each class; the impl layer keeps C-aligned names (`RLImpl.fsInit`, …).
-- `bindings/haxe/rl/helpers/*.hx` — binding ergonomics (not C API), e.g. `rl.helpers.TaskGroup.create()`, `rl.helpers.Log.info()`. JS equivalent bucket: `RL.helpers.*` (where applicable).
+- `bindings/haxe/rl/helpers/*.hx` — binding ergonomics (not C API), e.g. `rl.helpers.TaskGroup.create()`, `rl.helpers.Log.info()`, `rl.helpers.Wait.waitForTask()`. JS equivalent bucket: `RL.helpers.*` (where applicable).
 - `tools/gen_haxe_public_sections.py` — regenerates section façade files from `include/*.h` (parity audits can be run per generated file).
 - `bindings/haxe/rl/impl/RLImpl.cpp.hx` — current hxcpp backend implementation. Contains all `@:native`, `untyped __cpp__`, `@:functionCode`, and bridge classes.
 - `bindings/haxe/rl/impl/RLImpl.js.hx` — Haxe `js` backend. It is a thin adapter over the standalone JS binding exported from `bindings/js/rl.js`.
@@ -293,6 +294,7 @@ Current state:
   - `RLImpl.js.hx` on `js`
   - `RLImpl.hx` for unsupported targets, which fails at compile time
 - `RL.boot(?config)` is the backend bootstrap hook:
+  - Returns `RL.BOOT_*` codes (not `RL.INIT_*`): `BOOT_OK` (0), `BOOT_ERR_UNKNOWN` (-10), `BOOT_ERR_LOADER` (-11, wasm/module/JSPI load failure), `BOOT_ERR_VERSION_MISMATCH` (-12).
   - On hxcpp/cppia it returns `Int`, runs the binding/core version check, and succeeds immediately when load is not required.
   - On Haxe JS it returns `js.lib.Promise<Int>` so the JS backend can import `bindings/js/rl.js`, which then instantiates `lib/librl.js` / `lib/librl.wasm` before normal `RL.init(...)` calls.
   - The current Haxe JS backend expects the generated raw `lib/librl.js` JSPI build plus the standalone wrapper in `bindings/js/rl.js`. If `WebAssembly.Suspending` / `WebAssembly.promising` are unavailable, `RL.boot()` returns an error code and leaves the backend unbooted.
@@ -344,8 +346,11 @@ Notes:
 
 - Public Haxe API mirrors C sections, with verb-first methods inside each class:
   - `Model.create`, `Sprite3d.create`, `Camera3d.create`, `Fs.init`, `Asset.ensure`, etc.
-  - Section constants: `Window.FLAG_MSAA_4X_HINT`, `Camera3d.PERSPECTIVE`, `Logger.LEVEL_INFO`, `Asset.ADD_TASK_OK`.
+  - Section constants: `Window.FLAG_MSAA_4X_HINT`, `Camera3d.PERSPECTIVE`, `Logger.LEVEL_INFO`, `Asset.ADD_TASK_OK`, `Input.BUTTON_UP`, …
   - Core constants on `RL`: `RL.INIT_OK`, `RL.TICK_RUNNING`, …
+  - Boot result constants on `RL` (binding-only; distinct from init): `RL.BOOT_OK`, `RL.BOOT_ERR_UNKNOWN`, `RL.BOOT_ERR_LOADER`, `RL.BOOT_ERR_VERSION_MISMATCH`. Compare `RL.boot()` against these, not `RL.INIT_*`.
+  - `Input.getGamepads()` / `Input.getTouchpoints()` mirror JS scratch-backed snapshots on wasm; desktop returns empty/null.
+  - Picking: `Pick.model(...)`, `Pick.sprite3d(...)`, returning `RLPickResult`.
   - `RL.isInitialized()` wraps `rl_is_initialized()`.
   - `RL.getPlatform()` wraps `rl_get_platform()`.
   - `Window.closeRequested()` wraps `rl_window_close_requested()`.
@@ -372,6 +377,7 @@ Async fs/asset sugar:
   - `Asset.pollTask(task: RLHandle): Bool`
   - `Asset.finishTask(task: RLHandle): Int`
   - `TaskGroup.create<T>(onComplete?, onError?, ctx?)` (`rl.helpers.TaskGroup`)
+  - `Wait.waitForTask(task)`, `Wait.waitForFsReady()`, `Wait.waitForAssetEnsureAsync(...)` (`rl.helpers.Wait`; JS `RL.helpers.*` equivalents)
   - `TaskGroup.addImportTask(path, onSuccess?, onError?)`
   - `TaskGroup.process()`, `TaskGroup.remainingTasks()`, `TaskGroup.failedPaths()`
   - `Asset.addTask(task, onSuccess, onFailure, ctx)`

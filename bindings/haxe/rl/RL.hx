@@ -43,6 +43,26 @@ class RL {
 	static inline function get_INIT_ERR_WINDOW():Int
 		return rl.impl.RLImpl.INIT_ERR_WINDOW;
 
+	public static var BOOT_OK(get, never):Int;
+
+	static inline function get_BOOT_OK():Int
+		return rl.impl.RLImpl.BOOT_OK;
+
+	public static var BOOT_ERR_UNKNOWN(get, never):Int;
+
+	static inline function get_BOOT_ERR_UNKNOWN():Int
+		return rl.impl.RLImpl.BOOT_ERR_UNKNOWN;
+
+	public static var BOOT_ERR_LOADER(get, never):Int;
+
+	static inline function get_BOOT_ERR_LOADER():Int
+		return rl.impl.RLImpl.BOOT_ERR_LOADER;
+
+	public static var BOOT_ERR_VERSION_MISMATCH(get, never):Int;
+
+	static inline function get_BOOT_ERR_VERSION_MISMATCH():Int
+		return rl.impl.RLImpl.BOOT_ERR_VERSION_MISMATCH;
+
 	public static var TICK_RUNNING(get, never):Int;
 
 	static inline function get_TICK_RUNNING():Int

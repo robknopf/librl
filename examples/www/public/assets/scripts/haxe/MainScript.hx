@@ -109,7 +109,7 @@ class MainScript extends Script {
 			assetHost: ASSET_HOST,
 			// fsRootDir: LOADER_CACHE_DIR
 		});
-		if (err != 0) {
+		if (err != RL.INIT_OK) {
 			trace("Main: onInit failed with error: " + err);
 			return RT_FAILED;
 		}

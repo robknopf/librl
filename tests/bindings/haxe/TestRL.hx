@@ -35,7 +35,7 @@ class TestRL extends utest.Test {
 
   #if cpp
   public function testVersionValidateBinding() {
-    Assert.equals(0, RL.boot());
+    Assert.equals(RL.BOOT_OK, RL.boot());
   }
   #end
 
@@ -45,6 +45,10 @@ class TestRL extends utest.Test {
     Assert.equals(0x00000040, Window.FLAG_VSYNC_HINT);
     Assert.equals(0, Camera3d.PERSPECTIVE);
     Assert.equals(1, Camera3d.ORTHOGRAPHIC);
+    Assert.equals(0, Input.BUTTON_UP);
+    Assert.equals(1, Input.BUTTON_PRESSED);
+    Assert.equals(2, Input.BUTTON_DOWN);
+    Assert.equals(3, Input.BUTTON_RELEASED);
   }
 
   #if cpp
@@ -122,6 +126,15 @@ class TestRL extends utest.Test {
     // Validate fields exist and are numeric; exact values depend on environment.
     Assert.isTrue(mouse.x >= 0 || mouse.x <= 0, "mouse.x is an Int");
     Assert.isTrue(mouse.y >= 0 || mouse.y <= 0, "mouse.y is an Int");
+    RL.deinit();
+  }
+
+  public function testInputScratchDevicesEmptyOnDesktop() {
+    Assert.equals(0, RL.init());
+    Assert.equals(0, Input.getGamepads().length);
+    Assert.equals(null, Input.getGamepad(0));
+    Assert.equals(0, Input.getTouchpoints().length);
+    Assert.equals(null, Input.getTouchpoint(0));
     RL.deinit();
   }
 

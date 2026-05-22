@@ -30,7 +30,7 @@ class Sprite3d {
 	}
 
 	public static function getTransform(sprite:RLHandle):RLSprite3dTransform {
-		return cast rl.impl.RLImpl.sprite3dGetTransform(sprite);
+		return rl.impl.RLImpl.sprite3dGetTransform(sprite);
 	}
 
 	public static function setTint(sprite:RLHandle, color:RLHandle = 0):Bool {

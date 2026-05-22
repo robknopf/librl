@@ -451,31 +451,57 @@ const RL = {
             idealHeight: moduleOptions.idealHeight ?? opts.windowHeight ?? 1280,
         };
     },
-    _ensureModuleInstance: async (opts) => {
+    _hasJspiSupport: () => {
+        return typeof WebAssembly !== "undefined"
+            && typeof WebAssembly.Suspending === "function"
+            && typeof WebAssembly.promising === "function";
+    },
+    _tryLoadModuleInstance: async (opts) => {
         RL._prepareModuleOptions(opts);
 
         if (moduleInstance) {
-            return moduleInstance;
+            return RL.BOOT_OK;
         }
 
-        const moduleFactory = await RL._loadModuleFactory(opts);
-        moduleInstance = await moduleFactory(moduleOptions.env);
-        if (RL._compareVersion() < 0) {
-            throw new Error(
-                `librl version mismatch: runtime ${RL.getVersionMajor()}.${RL.getVersionMinor()}.${RL.getVersionPatch()}, ` +
-                `binding ${RL_BINDING_BUILT_MAJOR}.${RL_BINDING_BUILT_MINOR}.${RL_BINDING_BUILT_PATCH}`
-            );
+        try {
+            const moduleFactory = await RL._loadModuleFactory(opts);
+            moduleInstance = await moduleFactory(moduleOptions.env);
+        } catch (err) {
+            console.error("RL.boot failed", err);
+            moduleInstance = null;
+            return RL.BOOT_ERR_LOADER;
         }
-        
+
+        if (RL._compareVersion() < 0) {
+            moduleInstance = null;
+            return RL.BOOT_ERR_VERSION_MISMATCH;
+        }
+
         RL._installScratchHelpers();
         RL._patchColorConstants();
         moduleInstance.initScratchArea();
 
+        return RL.BOOT_OK;
+    },
+    _ensureModuleInstance: async (opts) => {
+        const rc = await RL._tryLoadModuleInstance(opts);
+        if (rc !== RL.BOOT_OK) {
+            throw new Error(`RL boot failed with code ${rc}`);
+        }
         return moduleInstance;
     },
     boot: async (opts = {}) => {
-        await RL._ensureModuleInstance(opts);
-        return 0;
+        if (!RL._hasJspiSupport()) {
+            return RL.BOOT_ERR_LOADER;
+        }
+
+        try {
+            return await RL._tryLoadModuleInstance(opts);
+        } catch (err) {
+            console.error("RL.boot failed", err);
+            moduleInstance = null;
+            return RL.BOOT_ERR_UNKNOWN;
+        }
     },
     _callInitWithOptionsAsync: async (opts, symbolName, asyncOptions) => {
         await RL._ensureModuleInstance();
@@ -830,6 +856,10 @@ const RL = {
     INIT_ERR_LOADER: -3,
     INIT_ERR_ASSET_HOST: -4,
     INIT_ERR_WINDOW: -5,
+    BOOT_OK: 0,
+    BOOT_ERR_UNKNOWN: -10,
+    BOOT_ERR_LOADER: -11,
+    BOOT_ERR_VERSION_MISMATCH: -12,
     CAMERA_PERSPECTIVE: 0,
     CAMERA_ORTHOGRAPHIC: 1,
     FLAG_FULLSCREEN_MODE: 0x00000002,

@@ -6,9 +6,12 @@ import js.lib.Promise;
 import rl.Types.RLHandle;
 import rl.Types.RLBootConfig;
 import rl.Types.RLInitConfig;
+import rl.Types.RLGamepad;
 import rl.Types.RLKeyboardState;
 import rl.Types.RLMouseState;
 import rl.Types.RLPickResult;
+import rl.Types.RLSprite3dTransform;
+import rl.Types.RLTouchpoint;
 import rl.Types.RLVec2;
 import rl.gen.RLVersion;
 /**
@@ -30,12 +33,18 @@ class RLImpl {
 	public static inline var INIT_ERR_WINDOW:Int = -5;
 
 	public static inline var BOOT_OK:Int = 0;
-	public static inline var BOOT_ERR_UNKNOWN:Int = -1;
-	public static inline var BOOT_ERR_VERSION_MISMATCH:Int = -2;
+	public static inline var BOOT_ERR_UNKNOWN:Int = -10;
+	public static inline var BOOT_ERR_LOADER:Int = -11;
+	public static inline var BOOT_ERR_VERSION_MISMATCH:Int = -12;
 
 	public static inline var TICK_RUNNING:Int = 0;
 	public static inline var TICK_WAITING:Int = 1;
 	public static inline var TICK_FAILED:Int = -1;
+
+	public static inline var BUTTON_UP:Int = 0;
+	public static inline var BUTTON_PRESSED:Int = 1;
+	public static inline var BUTTON_DOWN:Int = 2;
+	public static inline var BUTTON_RELEASED:Int = 3;
 
 	public static inline var FLAG_WINDOW_RESIZABLE:Int = 0x00000004;
 	public static inline var FLAG_MSAA_4X_HINT:Int = 0x00000020;
@@ -95,14 +104,14 @@ class RLImpl {
 	@async
 	public static function boot(?config:RLBootConfig):Promise<Int> {
 		if (binding != null) {
-			return Promise.resolve(INIT_OK);
+			return Promise.resolve(BOOT_OK);
 		}
 		if (bootPromise != null) {
 			return bootPromise;
 		}
 
 		if (!hasJspiSupport()) {
-			return Promise.resolve(INIT_ERR_UNKNOWN);
+			return Promise.resolve(BOOT_ERR_LOADER);
 		}
 
 		var bootOptions = buildBootOptions(config);
@@ -654,8 +663,8 @@ class RLImpl {
 	public static function sprite3dGetDefaultTexture():RLHandle
 		return binding == null ? 0 : cast binding.sprite3d.getDefaultTexture();
 
-	public static function sprite3dGetTransform(sprite:RLHandle):Dynamic
-		return binding == null ? null : binding.sprite3d.getTransform(sprite);
+	public static function sprite3dGetTransform(sprite:RLHandle):RLSprite3dTransform
+		return binding == null ? sprite3dTransform() : toSprite3dTransform(binding.sprite3d.getTransform(sprite));
 
 	public static function shapeDrawRectangle(x:Int, y:Int, width:Int, height:Int, color:RLHandle):Void {
 		if (binding != null)
@@ -824,6 +833,44 @@ class RLImpl {
 
 	public static function inputGetKeyboardState():RLKeyboardState
 		return binding == null ? new RLKeyboardState() : toKeyboardState(binding.input.getKeyboardState());
+
+	public static function inputGetGamepads():Array<RLGamepad> {
+		if (binding == null)
+			return [];
+		return toGamepads(binding.input.getGamepads());
+	}
+
+	public static function inputGetGamepad(id:Int):Null<RLGamepad> {
+		if (binding == null)
+			return null;
+		return toGamepad(binding.input.getGamepad(id));
+	}
+
+	public static function inputGetTouchpoints():Array<RLTouchpoint> {
+		if (binding == null)
+			return [];
+		return toTouchpoints(binding.input.getTouchpoints());
+	}
+
+	public static function inputGetTouchpoint(id:Int):Null<RLTouchpoint> {
+		if (binding == null)
+			return null;
+		return toTouchpoint(binding.input.getTouchpoint(id));
+	}
+
+	@async
+	public static function helpersWaitForTask(task:RLHandle, ?pollMs:Int):Int {
+		if (binding == null)
+			return -1;
+		return cast binding.helpers.waitForTask(task, pollMs == null ? 16 : pollMs);
+	}
+
+	@async
+	public static function helpersWaitForFsReady(?timeoutMs:Int):Bool {
+		if (binding == null)
+			return false;
+		return cast binding.helpers.waitForFsReady(timeoutMs == null ? 2000 : timeoutMs);
+	}
 
 	public static function pickModel(camera:RLHandle, model:RLHandle, mouseX:Float, mouseY:Float):RLPickResult
 		return binding == null ? pickResult() : toPickResult(binding.pick.model(camera, model, mouseX, mouseY));
@@ -1091,6 +1138,92 @@ class RLImpl {
 		out.pressed_keys = cast value.pressed_keys;
 		out.num_pressed_chars = value.num_pressed_chars;
 		out.pressed_chars = cast value.pressed_chars;
+		return out;
+	}
+
+	static inline function sprite3dTransform():RLSprite3dTransform {
+		return {positionX: 0.0, positionY: 0.0, positionZ: 0.0, size: 0.0};
+	}
+
+	static function toSprite3dTransform(value:Dynamic):RLSprite3dTransform {
+		if (value == null) {
+			return sprite3dTransform();
+		}
+		return {
+			positionX: value.positionX,
+			positionY: value.positionY,
+			positionZ: value.positionZ,
+			size: value.size
+		};
+	}
+
+	static function toGamepads(value:Dynamic):Array<RLGamepad> {
+		if (value == null) {
+			return [];
+		}
+		var out:Array<RLGamepad> = [];
+		var len:Int = untyped __js__('value.length');
+		for (i in 0...len) {
+			out.push(toGamepad(untyped __js__('value[{0}]', i)));
+		}
+		return out;
+	}
+
+	static function toGamepad(value:Dynamic):Null<RLGamepad> {
+		if (value == null) {
+			return null;
+		}
+		return {
+			id: value.id,
+			axis: copyFloatArray(value.axis),
+			buttons: copyIntArray(value.buttons)
+		};
+	}
+
+	static function toTouchpoints(value:Dynamic):Array<RLTouchpoint> {
+		if (value == null) {
+			return [];
+		}
+		var out:Array<RLTouchpoint> = [];
+		var len:Int = untyped __js__('value.length');
+		for (i in 0...len) {
+			out.push(toTouchpoint(untyped __js__('value[{0}]', i)));
+		}
+		return out;
+	}
+
+	static function toTouchpoint(value:Dynamic):Null<RLTouchpoint> {
+		if (value == null) {
+			return null;
+		}
+		return {
+			id: value.id,
+			x: value.x,
+			y: value.y
+		};
+	}
+
+	static function copyFloatArray(value:Dynamic):Array<Float> {
+		if (value == null) {
+			return [];
+		}
+		var out:Array<Float> = [];
+		var len:Int = untyped __js__('value.length');
+		for (i in 0...len) {
+			out.push(untyped __js__('value[{0}]', i));
+		}
+		return out;
+	}
+
+	static function copyIntArray(value:Dynamic):Array<Int> {
+		if (value == null) {
+			return [];
+		}
+		var out:Array<Int> = [];
+		var len:Int = untyped __js__('value.length');
+		for (i in 0...len) {
+			out.push(untyped __js__('value[{0}]', i));
+		}
 		return out;
 	}
 

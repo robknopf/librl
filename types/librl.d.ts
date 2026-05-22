@@ -366,6 +366,10 @@ export interface RLApi {
   INIT_ERR_LOADER: number;
   INIT_ERR_ASSET_HOST: number;
   INIT_ERR_WINDOW: number;
+  BOOT_OK: number;
+  BOOT_ERR_UNKNOWN: number;
+  BOOT_ERR_LOADER: number;
+  BOOT_ERR_VERSION_MISMATCH: number;
   CAMERA_PERSPECTIVE: number;
   CAMERA_ORTHOGRAPHIC: number;
   FLAG_FULLSCREEN_MODE: number;

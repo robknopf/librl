@@ -17,7 +17,9 @@ import rl.Types.RLVec3;
 import rl.Types.RLPickResult;
 import rl.Types.RLMouseState;
 import rl.Types.RLKeyboardState;
+import rl.Types.RLGamepad;
 import rl.Types.RLSprite3dTransform;
+import rl.Types.RLTouchpoint;
 import rl.gen.RLVersion;
 
 @:keep
@@ -913,8 +915,9 @@ abstract RLImpl(RLExterns) {
   // --- Forwarded constants (inline so cppia bakes values at script compile time) ---
 
   public static inline var BOOT_OK: Int = 0;
-  public static inline var BOOT_ERR_UNKNOWN: Int = -1;
-  public static inline var BOOT_ERR_VERSION_MISMATCH: Int = -2;
+  public static inline var BOOT_ERR_UNKNOWN: Int = -10;
+  public static inline var BOOT_ERR_LOADER: Int = -11;
+  public static inline var BOOT_ERR_VERSION_MISMATCH: Int = -12;
   public static inline var INIT_OK: Int = 0;
   public static inline var INIT_ERR_UNKNOWN: Int = -1;
   public static inline var INIT_ERR_ALREADY_INITIALIZED: Int = -2;
@@ -924,6 +927,11 @@ abstract RLImpl(RLExterns) {
   public static inline var TICK_RUNNING: Int = 0;
   public static inline var TICK_WAITING: Int = 1;
   public static inline var TICK_FAILED: Int = -1;
+
+  public static inline var BUTTON_UP: Int = 0;
+  public static inline var BUTTON_PRESSED: Int = 1;
+  public static inline var BUTTON_DOWN: Int = 2;
+  public static inline var BUTTON_RELEASED: Int = 3;
   public static inline var FLAG_WINDOW_RESIZABLE: Int = 0x00000004;
   public static inline var FLAG_MSAA_4X_HINT: Int = 0x00000020;
   public static inline var FLAG_VSYNC_HINT: Int = 0x00000040;
@@ -1159,6 +1167,22 @@ abstract RLImpl(RLExterns) {
   }
   public static function inputGetKeyboardState(): RLKeyboardState {
     return RLKeyboardBridge.getState();
+  }
+
+  public static function inputGetGamepads(): Array<RLGamepad> {
+    return [];
+  }
+
+  public static function inputGetGamepad(id: Int): Null<RLGamepad> {
+    return null;
+  }
+
+  public static function inputGetTouchpoints(): Array<RLTouchpoint> {
+    return [];
+  }
+
+  public static function inputGetTouchpoint(id: Int): Null<RLTouchpoint> {
+    return null;
   }
 
   public static function pickModel(camera: RLHandle, model: RLHandle, mouseX: Float, mouseY: Float): RLPickResult {

@@ -71,6 +71,18 @@ typedef RLMouseState = {
 	var middle:Int;
 }
 
+typedef RLGamepad = {
+	var id:Int;
+	var axis:Array<Float>;
+	var buttons:Array<Int>;
+}
+
+typedef RLTouchpoint = {
+	var id:Int;
+	var x:Float;
+	var y:Float;
+}
+
 class RLKeyboardState {
 	public var max_num_keys:Int = 0;
 	public var keys:Array<Int> = [];

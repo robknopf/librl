@@ -27,7 +27,7 @@ make -C tests test_haxe_bindings
 - **testConstants**: Window flag constants (FLAG_WINDOW_RESIZABLE, etc.)
 - **testInitDeinit**: rl_init / rl_deinit lifecycle
 - **testTimeFunctions**: getTime, getDeltaTime, setTargetFps
-- **testAssetHost**: setAssetHost, getAssetHost
+- **testAssetHost**: fileioSetAssetHost, fileioGetAssetHost
 - **testLighting**: enableLighting, disableLighting, isLightingEnabled, setLightDirection, setLightAmbient
 - **testWindowGetScreenSize**: windowGetScreenSize (vec2_t return)
 - **testWindowGetMonitorCount**: windowGetMonitorCount

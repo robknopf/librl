@@ -193,6 +193,20 @@ class RLFileio {
   }
 
   @:functionCode('
+    return ::rl_fileio_set_asset_host(assetHost.utf8_str());
+  ')
+  static function setAssetHostNative(assetHost: String): Int {
+    return -1;
+  }
+
+  @:functionCode('
+    return ::rl_fileio_get_asset_host();
+  ')
+  static function getAssetHostNative(): String {
+    return null;
+  }
+
+  @:functionCode('
     return ::rl_fileio_ping_asset_host(assetHost.utf8_str());
   ')
   static function pingAssetHostNative(assetHost: String): Float {
@@ -317,6 +331,14 @@ class RLFileio {
 
   public static function fileioPingAssetHost(?assetHost: String): Float {
     return pingAssetHostNative(assetHost == null ? "" : assetHost);
+  }
+
+  public static function fileioSetAssetHost(assetHost: String): Int {
+    return setAssetHostNative(assetHost);
+  }
+
+  public static function fileioGetAssetHost(): String {
+    return getAssetHostNative();
   }
 
   public static function fileioGetBaseDir(): String {

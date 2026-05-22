@@ -64,11 +64,11 @@ class TestRL extends utest.Test {
 
   public function testAssetHost() {
     Assert.equals(0, RL.init());
-    var host = RL.getAssetHost();
+    var host = RL.fileioGetAssetHost();
     Assert.notEquals(null, host);
-    var rc = RL.setAssetHost("https://example.com/assets");
-    Assert.isTrue(rc == 0 || rc != 0, "setAssetHost returns int");
-    host = RL.getAssetHost();
+    var rc = RL.fileioSetAssetHost("https://example.com/assets");
+    Assert.isTrue(rc == 0 || rc != 0, "fileioSetAssetHost returns int");
+    host = RL.fileioGetAssetHost();
     Assert.notEquals(null, host);
     RL.deinit();
   }

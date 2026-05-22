@@ -176,7 +176,7 @@ if rl.init() ~= rl.RL_INIT_OK then
     print("FAIL: rl.init() failed before text2d lifecycle test")
     os.exit(1)
 end
-local label = rl.text2d_create(0, 16)
+local label = rl.text2d_create(rl.font_get_default(), 16)
 if label == 0 then
     print("FAIL: text2d_create returned 0")
     rl.deinit()
@@ -186,7 +186,7 @@ rl.text2d_set_content(label, "hello text2d")
 rl.text2d_set_position(label, 10, 20)
 rl.text2d_set_color(label, 0)
 rl.text2d_set_size(label, 24)
-rl.text2d_set_font(label, 0)
+rl.text2d_set_font(label, rl.font_get_default())
 rl.text2d_destroy(label)
 rl.deinit()
 print("OK: text2d API available and lifecycle works")

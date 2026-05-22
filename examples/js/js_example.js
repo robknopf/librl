@@ -48,14 +48,14 @@ import { rl } from "../../bindings/js/rl.js";
     rl.setLightDirection(-0.6, -1.0, -0.5);
     rl.setLightAmbient(0.25);
 
-    labelText2d = rl.createText2D(0, fontSize);
-    rl.text2DSetContent(labelText2d, "rl_text2d: retained label");
-    rl.text2DSetPosition(labelText2d, 10, 136);
-    rl.text2DSetColor(labelText2d, rl.COLOR_GREEN);
+    labelText2d = rl.createText2d(rl.getDefaultFont(), fontSize);
+    rl.setText2dContent(labelText2d, "rl_text2d: retained label");
+    rl.setText2dPosition(labelText2d, 10, 136);
+    rl.setText2dColor(labelText2d, rl.COLOR_GREEN);
 
     // using a task group to load assets asynchronously
     /*
-    let loadingGroup = rl.createTaskGroup(
+    let loadingGroup = rl.helpers.createTaskGroup(
       () => {
         loadingGroup = null;
       },
@@ -68,9 +68,9 @@ import { rl } from "../../bindings/js/rl.js";
     );
     loadingGroup.addImportTask(modelPath, (path) => {
       gumshoe = rl.createModelFromFile(path);
-      rl.modelSetAnimation(gumshoe, 1);
-      rl.modelSetAnimationSpeed(gumshoe, 1.0);
-      rl.modelSetAnimationLoop(gumshoe, true);
+      rl.setModelAnimation(gumshoe, 1);
+      rl.setModelAnimationSpeed(gumshoe, 1.0);
+      rl.setModelAnimationLoop(gumshoe, true);
     });
     loadingGroup.addImportTask(spritePath, (path) => {
       sprite = rl.createSprite3dFromFile(path);
@@ -98,9 +98,9 @@ import { rl } from "../../bindings/js/rl.js";
 
     importAssetTask(modelPath, (path) => {
       gumshoe = rl.createModelFromFile(path);
-      rl.modelSetAnimation(gumshoe, 1);
-      rl.modelSetAnimationSpeed(gumshoe, 1.0);
-      rl.modelSetAnimationLoop(gumshoe, true);
+      rl.setModelAnimation(gumshoe, 1);
+      rl.setModelAnimationSpeed(gumshoe, 1.0);
+      rl.setModelAnimationLoop(gumshoe, true);
     }, (path, error) => {
       console.error(`asset import failed: ${path}: ${error}`);
     });
@@ -112,7 +112,7 @@ import { rl } from "../../bindings/js/rl.js";
     importAssetTask(fontPath, (path) => {
       komika = rl.createFont(path, fontSize);
       komikaSmall = rl.createFont(path, smallFontSize);
-      if (labelText2d) rl.text2DSetFont(labelText2d, komika);
+      if (labelText2d) rl.setText2dFont(labelText2d, komika);
     }, (path, error) => {
       console.error(`asset import failed: ${path}: ${error}`);
     });
@@ -180,7 +180,7 @@ import { rl } from "../../bindings/js/rl.js";
      //   return;
      // }
       if (gumshoe) {
-        rl.modelAnimate(gumshoe, deltaTime);
+        rl.animateModel(gumshoe, deltaTime);
         rl.drawModel(gumshoe, rl.COLOR_WHITE);
       }
       if (sprite) {
@@ -188,8 +188,8 @@ import { rl } from "../../bindings/js/rl.js";
       }
       rl.endMode3d();
 
-      const w = rl.getScreenWidth();
-      const h = rl.getScreenHeight();
+      const w = rl.helpers.getScreenWidth();
+      const h = rl.helpers.getScreenHeight();
       if (komika) {
         const textSize = rl.measureTextEx(komika, message, fontSize, 0);
         rl.drawTextEx(komika, message, (w - textSize.x) / 2, (h - textSize.y) / 2, fontSize, 1, rl.COLOR_BLUE);
@@ -201,7 +201,7 @@ import { rl } from "../../bindings/js/rl.js";
         rl.drawFPSEx(komikaSmall, 10, 10, smallFontSize, rl.COLOR_BLUE);
       }
       if (labelText2d) {
-        rl.drawText2D(labelText2d);
+        rl.drawText2d(labelText2d);
       }
       rl.endDrawing();
       animationFrameId = window.requestAnimationFrame(mainLoop);

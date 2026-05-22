@@ -5,7 +5,9 @@
 extern "C" {
 #endif
 
-void rl_debug_enable_fps(int x, int y, int font_size, const char *font_path);
+#include "rl_types.h"
+
+void rl_debug_enable_fps(int x, int y, int font_size, rl_handle_t font);
 void rl_debug_disable(void);
 
 #ifdef __cplusplus

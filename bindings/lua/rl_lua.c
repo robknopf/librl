@@ -113,42 +113,6 @@ static int rl_init_async_lua(lua_State *L)
     return 1;
 }
 
-static int rl_init_values_lua(lua_State *L)
-{
-    const int window_width = (int)luaL_optinteger(L, 1, 0);
-    const int window_height = (int)luaL_optinteger(L, 2, 0);
-    const char *window_title = lua_isstring(L, 3) ? lua_tostring(L, 3) : NULL;
-    const unsigned int window_flags = (unsigned int)luaL_optinteger(L, 4, 0);
-    const char *asset_host = lua_isstring(L, 5) ? lua_tostring(L, 5) : NULL;
-    const char *fileio_base_dir = lua_isstring(L, 6) ? lua_tostring(L, 6) : NULL;
-
-    lua_pushinteger(L, (lua_Integer)rl_init_values(window_width,
-                                                   window_height,
-                                                   window_title,
-                                                   window_flags,
-                                                   asset_host,
-                                                   fileio_base_dir));
-    return 1;
-}
-
-static int rl_init_values_async_lua(lua_State *L)
-{
-    const int window_width = (int)luaL_optinteger(L, 1, 0);
-    const int window_height = (int)luaL_optinteger(L, 2, 0);
-    const char *window_title = lua_isstring(L, 3) ? lua_tostring(L, 3) : NULL;
-    const unsigned int window_flags = (unsigned int)luaL_optinteger(L, 4, 0);
-    const char *asset_host = lua_isstring(L, 5) ? lua_tostring(L, 5) : NULL;
-    const char *fileio_base_dir = lua_isstring(L, 6) ? lua_tostring(L, 6) : NULL;
-
-    lua_pushinteger(L, (lua_Integer)rl_init_values_async(window_width,
-                                                         window_height,
-                                                         window_title,
-                                                         window_flags,
-                                                         asset_host,
-                                                         fileio_base_dir));
-    return 1;
-}
-
 static int rl_lua_compare_version()
 {
     const int runtime_major = rl_version_major();
@@ -307,20 +271,6 @@ static int rl_render_end_mode_3d_lua(lua_State *L)
     return 0;
 }
 
-static int rl_set_asset_host_lua(lua_State *L)
-{
-    const char *asset_host = luaL_checkstring(L, 1);
-    lua_pushinteger(L, rl_set_asset_host(asset_host));
-    return 1;
-}
-
-static int rl_get_asset_host_lua(lua_State *L)
-{
-    (void)L;
-    lua_pushstring(L, rl_get_asset_host());
-    return 1;
-}
-
 static int rl_enable_lighting_lua(lua_State *L)
 {
     (void)L;
@@ -391,8 +341,6 @@ static const luaL_Reg rl_functions[] = {
     {"boot", rl_boot_lua},
     {"init", rl_init_lua},
     {"init_async", rl_init_async_lua},
-    {"init_values", rl_init_values_lua},
-    {"init_values_async", rl_init_values_async_lua},
     {"deinit", rl_deinit_lua},
     {"is_initialized", rl_is_initialized_lua},
     {"get_platform", rl_get_platform_lua},
@@ -410,8 +358,6 @@ static const luaL_Reg rl_functions[] = {
     {"render_end_mode_2d", rl_render_end_mode_2d_lua},
     {"render_begin_mode_3d", rl_render_begin_mode_3d_lua},
     {"render_end_mode_3d", rl_render_end_mode_3d_lua},
-    {"set_asset_host", rl_set_asset_host_lua},
-    {"get_asset_host", rl_get_asset_host_lua},
     {"enable_lighting", rl_enable_lighting_lua},
     {"disable_lighting", rl_disable_lighting_lua},
     {"is_lighting_enabled", rl_is_lighting_enabled_lua},

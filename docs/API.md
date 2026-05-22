@@ -109,7 +109,7 @@ typedef enum {
 Notes:
 - `rl_init()` is synchronous: it returns only after loader restore readiness is satisfied.
 - `rl_init_async()` returns immediately; call `rl_tick()` each frame and check for `RL_TICK_WAITING` until the runtime is ready.
-- `rl_init_values(...)` is the flattened FFI-friendly variant for bindings that cannot marshal `rl_init_config_t`.
+- `rl_init_values(...)` / `rl_init_values_async(...)` are flattened C FFI helpers. **Bindings call them internally** after flattening native config; they are **not** part of the public binding API (see `docs/BINDINGS.md` init contract).
 - The typical frame loop: call `rl_tick()` → if `RL_TICK_WAITING`, skip; if `RL_TICK_RUNNING`, run user logic and draw.
 
 ---
@@ -704,9 +704,13 @@ Naming convention for bridge helpers:
 Optional overlay drawn automatically during `rl_render_end()`.
 
 ```c
-void rl_debug_enable_fps(int x, int y, int font_size, const char *font_path); // NULL for default font
+void rl_debug_enable_fps(int x, int y, int font_size, rl_handle_t font); // 0 for default font
 void rl_debug_disable(void);
 ```
+
+Notes:
+- `font` is borrowed for the lifetime of the enabled overlay; the caller retains ownership.
+- Pass `0` to use the default font (`rl_text_draw_fps`).
 
 ---
 

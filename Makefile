@@ -131,7 +131,6 @@ LDFLAGS_WASM = \
 	"_rl_text_draw_ex", \
 	"_rl_text_draw_fps", \
 	"_rl_text_draw_fps_ex", \
-	"_RL_FONT_DEFAULT", \
 	"_rl_font_get_default", \
 	"_rl_font_create", \
 	"_rl_font_destroy", \
@@ -431,7 +430,7 @@ libraylib: libraylib_desktop libraylib_wasm
 	@echo "[libraylib] Built raylib archives (desktop + wasm)."
 
 # WebAssembly static build
-wasm: binding-version libraylib_wasm wgutils_wasm ensure_out_dir
+wasm: binding-version binding-types libraylib_wasm wgutils_wasm ensure_out_dir
 	$(info [wasm] Building WASM module: $(OUT_WASM))
 	$(call DETAILS,[wasm] Sources: $(WASM_SRCS))
 	$(call DETAILS,[wasm] LDFLAGS_WASM: $(LDFLAGS_WASM))
@@ -456,7 +455,7 @@ wasm_archive: libraylib_wasm wgutils_wasm ensure_out_dir ensure_obj_dir $(WASM_O
 	$(Q)$(EM_ENV) emar rcs $(OUT_WASM_ARCHIVE) $(WASM_OBJS) $(OBJ_WASM_DIR)/.raylib_unpack/*.o $(OBJ_WASM_DIR)/.wgutils_unpack/*.o
 
 # Desktop static library build
-desktop: binding-version libraylib_desktop wgutils_desktop ensure_out_dir ensure_obj_dir $(DESKTOP_OBJS)
+desktop: binding-version binding-types libraylib_desktop wgutils_desktop ensure_out_dir ensure_obj_dir $(DESKTOP_OBJS)
 	$(info [desktop] Building Desktop static archive: $(OUT_DESKTOP))
 	$(call DETAILS,[desktop] Sources: $(DESKTOP_SRCS))
 	$(info [desktop] Adding raylib archive: $(LIBRAYLIB_DESKTOP_ARCHIVE))
@@ -473,18 +472,23 @@ desktop: binding-version libraylib_desktop wgutils_desktop ensure_out_dir ensure
 	$(Q)ar rcs $(OUT_DESKTOP) $(DESKTOP_OBJS) $(OBJ_DESKTOP_DIR)/.raylib_unpack/*.o $(OBJ_DESKTOP_DIR)/.wgutils_unpack/*.o
 
 BINDING_GEN_SCRIPT := $(LIBRL_ROOT)/tools/gen_binding_versions.py
+BINDING_TYPES_SCRIPT := $(LIBRL_ROOT)/tools/gen_librl_dts.py
 PYTHON ?= python3
 
 .PHONY: binding-version
 binding-version: include/rl_version.h $(BINDING_GEN_SCRIPT)
 	$(Q)$(PYTHON) "$(BINDING_GEN_SCRIPT)" "$(abspath $(LIBRL_ROOT))"
 
+.PHONY: binding-types
+binding-types: bindings/js/rl.js $(BINDING_TYPES_SCRIPT)
+	$(Q)$(PYTHON) "$(BINDING_TYPES_SCRIPT)" "$(abspath $(LIBRL_ROOT))"
+
 # Desktop shared core library (C API only, no Lua module entrypoint)
 LIBRL_SHARED_SO := $(OUT_LIB_DIR)/librl.so
 RL_LUA_MODULE_SO := $(OUT_LIB_DIR)/rl.so
 LUA_BINDINGS_SRC := $(wildcard $(LIBRL_ROOT)/bindings/lua/*.c)
 
-shared: binding-version libraylib_desktop wgutils_desktop ensure_out_dir ensure_obj_dir $(DESKTOP_OBJS)
+shared: binding-version binding-types libraylib_desktop wgutils_desktop ensure_out_dir ensure_obj_dir $(DESKTOP_OBJS)
 	$(info [shared] Building shared core library: $(LIBRL_SHARED_SO))
 	$(call DETAILS,[shared] Sources: $(DESKTOP_SRCS))
 	$(Q)test -f "$(LIBRAYLIB_DESKTOP_ARCHIVE)" || (echo "Missing raylib archive: $(LIBRAYLIB_DESKTOP_ARCHIVE)" && exit 1)
@@ -569,7 +573,7 @@ clean:
 #	@$(MAKE) -C $(LIBRAYLIB_ROOT) clean
 
 
-.PHONY: all deps ensure_deps clean ensure_out_dir ensure_obj_dir libraylib libraylib_wasm libraylib_desktop wgutils wgutils_desktop wgutils_wasm wasm wasm_archive desktop shared rl_lua librl_lua librl_lua_desktop librl_lua_wasm test test_desktop test_wasm test_haxe_bindings test_nim_bindings test_lua_bindings unit_test_desktop unit_test_wasm check_node check_chrome check_probe_python probe_idbfs_build probe_idbfs uri_test
+.PHONY: all deps ensure_deps clean ensure_out_dir ensure_obj_dir libraylib libraylib_wasm libraylib_desktop wgutils wgutils_desktop wgutils_wasm wasm wasm_archive desktop shared rl_lua librl_lua librl_lua_desktop librl_lua_wasm test test_desktop test_wasm test_haxe_bindings test_nim_bindings test_lua_bindings unit_test_desktop unit_test_wasm check_node check_chrome check_probe_python probe_idbfs_build probe_idbfs uri_test binding-types
 # 	"_RL_COLOR_BLACK", \
 # 	"_RL_COLOR_BLANK", \
 # 	"_RL_COLOR_MAGENTA", \

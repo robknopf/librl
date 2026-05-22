@@ -88,7 +88,7 @@ async function run() {
     final.step = 'init-window';
 
     final.step = 'wait-ready';
-    final.idbReadyAtInit = await rl.waitForIdbfsReady(5000);
+    final.idbReadyAtInit = await rl.helpers.waitForFileioReady(5000);
 
     final.step = 'create-font';
     final.fontHandle = await rl.createFont(targetUrl, 16);

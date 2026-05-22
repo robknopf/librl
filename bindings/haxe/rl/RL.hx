@@ -295,10 +295,6 @@ class RL {
 		return rl.impl.RLImpl.initAsync(config);
 	}
 
-	public static function initValuesInt(width:Int, height:Int, title:String, flags:Int = 0, assetHost:String = "", fileioBaseDir:String = ""):Int {
-		return cast rl.impl.RLImpl.initValues(width, height, title, flags, assetHost, fileioBaseDir);
-	}
-
 	@async
 	public static function deinit():VoidResult{
 		return rl.impl.RLImpl.deinit();
@@ -396,12 +392,12 @@ class RL {
 		rl.impl.RLImpl.textDrawFpsEx(font, x, y, fontSize, color);
 	}
 
-	public static function setAssetHost(assetHost:String):Int {
-		return rl.impl.RLImpl.setAssetHost(assetHost);
+	public static function fileioSetAssetHost(assetHost:String):Int {
+		return rl.impl.RLImpl.fileioSetAssetHost(assetHost);
 	}
 
-	public static function getAssetHost():String {
-		return rl.impl.RLImpl.getAssetHost();
+	public static function fileioGetAssetHost():String {
+		return rl.impl.RLImpl.fileioGetAssetHost();
 	}
 
 	public static function musicCreate(filename:String):RLHandle {
@@ -655,10 +651,6 @@ class RL {
 		rl.impl.RLImpl.modelDestroy(model);
 	}
 
-	public static function sprite3dGetDefaultTexture():RLHandle {
-		return rl.impl.RLImpl.sprite3dGetDefaultTexture();
-	}
-
 	public static function sprite3dCreate(texture:RLHandle):RLHandle {
 		return rl.impl.RLImpl.sprite3dCreate(texture);
 	}
@@ -685,10 +677,6 @@ class RL {
 
 	public static function sprite3dDestroy(sprite:RLHandle):Void {
 		rl.impl.RLImpl.sprite3dDestroy(sprite);
-	}
-
-	public static function sprite2dGetDefaultTexture():RLHandle {
-		return rl.impl.RLImpl.sprite2dGetDefaultTexture();
 	}
 
 	public static function sprite2dCreate(texture:RLHandle):RLHandle {

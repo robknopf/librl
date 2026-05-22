@@ -61,6 +61,7 @@ private extern class RLExterns {
   static inline var LOGGER_LEVEL_ERROR: Int = 4;
   static inline var LOGGER_LEVEL_FATAL: Int = 5;
 
+  // Internal FFI to rl_init_values / rl_init_values_async (not public binding API).
   @:native("rl_init_values")
   static function initValuesNative(
     width: Int, height: Int, title: String, flags: Int,
@@ -228,12 +229,6 @@ private extern class RLExterns {
 
   @:native("rl_text_draw_fps_ex")
   static function textDrawFpsEx(font: RLHandle, x: Int, y: Int, fontSize: Float, color: RLHandle): Void;
-
-  @:native("rl_set_asset_host")
-  static function setAssetHost(assetHost: String): Int;
-
-  @:native("rl_get_asset_host")
-  static function getAssetHost(): String;
 
   @:native("rl_music_create")
   static function musicCreate(filename: String): RLHandle;
@@ -437,9 +432,6 @@ private extern class RLExterns {
   @:native("rl_model_destroy")
   static function modelDestroy(model: RLHandle): Void;
 
-  @:native("rl_sprite3d_get_default_texture")
-  static function sprite3dGetDefaultTexture(): RLHandle;
-
   @:native("rl_sprite3d_create")
   static function sprite3dCreate(texture: RLHandle): RLHandle;
 
@@ -464,9 +456,6 @@ private extern class RLExterns {
 
   @:native("rl_sprite3d_destroy")
   static function sprite3dDestroy(sprite: RLHandle): Void;
-
-  @:native("rl_sprite2d_get_default_texture")
-  static function sprite2dGetDefaultTexture(): RLHandle;
 
   @:native("rl_sprite2d_create")
   static function sprite2dCreate(texture: RLHandle): RLHandle;
@@ -835,8 +824,6 @@ abstract RLImpl(RLExterns) {
     return {x: n.x, y: n.y};
   }
   public static function textDrawFpsEx(font: RLHandle, x: Int, y: Int, fontSize: Float, color: RLHandle): Void { RLExterns.textDrawFpsEx(font, x, y, fontSize, color); }
-  public static function setAssetHost(assetHost: String): Int { return RLExterns.setAssetHost(assetHost); }
-  public static function getAssetHost(): String { return RLExterns.getAssetHost(); }
   public static function musicCreate(filename: String): RLHandle { return RLExterns.musicCreate(filename); }
   public static function musicDestroy(music: RLHandle): Void { RLExterns.musicDestroy(music); }
   public static function musicPlay(music: RLHandle): Bool { return RLExterns.musicPlay(music); }
@@ -908,7 +895,6 @@ abstract RLImpl(RLExterns) {
   public static function modelSetTint(model: RLHandle, color: RLHandle = 0): Bool { return RLExterns.modelSetTint(model, color); }
   public static function modelAnimate(model: RLHandle, deltaSeconds: Float): Bool { return RLExterns.modelAnimate(model, deltaSeconds); }
   public static function modelDestroy(model: RLHandle): Void { RLExterns.modelDestroy(model); }
-  public static function sprite3dGetDefaultTexture(): RLHandle { return RLExterns.sprite3dGetDefaultTexture(); }
   public static function sprite3dCreate(texture: RLHandle): RLHandle { return RLExterns.sprite3dCreate(texture); }
   public static function sprite3dCreateFromFile(filename: String): RLHandle { return RLExterns.sprite3dCreateFromFile(filename); }
   public static function sprite3dSetTexture(sprite: RLHandle, texture: RLHandle): Bool { return RLExterns.sprite3dSetTexture(sprite, texture); }
@@ -916,7 +902,6 @@ abstract RLImpl(RLExterns) {
   public static function sprite3dSetTint(sprite: RLHandle, color: RLHandle = 0): Bool { return RLExterns.sprite3dSetTint(sprite, color); }
   public static function sprite3dDraw(sprite: RLHandle, tint: RLHandle = 0): Void { RLExterns.sprite3dDraw(sprite, tint); }
   public static function sprite3dDestroy(sprite: RLHandle): Void { RLExterns.sprite3dDestroy(sprite); }
-  public static function sprite2dGetDefaultTexture(): RLHandle { return RLExterns.sprite2dGetDefaultTexture(); }
   public static function sprite2dCreate(texture: RLHandle): RLHandle { return RLExterns.sprite2dCreate(texture); }
   public static function sprite2dCreateFromFile(filename: String): RLHandle { return RLExterns.sprite2dCreateFromFile(filename); }
   public static function sprite2dSetTexture(sprite: RLHandle, texture: RLHandle): Bool { return RLExterns.sprite2dSetTexture(sprite, texture); }
@@ -1016,13 +1001,6 @@ abstract RLImpl(RLExterns) {
   public static function initAsync(?config: RLInitConfig): Int {
     var values = normalizeInitConfig(config);
     return RLExterns.initValuesAsyncNative(values.w, values.h, values.title, values.flags, values.asset, values.cache);
-  }
-
-  public static function initValues(
-    width: Int, height: Int, title: String,
-    flags: Int = 0, assetHost: String = "", fileioBaseDir: String = ""
-  ): Int {
-    return RLExterns.initValuesNative(width, height, title, flags, assetHost, fileioBaseDir);
   }
 
   static function normalizeInitConfig(?config: RLInitConfig):{
@@ -1194,6 +1172,14 @@ abstract RLImpl(RLExterns) {
 
   public static function fileioPingAssetHost(?assetHost: String): Float {
     return RLFileio.fileioPingAssetHost(assetHost);
+  }
+
+  public static function fileioSetAssetHost(assetHost: String): Int {
+    return RLFileio.fileioSetAssetHost(assetHost);
+  }
+
+  public static function fileioGetAssetHost(): String {
+    return RLFileio.fileioGetAssetHost();
   }
 
   public static function fileioGetBaseDir(): String {

@@ -31,6 +31,8 @@ typedef struct remote_context_t {
   bool has_frame;
   int frames_received;
   int frames_rendered;
+  rl_handle_t debug_font;
+  int debug_font_size;
   rl_handle_t overlay_font;
   int overlay_font_size;
 } remote_context_t;
@@ -69,8 +71,18 @@ static const char *get_remote_ws_url(void) {
 }
 
 static void on_debug_font_ready(const char *path, void *user_data) {
-  (void)user_data;
-  rl_debug_enable_fps(10, 10, 24, path);
+  remote_context_t *ctx = (remote_context_t *)user_data;
+
+  if (ctx == NULL) {
+    return;
+  }
+
+  if (ctx->debug_font != 0) {
+    rl_font_destroy(ctx->debug_font);
+  }
+
+  ctx->debug_font = rl_font_create(path, ctx->debug_font_size);
+  rl_debug_enable_fps(10, 10, ctx->debug_font_size, ctx->debug_font);
 }
 
 static void on_overlay_font_ready(const char *path, void *user_data) {
@@ -103,9 +115,11 @@ int rt_init(void *user_data) {
   rl_set_target_fps(60);
 
   // In init:
+  context->debug_font = 0;
+  context->debug_font_size = 24;
   loader_rc =
       rl_fileio_add_task(rl_fileio_ensure_async(debug_font_path, NULL),
-                         on_debug_font_ready, NULL, NULL);
+                         on_debug_font_ready, NULL, context);
   if (loader_rc != RL_FILEIO_ADD_TASK_OK) {
     log_error("[Remote] Failed to queue debug font load (%d)", loader_rc);
   }
@@ -146,6 +160,13 @@ void rt_shutdown(void) {
   if (context->ws_client != NULL) {
     rl_ws_client_destroy(context->ws_client);
     context->ws_client = NULL;
+  }
+
+  rl_debug_disable();
+
+  if (context->debug_font != 0) {
+    rl_font_destroy(context->debug_font);
+    context->debug_font = 0;
   }
 
   if (context->overlay_font != 0) {

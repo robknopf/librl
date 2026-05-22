@@ -16,6 +16,25 @@
   - Do not add aliases or backward-compatibility shims unless explicitly requested.
 - When creating or updating bindings, keep non-C-API files (helpers, wrappers, ergonomics layers) separate from direct C-API binding files.
 - If a binding intentionally does not expose an API, document that decision in `docs/BINDINGS.md`.
+- When changing the JS binding (`bindings/js/rl.js`), run `make binding-types` in the same pass to regenerate `types/librl.d.ts` (also runs automatically with `make wasm`, `make desktop`, and `make shared`). Do not edit `types/librl.d.ts` by hand.
+- **Init API:** public binding surfaces expose only `init(config)` and `initAsync(config)` with native config types. Do not expose `rl_init_values` / `rl_init_values_async` (or positional `initValues*` wrappers) on binding public APIs — bindings flatten config and call those C helpers internally. See `docs/BINDINGS.md` init contract.
+
+## Binding Naming Policy
+
+Bindings mirror C API shape and intent, but use idiomatic naming per target. C is the template: subsystem-first `rl_<section>_<action>` (e.g. `rl_frame_buffer_submit`).
+
+| Binding | Style | Examples |
+|---------|-------|----------|
+| **JavaScript** (`bindings/js/rl.js`) | Verb-first for handle/instance methods; section-first namespaces for modules | `setText2dFont`, `getDefaultTexture`, `getVersionMajor`, `animateModel`; keep `fileio*`, `logger*` |
+| **Haxe** (`bindings/haxe/rl/RL.hx`) | Section-first lowerCamelCase | `text2dSetFont`, `fileioEnsure`, `versionMajor` |
+| **Nim** | snake_case aligned with C | `rl_text2d_set_font`, `rl_fileio_ensure` |
+| **Lua** | lower snake_case aligned with C | `text2d_set_font`, `fileio_ensure` |
+
+Cross-binding rules:
+- **Haxe JS bridge** (`RLImpl.js.hx`) maps Haxe section-first names to JS verb-first names at the boundary — do not rename Haxe public API to match JS.
+- **Nim JS backend** (`impl/rl_js.nim`) maps Nim/C names to JS verb-first `importjs` strings.
+- Do not add backward-compat aliases when renaming JS methods; update call sites and regenerate types instead.
+- Full rationale and edge cases: `docs/BINDINGS.md` § Binding Naming.
 
 ## Native Type Policy
 
@@ -52,3 +71,12 @@ When adding new procs to any binding, always check: would a user need to write `
 ## Commit Workflow
 
 - Before any commits, update relevant documentation (`docs/*`, API notes, and binding docs) to match behavior and API changes in the commit.
+- After renaming or adding JS binding methods/constants in `bindings/js/rl.js`, run `make binding-types` (or `make wasm` / `make desktop`) in the same pass and include the regenerated `types/librl.d.ts` in the commit. Do not hand-edit `types/librl.d.ts`.
+
+## Testing
+
+- **Desktop:** `make -C tests test_desktop` — no special Node requirement.
+- **Wasm / JS bindings:** `make -C tests test_wasm` (or full `make -C tests test`) requires a Node runtime with **JSPI** support (`WebAssembly.Suspending` must be a function). Use the **system Node ≥ 25** (e.g. via nvm), not an IDE-bundled older Node that may appear first on `PATH`.
+  - Quick check: `node -e "console.log(typeof WebAssembly.Suspending)"` → expect `function`.
+  - Override when needed: `make -C tests test_wasm NODE=/path/to/node` (Makefiles honor `NODE=`).
+  - Symptom of wrong Node: `TypeError: WebAssembly.Suspending is not a constructor` during wasm JS binding or Haxe JS boot tests.

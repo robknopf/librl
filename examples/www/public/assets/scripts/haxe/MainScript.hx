@@ -57,7 +57,7 @@ class MainScript extends Script {
 	final SPRITE_PATH:String = "assets/sprites/logo/wg-logo-bw-alpha.png";
 	final BGM_PATH:String = "assets/music/ethernight_club.mp3";
 
-	var ctx:AppContext = null;
+	static var ctx:AppContext = null;
 
 	var msg:String = "Hello from Haxe Simple Main !";
 	var platformText:String = "Platform: <unknown>";
@@ -170,6 +170,7 @@ class MainScript extends Script {
 		// bob the sprite up and down
 		var bobSpeed = 1.0;
 		var bobHeight = 1.5;
+		bobHeight = bobHeight * 2;
 		if (ctx.sprite != 0) {
 			var y = Math.sin(ctx.elapsed * bobSpeed) * bobHeight;
 			spriteY = y + ctx.spriteYOffset;
@@ -317,7 +318,7 @@ class MainScript extends Script {
 
 		RL.fileioAddTask(RL.fileioEnsureAsync(modelPath), (path, _) -> {
 			var modelAsset = RL.modelLoadAsset(path);
-			trace(modelAsset);
+			//trace(modelAsset);
 			RL.modelSetAsset(ctx.model, modelAsset);
 		}, (path, _) -> {
 			Log.error('Failed to ensure asset: ${path}');

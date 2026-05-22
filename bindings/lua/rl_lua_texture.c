@@ -6,6 +6,12 @@
 #include "rl.h"
 #include "rl_lua_texture.h"
 
+static int rl_texture_get_default_lua(lua_State *L)
+{
+    lua_pushinteger(L, rl_texture_get_default());
+    return 1;
+}
+
 static int rl_texture_create_lua(lua_State *L)
 {
     const char *filename = luaL_checkstring(L, 1);
@@ -48,6 +54,9 @@ static int rl_texture_draw_ground_lua(lua_State *L)
 
 void rl_register_texture_bindings(lua_State *L)
 {
+    lua_pushcfunction(L, rl_texture_get_default_lua);
+    lua_setfield(L, -2, "texture_get_default");
+
     lua_pushcfunction(L, rl_texture_create_lua);
     lua_setfield(L, -2, "texture_create");
 

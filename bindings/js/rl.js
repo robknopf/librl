@@ -334,22 +334,6 @@ const RL = {
             return values.length;
         };
     },
-    _waitForIdbfsReady: async (timeoutMs = 2000) => {
-        const start = performance.now();
-        while (performance.now() - start < timeoutMs) {
-            if (RL.isIdbfsReady()) {
-                return true;
-            }
-            await new Promise((resolve) => setTimeout(resolve, 16));
-        }
-        return RL.isIdbfsReady();
-    },
-    isIdbfsReady: () => {
-        return !!(moduleInstance && moduleInstance.fileio_idbfs_ready);
-    },
-    waitForIdbfsReady: async (timeoutMs = 2000) => {
-        return RL._waitForIdbfsReady(timeoutMs);
-    },
     _mallocOrThrow: (size) => {
         const m = moduleInstance && (moduleInstance._malloc || moduleInstance.malloc);
         if (typeof m !== "function") {
@@ -390,34 +374,6 @@ const RL = {
         return bytes;
     },
 
-    /* unused for now
-    _installWebResizeHandler: (opts) => {
-        if (typeof window === "undefined" || !window.addEventListener) {
-            return;
-        }
-
-        const idealWidth = opts.idealWidth || opts.windowWidth || 1024;
-        const idealHeight = opts.idealHeight || opts.windowHeight || 1280;
-        const aspectRatio = idealWidth / idealHeight;
-
-        window.addEventListener("resize", (_event) => {
-            const windowWidth = window.innerWidth;
-            const windowHeight = window.innerHeight;
-
-            let newWidth;
-            let newHeight;
-            if (windowWidth / windowHeight > aspectRatio) {
-                newHeight = windowHeight;
-                newWidth = windowHeight * aspectRatio;
-            } else {
-                newWidth = windowWidth;
-                newHeight = windowWidth / aspectRatio;
-            }
-
-            moduleInstance.ccall("rl_window_set_size", null, ["number", "number"], [newWidth, newHeight]);
-        });
-    },
-    */
     _getModulePath: (opts) => {
         const modulePath = opts?.modulePath ?? moduleOptions.modulePath;
         if (modulePath) {
@@ -506,7 +462,7 @@ const RL = {
         moduleInstance = await moduleFactory(moduleOptions.env);
         if (RL._compareVersion() < 0) {
             throw new Error(
-                `librl version mismatch: runtime ${RL.versionMajor()}.${RL.versionMinor()}.${RL.versionPatch()}, ` +
+                `librl version mismatch: runtime ${RL.getVersionMajor()}.${RL.getVersionMinor()}.${RL.getVersionPatch()}, ` +
                 `binding ${RL_BINDING_BUILT_MAJOR}.${RL_BINDING_BUILT_MINOR}.${RL_BINDING_BUILT_PATCH}`
             );
         }
@@ -632,12 +588,6 @@ const RL = {
             return initRc;
         }
 
-     /*
-        RL._installWebResizeHandler(initOptions);
-        if (typeof window !== "undefined" && window.dispatchEvent) {
-            window.dispatchEvent(new Event("resize"));
-        }
-            */
         return 0;
     },
     _callInitWithOptionsImmediate: (opts, symbolName) => {
@@ -752,10 +702,6 @@ const RL = {
             return initRc;
         }
 
-        RL._installWebResizeHandler(initOptions);
-        if (typeof window !== "undefined" && window.dispatchEvent) {
-            window.dispatchEvent(new Event("resize"));
-        }
         return 0;
     },
     init: async (opts) => {
@@ -763,41 +709,6 @@ const RL = {
     },
     initAsync: (opts) => {
         return RL._callInitWithOptionsImmediate(opts, "rl_init_values_async");
-    },
-    initValues: async (
-        width, height, title,
-        flags = 0, assetHost = "", fileioBaseDir = ""
-    ) => {
-        return await RL._callInitWithOptionsAsync({
-            windowWidth: width,
-            windowHeight: height,
-            windowTitle: title,
-            windowFlags: flags,
-            assetHost,
-            fileioBaseDir
-        }, "rl_init_values", { async: true });
-    },
-    initValuesAsync: (
-        width, height, title,
-        flags = 0, assetHost = "", fileioBaseDir = ""
-    ) => {
-        return RL._callInitWithOptionsImmediate({
-            windowWidth: width,
-            windowHeight: height,
-            windowTitle: title,
-            windowFlags: flags,
-            assetHost,
-            fileioBaseDir
-        }, "rl_init_values_async");
-    },
-    setAssetHost: (assetHost) => {
-        if (typeof assetHost !== "string") {
-            return -1;
-        }
-        return moduleInstance.ccall('rl_set_asset_host', 'number', ['string'], [assetHost]);
-    },
-    getAssetHost: () => {
-        return moduleInstance.ccall('rl_get_asset_host', 'string', [], []);
     },
     refreshScratch: () => {
         moduleInstance.ccall('rl_scratch_refresh', null, [], []);
@@ -829,9 +740,9 @@ const RL = {
             console.info('[librl] librl version: (not loaded)');
             return -3;
         }
-        const runtimeMajor = RL.versionMajor();
-        const runtimeMinor = RL.versionMinor();
-        const runtimePatch = RL.versionPatch();
+        const runtimeMajor = RL.getVersionMajor();
+        const runtimeMinor = RL.getVersionMinor();
+        const runtimePatch = RL.getVersionPatch();
         console.info(`[librl] librl version: ${runtimeMajor}, ${runtimeMinor}, ${runtimePatch}`);
         if (runtimeMajor !== (RL_BINDING_BUILT_MAJOR | 0)) {
             return -1;
@@ -844,19 +755,19 @@ const RL = {
         }
         return 0;
     },
-    versionMajor: () => {
+    getVersionMajor: () => {
         if (!moduleInstance) {
             return 0;
         }
         return moduleInstance.ccall('rl_version_major', 'number', [], []);
     },
-    versionMinor: () => {
+    getVersionMinor: () => {
         if (!moduleInstance) {
             return 0;
         }
         return moduleInstance.ccall('rl_version_minor', 'number', [], []);
     },
-    versionPatch: () => {
+    getVersionPatch: () => {
         if (!moduleInstance) {
             return 1;
         }
@@ -868,13 +779,13 @@ const RL = {
         }
         return moduleInstance.ccall('rl_version_label', 'string', [], []);
     },
-    versionNumber: () => {
+    getVersionNumber: () => {
         if (!moduleInstance) {
             return 1;
         }
         return moduleInstance.ccall('rl_version_number', 'number', [], []) >>> 0;
     },
-    versionString: () => {
+    getVersionString: () => {
         if (!moduleInstance) {
             return '0.0.1-dev';
         }
@@ -918,14 +829,44 @@ const RL = {
             [assetHost || ""]
         );
     },
+    fileioSetAssetHost: (assetHost) => {
+        if (typeof assetHost !== "string") {
+            return -1;
+        }
+        return moduleInstance.ccall('rl_fileio_set_asset_host', 'number', ['string'], [assetHost]) | 0;
+    },
+    fileioGetAssetHost: () => {
+        return moduleInstance.ccall('rl_fileio_get_asset_host', 'string', [], []);
+    },
+    fileioNormalizePath: (path) => {
+        if (path == null) {
+            return "";
+        }
+        const bufferSize = 4096;
+        const bufferPtr = RL._mallocOrThrow(bufferSize);
+        try {
+            moduleInstance.ccall(
+                'rl_fileio_normalize_path',
+                null,
+                ['string', 'number', 'number'],
+                [String(path), bufferPtr, bufferSize]
+            );
+            if (typeof moduleInstance.UTF8ToString === "function") {
+                return moduleInstance.UTF8ToString(bufferPtr);
+            }
+            return "";
+        } finally {
+            RL._freeIfPossible(bufferPtr);
+        }
+    },
     fileioRestoreAsync: () => {
         return moduleInstance.ccall('rl_fileio_restore_async', 'number', [], []);
     },
-    ensure: async (localPath, src = null) => {
+    fileioEnsure: async (localPath, src = null) => {
         if (typeof localPath === "string" && /\.gltf(?:[?#].*)?$/i.test(localPath)) {
             console.warn(
-                `[librl] ensure("${localPath}") does not currently follow .gltf dependencies. ` +
-                `Use fileioEnsureAsync()/waitForEnsureAsync() or a task group instead.`
+                `[librl] fileioEnsure("${localPath}") does not currently follow .gltf dependencies. ` +
+                `Use fileioEnsureAsync(), rl.helpers.waitForFileioEnsureAsync(), or rl.helpers.createTaskGroup() instead.`
             );
         }
         return await moduleInstance.ccall(
@@ -952,25 +893,6 @@ const RL = {
     fileioGetTaskPath: (task) => {
         return moduleInstance.ccall('rl_fileio_get_task_path', 'string', ['number'], [task]);
     },
-
-/*
-    // js native read, using the FS.  We are using the librl version, 
-    // but keep this around for reference
-
-    fileioRead: (filename) => {
-        const fs = moduleInstance && moduleInstance.FS;
-        let data = null;
-        if (!fs || typeof fs.readFile !== "function") {
-            return null;
-        }
-        try {
-            data = fs.readFile(filename);
-        } catch (_err) {
-            return null;
-        }
-        return data instanceof Uint8Array ? data : new Uint8Array(data);
-    },
-*/
 
     fileioRead: (filename) => {
         if (!moduleInstance) {
@@ -1039,10 +961,6 @@ const RL = {
     },
     fileioRmdir: (path) => {
         return moduleInstance.ccall('rl_fileio_rmdir', 'number', ['string'], [path]) | 0;
-    },
-    taskIsValid: (task) => {
-        
-        return task !== 0;
     },
 
     fileioFreeTask: (task) => {
@@ -1118,124 +1036,8 @@ const RL = {
     fileioTick: () => {
         moduleInstance.ccall('rl_fileio_tick', null, [], []);
     },
-    createTaskGroup: (onComplete = null, onError = null, ctx = null) => {
-        const group = {
-            entries: [],
-            callbackContext: ctx,
-            onCompleteCallback: typeof onComplete === "function" ? onComplete : null,
-            onErrorCallback: typeof onError === "function" ? onError : null,
-            terminalCallbackInvoked: false,
-            failedCount: 0,
-            completedCount: 0,
-            addTask(task, onSuccess = null, onTaskError = null) {
-                if (!task) {
-                    return;
-                }
-                this.entries.push({
-                    task,
-                    path: RL.fileioGetTaskPath(task),
-                    done: false,
-                    rc: 1,
-                    onSuccess: typeof onSuccess === "function" ? onSuccess : null,
-                    onError: typeof onTaskError === "function" ? onTaskError : null,
-                });
-            },
-            addImportTask(path, onSuccess = null, onTaskError = null) {
-                this.addTask(RL.fileioEnsureAsync(path), onSuccess, onTaskError);
-            },
-            addImportTasks(paths, onSuccess = null, onTaskError = null) {
-                if (!Array.isArray(paths)) {
-                    return;
-                }
-                for (const path of paths) {
-                    this.addImportTask(path, onSuccess, onTaskError);
-                }
-            },
-            remainingTasks() {
-                return this.entries.length - this.completedCount;
-            },
-            isDone() {
-                return this.remainingTasks() === 0;
-            },
-            hasFailures() {
-                return this.failedCount > 0;
-            },
-            tick() {
-                RL.fileioTick();
-                for (const entry of this.entries) {
-                    if (entry.done) {
-                        continue;
-                    }
-                    if (!RL.fileioPollTask(entry.task)) {
-                        continue;
-                    }
-                    entry.rc = RL.fileioFinishTask(entry.task);
-                    RL.fileioFreeTask(entry.task);
-                    entry.done = true;
-                    this.completedCount += 1;
-                    if (entry.rc !== 0) {
-                        this.failedCount += 1;
-                        if (entry.onError) {
-                            entry.onError(entry.path, this.callbackContext);
-                        }
-                    } else if (entry.onSuccess) {
-                        entry.onSuccess(entry.path, this.callbackContext);
-                    }
-                }
-                return this.remainingTasks() > 0;
-            },
-            process() {
-                this.tick();
-                if (!this.terminalCallbackInvoked && this.remainingTasks() === 0) {
-                    this.terminalCallbackInvoked = true;
-                    if (this.hasFailures()) {
-                        if (this.onErrorCallback) {
-                            this.onErrorCallback(this, this.callbackContext);
-                        }
-                    } else if (this.onCompleteCallback) {
-                        this.onCompleteCallback(this, this.callbackContext);
-                    }
-                }
-                return this.remainingTasks();
-            },
-            failedPaths() {
-                const out = [];
-                for (const entry of this.entries) {
-                    if (entry.done && entry.rc !== 0) {
-                        out.push(entry.path);
-                    }
-                }
-                return out;
-            },
-        };
-        return group;
-    },
     fileioExists: (filename) => {
         return moduleInstance.ccall('rl_fileio_exists', 'number', ['string'], [filename]) !== 0;
-    },
-    waitForTask: async (task, pollMs = 16) => {
-        let rc = 0;
-
-        if (!task) {
-            return -1;
-        }
-
-        while (!RL.fileioPollTask(task)) {
-            await new Promise((resolve) => setTimeout(resolve, pollMs));
-        }
-
-        rc = RL.fileioFinishTask(task);
-        RL.fileioFreeTask(task);
-        return rc;
-    },
-    waitForRestoreAsync: async () => {
-        return RL.waitForTask(RL.fileioRestoreAsync());
-    },
-    waitForImportAssetAsync: async (filename) => {
-        return RL.waitForTask(RL.fileioEnsureAsync(filename));
-    },
-    waitForImportAssetsAsync: async (filenames) => {
-        return RL.waitForTask(RL.fileioEnsureGroupAsync(filenames));
     },
     emitEvent: (eventName, payload = 0) => {
         return moduleInstance.ccall('rl_event_emit', 'number', ['string', 'number'], [eventName, payload]);
@@ -1456,6 +1258,25 @@ const RL = {
             [positionX, positionY, positionZ, width, height, length, color]
         );
     },
+    drawRectangle: (x, y, width, height, color) => {
+        return moduleInstance.ccall(
+            'rl_shape_draw_rectangle',
+            null,
+            ['number', 'number', 'number', 'number', 'number'],
+            [x | 0, y | 0, width | 0, height | 0, color >>> 0]
+        );
+    },
+    debugEnableFps: (x, y, fontSize, font = 0) => {
+        return moduleInstance.ccall(
+            'rl_debug_enable_fps',
+            null,
+            ['number', 'number', 'number', 'number'],
+            [x | 0, y | 0, fontSize | 0, font >>> 0]
+        );
+    },
+    debugDisable: () => {
+        return moduleInstance.ccall('rl_debug_disable', null, [], []);
+    },
     drawFPS: (x, y) => {
         return moduleInstance.ccall('rl_text_draw_fps', null, ['number', 'number'], [x, y]);
     },
@@ -1507,15 +1328,33 @@ const RL = {
     getKeyboardState: () => {
         return moduleInstance.getKeyboard();
     },
+    getGamepads: () => {
+        if (!moduleInstance || typeof moduleInstance.getGamepads !== "function") {
+            return [];
+        }
+        return moduleInstance.getGamepads();
+    },
+    getGamepad: (id) => {
+        if (!moduleInstance || typeof moduleInstance.getGamepad !== "function") {
+            return null;
+        }
+        return moduleInstance.getGamepad(id | 0);
+    },
+    getTouchpoints: () => {
+        if (!moduleInstance || typeof moduleInstance.getTouchpoints !== "function") {
+            return [];
+        }
+        return moduleInstance.getTouchpoints();
+    },
+    getTouchpoint: (id) => {
+        if (!moduleInstance || typeof moduleInstance.getTouchpoint !== "function") {
+            return null;
+        }
+        return moduleInstance.getTouchpoint(id | 0);
+    },
     getScreenSize: () => {
         moduleInstance.ccall('rl_window_get_screen_size_to_scratch', null, [], []);
         return moduleInstance.getVector2();
-    },
-    getScreenWidth: () => {
-        return RL.getScreenSize().x;
-    },
-    getScreenHeight: () => {
-        return RL.getScreenSize().y;
     },
     getWindowPosition: () => {
         moduleInstance.ccall('rl_window_get_position_to_scratch', null, [], []);
@@ -1570,8 +1409,26 @@ const RL = {
     FILEIO_ADD_TASK_ERR_QUEUE_FULL: -2,
     CAMERA_PERSPECTIVE: 0,
     CAMERA_ORTHOGRAPHIC: 1,
-    FLAG_MSAA_4X_HINT: 32,
+    FLAG_FULLSCREEN_MODE: 0x00000002,
     FLAG_WINDOW_RESIZABLE: 4,
+    FLAG_WINDOW_UNDECORATED: 0x00000008,
+    FLAG_WINDOW_TRANSPARENT: 0x00000010,
+    FLAG_MSAA_4X_HINT: 32,
+    FLAG_VSYNC_HINT: 0x00000040,
+    FLAG_WINDOW_HIDDEN: 0x00000080,
+    FLAG_WINDOW_ALWAYS_RUN: 0x00000100,
+    FLAG_WINDOW_MINIMIZED: 0x00000200,
+    FLAG_WINDOW_MAXIMIZED: 0x00000400,
+    FLAG_WINDOW_UNFOCUSED: 0x00000800,
+    FLAG_WINDOW_TOPMOST: 0x00001000,
+    FLAG_WINDOW_HIGHDPI: 0x00002000,
+    FLAG_INTERLACED_HINT: 0x00010000,
+    LOGGER_LEVEL_TRACE: 0,
+    LOGGER_LEVEL_DEBUG: 1,
+    LOGGER_LEVEL_INFO: 2,
+    LOGGER_LEVEL_WARN: 3,
+    LOGGER_LEVEL_ERROR: 4,
+    LOGGER_LEVEL_FATAL: 5,
     BUTTON_UP: 0,
     BUTTON_PRESSED: 1,
     BUTTON_DOWN: 2,
@@ -1590,19 +1447,19 @@ const RL = {
     destroyFont: (font) => moduleInstance.ccall(
         "rl_font_destroy", null, ["number"], [font]
     ),
-    rl_font_get_default: () => moduleInstance.ccall(
+    getDefaultFont: () => moduleInstance.ccall(
         "rl_font_get_default", "number", [], []
     ),
     setTargetFPS: (fps) => moduleInstance.ccall(
         "rl_set_target_fps", null, ["number"], [fps]
     ),
-    modelGetDefaultAsset: () => moduleInstance.ccall(
+    getDefaultModelAsset: () => moduleInstance.ccall(
         "rl_model_get_default_asset", "number", [], []
     ),
-    modelLoadAsset: (path) => moduleInstance.ccall(
+    loadModelAsset: (path) => moduleInstance.ccall(
         "rl_model_load_asset", "number", ["string"], [path]
     ),
-    modelDestroyAsset: (asset) => moduleInstance.ccall(
+    destroyModelAsset: (asset) => moduleInstance.ccall(
         "rl_model_destroy_asset", null, ["number"], [asset]
     ),
     createModel: (asset) => moduleInstance.ccall(
@@ -1611,10 +1468,10 @@ const RL = {
     createModelFromFile: (path) => moduleInstance.ccall(
         "rl_model_create_from_file", "number", ["string"], [path]
     ),
-    modelSetAsset: (model, asset) => moduleInstance.ccall(
+    setModelAsset: (model, asset) => moduleInstance.ccall(
         "rl_model_set_asset", "number", ["number", "number"], [model, asset]
     ) !== 0,
-    modelSetTransform: (
+    setModelTransform: (
         model,
         positionX, positionY, positionZ,
         rotationX, rotationY, rotationZ,
@@ -1634,28 +1491,28 @@ const RL = {
     isModelValidStrict: (model) => moduleInstance.ccall(
         "rl_model_is_valid_strict", "number", ["number"], [model]
     ) !== 0,
-    modelGetAnimationCount: (model) => moduleInstance.ccall(
+    getModelAnimationCount: (model) => moduleInstance.ccall(
         "rl_model_get_animation_count", "number", ["number"], [model]
     ),
-    modelGetAnimationFrameCount: (model, animationIndex) => moduleInstance.ccall(
+    getModelAnimationFrameCount: (model, animationIndex) => moduleInstance.ccall(
         "rl_model_get_animation_frame_count", "number", ["number", "number"], [model, animationIndex]
     ),
-    modelUpdateAnimation: (model, animationIndex, frame) => moduleInstance.ccall(
+    updateModelAnimation: (model, animationIndex, frame) => moduleInstance.ccall(
         "rl_model_update_animation", null, ["number", "number", "number"], [model, animationIndex, frame]
     ),
-    modelSetAnimation: (model, animationIndex) => moduleInstance.ccall(
+    setModelAnimation: (model, animationIndex) => moduleInstance.ccall(
         "rl_model_set_animation", "number", ["number", "number"], [model, animationIndex]
     ) !== 0,
-    modelSetAnimationSpeed: (model, speed) => moduleInstance.ccall(
+    setModelAnimationSpeed: (model, speed) => moduleInstance.ccall(
         "rl_model_set_animation_speed", "number", ["number", "number"], [model, speed]
     ) !== 0,
-    modelSetAnimationLoop: (model, shouldLoop) => moduleInstance.ccall(
+    setModelAnimationLoop: (model, shouldLoop) => moduleInstance.ccall(
         "rl_model_set_animation_loop", "number", ["number", "number"], [model, shouldLoop ? 1 : 0]
     ) !== 0,
-    modelSetTint: (model, color = 0) => moduleInstance.ccall(
+    setModelTint: (model, color = 0) => moduleInstance.ccall(
         "rl_model_set_tint", "number", ["number", "number"], [model, color]
     ) !== 0,
-    modelAnimate: (model, deltaSeconds) => moduleInstance.ccall(
+    animateModel: (model, deltaSeconds) => moduleInstance.ccall(
         "rl_model_animate", "number", ["number", "number"], [model, deltaSeconds]
     ) !== 0,
     destroyModel: (model) => moduleInstance.ccall(
@@ -1703,14 +1560,6 @@ const RL = {
     },
     resetPickStats: () => {
         moduleInstance.ccall("rl_pick_reset_stats", null, [], []);
-    },
-    getPickStats: () => {
-        return {
-            broadphaseTests: moduleInstance.ccall("rl_pick_get_broadphase_tests", "number", [], []),
-            broadphaseRejects: moduleInstance.ccall("rl_pick_get_broadphase_rejects", "number", [], []),
-            narrowphaseTests: moduleInstance.ccall("rl_pick_get_narrowphase_tests", "number", [], []),
-            narrowphaseHits: moduleInstance.ccall("rl_pick_get_narrowphase_hits", "number", [], [])
-        };
     },
     createMusic: (path) => moduleInstance.ccall(
         "rl_music_create", "number", ["string"], [path]
@@ -1772,14 +1621,14 @@ const RL = {
     isSoundPlaying: (sound) => moduleInstance.ccall(
         "rl_sound_is_playing", "number", ["number"], [sound]
     ) !== 0,
+    getDefaultTexture: () => moduleInstance.ccall(
+        "rl_texture_get_default", "number", [], []
+    ),
     createTexture: (path) => moduleInstance.ccall(
         "rl_texture_create", "number", ["string"], [path]
     ),
     destroyTexture: (texture) => moduleInstance.ccall(
         "rl_texture_destroy", null, ["number"], [texture]
-    ),
-    sprite3dGetDefaultTexture: () => moduleInstance.ccall(
-        "rl_sprite3d_get_default_texture", "number", [], []
     ),
     createSprite3d: (texture) => moduleInstance.ccall(
         "rl_sprite3d_create", "number", ["number"], [texture]
@@ -1787,13 +1636,51 @@ const RL = {
     createSprite3dFromFile: (path) => moduleInstance.ccall(
         "rl_sprite3d_create_from_file", "number", ["string"], [path]
     ),
-    sprite3dSetTexture: (sprite, texture) => moduleInstance.ccall(
+    setSprite3dTexture: (sprite, texture) => moduleInstance.ccall(
         "rl_sprite3d_set_texture", "number", ["number", "number"], [sprite, texture]
     ) !== 0,
-    sprite3dSetTransform: (sprite, positionX, positionY, positionZ, size) => moduleInstance.ccall(
+    setSprite3dTransform: (sprite, positionX, positionY, positionZ, size) => moduleInstance.ccall(
         "rl_sprite3d_set_transform", "number", ["number", "number", "number", "number", "number"], [sprite, positionX, positionY, positionZ, size]
     ) !== 0,
-    sprite3dSetTint: (sprite, color = 0) => moduleInstance.ccall(
+    getSprite3dTransform: (sprite) => {
+        const stackSave = moduleInstance.stackSave;
+        const stackRestore = moduleInstance.stackRestore;
+        const stackAlloc = moduleInstance.stackAlloc;
+        const heapF32 = moduleInstance.HEAPF32;
+        if (
+            typeof stackSave !== "function" ||
+            typeof stackRestore !== "function" ||
+            typeof stackAlloc !== "function" ||
+            !heapF32
+        ) {
+            return null;
+        }
+        const prevSp = stackSave();
+        try {
+            const positionXPtr = stackAlloc(4) >>> 0;
+            const positionYPtr = stackAlloc(4) >>> 0;
+            const positionZPtr = stackAlloc(4) >>> 0;
+            const sizePtr = stackAlloc(4) >>> 0;
+            const ok = moduleInstance.ccall(
+                "rl_sprite3d_get_transform",
+                "number",
+                ["number", "number", "number", "number", "number"],
+                [sprite >>> 0, positionXPtr, positionYPtr, positionZPtr, sizePtr]
+            ) !== 0;
+            if (!ok) {
+                return null;
+            }
+            return {
+                positionX: heapF32[positionXPtr >> 2],
+                positionY: heapF32[positionYPtr >> 2],
+                positionZ: heapF32[positionZPtr >> 2],
+                size: heapF32[sizePtr >> 2],
+            };
+        } finally {
+            stackRestore(prevSp);
+        }
+    },
+    setSprite3dTint: (sprite, color = 0) => moduleInstance.ccall(
         "rl_sprite3d_set_tint", "number", ["number", "number"], [sprite, color]
     ) !== 0,
     drawSprite3d: (sprite, tint = 0) => moduleInstance.ccall(
@@ -1802,61 +1689,215 @@ const RL = {
     destroySprite3d: (sprite) => moduleInstance.ccall(
         "rl_sprite3d_destroy", null, ["number"], [sprite]
     ),
-    sprite2dGetDefaultTexture: () => moduleInstance.ccall(
-        "rl_sprite2d_get_default_texture", "number", [], []
-    ),
-    createSprite2D: (texture) => moduleInstance.ccall(
+    createSprite2d: (texture) => moduleInstance.ccall(
         "rl_sprite2d_create", "number", ["number"], [texture]
     ),
-    createSprite2DFromFile: (path) => moduleInstance.ccall(
+    createSprite2dFromFile: (path) => moduleInstance.ccall(
         "rl_sprite2d_create_from_file", "number", ["string"], [path]
     ),
-    sprite2DSetTexture: (sprite, texture) => moduleInstance.ccall(
+    setSprite2dTexture: (sprite, texture) => moduleInstance.ccall(
         "rl_sprite2d_set_texture", "number", ["number", "number"], [sprite, texture]
     ) !== 0,
-    sprite2DSetTransform: (sprite, x, y, scale, rotation) => moduleInstance.ccall(
+    setSprite2dTransform: (sprite, x, y, scale, rotation) => moduleInstance.ccall(
         "rl_sprite2d_set_transform", "number", ["number", "number", "number", "number", "number"], [sprite, x, y, scale, rotation]
     ) !== 0,
-    sprite2DSetTint: (sprite, color = 0) => moduleInstance.ccall(
+    setSprite2dTint: (sprite, color = 0) => moduleInstance.ccall(
         "rl_sprite2d_set_tint", "number", ["number", "number"], [sprite, color]
     ) !== 0,
-    drawSprite2D: (sprite, tint = 0) => moduleInstance.ccall(
+    drawSprite2d: (sprite, tint = 0) => moduleInstance.ccall(
         "rl_sprite2d_draw", null, ["number", "number"], [sprite, tint]
     ),
-    destroySprite2D: (sprite) => moduleInstance.ccall(
+    destroySprite2d: (sprite) => moduleInstance.ccall(
         "rl_sprite2d_destroy", null, ["number"], [sprite]
     ),
-    createText2D: (font, size) => moduleInstance.ccall(
+    createText2d: (font, size) => moduleInstance.ccall(
         "rl_text2d_create", "number", ["number", "number"], [font, size]
     ),
-    text2DSetFont: (handle, font) => moduleInstance.ccall(
+    setText2dFont: (handle, font) => moduleInstance.ccall(
         "rl_text2d_set_font", null, ["number", "number"], [handle, font]
     ),
-    text2DSetSize: (handle, size) => moduleInstance.ccall(
+    setText2dSize: (handle, size) => moduleInstance.ccall(
         "rl_text2d_set_size", null, ["number", "number"], [handle, size]
     ),
-    text2DSetContent: (handle, content) => moduleInstance.ccall(
+    setText2dContent: (handle, content) => moduleInstance.ccall(
         "rl_text2d_set_content", null, ["number", "string"], [handle, content]
     ),
-    text2DSetPosition: (handle, x, y) => moduleInstance.ccall(
+    setText2dPosition: (handle, x, y) => moduleInstance.ccall(
         "rl_text2d_set_position", null, ["number", "number", "number"], [handle, x, y]
     ),
-    text2DSetColor: (handle, color) => moduleInstance.ccall(
+    setText2dColor: (handle, color) => moduleInstance.ccall(
         "rl_text2d_set_color", null, ["number", "number"], [handle, color]
     ),
-    drawText2D: (handle) => moduleInstance.ccall(
+    drawText2d: (handle) => moduleInstance.ccall(
         "rl_text2d_draw", null, ["number"], [handle]
     ),
-    destroyText2D: (handle) => moduleInstance.ccall(
+    destroyText2d: (handle) => moduleInstance.ccall(
         "rl_text2d_destroy", null, ["number"], [handle]
     ),
     loggerMessage: (level, message) => moduleInstance.ccall(
         "rl_logger_message", null, ["number", "string"], [level, String(message ?? "").replaceAll("%", "%%")]
     ),
+    loggerMessageSource: (level, sourceFile, sourceLine, message) => moduleInstance.ccall(
+        "rl_logger_message_source",
+        null,
+        ["number", "string", "number", "string"],
+        [
+            level | 0,
+            String(sourceFile ?? ""),
+            sourceLine | 0,
+            String(message ?? "").replaceAll("%", "%%"),
+        ]
+    ),
     loggerSetLevel: (level) => moduleInstance.ccall(
         "rl_logger_set_level", null, ["number"], [level]
     ),
 
+};
+
+RL.helpers = {
+    waitForFileioReady: async (timeoutMs = 2000) => {
+        const start = performance.now();
+        while (performance.now() - start < timeoutMs) {
+            if (RL.fileioIsReady()) {
+                return true;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 16));
+        }
+        return RL.fileioIsReady();
+    },
+    taskIsValid: (task) => {
+        return task !== 0;
+    },
+    waitForTask: async (task, pollMs = 16) => {
+        let rc = 0;
+
+        if (!task) {
+            return -1;
+        }
+
+        while (!RL.fileioPollTask(task)) {
+            await new Promise((resolve) => setTimeout(resolve, pollMs));
+        }
+
+        rc = RL.fileioFinishTask(task);
+        RL.fileioFreeTask(task);
+        return rc;
+    },
+    waitForFileioRestoreAsync: async () => {
+        return RL.helpers.waitForTask(RL.fileioRestoreAsync());
+    },
+    waitForFileioEnsureAsync: async (filename, src = null) => {
+        return RL.helpers.waitForTask(RL.fileioEnsureAsync(filename, src));
+    },
+    waitForFileioEnsureGroupAsync: async (filenames) => {
+        return RL.helpers.waitForTask(RL.fileioEnsureGroupAsync(filenames));
+    },
+    createTaskGroup: (onComplete = null, onError = null, ctx = null) => {
+        const group = {
+            entries: [],
+            callbackContext: ctx,
+            onCompleteCallback: typeof onComplete === "function" ? onComplete : null,
+            onErrorCallback: typeof onError === "function" ? onError : null,
+            terminalCallbackInvoked: false,
+            failedCount: 0,
+            completedCount: 0,
+            addTask(task, onSuccess = null, onTaskError = null) {
+                if (!task) {
+                    return;
+                }
+                this.entries.push({
+                    task,
+                    path: RL.fileioGetTaskPath(task),
+                    done: false,
+                    rc: 1,
+                    onSuccess: typeof onSuccess === "function" ? onSuccess : null,
+                    onError: typeof onTaskError === "function" ? onTaskError : null,
+                });
+            },
+            addImportTask(path, onSuccess = null, onTaskError = null) {
+                this.addTask(RL.fileioEnsureAsync(path), onSuccess, onTaskError);
+            },
+            addImportTasks(paths, onSuccess = null, onTaskError = null) {
+                if (!Array.isArray(paths)) {
+                    return;
+                }
+                for (const path of paths) {
+                    this.addImportTask(path, onSuccess, onTaskError);
+                }
+            },
+            remainingTasks() {
+                return this.entries.length - this.completedCount;
+            },
+            isDone() {
+                return this.remainingTasks() === 0;
+            },
+            hasFailures() {
+                return this.failedCount > 0;
+            },
+            tick() {
+                RL.fileioTick();
+                for (const entry of this.entries) {
+                    if (entry.done) {
+                        continue;
+                    }
+                    if (!RL.fileioPollTask(entry.task)) {
+                        continue;
+                    }
+                    entry.rc = RL.fileioFinishTask(entry.task);
+                    RL.fileioFreeTask(entry.task);
+                    entry.done = true;
+                    this.completedCount += 1;
+                    if (entry.rc !== 0) {
+                        this.failedCount += 1;
+                        if (entry.onError) {
+                            entry.onError(entry.path, this.callbackContext);
+                        }
+                    } else if (entry.onSuccess) {
+                        entry.onSuccess(entry.path, this.callbackContext);
+                    }
+                }
+                return this.remainingTasks() > 0;
+            },
+            process() {
+                this.tick();
+                if (!this.terminalCallbackInvoked && this.remainingTasks() === 0) {
+                    this.terminalCallbackInvoked = true;
+                    if (this.hasFailures()) {
+                        if (this.onErrorCallback) {
+                            this.onErrorCallback(this, this.callbackContext);
+                        }
+                    } else if (this.onCompleteCallback) {
+                        this.onCompleteCallback(this, this.callbackContext);
+                    }
+                }
+                return this.remainingTasks();
+            },
+            failedPaths() {
+                const out = [];
+                for (const entry of this.entries) {
+                    if (entry.done && entry.rc !== 0) {
+                        out.push(entry.path);
+                    }
+                }
+                return out;
+            },
+        };
+        return group;
+    },
+    getScreenWidth: () => {
+        return RL.getScreenSize().x;
+    },
+    getScreenHeight: () => {
+        return RL.getScreenSize().y;
+    },
+    getPickStats: () => {
+        return {
+            broadphaseTests: moduleInstance.ccall("rl_pick_get_broadphase_tests", "number", [], []),
+            broadphaseRejects: moduleInstance.ccall("rl_pick_get_broadphase_rejects", "number", [], []),
+            narrowphaseTests: moduleInstance.ccall("rl_pick_get_narrowphase_tests", "number", [], []),
+            narrowphaseHits: moduleInstance.ccall("rl_pick_get_narrowphase_hits", "number", [], [])
+        };
+    },
 };
 
 export const rl = RL;

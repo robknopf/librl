@@ -29,8 +29,8 @@ function assertEq(actual, expected, label) {
     }
 }
 
-assertEq(RL.versionMajor(), RL_BINDING_BUILT_MAJOR, 'versionMajor vs binding stamp');
-assertEq(RL.versionMinor(), RL_BINDING_BUILT_MINOR, 'versionMinor vs binding stamp');
-assertEq(RL.versionPatch(), RL_BINDING_BUILT_PATCH, 'versionPatch vs binding stamp');
+assertEq(RL.getVersionMajor(), RL_BINDING_BUILT_MAJOR, 'getVersionMajor vs binding stamp');
+assertEq(RL.getVersionMinor(), RL_BINDING_BUILT_MINOR, 'getVersionMinor vs binding stamp');
+assertEq(RL.getVersionPatch(), RL_BINDING_BUILT_PATCH, 'getVersionPatch vs binding stamp');
 
 process.exit(0);

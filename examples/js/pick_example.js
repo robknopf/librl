@@ -49,9 +49,9 @@ import { rl } from "../../bindings/js/rl.js";
     );
 
     rl.setActiveCamera3D(camera);
-    rl.modelSetAnimation(gumshoe, 1);
-    rl.modelSetAnimationSpeed(gumshoe, 1.0);
-    rl.modelSetAnimationLoop(gumshoe, true);
+    rl.setModelAnimation(gumshoe, 1);
+    rl.setModelAnimationSpeed(gumshoe, 1.0);
+    rl.setModelAnimationLoop(gumshoe, true);
     rl.resetPickStats();
 
     let lastTime = rl.getTime();
@@ -109,21 +109,21 @@ import { rl } from "../../bindings/js/rl.js";
       rl.clearBackground(rl.COLOR_RAYWHITE);
 
       rl.beginMode3D();
-      rl.modelAnimate(gumshoe, dt);
+      rl.animateModel(gumshoe, dt);
       rl.drawModel(gumshoe, 0.0, 0.0, 0.0, 1.0, rl.COLOR_RAYWHITE);
       rl.drawSprite3D(sprite, spritePos.x, spritePos.y, spritePos.z, spriteSize, rl.COLOR_RAYWHITE);
       rl.endMode3D();
 
       const title = "Click model to test pick";
       const size = rl.measureTextEx(komika, title, fontSize, 1);
-      rl.drawTextEx(komika, title, (rl.getScreenWidth() - size.x) * 0.5, 14, fontSize, 1, rl.COLOR_BLUE);
+      rl.drawTextEx(komika, title, (rl.helpers.getScreenWidth() - size.x) * 0.5, 14, fontSize, 1, rl.COLOR_BLUE);
 
       rl.drawTextEx(
         komikaSmall,
         `Mouse: (${mouse.x}, ${mouse.y})`,
         10, 46, smallFontSize, 1, rl.COLOR_BLACK
       );
-      const pickStats = rl.getPickStats();
+      const pickStats = rl.helpers.getPickStats();
       const skippedNarrowphase = pickStats.broadphaseRejects;
       rl.drawTextEx(
         komikaSmall,

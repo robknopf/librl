@@ -169,7 +169,7 @@ class ScriptableRuntime implements IRuntime {
 			return RT_FAILED;
 		}
 
-		rc = RL.setAssetHost(ASSET_HOST);
+		rc = RL.fileioSetAssetHost(ASSET_HOST);
 		if (rc != 0) {
 			Log.error("[script] Loader set asset host failed");
 			return RT_FAILED;

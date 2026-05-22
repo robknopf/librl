@@ -11,8 +11,13 @@ static int rl_debug_enable_fps_lua(lua_State *L)
     int x = (int)luaL_checkinteger(L, 1);
     int y = (int)luaL_checkinteger(L, 2);
     int font_size = (int)luaL_checkinteger(L, 3);
-    const char *font_path = luaL_checkstring(L, 4);
-    rl_debug_enable_fps(x, y, font_size, font_path);
+    rl_handle_t font = 0;
+
+    if (!lua_isnoneornil(L, 4)) {
+        font = (rl_handle_t)luaL_checkinteger(L, 4);
+    }
+
+    rl_debug_enable_fps(x, y, font_size, font);
     return 0;
 }
 

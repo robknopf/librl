@@ -205,26 +205,25 @@ when defined(js):
       return rc
     return RL_INIT_OK
 
-  proc rl_init_values_impl(windowWidth, windowHeight: int, windowTitle: cstring,
-                          windowFlags: RLWindowFlags,
-                          assetHost: cstring, fileioBaseDir: cstring): Future[int] =
+  proc rl_init_impl(windowWidth, windowHeight: int, windowTitle, assetHost, fileioBaseDir: cstring,
+                    windowFlags: RLWindowFlags): Future[int] =
     {.emit: """return (async function() {
-      return await __gRl.initValues(
-        `windowWidth`, `windowHeight`, `windowTitle`,
-        `windowFlags`, `assetHost`, `fileioBaseDir`
-      ) | 0;
+      return await __gRl.init({
+        windowWidth: `windowWidth`,
+        windowHeight: `windowHeight`,
+        windowTitle: `windowTitle`,
+        windowFlags: `windowFlags`,
+        assetHost: `assetHost`,
+        fileioBaseDir: `fileioBaseDir`,
+      }) | 0;
     })();""".}
 
-  proc rl_init_values*(windowWidth, windowHeight: int, windowTitle: string,
-                      windowFlags: RLWindowFlags = 0.RLWindowFlags,
-                      assetHost: string = "", fileioBaseDir: string = ""): Future[int] =
-    rl_init_values_impl(windowWidth, windowHeight, windowTitle.cstring, windowFlags,
-                        assetHost.cstring, fileioBaseDir.cstring)
+  proc rl_init_from_config*(config: RLInitConfig): Future[int] =
+    rl_init_impl(config.windowWidth, config.windowHeight, config.windowTitle.cstring,
+                 config.assetHost.cstring, config.fileioBaseDir.cstring, config.windowFlags)
 
   proc rl_init*(config = RLInitConfig()): int {.rlAsync.} =
-    return rlAwait rl_init_values(config.windowWidth, config.windowHeight,
-                                  config.windowTitle, config.windowFlags,
-                                  config.assetHost, config.fileioBaseDir)
+    return rlAwait rl_init_from_config(config)
 
   proc rl_deinit*(): Future[void] =
     {.emit: "return (async function() { await __gRl.deinit(); })();".}
@@ -248,16 +247,16 @@ when defined(js):
   proc rl_get_delta_time*(): float {.importjs: "__gRl.getDeltaTime()".}
   proc rl_is_initialized*(): bool {.importjs: "__gRl.isInitialized()".}
   proc rl_get_platform*(): cstring {.importjs: "__gRl.getPlatform()".}
-  proc rl_version_major*(): int {.importjs: "__gRl.versionMajor()".}
-  proc rl_version_minor*(): int {.importjs: "__gRl.versionMinor()".}
-  proc rl_version_patch*(): int {.importjs: "__gRl.versionPatch()".}
-  proc rl_version_label*(): string {.importjs: "__gRl.versionLabel()".}
-  proc rl_version_number*(): uint32 {.importjs: "__gRl.versionNumber()".}
-  proc rl_version_string*(): string {.importjs: "__gRl.versionString()".}
+  proc rl_version_major*(): int {.importjs: "__gRl.getVersionMajor()".}
+  proc rl_version_minor*(): int {.importjs: "__gRl.getVersionMinor()".}
+  proc rl_version_patch*(): int {.importjs: "__gRl.getVersionPatch()".}
+  proc rl_version_label*(): string {.importjs: "__gRl.getVersionLabel()".}
+  proc rl_version_number*(): uint32 {.importjs: "__gRl.getVersionNumber()".}
+  proc rl_version_string*(): string {.importjs: "__gRl.getVersionString()".}
   proc rl_scratch_refresh*() {.importjs: "__gRl.refreshScratch()".}
-  proc rl_set_asset_host_impl(assetHost: cstring): int {.importjs: "__gRl.setAssetHost(#)".}
-  proc rl_set_asset_host*(assetHost: string): int {.inline.} = rl_set_asset_host_impl(assetHost.cstring)
-  proc rl_get_asset_host*(): cstring {.importjs: "__gRl.getAssetHost()".}
+  proc rl_fileio_set_asset_host_impl(assetHost: cstring): int {.importjs: "__gRl.fileioSetAssetHost(#)".}
+  proc rl_fileio_set_asset_host*(assetHost: string): int {.inline.} = rl_fileio_set_asset_host_impl(assetHost.cstring)
+  proc rl_fileio_get_asset_host*(): cstring {.importjs: "__gRl.fileioGetAssetHost()".}
 
   # Window
   proc rl_window_close_requested*(): bool {.importjs: "__gRl.isWindowCloseRequested()".}
@@ -348,26 +347,27 @@ when defined(js):
   proc rl_font_create*(filename: string, fontSize: int): RLHandle {.inline.} =
     rl_font_create(filename.cstring, fontSize)
   proc rl_font_destroy*(font: RLHandle) {.importjs: "__gRl.destroyFont(#)".}
-  proc rl_font_get_default*(): RLHandle {.importjs: "__gRl.rl_font_get_default()".}
+  proc rl_font_get_default*(): RLHandle {.importjs: "__gRl.getDefaultFont()".}
 
   # Texture
   proc rl_texture_create*(filename: cstring): RLHandle {.importjs: "__gRl.createTexture(#)".}
   proc rl_texture_create*(filename: string): RLHandle {.inline.} = rl_texture_create(filename.cstring)
   proc rl_texture_destroy*(texture: RLHandle) {.importjs: "__gRl.destroyTexture(#)".}
+  proc rl_texture_get_default*(): RLHandle {.importjs: "__gRl.getDefaultTexture()".}
   proc rl_texture_draw_ex*(texture: RLHandle, x, y, scale, rotation: float, tint: RLHandle) {.
     importjs: "__gRl.drawTextureEx(#,#,#,#,#,#)".}
   proc rl_texture_draw_ground*(texture: RLHandle, x, y, z, width, length: float, tint: RLHandle) {.
     importjs: "__gRl.drawTextureGround(#,#,#,#,#,#,#)".}
 
   # Model
-  proc rl_model_get_default_asset*(): RLHandle {.importjs: "__gRl.modelGetDefaultAsset()".}
-  proc rl_model_load_asset*(filename: cstring): RLHandle {.importjs: "__gRl.modelLoadAsset(#)".}
+  proc rl_model_get_default_asset*(): RLHandle {.importjs: "__gRl.getDefaultModelAsset()".}
+  proc rl_model_load_asset*(filename: cstring): RLHandle {.importjs: "__gRl.loadModelAsset(#)".}
   proc rl_model_load_asset*(filename: string): RLHandle {.inline.} = rl_model_load_asset(filename.cstring)
-  proc rl_model_destroy_asset*(asset: RLHandle) {.importjs: "__gRl.modelDestroyAsset(#)".}
+  proc rl_model_destroy_asset*(asset: RLHandle) {.importjs: "__gRl.destroyModelAsset(#)".}
   proc rl_model_create*(asset: RLHandle): RLHandle {.importjs: "__gRl.createModel(#)".}
   proc rl_model_create_from_file*(filename: cstring): RLHandle {.importjs: "__gRl.createModelFromFile(#)".}
   proc rl_model_create_from_file*(filename: string): RLHandle {.inline.} = rl_model_create_from_file(filename.cstring)
-  proc rl_model_set_asset*(model: RLHandle, asset: RLHandle): bool {.importjs: "__gRl.modelSetAsset(#,#)".}
+  proc rl_model_set_asset*(model: RLHandle, asset: RLHandle): bool {.importjs: "__gRl.setModelAsset(#,#)".}
   proc rl_model_destroy*(model: RLHandle) {.importjs: "__gRl.destroyModel(#)".}
   proc rl_model_draw*(model: RLHandle, tint: RLHandle = 0) {.importjs: "__gRl.drawModel(#,#)".}
   proc rl_model_is_valid*(model: RLHandle): bool {.importjs: "__gRl.isModelValid(#)".}
@@ -376,64 +376,62 @@ when defined(js):
                                 positionX, positionY, positionZ,
                                 rotationX, rotationY, rotationZ,
                                 scaleX, scaleY, scaleZ: float): bool {.
-    importjs: "__gRl.modelSetTransform(#,#,#,#,#,#,#,#,#,#)".}
-  proc rl_model_get_animation_count*(model: RLHandle): int {.importjs: "__gRl.modelGetAnimationCount(#)".}
+    importjs: "__gRl.setModelTransform(#,#,#,#,#,#,#,#,#,#)".}
+  proc rl_model_get_animation_count*(model: RLHandle): int {.importjs: "__gRl.getModelAnimationCount(#)".}
   proc rl_model_get_animation_frame_count*(model: RLHandle, animationIndex: int): int {.
-    importjs: "__gRl.modelGetAnimationFrameCount(#,#)".}
+    importjs: "__gRl.getModelAnimationFrameCount(#,#)".}
   proc rl_model_update_animation*(model: RLHandle, animationIndex, frame: int) {.
-    importjs: "__gRl.modelUpdateAnimation(#,#,#)".}
+    importjs: "__gRl.updateModelAnimation(#,#,#)".}
   proc rl_model_set_animation*(model: RLHandle, animationIndex: int): bool {.
-    importjs: "__gRl.modelSetAnimation(#,#)".}
+    importjs: "__gRl.setModelAnimation(#,#)".}
   proc rl_model_set_animation_speed*(model: RLHandle, speed: float): bool {.
-    importjs: "__gRl.modelSetAnimationSpeed(#,#)".}
+    importjs: "__gRl.setModelAnimationSpeed(#,#)".}
   proc rl_model_set_animation_loop*(model: RLHandle, shouldLoop: bool): bool {.
-    importjs: "__gRl.modelSetAnimationLoop(#,#)".}
+    importjs: "__gRl.setModelAnimationLoop(#,#)".}
   proc rl_model_set_tint*(model: RLHandle, color: RLHandle = 0): bool {.
-    importjs: "__gRl.modelSetTint(#,#)".}
+    importjs: "__gRl.setModelTint(#,#)".}
   proc rl_model_animate*(model: RLHandle, deltaSeconds: float): bool {.
-    importjs: "__gRl.modelAnimate(#,#)".}
+    importjs: "__gRl.animateModel(#,#)".}
   proc rl_pick_model*(camera, model: RLHandle, mouseX, mouseY: float): RLPickResult {.
     importjs: "__gRl.pickModel(#,#,#,#)".}
 
   # Sprite3D
-  proc rl_sprite3d_get_default_texture*(): RLHandle {.importjs: "__gRl.sprite3dGetDefaultTexture()".}
   proc rl_sprite3d_create*(texture: RLHandle): RLHandle {.importjs: "__gRl.createSprite3d(#)".}
   proc rl_sprite3d_create_from_file*(filename: cstring): RLHandle {.importjs: "__gRl.createSprite3dFromFile(#)".}
   proc rl_sprite3d_create_from_file*(filename: string): RLHandle {.inline.} = rl_sprite3d_create_from_file(filename.cstring)
   proc rl_sprite3d_set_texture*(sprite: RLHandle, texture: RLHandle): bool {.
-    importjs: "__gRl.sprite3dSetTexture(#,#)".}
+    importjs: "__gRl.setSprite3dTexture(#,#)".}
   proc rl_sprite3d_set_transform*(sprite: RLHandle,
-                                  positionX, positionY, positionZ, size: float): bool {.
-    importjs: "__gRl.sprite3dSetTransform(#,#,#,#,#)".}
-  proc rl_sprite3d_set_tint*(sprite: RLHandle, color: RLHandle = 0): bool {.importjs: "__gRl.sprite3dSetTint(#,#)".}
+                                positionX, positionY, positionZ, size: float): bool {.
+    importjs: "__gRl.setSprite3dTransform(#,#,#,#,#)".}
+  proc rl_sprite3d_set_tint*(sprite: RLHandle, color: RLHandle = 0): bool {.importjs: "__gRl.setSprite3dTint(#,#)".}
   proc rl_sprite3d_draw*(sprite: RLHandle, tint: RLHandle = 0) {.importjs: "__gRl.drawSprite3d(#,#)".}
   proc rl_sprite3d_destroy*(sprite: RLHandle) {.importjs: "__gRl.destroySprite3d(#)".}
   proc rl_pick_sprite3d*(camera, sprite3d: RLHandle, mouseX, mouseY: float): RLPickResult {.
     importjs: "__gRl.pickSprite3d(#,#,#,#)".}
 
   # Sprite2D
-  proc rl_sprite2d_get_default_texture*(): RLHandle {.importjs: "__gRl.sprite2dGetDefaultTexture()".}
-  proc rl_sprite2d_create*(texture: RLHandle): RLHandle {.importjs: "__gRl.createSprite2D(#)".}
-  proc rl_sprite2d_create_from_file*(filename: cstring): RLHandle {.importjs: "__gRl.createSprite2DFromFile(#)".}
+  proc rl_sprite2d_create*(texture: RLHandle): RLHandle {.importjs: "__gRl.createSprite2d(#)".}
+  proc rl_sprite2d_create_from_file*(filename: cstring): RLHandle {.importjs: "__gRl.createSprite2dFromFile(#)".}
   proc rl_sprite2d_create_from_file*(filename: string): RLHandle {.inline.} = rl_sprite2d_create_from_file(filename.cstring)
   proc rl_sprite2d_set_texture*(sprite: RLHandle, texture: RLHandle): bool {.
-    importjs: "__gRl.sprite2DSetTexture(#,#)".}
+    importjs: "__gRl.setSprite2dTexture(#,#)".}
   proc rl_sprite2d_set_transform*(sprite: RLHandle, x, y, scale, rotation: float): bool {.
-    importjs: "__gRl.sprite2DSetTransform(#,#,#,#,#)".}
-  proc rl_sprite2d_set_tint*(sprite: RLHandle, color: RLHandle = 0): bool {.importjs: "__gRl.sprite2DSetTint(#,#)".}
-  proc rl_sprite2d_draw*(sprite: RLHandle, tint: RLHandle = 0) {.importjs: "__gRl.drawSprite2D(#,#)".}
-  proc rl_sprite2d_destroy*(sprite: RLHandle) {.importjs: "__gRl.destroySprite2D(#)".}
+    importjs: "__gRl.setSprite2dTransform(#,#,#,#,#)".}
+  proc rl_sprite2d_set_tint*(sprite: RLHandle, color: RLHandle = 0): bool {.importjs: "__gRl.setSprite2dTint(#,#)".}
+  proc rl_sprite2d_draw*(sprite: RLHandle, tint: RLHandle = 0) {.importjs: "__gRl.drawSprite2d(#,#)".}
+  proc rl_sprite2d_destroy*(sprite: RLHandle) {.importjs: "__gRl.destroySprite2d(#)".}
 
   # Text2D
-  proc rl_text2d_create*(font: RLHandle, size: float): RLHandle {.importjs: "__gRl.createText2D(#,#)".}
-  proc rl_text2d_set_font*(handle: RLHandle, font: RLHandle) {.importjs: "__gRl.text2DSetFont(#,#)".}
-  proc rl_text2d_set_size*(handle: RLHandle, size: float) {.importjs: "__gRl.text2DSetSize(#,#)".}
-  proc rl_text2d_set_content_impl(handle: RLHandle, content: cstring) {.importjs: "__gRl.text2DSetContent(#,#)".}
+  proc rl_text2d_create*(font: RLHandle, size: float): RLHandle {.importjs: "__gRl.createText2d(#,#)".}
+  proc rl_text2d_set_font*(handle: RLHandle, font: RLHandle) {.importjs: "__gRl.setText2dFont(#,#)".}
+  proc rl_text2d_set_size*(handle: RLHandle, size: float) {.importjs: "__gRl.setText2dSize(#,#)".}
+  proc rl_text2d_set_content_impl(handle: RLHandle, content: cstring) {.importjs: "__gRl.setText2dContent(#,#)".}
   proc rl_text2d_set_content*(handle: RLHandle, content: string) {.inline.} = rl_text2d_set_content_impl(handle, content.cstring)
-  proc rl_text2d_set_position*(handle: RLHandle, x: float, y: float) {.importjs: "__gRl.text2DSetPosition(#,#,#)".}
-  proc rl_text2d_set_color*(handle: RLHandle, color: RLHandle) {.importjs: "__gRl.text2DSetColor(#,#)".}
-  proc rl_text2d_draw*(handle: RLHandle) {.importjs: "__gRl.drawText2D(#)".}
-  proc rl_text2d_destroy*(handle: RLHandle) {.importjs: "__gRl.destroyText2D(#)".}
+  proc rl_text2d_set_position*(handle: RLHandle, x: float, y: float) {.importjs: "__gRl.setText2dPosition(#,#,#)".}
+  proc rl_text2d_set_color*(handle: RLHandle, color: RLHandle) {.importjs: "__gRl.setText2dColor(#,#)".}
+  proc rl_text2d_draw*(handle: RLHandle) {.importjs: "__gRl.drawText2d(#)".}
+  proc rl_text2d_destroy*(handle: RLHandle) {.importjs: "__gRl.destroyText2d(#)".}
 
   # Music
   proc rl_music_create*(filename: cstring): RLHandle {.importjs: "__gRl.createMusic(#)".}
@@ -477,7 +475,7 @@ when defined(js):
   proc rl_fileio_ensure*(localPath: string, src: string = ""): Future[int] =
     let localPathCstr = localPath.cstring
     let srcCstr = if src.len == 0: cstring(nil) else: src.cstring
-    {.emit: "return (async function() { return await __gRl.ensure(`localPathCstr`, `srcCstr`) | 0; })();".}
+    {.emit: "return (async function() { return await __gRl.fileioEnsure(`localPathCstr`, `srcCstr`) | 0; })();".}
   proc rl_fileio_ensure_async*(localPath: cstring, src: cstring): RLHandle {.importjs: "__gRl.fileioEnsureAsync(#,#)".}
   proc rl_fileio_ensure_async*(localPath: string, src: string = ""): RLHandle {.inline.} =
     let srcPtr = if src.len == 0: cstring(nil) else: src.cstring

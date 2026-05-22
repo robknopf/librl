@@ -142,8 +142,6 @@ proc rl_init_values_async_raw(windowWidth: cint, windowHeight: cint, windowTitle
                               windowFlags: RLWindowFlags, assetHost: cstring,
                               fileioBaseDir: cstring): cint {.importc: "rl_init_values_async", cdecl, header: "rl.h".}
 proc rl_deinit*() {.importc, cdecl, header: "rl.h".}
-proc rl_set_asset_host*(assetHost: cstring): cint {.importc, cdecl, header: "rl.h".}
-proc rl_get_asset_host*(): cstring {.importc, cdecl, header: "rl.h".}
 proc rl_fileio_init*(baseDir: cstring): cint {.importc, cdecl, header: "rl_fileio.h".}
 proc rl_fileio_init_async*(baseDir: cstring): cint {.importc, cdecl, header: "rl_fileio.h".}
 proc rl_fileio_deinit*() {.importc, cdecl, header: "rl_fileio.h".}
@@ -227,28 +225,16 @@ proc rl_fileio_add_task*(task: RLHandle,
   if result != RL_FILEIO_ADD_TASK_OK and onFailure.isNil:
     rl_fileio_release_closure_task(closureTask)
 
-proc rl_init_async*(): int {.inline.} =
-  rl_init_async_raw(nil).int
+proc rl_init_from_config*(config: RLInitConfig): int {.inline.} =
+  rl_init_values_raw(config.windowWidth.cint, config.windowHeight.cint, config.windowTitle.cstring,
+                     config.windowFlags, config.assetHost.cstring, config.fileioBaseDir.cstring).int
 
-proc rl_init_values*(windowWidth, windowHeight: int, windowTitle: string,
-                     windowFlags: RLWindowFlags = 0.RLWindowFlags,
-                     assetHost: string = "", fileioBaseDir: string = ""): int {.inline.} =
-  rl_init_values_raw(windowWidth.cint, windowHeight.cint, windowTitle.cstring, windowFlags,
-                     assetHost.cstring, fileioBaseDir.cstring).int
-
-proc rl_init_values_async*(windowWidth, windowHeight: int, windowTitle: string,
-                           windowFlags: RLWindowFlags = 0.RLWindowFlags,
-                           assetHost: string = "", fileioBaseDir: string = ""): int {.inline.} =
-  rl_init_values_async_raw(windowWidth.cint, windowHeight.cint, windowTitle.cstring, windowFlags,
-                           assetHost.cstring, fileioBaseDir.cstring).int
+proc rl_init_async*(config: RLInitConfig = RLInitConfig()): int {.inline.} =
+  rl_init_values_async_raw(config.windowWidth.cint, config.windowHeight.cint, config.windowTitle.cstring,
+                           config.windowFlags, config.assetHost.cstring, config.fileioBaseDir.cstring).int
 
 proc rl_init*(config = RLInitConfig()): int {.rlAsync.} =
-  return rlAwait rl_init_values(config.windowWidth, config.windowHeight,
-                                config.windowTitle, config.windowFlags,
-                                config.assetHost, config.fileioBaseDir)
-                                
-proc rl_set_asset_host*(assetHost: string): int {.inline.} =
-  rl_set_asset_host(assetHost.cstring).int
+  return rlAwait rl_init_from_config(config)
 
 proc rl_fileio_init*(baseDir: string): int {.inline.} =
   rl_fileio_init(baseDir.cstring).int
@@ -503,7 +489,7 @@ proc rl_shape_draw_rectangle*(x: cint, y: cint, width: cint, height: cint,
                               color: RLHandle) {.importc, cdecl, header: "rl_shape.h".}
 proc rl_render_clear_background*(color: RLHandle) {.importc, cdecl, header: "rl.h".}
 proc rl_set_target_fps*(fps: cint) {.importc, cdecl, header: "rl.h".}
-proc rl_debug_enable_fps*(x: cint, y: cint, fontSize: cint, fontPath: cstring) {.importc, cdecl, header: "rl_debug.h".}
+proc rl_debug_enable_fps*(x: cint, y: cint, fontSize: cint, font: RLHandle) {.importc, cdecl, header: "rl_debug.h".}
 proc rl_debug_disable*() {.importc, cdecl, header: "rl_debug.h".}
 proc rl_text_draw_fps*(x: cint, y: cint) {.importc, cdecl, header: "rl_text.h".}
 proc rl_text_draw*(text: cstring, x: cint, y: cint, fontSize: cint, color: RLHandle) {.importc, cdecl, header: "rl.h".}
@@ -577,13 +563,13 @@ proc rl_sound_set_volume*(sound: RLHandle, volume: cfloat): bool {.importc, cdec
 proc rl_sound_set_pitch*(sound: RLHandle, pitch: cfloat): bool {.importc, cdecl, header: "rl_sound.h".}
 proc rl_sound_set_pan*(sound: RLHandle, pan: cfloat): bool {.importc, cdecl, header: "rl_sound.h".}
 proc rl_sound_is_playing*(sound: RLHandle): bool {.importc, cdecl, header: "rl_sound.h".}
+proc rl_texture_get_default*(): RLHandle {.importc, cdecl, header: "rl_texture.h".}
 proc rl_texture_create*(filename: cstring): RLHandle {.importc, cdecl, header: "rl_texture.h".}
 proc rl_texture_destroy*(texture: RLHandle) {.importc, cdecl, header: "rl_texture.h".}
 proc rl_texture_draw_ex*(texture: RLHandle, x: cfloat, y: cfloat, scale: cfloat,
                          rotation: cfloat, tint: RLHandle) {.importc, cdecl, header: "rl_texture.h".}
 proc rl_texture_draw_ground*(texture: RLHandle, x: cfloat, y: cfloat, z: cfloat,
                              width: cfloat, length: cfloat, tint: RLHandle) {.importc, cdecl, header: "rl_texture.h".}
-proc rl_sprite3d_get_default_texture*(): RLHandle {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_create*(texture: RLHandle): RLHandle {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_create_from_file*(filename: cstring): RLHandle {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_set_texture*(sprite: RLHandle, texture: RLHandle): bool {.importc, cdecl, header: "rl_sprite3d.h".}
@@ -595,7 +581,6 @@ proc rl_sprite3d_set_transform*(
 proc rl_sprite3d_set_tint*(sprite: RLHandle, color: RLHandle = 0): bool {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_draw*(sprite: RLHandle, tint: RLHandle = 0) {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_destroy*(sprite: RLHandle) {.importc, cdecl, header: "rl_sprite3d.h".}
-proc rl_sprite2d_get_default_texture*(): RLHandle {.importc, cdecl, header: "rl_sprite2d.h".}
 proc rl_sprite2d_create*(texture: RLHandle): RLHandle {.importc, cdecl, header: "rl_sprite2d.h".}
 proc rl_sprite2d_create_from_file*(filename: cstring): RLHandle {.importc, cdecl, header: "rl_sprite2d.h".}
 proc rl_sprite2d_set_texture*(sprite: RLHandle, texture: RLHandle): bool {.importc, cdecl, header: "rl_sprite2d.h".}
@@ -714,8 +699,8 @@ proc rl_shape_draw_rectangle*(x, y, width, height: int, color: RLHandle) {.inlin
 proc rl_set_target_fps*(fps: int) {.inline.} =
   rl_set_target_fps(fps.cint)
 
-proc rl_debug_enable_fps*(x, y, fontSize: int, fontPath: string) {.inline.} =
-  rl_debug_enable_fps(x.cint, y.cint, fontSize.cint, fontPath.cstring)
+proc rl_debug_enable_fps*(x, y, fontSize: int, font: RLHandle = 0) {.inline.} =
+  rl_debug_enable_fps(x.cint, y.cint, fontSize.cint, font)
 
 proc rl_text_draw_fps*(x, y: int) {.inline.} =
   rl_text_draw_fps(x.cint, y.cint)

@@ -216,30 +216,29 @@ class RLImpl {
 	}
 
 	public static function init(?config:RLInitConfig):Promise<Int> {
-		var values = normalizeInitConfig(config);
-		return initValues(values.width, values.height, values.title, values.flags, values.assetHost, values.fileioBaseDir);
+		if (binding == null) {
+			return Promise.resolve(INIT_ERR_UNKNOWN);
+		}
+		return cast binding.init(normalizeInitOptions(config));
 	}
 
 	public static function initAsync(?config:RLInitConfig):Int {
 		if (binding == null) {
 			return INIT_ERR_UNKNOWN;
 		}
+		return cast binding.initAsync(normalizeInitOptions(config));
+	}
+
+	static function normalizeInitOptions(?config:RLInitConfig):Dynamic {
 		var values = normalizeInitConfig(config);
-		return initValuesAsync(values.width, values.height, values.title, values.flags, values.assetHost, values.fileioBaseDir);
-	}
-
-	public static function initValues(width:Int, height:Int, title:String, flags:Int = 0, assetHost:String = "", fileioBaseDir:String = ""):Promise<Int> {
-		if (binding == null) {
-			return Promise.resolve(INIT_ERR_UNKNOWN);
-		}
-		return cast binding.initValues(width, height, title, flags, assetHost, fileioBaseDir);
-	}
-
-	public static function initValuesAsync(width:Int, height:Int, title:String, flags:Int = 0, assetHost:String = "", fileioBaseDir:String = ""):Int {
-		if (binding == null) {
-			return INIT_ERR_UNKNOWN;
-		}
-		return cast binding.initValuesAsync(width, height, title, flags, assetHost, fileioBaseDir);
+		return {
+			windowWidth: values.width,
+			windowHeight: values.height,
+			windowTitle: values.title,
+			windowFlags: values.flags,
+			assetHost: values.assetHost,
+			fileioBaseDir: values.fileioBaseDir,
+		};
 	}
 
 	@async
@@ -265,27 +264,27 @@ class RLImpl {
 	}
 
 	public static function versionMajor():Int {
-		return binding == null ? 0 : cast binding.versionMajor();
+		return binding == null ? 0 : cast binding.getVersionMajor();
 	}
 
 	public static function versionMinor():Int {
-		return binding == null ? 0 : cast binding.versionMinor();
+		return binding == null ? 0 : cast binding.getVersionMinor();
 	}
 
 	public static function versionPatch():Int {
-		return binding == null ? 0 : cast binding.versionPatch();
+		return binding == null ? 0 : cast binding.getVersionPatch();
 	}
 
 	public static function versionLabel():String {
-		return binding == null ? "unknown" : cast binding.versionLabel();
+		return binding == null ? "unknown" : cast binding.getVersionLabel();
 	}
 
 	public static function versionNumber():Int {
-		return binding == null ? 0 : cast binding.versionNumber();
+		return binding == null ? 0 : cast binding.getVersionNumber();
 	}
 
 	public static function versionString():String {
-		return binding == null ? "0.0.0-unknown" : cast binding.versionString();
+		return binding == null ? "0.0.0-unknown" : cast binding.getVersionString();
 	}
 
 	static function compareVersion():Int {
@@ -380,12 +379,12 @@ class RLImpl {
 			binding.drawFPSEx(font, x, y, fontSize, color);
 	}
 
-	public static function setAssetHost(assetHost:String):Int {
-		return binding == null ? -1 : cast binding.setAssetHost(assetHost);
+	public static function fileioSetAssetHost(assetHost:String):Int {
+		return binding == null ? -1 : cast binding.fileioSetAssetHost(assetHost);
 	}
 
-	public static function getAssetHost():String {
-		return binding == null ? "" : cast binding.getAssetHost();
+	public static function fileioGetAssetHost():String {
+		return binding == null ? "" : cast binding.fileioGetAssetHost();
 	}
 
 	public static function musicCreate(filename:String):RLHandle
@@ -574,14 +573,14 @@ class RLImpl {
 	}
 
 	public static function modelGetDefaultAsset():RLHandle
-		return binding == null ? 0 : cast binding.modelGetDefaultAsset();
+		return binding == null ? 0 : cast binding.getDefaultModelAsset();
 
 	public static function modelLoadAsset(filename:String):RLHandle
-		return binding == null ? 0 : cast binding.modelLoadAsset(filename);
+		return binding == null ? 0 : cast binding.loadModelAsset(filename);
 
 	public static function modelDestroyAsset(asset:RLHandle):Void {
 		if (binding != null)
-			binding.modelDestroyAsset(asset);
+			binding.destroyModelAsset(asset);
 	}
 
 	public static function modelCreate(asset:RLHandle):RLHandle
@@ -591,12 +590,12 @@ class RLImpl {
 		return binding == null ? 0 : cast binding.createModelFromFile(filename);
 
 	public static function modelSetAsset(model:RLHandle, asset:RLHandle):Bool
-		return binding != null && cast binding.modelSetAsset(model, asset);
+		return binding != null && cast binding.setModelAsset(model, asset);
 
 	public static function modelSetTransform(model:RLHandle, positionX:Float, positionY:Float, positionZ:Float, rotationX:Float, rotationY:Float,
 			rotationZ:Float, scaleX:Float, scaleY:Float, scaleZ:Float):Bool
 		return binding != null
-			&& cast binding.modelSetTransform(model, positionX, positionY, positionZ, rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ);
+			&& cast binding.setModelTransform(model, positionX, positionY, positionZ, rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ);
 
 	public static function modelDraw(model:RLHandle, tint:RLHandle = 0):Void {
 		if (binding != null)
@@ -604,27 +603,24 @@ class RLImpl {
 	}
 
 	public static function modelSetAnimation(model:RLHandle, animationIndex:Int):Bool
-		return binding != null && cast binding.modelSetAnimation(model, animationIndex);
+		return binding != null && cast binding.setModelAnimation(model, animationIndex);
 
 	public static function modelSetAnimationSpeed(model:RLHandle, speed:Float):Bool
-		return binding != null && cast binding.modelSetAnimationSpeed(model, speed);
+		return binding != null && cast binding.setModelAnimationSpeed(model, speed);
 
 	public static function modelSetAnimationLoop(model:RLHandle, shouldLoop:Bool):Bool
-		return binding != null && cast binding.modelSetAnimationLoop(model, shouldLoop);
+		return binding != null && cast binding.setModelAnimationLoop(model, shouldLoop);
 
 	public static function modelSetTint(model:RLHandle, color:RLHandle):Bool
-		return binding != null && cast binding.modelSetTint(model, color);
+		return binding != null && cast binding.setModelTint(model, color);
 
 	public static function modelAnimate(model:RLHandle, deltaSeconds:Float):Bool
-		return binding != null && cast binding.modelAnimate(model, deltaSeconds);
+		return binding != null && cast binding.animateModel(model, deltaSeconds);
 
 	public static function modelDestroy(model:RLHandle):Void {
 		if (binding != null)
 			binding.destroyModel(model);
 	}
-
-	public static function sprite3dGetDefaultTexture():RLHandle
-		return binding == null ? 0 : cast binding.sprite3dGetDefaultTexture();
 
 	public static function sprite3dCreate(texture:RLHandle):RLHandle
 		return binding == null ? 0 : cast binding.createSprite3d(texture);
@@ -633,13 +629,13 @@ class RLImpl {
 		return binding == null ? 0 : cast binding.createSprite3dFromFile(filename);
 
 	public static function sprite3dSetTexture(sprite:RLHandle, texture:RLHandle):Bool
-		return binding != null && cast binding.sprite3dSetTexture(sprite, texture);
+		return binding != null && cast binding.setSprite3dTexture(sprite, texture);
 
 	public static function sprite3dSetTransform(sprite:RLHandle, positionX:Float, positionY:Float, positionZ:Float, size:Float):Bool
-		return binding != null && cast binding.sprite3dSetTransform(sprite, positionX, positionY, positionZ, size);
+		return binding != null && cast binding.setSprite3dTransform(sprite, positionX, positionY, positionZ, size);
 
 	public static function sprite3dSetTint(sprite:RLHandle, color:RLHandle = 0):Bool
-		return binding != null && cast binding.sprite3dSetTint(sprite, color);
+		return binding != null && cast binding.setSprite3dTint(sprite, color);
 
 	public static function sprite3dDraw(sprite:RLHandle, tint:RLHandle = 0):Void {
 		if (binding != null)
@@ -651,70 +647,67 @@ class RLImpl {
 			binding.destroySprite3d(sprite);
 	}
 
-	public static function sprite2dGetDefaultTexture():RLHandle
-		return binding == null ? 0 : cast binding.sprite2dGetDefaultTexture();
-
 	public static function sprite2dCreate(texture:RLHandle):RLHandle
-		return binding == null ? 0 : cast binding.createSprite2D(texture);
+		return binding == null ? 0 : cast binding.createSprite2d(texture);
 
 	public static function sprite2dCreateFromFile(filename:String):RLHandle
-		return binding == null ? 0 : cast binding.createSprite2DFromFile(filename);
+		return binding == null ? 0 : cast binding.createSprite2dFromFile(filename);
 
 	public static function sprite2dSetTexture(sprite:RLHandle, texture:RLHandle):Bool
-		return binding != null && cast binding.sprite2DSetTexture(sprite, texture);
+		return binding != null && cast binding.setSprite2dTexture(sprite, texture);
 
 	public static function sprite2dSetTransform(sprite:RLHandle, x:Float, y:Float, scale:Float, rotation:Float):Bool
-		return binding != null && cast binding.sprite2DSetTransform(sprite, x, y, scale, rotation);
+		return binding != null && cast binding.setSprite2dTransform(sprite, x, y, scale, rotation);
 
 	public static function sprite2dSetTint(sprite:RLHandle, color:RLHandle = 0):Bool
-		return binding != null && cast binding.sprite2DSetTint(sprite, color);
+		return binding != null && cast binding.setSprite2dTint(sprite, color);
 
 	public static function sprite2dDraw(sprite:RLHandle, tint:RLHandle = 0):Void {
 		if (binding != null)
-			binding.drawSprite2D(sprite, tint);
+			binding.drawSprite2d(sprite, tint);
 	}
 
 	public static function sprite2dDestroy(sprite:RLHandle):Void {
 		if (binding != null)
-			binding.destroySprite2D(sprite);
+			binding.destroySprite2d(sprite);
 	}
 
 	public static function text2dCreate(font:RLHandle, size:Float):RLHandle
-		return binding == null ? 0 : cast binding.createText2D(font, size);
+		return binding == null ? 0 : cast binding.createText2d(font, size);
 
 	public static function text2dSetFont(handle:RLHandle, font:RLHandle):Void {
 		if (binding != null)
-			binding.text2DSetFont(handle, font);
+			binding.setText2dFont(handle, font);
 	}
 
 	public static function text2dSetSize(handle:RLHandle, size:Float):Void {
 		if (binding != null)
-			binding.text2DSetSize(handle, size);
+			binding.setText2dSize(handle, size);
 	}
 
 	public static function text2dSetContent(handle:RLHandle, content:String):Void {
 		if (binding != null)
-			binding.text2DSetContent(handle, content);
+			binding.setText2dContent(handle, content);
 	}
 
 	public static function text2dSetPosition(handle:RLHandle, x:Float, y:Float):Void {
 		if (binding != null)
-			binding.text2DSetPosition(handle, x, y);
+			binding.setText2dPosition(handle, x, y);
 	}
 
 	public static function text2dSetColor(handle:RLHandle, color:RLHandle):Void {
 		if (binding != null)
-			binding.text2DSetColor(handle, color);
+			binding.setText2dColor(handle, color);
 	}
 
 	public static function text2dDraw(handle:RLHandle):Void {
 		if (binding != null)
-			binding.drawText2D(handle);
+			binding.drawText2d(handle);
 	}
 
 	public static function text2dDestroy(handle:RLHandle):Void {
 		if (binding != null)
-			binding.destroyText2D(handle);
+			binding.destroyText2d(handle);
 	}
 
 	public static function textureCreate(filename:String):RLHandle
@@ -768,16 +761,16 @@ class RLImpl {
 	}
 
 	public static function pickGetBroadphaseTests():Int
-		return binding == null ? 0 : cast binding.getPickStats().broadphaseTests;
+		return binding == null ? 0 : cast binding.helpers.getPickStats().broadphaseTests;
 
 	public static function pickGetBroadphaseRejects():Int
-		return binding == null ? 0 : cast binding.getPickStats().broadphaseRejects;
+		return binding == null ? 0 : cast binding.helpers.getPickStats().broadphaseRejects;
 
 	public static function pickGetNarrowphaseTests():Int
-		return binding == null ? 0 : cast binding.getPickStats().narrowphaseTests;
+		return binding == null ? 0 : cast binding.helpers.getPickStats().narrowphaseTests;
 
 	public static function pickGetNarrowphaseHits():Int
-		return binding == null ? 0 : cast binding.getPickStats().narrowphaseHits;
+		return binding == null ? 0 : cast binding.helpers.getPickStats().narrowphaseHits;
 
 	@async
 	public static function fileioInit(?baseDir:String):Promise<Int> {
@@ -821,7 +814,7 @@ class RLImpl {
 		if (binding == null) {
 			return Promise.resolve(-1);
 		}
-		return cast binding.ensure(localPath, src);
+		return cast binding.fileioEnsure(localPath, src);
 	}
 
 	public static function fileioEnsureGroupAsync(filenames:Array<String>):RLHandle

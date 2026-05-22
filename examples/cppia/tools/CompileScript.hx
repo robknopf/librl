@@ -27,7 +27,7 @@ class CompileScript {
 	static var sysArgs = Sys.args();
 	static var scriptClassName = (sysArgs.length > 0) ? sysArgs[sysArgs.length - 1] : "";
 	static var verbosity:Verbosity = Verbosity.Silent; // HXCPP_SILENT, HXCPP_VERBOSE, HXCPP_QUIET
-	static var buildMode:BuildMode = Debug;
+	static var buildMode:BuildMode = Release; // this will change if "--debug" is provided in the sys args
 	static var scriptsDir = joinPath(librlRoot, "examples", "www", "public", "assets", "scripts", "haxe");
 	static var srcDir = joinPath(projectRoot, "src");
 	static var bindingsDir = joinPath(librlRoot, "bindings", "haxe");
@@ -139,10 +139,14 @@ class CompileScript {
 		var buildStartTime:Float = 0;
 		var buildEndTime:Float = 0;
 
+		// set verbosity if it was provided as a sys arg
+		// TODO: add a helper to get the verbosity level from the args
+
+
+		// if "--debug" was provided as an argument, set the buildMode
+		// note that we don't set buildMode to release in an else clause, allowing --debug to be an override of the default
 		if (hasDebugFlag(sysArgs)) {
 			buildMode = Debug;
-		} else {
-			buildMode = Release;
 		}
 
 		if (scriptClassName == null) {

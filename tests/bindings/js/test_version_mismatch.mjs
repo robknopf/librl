@@ -3,10 +3,8 @@
  * Version policy via RL.boot(): major/minor mismatch → BOOT_ERR_VERSION_MISMATCH;
  * patch drift → BOOT_OK.
  *
- * Driver mode patches bindings/js/gen/rl_version.js and spawns a fresh Node worker
+ * Driver mode patches bindings/js/gen/rl_version.ts, rebundles, and spawns
  * per case (ESM caches static imports within a process). Restores gen on exit.
- *
- * Worker mode: `node test_version_mismatch.mjs --worker <mismatch|ok>`
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -14,9 +12,9 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../../..', import.meta.url));
-const genPath = path.join(root, 'bindings/js/gen/rl_version.js');
+const genTsPath = path.join(root, 'bindings/js/gen/rl_version.ts');
 const librlJs = path.join(root, 'lib/librl.js');
-const bindingsRlBase = path.join(root, 'bindings/js/rl.js');
+const bindingsRlBase = path.join(root, 'bindings/js/dist/rl.js');
 const selfPath = fileURLToPath(import.meta.url);
 
 function assertJspi() {
@@ -25,9 +23,19 @@ function assertJspi() {
     }
 }
 
+function bundleBinding() {
+    const result = spawnSync('npm', ['run', 'bundle', '--prefix', 'bindings/js'], {
+        cwd: root,
+        stdio: 'inherit',
+    });
+    if (result.status !== 0) {
+        throw new Error('failed to bundle bindings/js');
+    }
+}
+
 function writeGen(major, minor, patch) {
     fs.writeFileSync(
-        genPath,
+        genTsPath,
         `/* GENERATED — DO NOT EDIT (test override) */
 export const RL_BINDING_BUILT_MAJOR = ${major};
 export const RL_BINDING_BUILT_MINOR = ${minor};
@@ -36,6 +44,7 @@ export const RL_BINDING_BUILT_VERSION_STRING = "${major}.${minor}.${patch}";
 `,
         'utf8',
     );
+    bundleBinding();
 }
 
 async function workerMain(mode) {
@@ -83,8 +92,8 @@ function expectBootOk(label, major, minor, patch) {
 }
 
 async function driverMain() {
-    if (!fs.existsSync(genPath)) {
-        console.error(`test_version_mismatch: missing ${genPath} (run make binding-version)`);
+    if (!fs.existsSync(genTsPath)) {
+        console.error(`test_version_mismatch: missing ${genTsPath} (run make binding-version)`);
         process.exit(1);
     }
 
@@ -95,14 +104,15 @@ async function driverMain() {
 
     assertJspi();
 
-    const originalGen = fs.readFileSync(genPath, 'utf8');
+    const originalGen = fs.readFileSync(genTsPath, 'utf8');
 
     try {
         expectVersionMismatch('major mismatch (9.0.1 vs runtime)', 9, 0, 1);
         expectVersionMismatch('minor mismatch (0.9.1 vs runtime)', 0, 9, 1);
         expectBootOk('patch drift (0.0.9 vs runtime)', 0, 0, 9);
     } finally {
-        fs.writeFileSync(genPath, originalGen, 'utf8');
+        fs.writeFileSync(genTsPath, originalGen, 'utf8');
+        bundleBinding();
     }
 }
 

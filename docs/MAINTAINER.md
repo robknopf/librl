@@ -182,7 +182,7 @@ Approximate sizes for the example builds (release/optimized, no debug symbols). 
 
 ## Web/Vite Workflow Notes
 
-- Web examples use `/bindings/js/rl.js` as the JS binding entrypoint, which instantiates the raw `/lib/librl.js` runtime. If `make clean` removes generated outputs while Vite is running, browser requests can fail until rebuild completes.
+- Web examples use `/bindings/js/dist/rl.js` as the JS binding entrypoint, which instantiates the raw `/lib/librl.js` runtime. If `make clean` removes generated outputs while Vite is running, browser requests can fail until rebuild completes.
 - Vite may not always recover automatically from a missing generated entry file (`main.js`/bundled artifacts) without a new file-change trigger.
 - Practical flow:
   1. Rebuild wasm/js outputs (`make wasm` or target-specific make).
@@ -320,7 +320,7 @@ Approximate sizes for the example builds (release/optimized, no debug symbols). 
 - Seeing NPOT warning (`limited NPOT support`) usually indicates WebGL1 constraints or non-mipmap/non-repeat constraints for NPOT textures.
 - Duplicate/buried wasm flags can happen between root, examples, tests, and deps makefiles; prefer a single shared variable per makefile where possible.
 - Binding changes should be reflected in:
-  - `bindings/js/rl.js`
+  - `bindings/js/dist/rl.js`
   - `bindings/nim/rl.nim`
   - `docs/API.md`
 - After C API or binding surface changes, run `python3 tools/audit_binding_parity.py` and update `docs/ROADMAP.md` gap table if needed.
@@ -344,7 +344,7 @@ Python helpers under `tools/` — use these instead of hand-editing generated bi
 |--------|-------------|---------|
 | `tools/audit_binding_parity.py` | — | Compare `docs/API.md` C functions to JS/Haxe/Nim/Lua public surfaces; prints gap table and ROADMAP-ready markdown. **Run after binding or API changes.** |
 | `tools/gen_binding_versions.py` | `make binding-version` | Regenerate version stamps in `bindings/*/gen/` from `include/rl_version.h`. Runs automatically with `make desktop` / `wasm` / `shared`. |
-| `tools/gen_librl_dts.py` | `make binding-types` | Regenerate `types/librl.d.ts` from `bindings/js/rl.js`. Do not hand-edit `.d.ts`. Runs automatically with desktop/wasm/shared builds. Tight signatures: edit `SIGNATURE_OVERRIDES` in the generator. |
+| `npm run build --prefix bindings/js` | `make binding-types` | esbuild bundle of `src/rl.ts` → `dist/rl.js`; `tsc` emits `dist/rl.d.ts` from `src/types.ts`. |
 | `tools/gen_haxe_public_sections.py` | — | Regenerate Haxe section façade files (`bindings/haxe/rl/Fs.hx`, `Asset.hx`, …) from the `SECTIONS` map. Run after adding RLImpl methods; then review/commit generated output. |
 | `tools/find_node_jspi.py` | — | Locate Node ≥25 with JSPI for wasm tests; used by `tests/Makefile` when `NODE` is unset. |
 

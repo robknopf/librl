@@ -1,0 +1,24 @@
+{
+  "name": "librl-js-binding",
+  "private": true,
+  "type": "module",
+  "types": "./dist/rl.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/rl.d.ts",
+      "default": "./dist/rl.js"
+    }
+  },
+  "scripts": {
+    "check": "tsc -p tsconfig.json --noEmit",
+    "clean": "rm -rf dist",
+    "bundle": "npm run clean && mkdir -p dist && esbuild src/rl.ts --bundle --format=esm --platform=browser --target=es2022 --outfile=dist/rl.js --banner:js=\"/* GENERATED from bindings/js/src — do not edit */\"",
+    "bundle:min": "npm run bundle -- --minify",
+    "types": "tsc -p tsconfig.decl.json && node finalize-rl-dts.mjs",
+    "build": "npm run check && npm run bundle && npm run types"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.0",
+    "typescript": "^6.0.3"
+  }
+}

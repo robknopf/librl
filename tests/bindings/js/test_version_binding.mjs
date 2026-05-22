@@ -4,17 +4,17 @@
  */
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import {
+
+const root = fileURLToPath(new URL('../../..', import.meta.url));
+const bindingsRl = path.join(root, 'bindings/js/dist/rl.js');
+const librlJs = path.join(root, 'lib/librl.js');
+
+const {
+    rl: RL,
     RL_BINDING_BUILT_MAJOR,
     RL_BINDING_BUILT_MINOR,
     RL_BINDING_BUILT_PATCH,
-} from '../../../bindings/js/gen/rl_version.js';
-
-const root = fileURLToPath(new URL('../../..', import.meta.url));
-const bindingsRl = path.join(root, 'bindings/js/rl.js');
-const librlJs = path.join(root, 'lib/librl.js');
-
-const { rl: RL } = await import(bindingsRl);
+} = await import(bindingsRl);
 
 await RL.boot({
     modulePath: librlJs,

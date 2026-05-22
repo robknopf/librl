@@ -115,7 +115,7 @@ class RLImpl {
 		}
 
 		var bootOptions = buildBootOptions(config);
-		var bindingsPath = maybeCacheBustBindingsPath(optionString(bootOptions, "bindingsPath", "/bindings/js/rl.js"));
+		var bindingsPath = maybeCacheBustBindingsPath(optionString(bootOptions, "bindingsPath", "/bindings/js/dist/rl.js"));
 
 		bootPromise = cast js.Syntax.code("(async () => {
         try {

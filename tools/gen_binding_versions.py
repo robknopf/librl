@@ -68,7 +68,7 @@ def write_lua_header(path: Path, major: int, minor: int, patch: int) -> None:
     path.write_text(body, encoding="utf-8", newline="\n")
 
 
-def write_js_module(path: Path, major: int, minor: int, patch: int) -> None:
+def write_ts_module(path: Path, major: int, minor: int, patch: int) -> None:
     version = version_core(major, minor, patch)
     body = f"""{c_block_comment("include/rl_version.h")}
 
@@ -117,7 +117,7 @@ def generate(root: Path) -> tuple[int, int, int]:
 
     outputs = {
         root / "bindings/lua/gen/rl_lua_version.h": write_lua_header,
-        root / "bindings/js/gen/rl_version.js": write_js_module,
+        root / "bindings/js/gen/rl_version.ts": write_ts_module,
         root / "bindings/nim/gen/rl_version.nim": write_nim_module,
         root / "bindings/haxe/rl/gen/RLVersion.hx": write_haxe_module,
     }

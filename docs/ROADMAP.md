@@ -27,7 +27,6 @@ Committed near-term work — pick up when Now is clear.
 - API/docs sync:
   - keep examples current as APIs change
   - keep `README.md`, `docs/API.md`, `docs/BINDINGS.md`, and `docs/MAINTAINER.md` aligned when the Lua/module surface changes
-  - expand `tools/gen_librl_dts.py` `SIGNATURE_OVERRIDES` for model/sprite/camera methods (most still emit generic `unknown` signatures)
 - Naming convention cleanup (remaining):
   - rename `async/wg_*` to drop the `wg_` prefix (align with `websocket_`, `fetch_url_`)
   - optional: verb-first pass on `debug*` / `logger*` (currently kept section-first as module namespaces)
@@ -206,6 +205,7 @@ Deferred until scripting strategy settles (see **Research → Scripting backend 
 Changelog — trim periodically.
 
 - Binding parity complete (2025-05): all bindings 172/172; `tools/audit_binding_parity.py`; Nim `rl_asset.h` FFI imports + string wrappers; `rl_fs_read*`, `rl_fs_normalize_path`, sprite default-texture/get-transform on Nim + Lua
+- JS binding TypeScript source (2025-05): `bindings/js/src/rl.ts` + `types.ts`; `bindings/js/package.json` scripts (esbuild bundle + `tsc` declarations) emit `dist/rl.js` and `dist/rl.d.ts`; retired `tools/gen_librl_dts.py`
 - C init ABI flattening (2025-05): public init is `rl_init_values` / `rl_init_values_async`; removed struct-based `rl_init*` and `rl_config.h`
 - JS init flattening (2025-05): `RL.init()` calls `rl_init_values`; struct marshaling removed from `bindings/js/rl.js`
 - Docs consolidation (2025-05):
@@ -220,7 +220,7 @@ Changelog — trim periodically.
   - Haxe/Nim/Lua keep section-first public names; Haxe/Nim JS bridges map to JS verb-first at the boundary
   - default handles: getters only; removed binding-level `FONT_DEFAULT` / `CAMERA3D_DEFAULT` and sprite default-texture helpers
   - `text2d` lowercase-`d` casing aligned across JS, examples, and generated types
-  - auto-generated `types/librl.d.ts` via `tools/gen_librl_dts.py` + `make binding-types`
+  - auto-generated `bindings/js/dist/rl.d.ts` via `bindings/js/src/types.ts` + `npm run build --prefix bindings/js` + `make binding-types`
   - wasm scratch bridge table in `docs/BINDINGS.md`
 - Sprite2D module:
   - C implementation with handle pool, split transform/draw pattern

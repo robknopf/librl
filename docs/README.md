@@ -9,4 +9,4 @@
 
 Repo root [AGENTS.md](../AGENTS.md) defines the agent/editor contract (binding parity, API docs, commit policy).
 
-**Binding tooling:** `tools/audit_binding_parity.py`, `tools/gen_binding_versions.py`, `tools/gen_librl_dts.py`, `tools/gen_haxe_public_sections.py` — see [MAINTAINER.md](MAINTAINER.md) § Tools (Python-first policy).
+**Binding tooling:** `tools/audit_binding_parity.py`, `tools/gen_binding_versions.py`, `bindings/js/package.json` (`npm run build`), `tools/gen_haxe_public_sections.py` — see [MAINTAINER.md](MAINTAINER.md) § Tools (Python-first policy for repo tooling; JS binding build uses npm scripts in `bindings/js/`).

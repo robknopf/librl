@@ -140,7 +140,7 @@ when defined(js):
 
   proc rl_boot_js_load*(config = RLBootConfig()): Future[int] =
     ## Load bindings/js/rl.js, call rl.boot(), patch color constants.
-    let bindingsPath = (if config.bindingsPath.len > 0: config.bindingsPath else: "/bindings/js/rl.js").cstring
+    let bindingsPath = (if config.bindingsPath.len > 0: config.bindingsPath else: "/bindings/js/dist/rl.js").cstring
     let canvasId = config.canvasId.cstring
     let modulePath = config.modulePath.cstring
     let wasmPath = config.wasmPath.cstring

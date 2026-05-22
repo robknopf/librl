@@ -1,4 +1,4 @@
-import { rl } from "../../bindings/js/rl.js";
+import { rl } from "../../bindings/js/dist/rl.js";
 
 (async function () {
   try {

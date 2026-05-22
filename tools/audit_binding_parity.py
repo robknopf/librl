@@ -99,12 +99,16 @@ def parse_c_api_from_api_md() -> tuple[list[str], list[str]]:
 
 
 def parse_js_bindings() -> set[str]:
-    text = (ROOT / "bindings/js/rl.js").read_text(encoding="utf-8")
+    text = (ROOT / "bindings/js/src/rl.ts").read_text(encoding="utf-8")
     found: set[str] = set()
-    for m in re.finditer(r"""ccall\(\s*['"]rl_[a-z0-9_]+['"]""", text):
-        sym = re.search(r"rl_[a-z0-9_]+", m.group(0))
-        if sym:
-            found.add(sym.group(0))
+    for pattern in (
+        r"""ccall\(\s*['"]rl_[a-z0-9_]+['"]""",
+        r"""cc(?:Num|Str|Handle)\(\s*['"]rl_[a-z0-9_]+['"]""",
+    ):
+        for m in re.finditer(pattern, text):
+            sym = re.search(r"rl_[a-z0-9_]+", m.group(0))
+            if sym:
+                found.add(sym.group(0))
 
     covered: set[str] = set()
     for sym in found:
@@ -248,7 +252,7 @@ def render_roadmap_block(audited: list[str], gaps: list[dict]) -> str:
         "|---------|--------:|-----:|",
     ]
     for key, label in (
-        ("js", "JS (`bindings/js/rl.js`)"),
+        ("js", "JS (`bindings/js/src/rl.ts`)"),
         ("haxe", "Haxe (`bindings/haxe/rl/*`)"),
         ("nim", "Nim (`bindings/nim/`)"),
         ("lua", "Lua (`bindings/lua/`)"),

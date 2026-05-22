@@ -16,10 +16,10 @@
   - Do not add aliases or backward-compatibility shims unless explicitly requested.
 - When creating or updating bindings, keep non-C-API files (helpers, wrappers, ergonomics layers) separate from direct C-API binding files.
 - If a binding intentionally does not expose an API, document that decision in `docs/BINDINGS.md`.
-- When changing the JS binding (`bindings/js/rl.js`), run `make binding-types` in the same pass to regenerate `types/librl.d.ts` (also runs automatically with `make wasm`, `make desktop`, and `make shared`). Do not edit `types/librl.d.ts` by hand.
+- When changing the JS binding (`bindings/js/src/rl.ts`), run `make binding-types` in the same pass to regenerate `bindings/js/dist/rl.js` and `bindings/js/dist/rl.d.ts` (also runs automatically with `make wasm`, `make desktop`, and `make shared`). Do not edit generated files under `bindings/js/dist/` by hand.
 - **Binding tooling:** after C API or binding changes, run `python3 tools/audit_binding_parity.py` and update the gap table in `docs/ROADMAP.md`. Generators and workflow: `docs/MAINTAINER.md` § Tools. Prefer **Python 3** for new repo tooling under `tools/` (not shell); invoke via `python3 tools/foo.py`.
 - **Init API:** public binding surfaces expose only `init(config)` and `initAsync(config)` with native config types. Do not expose `rl_init_values` / `rl_init_values_async` (or positional `initValues*` wrappers) on binding public APIs — bindings flatten config and call those C helpers internally. See `docs/BINDINGS.md` init contract.
-- **Scratch / SAB bridge (JS/wasm only):** do not expose `rl_scratch_refresh`, `*_to_scratch`, `*_from_scratch`, or other scratch-only wasm bridge symbols on **Haxe, Lua, or Nim** public surfaces. JavaScript (`bindings/js/rl.js`) owns the scratch area and maps bridges to normal methods (`refreshScratch()`, `getScreenSize()`, `pickModel()`, …). Desktop Haxe/Lua/Nim use direct C struct returns where available; wasm Haxe/Nim rely on `tick()` forwarding to the JS binding (which calls `refreshScratch()` internally). If a symbol looks “missing” during parity review, check for commented-out stubs with rationale in binding sources before re-adding. See `docs/BINDINGS.md` (wasm scratch bridge table).
+- **Scratch / SAB bridge (JS/wasm only):** do not expose `rl_scratch_refresh`, `*_to_scratch`, `*_from_scratch`, or other scratch-only wasm bridge symbols on **Haxe, Lua, or Nim** public surfaces. JavaScript (`bindings/js/dist/rl.js`) owns the scratch area and maps bridges to normal methods (`refreshScratch()`, `getScreenSize()`, `pickModel()`, …). Desktop Haxe/Lua/Nim use direct C struct returns where available; wasm Haxe/Nim rely on `tick()` forwarding to the JS binding (which calls `refreshScratch()` internally). If a symbol looks “missing” during parity review, check for commented-out stubs with rationale in binding sources before re-adding. See `docs/BINDINGS.md` (wasm scratch bridge table).
 
 ## Binding Naming Policy
 
@@ -27,7 +27,7 @@ Bindings mirror C API shape and intent, but use idiomatic naming per target. C i
 
 | Binding | Style | Examples |
 |---------|-------|----------|
-| **JavaScript** (`bindings/js/rl.js`) | Nested namespaces per C header; verb-first for handle/instance methods | `RL.fs.init`, `RL.asset.setHost`, `RL.asset.ensure`, `setText2dFont`, `getVersionMajor` |
+| **JavaScript** (`bindings/js/src/rl.ts` → `rl.js`) | Nested namespaces per C header; verb-first for handle/instance methods | `RL.fs.init`, `RL.asset.setHost`, `RL.asset.ensure`, `setText2dFont`, `getVersionMajor` |
 | **Haxe** (`bindings/haxe/rl/RL.hx`) | Section-first lowerCamelCase | `fsInit`, `assetEnsure`, `text2dSetFont`, `versionMajor` |
 | **Nim** | snake_case aligned with C | `rl_fs_init`, `rl_asset_ensure`, `assetCreateTaskGroup` |
 | **Lua** | lower snake_case aligned with C | `fs_init`, `asset_ensure`, `text2d_set_font` |
@@ -73,7 +73,7 @@ When adding new procs to any binding, always check: would a user need to write `
 ## Commit Workflow
 
 - Before any commits, update relevant documentation (`docs/*`, API notes, and binding docs) to match behavior and API changes in the commit.
-- After renaming or adding JS binding methods/constants in `bindings/js/rl.js`, run `make binding-types` (or `make wasm` / `make desktop`) in the same pass and include the regenerated `types/librl.d.ts` in the commit. Do not hand-edit `types/librl.d.ts`.
+- After renaming or adding JS binding methods/constants in `bindings/js/src/rl.ts` (and `types.ts` when signatures change), run `make binding-types` (or `make wasm` / `make desktop`) in the same pass and include the regenerated `bindings/js/dist/rl.d.ts` in the commit when that artifact is tracked.
 
 ## Testing
 

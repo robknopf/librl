@@ -3,62 +3,135 @@ import {
     RL_BINDING_BUILT_MINOR,
     RL_BINDING_BUILT_PATCH,
     RL_BINDING_BUILT_VERSION_STRING,
-} from './gen/rl_version.js';
+} from '../gen/rl_version.js';
+import type { EmscriptenFactory, EmscriptenModule } from './emscripten.js';
+import type { ScratchAreaOffsets } from './scratch.js';
+import type {
+    RLApi,
+    RLAsset,
+    RLCamera3d,
+    RLColor,
+    RLDebug,
+    RLEvent,
+    RLFont,
+    RLFs,
+    RLKeyboardState,
+    RLGamepadState,
+    RLTouchpoint,
+    RLAssetTaskCallback,
+    RLHelpers,
+    RLInitOptions,
+    RLInput,
+    RLLogger,
+    RLModel,
+    RLMusic,
+    RLPick,
+    RLRender,
+    RLShape,
+    RLSound,
+    RLSprite2d,
+    RLSprite3d,
+    RLTaskGroup,
+    RLTaskGroupCallback,
+    RLTaskGroupTaskCallback,
+    RLText,
+    RLText2d,
+    RLTexture,
+    RLWindow,
+    RLHandle,
+} from './types.js';
 
-var moduleInstance;
-var moduleFactoryPromise = null;
-var moduleFactoryPath = "";
-var moduleOptions = {};
-var scratchAreaPtr = 0;
-var scratchAreaBytePtr = 0;
-var scratchAreaOffsets = {};
+export type * from './types.js';
 
-const RL = {
-    _eventDispatchPtr: 0,
-    _nextEventListenerId: 1,
-    _eventListenersById: new Map(),
-    _eventListenerIdsByCallback: new WeakMap(),
-    TICK_RUNNING: 0,
-    TICK_WAITING: 1,
-    TICK_FAILED: -1,
-    _dispatchEventFromWasm: (payload, userData) => {
-        const listener = RL._eventListenersById.get(userData >>> 0);
+export {
+    RL_BINDING_BUILT_MAJOR,
+    RL_BINDING_BUILT_MINOR,
+    RL_BINDING_BUILT_PATCH,
+    RL_BINDING_BUILT_VERSION_STRING,
+} from '../gen/rl_version.js';
+
+let moduleInstance: EmscriptenModule | undefined;
+let moduleFactoryPromise: Promise<EmscriptenFactory> | null = null;
+let moduleFactoryPath = "";
+let moduleOptions: RLInitOptions = {};
+let scratchAreaPtr = 0;
+let scratchAreaBytePtr = 0;
+let scratchAreaOffsets = {} as ScratchAreaOffsets;
+
+const BOOT_OK = 0;
+const BOOT_ERR_UNKNOWN = -10;
+const BOOT_ERR_LOADER = -11;
+const BOOT_ERR_VERSION_MISMATCH = -12;
+
+function reqModule(): EmscriptenModule {
+    if (!moduleInstance) {
+        throw new Error("RL module not initialized");
+    }
+    return moduleInstance;
+}
+
+function ccNum(
+    name: string,
+    argTypes: string[] = [],
+    args: unknown[] = [],
+    opts?: { async?: boolean },
+): number {
+    return reqModule().ccall(name, "number", argTypes, args, opts) as number;
+}
+
+function ccStr(name: string, argTypes: string[] = [], args: unknown[] = []): string {
+    return reqModule().ccall(name, "string", argTypes, args) as string;
+}
+
+function ccHandle(name: string, argTypes: string[] = [], args: unknown[] = []): RLHandle {
+    return ccNum(name, argTypes, args);
+}
+
+let eventDispatchPtr = 0;
+let nextEventListenerId = 1;
+let eventListenersById = new Map();
+let eventListenerIdsByCallback = new WeakMap();
+const dispatchEventFromWasm = (payload: number, userData: number) => {
+        const listener = eventListenersById.get(userData >>> 0);
         if (!listener || typeof listener.callback !== "function") {
             return;
         }
         listener.callback(payload >>> 0);
-    },
-    _ensureEventDispatchPtr: () => {
-        if (!moduleInstance || RL._eventDispatchPtr !== 0) {
+    };
+const ensureEventDispatchPtr = () => {
+        if (!moduleInstance || eventDispatchPtr !== 0) {
             return;
         }
-        RL._eventDispatchPtr = moduleInstance.addFunction(RL._dispatchEventFromWasm, "vii");
-    },
-    _forgetListenerById: (listenerId) => {
-        const listener = RL._eventListenersById.get(listenerId);
+        eventDispatchPtr = moduleInstance.addFunction(
+            dispatchEventFromWasm as (...args: unknown[]) => unknown,
+            "vii",
+        );
+    };
+const forgetListenerById = (listenerId: number) => {
+        const listener = eventListenersById.get(listenerId);
         let callbackMap = null;
         if (!listener) {
             return;
         }
-        callbackMap = RL._eventListenerIdsByCallback.get(listener.callback);
+        callbackMap = eventListenerIdsByCallback.get(listener.callback);
         if (callbackMap) {
             callbackMap.delete(listener.eventName);
         }
-        RL._eventListenersById.delete(listenerId);
-    },
-    _clearListenerCacheForEvent: (eventName) => {
-        const idsToDelete = [];
-        RL._eventListenersById.forEach((listener, id) => {
+        eventListenersById.delete(listenerId);
+    };
+const clearListenerCacheForEvent = (eventName: string) => {
+        const idsToDelete: number[] = [];
+        eventListenersById.forEach((listener, id) => {
             if (listener && listener.eventName === eventName) {
                 idsToDelete.push(id);
             }
         });
-        idsToDelete.forEach((id) => RL._forgetListenerById(id));
-    },
-    _clearRunCallbacks: () => {
+        idsToDelete.forEach((id) => forgetListenerById(id));
+    };
+const clearRunCallbacks = () => {
         /* Reserved for symmetry with deinit; run/start/stop removed from librl. */
-    },
-    _installScratchHelpers: () => {
+    };
+const installScratchHelpers = () => {
         const Module = moduleInstance;
         if (!Module) {
             return;
@@ -66,9 +139,9 @@ const RL = {
 
         Module.initScratchArea = () => {
             const HEAP32 = Module.HEAP32;
-            scratchAreaBytePtr = Module.ccall("rl_scratch_get_base", "number", [], []);
+            scratchAreaBytePtr = Module.ccall("rl_scratch_get_base", "number", [], []) as number;
             scratchAreaPtr = scratchAreaBytePtr >> 2;
-            const scratchAreaOffsetsPtr = Module.ccall("rl_scratch_get_offsets", "number", [], []) >> 2;
+            const scratchAreaOffsetsPtr = (Module.ccall("rl_scratch_get_offsets", "number", [], []) as number) >> 2;
 
             scratchAreaOffsets = {
                 vector2: HEAP32[scratchAreaOffsetsPtr],
@@ -322,19 +395,19 @@ const RL = {
 
             for (let i = 0; i < values.length; i++) {
                 const text = String(values[i] ?? "");
-                const encodedLength = Module.lengthBytesUTF8(text) + 1;
+                const encodedLength = (Module.lengthBytesUTF8?.(text) ?? (text.length * 4 + 1)) + 1;
                 if (byteOffset + encodedLength > maxBytes) {
                     throw new Error(`scratch string bytes overflow at index ${i}`);
                 }
                 HEAPU32[offsetsIndex + i] = byteOffset >>> 0;
-                Module.stringToUTF8(text, bytesIndex + byteOffset, encodedLength);
+                Module.stringToUTF8?.(text, bytesIndex + byteOffset, encodedLength);
                 byteOffset += encodedLength;
             }
 
             return values.length;
         };
-    },
-    _mallocOrThrow: (size) => {
+    };
+const mallocOrThrow = (size: number) => {
         const m = moduleInstance && (moduleInstance._malloc || moduleInstance.malloc);
         if (typeof m !== "function") {
             throw new Error("malloc not available in emscripten module (expected _malloc or malloc)");
@@ -344,8 +417,8 @@ const RL = {
             throw new Error("malloc failed");
         }
         return p;
-    },
-    _freeIfPossible: (p) => {
+    };
+const freeIfPossible = (p: number) => {
         if (!p) {
             return;
         }
@@ -353,36 +426,36 @@ const RL = {
         if (typeof f === "function") {
             f(p);
         }
-    },
-    _stringToNewUtf8OrNull: (s) => {
+    };
+const stringToNewUtf8OrNull = (s: string | null | undefined) => {
         if (s == null) {
             return 0;
         }
         if (typeof s !== "string") {
             s = String(s);
         }
-        if (moduleInstance.stringToNewUTF8) {
-            return moduleInstance.stringToNewUTF8(s) >>> 0;
+        const mod = reqModule();
+        if (mod.stringToNewUTF8) {
+            return mod.stringToNewUTF8(s) >>> 0;
         }
-        const len = (moduleInstance.lengthBytesUTF8 ? moduleInstance.lengthBytesUTF8(s) : (s.length * 4 + 1)) + 0;
-        const bytes = RL._mallocOrThrow(len);
-        if (moduleInstance.stringToUTF8) {
-            moduleInstance.stringToUTF8(s, bytes, len);
+        const len = (mod.lengthBytesUTF8 ? mod.lengthBytesUTF8(s) : (s.length * 4 + 1)) + 0;
+        const bytes = mallocOrThrow(len);
+        if (mod.stringToUTF8) {
+            mod.stringToUTF8(s, bytes, len);
         } else {
             throw new Error("stringToUTF8 not available; cannot encode JS strings to wasm memory");
         }
         return bytes;
-    },
-
-    _getModulePath: (opts) => {
+    };
+const getModulePath = (opts: RLInitOptions) => {
         const modulePath = opts?.modulePath ?? moduleOptions.modulePath;
         if (modulePath) {
             return String(modulePath);
         }
-        return new URL("../../lib/librl.js", import.meta.url).href;
-    },
-    _loadModuleFactory: async (opts) => {
-        const modulePath = RL._getModulePath(opts);
+        return new URL("../../../lib/librl.js", import.meta.url).href;
+    };
+const loadModuleFactory = async (opts: RLInitOptions) => {
+        const modulePath = getModulePath(opts);
         if (!moduleFactoryPromise || moduleFactoryPath !== modulePath) {
             moduleFactoryPath = modulePath;
             moduleFactoryPromise = import(/* @vite-ignore */ modulePath).then((mod) => {
@@ -394,19 +467,18 @@ const RL = {
             });
         }
         return await moduleFactoryPromise;
-    },
-
-    _prepareModuleOptions: (opts) => {
-        opts = opts || {};
-        opts.env = opts.env || {};
-        moduleOptions = {
+    };
+const prepareModuleOptions = (opts: RLInitOptions = {}): RLInitOptions => {
+        const merged: RLInitOptions = {
             ...moduleOptions,
             ...opts,
+            env: {
+                ...(moduleOptions.env ?? {}),
+                ...(opts.env ?? {}),
+            },
         };
-        moduleOptions.env = {
-            ...(moduleOptions.env || {}),
-            ...opts.env,
-        };
+        moduleOptions = merged;
+        const env = moduleOptions.env ?? (moduleOptions.env = {});
 
         if (moduleOptions.idealWidth == null && moduleOptions.windowWidth != null) {
             moduleOptions.idealWidth = moduleOptions.windowWidth;
@@ -415,30 +487,29 @@ const RL = {
             moduleOptions.idealHeight = moduleOptions.windowHeight;
         }
 
-        if (moduleOptions.wasmPath && !moduleOptions.env.locateFile) {
-            moduleOptions.env.locateFile = function (path, prefix) {
-                return path === "librl.wasm" ? moduleOptions.wasmPath : prefix + path;
+        if (moduleOptions.wasmPath && !env.locateFile) {
+            env.locateFile = (path, prefix) => {
+                return path === "librl.wasm" ? String(moduleOptions.wasmPath) : prefix + path;
             };
         }
 
-        // set up env for the Module (browser only; Node callers pass env.canvas or omit)
-        if (!moduleOptions.env.canvas && typeof document !== "undefined") {
+        if (!env.canvas && typeof document !== "undefined") {
             const canvasId = moduleOptions.canvasId || "renderCanvas";
-            moduleOptions.env.canvas = document.getElementById(canvasId);
+            env.canvas = document.getElementById(canvasId) as HTMLCanvasElement | null;
         }
-        if (!moduleOptions.env.print) {
-            moduleOptions.env.print = (...args) => {
+        if (!env.print) {
+            env.print = (...args: unknown[]) => {
                 console.log(...args);
             };
         }
-        if (!moduleOptions.env.printErr) {
-            moduleOptions.env.printErr = (...args) => {
+        if (!env.printErr) {
+            env.printErr = (...args: unknown[]) => {
                 console.error(...args);
             };
         }
         return moduleOptions;
-    },
-    _prepareInitOptions: (opts) => {
+    };
+const prepareInitOptions = (opts: RLInitOptions = {}) => {
         opts = opts || {};
         return {
             windowWidth: opts.windowWidth ?? moduleOptions.windowWidth ?? 0,
@@ -450,134 +521,100 @@ const RL = {
             idealWidth: moduleOptions.idealWidth ?? opts.windowWidth ?? 1024,
             idealHeight: moduleOptions.idealHeight ?? opts.windowHeight ?? 1280,
         };
-    },
-    _hasJspiSupport: () => {
-        return typeof WebAssembly !== "undefined"
-            && typeof WebAssembly.Suspending === "function"
-            && typeof WebAssembly.promising === "function";
-    },
-    _tryLoadModuleInstance: async (opts) => {
-        RL._prepareModuleOptions(opts);
+    };
+const hasJspiSupport = () => {
+        const wasm = WebAssembly as typeof WebAssembly & {
+            Suspending?: unknown;
+            promising?: unknown;
+        };
+        return typeof wasm.Suspending === "function"
+            && typeof wasm.promising === "function";
+    };
+const tryLoadModuleInstance = async (opts: RLInitOptions = {}) => {
+        prepareModuleOptions(opts);
 
         if (moduleInstance) {
-            return RL.BOOT_OK;
+            return BOOT_OK;
         }
 
         try {
-            const moduleFactory = await RL._loadModuleFactory(opts);
-            moduleInstance = await moduleFactory(moduleOptions.env);
+            const moduleFactory = await loadModuleFactory(opts);
+            moduleInstance = await moduleFactory(moduleOptions.env as Record<string, unknown> | undefined);
         } catch (err) {
             console.error("RL.boot failed", err);
-            moduleInstance = null;
-            return RL.BOOT_ERR_LOADER;
+            moduleInstance = undefined;
+            return BOOT_ERR_LOADER;
         }
 
-        if (RL._compareVersion() < 0) {
-            moduleInstance = null;
-            return RL.BOOT_ERR_VERSION_MISMATCH;
+        if (compareVersion() < 0) {
+            moduleInstance = undefined;
+            return BOOT_ERR_VERSION_MISMATCH;
         }
 
-        RL._installScratchHelpers();
-        RL._patchColorConstants();
+        installScratchHelpers();
+        patchColorConstants();
         moduleInstance.initScratchArea();
 
-        return RL.BOOT_OK;
-    },
-    _ensureModuleInstance: async (opts) => {
-        const rc = await RL._tryLoadModuleInstance(opts);
-        if (rc !== RL.BOOT_OK) {
+        return BOOT_OK;
+    };
+const ensureModuleInstance = async (opts: RLInitOptions = {}) => {
+        const rc = await tryLoadModuleInstance(opts);
+        if (rc !== BOOT_OK) {
             throw new Error(`RL boot failed with code ${rc}`);
         }
         return moduleInstance;
-    },
-    boot: async (opts = {}) => {
-        if (!RL._hasJspiSupport()) {
-            return RL.BOOT_ERR_LOADER;
-        }
-
-        try {
-            return await RL._tryLoadModuleInstance(opts);
-        } catch (err) {
-            console.error("RL.boot failed", err);
-            moduleInstance = null;
-            return RL.BOOT_ERR_UNKNOWN;
-        }
-    },
-    _initValuesCcallArgs: (initOptions) => [
+    };
+const initValuesCcallArgs = (initOptions: ReturnType<typeof prepareInitOptions>) => [
         (initOptions.windowWidth || 0) | 0,
         (initOptions.windowHeight || 0) | 0,
         initOptions.windowTitle ?? "",
         (initOptions.windowFlags || 0) >>> 0,
         initOptions.assetHost ?? "",
         initOptions.fsRootDir ?? "",
-    ],
-    _callInitWithOptionsAsync: async (opts, symbolName, asyncOptions) => {
-        await RL._ensureModuleInstance();
-        const initOptions = RL._prepareInitOptions(opts);
+    ];
+const callInitWithOptionsAsync = async (
+        opts: RLInitOptions,
+        symbolName: string,
+        asyncOptions: { async?: boolean },
+    ) => {
+        await ensureModuleInstance(opts);
+        const initOptions = prepareInitOptions(opts);
 
-        const initRc = (await moduleInstance.ccall(
+        const initRc = (await reqModule().ccall(
             symbolName,
             "number",
             ["number", "number", "string", "number", "string", "string"],
-            RL._initValuesCcallArgs(initOptions),
+            initValuesCcallArgs(initOptions),
             asyncOptions
-        )) | 0;
+        ) as number) | 0;
 
         if (initRc !== 0) {
             return initRc;
         }
 
         return 0;
-    },
-    _callInitWithOptionsImmediate: (opts, symbolName) => {
-        const initOptions = RL._prepareInitOptions(opts);
+    };
+const callInitWithOptionsImmediate = (opts: RLInitOptions, symbolName: string) => {
+        const initOptions = prepareInitOptions(opts);
 
         if (!moduleInstance) {
             throw new Error("Module must be booted before calling polling-style init APIs");
         }
 
-        const initRc = moduleInstance.ccall(
+        const initRc = (reqModule().ccall(
             symbolName,
             "number",
             ["number", "number", "string", "number", "string", "string"],
-            RL._initValuesCcallArgs(initOptions)
-        ) | 0;
+            initValuesCcallArgs(initOptions)
+        ) as number) | 0;
 
         if (initRc !== 0) {
             return initRc;
         }
 
         return 0;
-    },
-    init: async (opts) => {
-        return await RL._callInitWithOptionsAsync(opts, "rl_init_values", { async: true });
-    },
-    initAsync: (opts) => {
-        return RL._callInitWithOptionsImmediate(opts, "rl_init_values_async");
-    },
-    refreshScratch: () => {
-        moduleInstance.ccall('rl_scratch_refresh', null, [], []);
-    },
-    getTime: () => {
-        return moduleInstance.ccall('rl_get_time', 'number', [], []);
-    },
-    deinit: async () => {
-        RL._eventListenersById.clear();
-        RL._eventListenerIdsByCallback = new WeakMap();
-        RL._clearRunCallbacks();
-        if (moduleInstance && RL._eventDispatchPtr !== 0) {
-            moduleInstance.removeFunction(RL._eventDispatchPtr);
-            RL._eventDispatchPtr = 0;
-        }
-        moduleInstance.ccall('rl_deinit', null, [], [], { async: true });
-    },
-    isInitialized: () => {
-        return moduleInstance.ccall('rl_is_initialized', 'number', [], []) !== 0;
-    },
-    getPlatform: () => {
-        return moduleInstance.ccall('rl_get_platform', 'string', [], []);
-    },
-    _compareVersion: () => {
+    };
+const compareVersion = () => {
         console.info(
             `[librl] bindings version: ${RL_BINDING_BUILT_MAJOR}, ${RL_BINDING_BUILT_MINOR}, ${RL_BINDING_BUILT_PATCH}`,
         );
@@ -585,9 +622,9 @@ const RL = {
             console.info('[librl] librl version: (not loaded)');
             return -3;
         }
-        const runtimeMajor = RL.getVersionMajor();
-        const runtimeMinor = RL.getVersionMinor();
-        const runtimePatch = RL.getVersionPatch();
+        const runtimeMajor = moduleInstance.ccall('rl_version_major', 'number', [], []) as number;
+        const runtimeMinor = moduleInstance.ccall('rl_version_minor', 'number', [], []) as number;
+        const runtimePatch = moduleInstance.ccall('rl_version_patch', 'number', [], []) as number;
         console.info(`[librl] librl version: ${runtimeMajor}, ${runtimeMinor}, ${runtimePatch}`);
         if (runtimeMajor !== (RL_BINDING_BUILT_MAJOR | 0)) {
             return -1;
@@ -599,56 +636,9 @@ const RL = {
             return 1;
         }
         return 0;
-    },
-    getVersionMajor: () => {
-        if (!moduleInstance) {
-            return 0;
-        }
-        return moduleInstance.ccall('rl_version_major', 'number', [], []);
-    },
-    getVersionMinor: () => {
-        if (!moduleInstance) {
-            return 0;
-        }
-        return moduleInstance.ccall('rl_version_minor', 'number', [], []);
-    },
-    getVersionPatch: () => {
-        if (!moduleInstance) {
-            return 1;
-        }
-        return moduleInstance.ccall('rl_version_patch', 'number', [], []);
-    },
-    versionLabel: () => {
-        if (!moduleInstance) {
-            return 'dev';
-        }
-        return moduleInstance.ccall('rl_version_label', 'string', [], []);
-    },
-    getVersionNumber: () => {
-        if (!moduleInstance) {
-            return 1;
-        }
-        return moduleInstance.ccall('rl_version_number', 'number', [], []) >>> 0;
-    },
-    getVersionString: () => {
-        if (!moduleInstance) {
-            return '0.0.1-dev';
-        }
-        return moduleInstance.ccall('rl_version_string', 'string', [], []);
-    },
-    tick: () => {
-        moduleInstance.ccall('rl_scratch_refresh', null, [], []);
-        return moduleInstance.ccall('rl_tick', 'number', [], []);
-    },
-    getDeltaTime: () => {
-        return moduleInstance.ccall('rl_get_delta_time', 'number', [], []);
-    },
-    setTargetFPS: (fps) => moduleInstance.ccall(
-        "rl_set_target_fps", null, ["number"], [fps]
-    ),
-
-    _colorHandle: (index, generation) => ((generation << 16) | index) >>> 0,
-    _RL_COLOR_NAMES: [
+    };
+const colorHandle = (index: number, generation: number) => ((generation << 16) | index) >>> 0;
+const RL_COLOR_NAMES = [
         "DEFAULT", "LIGHTGRAY", "GRAY", "DARKGRAY",
         "YELLOW", "GOLD", "ORANGE", "PINK",
         "RED", "MAROON", "GREEN", "LIME",
@@ -656,19 +646,73 @@ const RL = {
         "PURPLE", "VIOLET", "DARKPURPLE",
         "BEIGE", "BROWN", "DARKBROWN",
         "WHITE", "BLACK", "BLANK", "MAGENTA", "RAYWHITE"
-    ],
-    _patchColorConstants: () => {
+    ];
+const patchColorConstants = () => {
         if (!moduleInstance || !(moduleInstance.HEAPU32 || moduleInstance.HEAP32)) {
             return;
         }
         const heap = moduleInstance.HEAPU32 || moduleInstance.HEAP32;
-        for (const name of RL._RL_COLOR_NAMES) {
-            const ptr = moduleInstance["_RL_COLOR_" + name];
+        for (const name of RL_COLOR_NAMES) {
+            const ptr = moduleInstance["_RL_COLOR_" + name] as number | undefined;
             if (ptr == null) continue;
-            const value = heap[ptr >>> 2] >>> 0;
-            RL["COLOR_" + name] = value;
+            const value = heap[(ptr >>> 2)] >>> 0;
+            (rlCore as unknown as Record<string, number>)["COLOR_" + name] = value;
+        }
+    };
+
+const rlCore = {
+    TICK_RUNNING: 0,
+    TICK_WAITING: 1,
+    TICK_FAILED: -1,
+    boot: async (opts = {}) => {
+        if (!hasJspiSupport()) {
+            return BOOT_ERR_LOADER;
+        }
+
+        try {
+            return await tryLoadModuleInstance(opts);
+        } catch (err) {
+            console.error("RL.boot failed", err);
+            moduleInstance = undefined;
+            return BOOT_ERR_UNKNOWN;
         }
     },
+    init: async (opts: RLInitOptions = {}) => {
+        return await callInitWithOptionsAsync(opts, "rl_init_values", { async: true });
+    },
+    initAsync: (opts: RLInitOptions = {}) => {
+        return callInitWithOptionsImmediate(opts, "rl_init_values_async");
+    },
+    refreshScratch: () => {
+        reqModule().ccall('rl_scratch_refresh', null, [], []);
+    },
+    getTime: () => ccNum('rl_get_time'),
+    deinit: async () => {
+        eventListenersById.clear();
+        eventListenerIdsByCallback = new WeakMap();
+        clearRunCallbacks();
+        if (moduleInstance && eventDispatchPtr !== 0) {
+            moduleInstance.removeFunction?.(eventDispatchPtr);
+            eventDispatchPtr = 0;
+        }
+        reqModule().ccall('rl_deinit', null, [], [], { async: true });
+    },
+    isInitialized: () => ccNum('rl_is_initialized') !== 0,
+    getPlatform: () => ccStr('rl_get_platform'),
+    getVersionMajor: () => moduleInstance ? ccNum('rl_version_major') : 0,
+    getVersionMinor: () => moduleInstance ? ccNum('rl_version_minor') : 0,
+    getVersionPatch: () => moduleInstance ? ccNum('rl_version_patch') : 1,
+    versionLabel: () => moduleInstance ? ccStr('rl_version_label') : 'dev',
+    getVersionNumber: () => moduleInstance ? ccNum('rl_version_number') >>> 0 : 1,
+    getVersionString: () => moduleInstance ? ccStr('rl_version_string') : '0.0.1-dev',
+    tick: () => {
+        reqModule().ccall('rl_scratch_refresh', null, [], []);
+        return ccNum('rl_tick');
+    },
+    getDeltaTime: () => ccNum('rl_get_delta_time'),
+    setTargetFPS: (fps: number) => reqModule().ccall(
+        "rl_set_target_fps", null, ["number"], [fps]
+    ),
     INIT_OK: 0,
     INIT_ERR_UNKNOWN: -1,
     INIT_ERR_ALREADY_INITIALIZED: -2,
@@ -705,73 +749,99 @@ const RL = {
     BUTTON_PRESSED: 1,
     BUTTON_DOWN: 2,
     BUTTON_RELEASED: 3,
-
+    COLOR_DEFAULT: 0,
+    COLOR_LIGHTGRAY: 0,
+    COLOR_GRAY: 0,
+    COLOR_DARKGRAY: 0,
+    COLOR_YELLOW: 0,
+    COLOR_GOLD: 0,
+    COLOR_ORANGE: 0,
+    COLOR_PINK: 0,
+    COLOR_RED: 0,
+    COLOR_MAROON: 0,
+    COLOR_GREEN: 0,
+    COLOR_LIME: 0,
+    COLOR_DARKGREEN: 0,
+    COLOR_SKYBLUE: 0,
+    COLOR_BLUE: 0,
+    COLOR_DARKBLUE: 0,
+    COLOR_PURPLE: 0,
+    COLOR_VIOLET: 0,
+    COLOR_DARKPURPLE: 0,
+    COLOR_BEIGE: 0,
+    COLOR_BROWN: 0,
+    COLOR_DARKBROWN: 0,
+    COLOR_WHITE: 0,
+    COLOR_BLACK: 0,
+    COLOR_BLANK: 0,
+    COLOR_MAGENTA: 0,
+    COLOR_RAYWHITE: 0,
 };
 
-RL.fs = {
+const fs = {
     remove: (filename) => {
-        return moduleInstance.ccall('rl_fs_remove', 'number', ['string'], [filename]);
+        return ccNum('rl_fs_remove', ['string'], [filename]);
     },
     clear: () => {
-        return moduleInstance.ccall('rl_fs_clear', 'number', [], []);
+        return ccNum('rl_fs_clear', [], []);
     },
     init: async (rootDir = "") => {
-        return await moduleInstance.ccall('rl_fs_init', 'number', ['string'], [rootDir || ""], { async: true });
+        return await ccNum('rl_fs_init', ['string'], [rootDir || ""], { async: true });
     },
     initAsync: (rootDir = "") => {
-        return moduleInstance.ccall('rl_fs_init_async', 'number', ['string'], [rootDir || ""]);
+        return ccNum('rl_fs_init_async', ['string'], [rootDir || ""]);
     },
     deinitAsync: () => {
-        return moduleInstance.ccall('rl_fs_deinit_async', 'number', [], []) >>> 0;
+        return ccNum('rl_fs_deinit_async', [], []) >>> 0;
     },
     deinit: async () => {
-        moduleInstance.ccall('rl_fs_deinit', null, [], [], { async: true });
+        reqModule().ccall('rl_fs_deinit', null, [], [], { async: true });
     },
     isInitialized: () => {
-        return moduleInstance.ccall('rl_fs_is_initialized', 'number', [], []) !== 0;
+        return ccNum('rl_fs_is_initialized', [], []) !== 0;
     },
     isReady: () => {
-        return moduleInstance.ccall('rl_fs_is_ready', 'number', [], []) !== 0;
+        return ccNum('rl_fs_is_ready', [], []) !== 0;
     },
     flush: () => {
-        return moduleInstance.ccall('rl_fs_flush', 'number', [], []) | 0;
+        return ccNum('rl_fs_flush', [], []) | 0;
     },
     getRootDir: () => {
-        return moduleInstance.ccall('rl_fs_get_root_dir', 'string', [], []);
+        return ccStr('rl_fs_get_root_dir', [], []);
     },
     normalizePath: (path) => {
         if (path == null) {
             return "";
         }
         const bufferSize = 4096;
-        const bufferPtr = RL._mallocOrThrow(bufferSize);
+        const bufferPtr = mallocOrThrow(bufferSize);
         try {
-            moduleInstance.ccall(
+            reqModule().ccall(
                 'rl_fs_normalize_path',
                 null,
                 ['string', 'number', 'number'],
                 [String(path), bufferPtr, bufferSize]
             );
-            if (typeof moduleInstance.UTF8ToString === "function") {
-                return moduleInstance.UTF8ToString(bufferPtr);
+            if (typeof reqModule().UTF8ToString === "function") {
+                return reqModule().UTF8ToString(bufferPtr);
             }
             return "";
         } finally {
-            RL._freeIfPossible(bufferPtr);
+            freeIfPossible(bufferPtr);
         }
     },
     restoreAsync: () => {
-        return moduleInstance.ccall('rl_fs_restore_async', 'number', [], []);
+        return ccNum('rl_fs_restore_async', [], []);
     },
     read: (filename) => {
         if (!moduleInstance) {
             return null;
         }
-        const stackSave = moduleInstance.stackSave;
-        const stackRestore = moduleInstance.stackRestore;
-        const stackAlloc = moduleInstance.stackAlloc;
-        const heapU32 = moduleInstance.HEAPU32;
-        const heapU8 = moduleInstance.HEAPU8;
+        const stackSave = reqModule().stackSave;
+        const stackRestore = reqModule().stackRestore;
+        const stackAlloc = reqModule().stackAlloc;
+        const heapU32 = reqModule().HEAPU32;
+        const heapU8 = reqModule().HEAPU8;
         if (
             typeof stackSave !== "function" ||
             typeof stackRestore !== "function" ||
@@ -789,17 +859,12 @@ RL.fs = {
             const outSizeSlot = stackAlloc(4) >>> 0;
             heapU32[outDataSlot >>> 2] = 0;
             heapU32[outSizeSlot >>> 2] = 0;
-            const rc = moduleInstance.ccall(
-                'rl_fs_read',
-                'number',
-                ['string', 'number', 'number'],
-                [name, outDataSlot, outSizeSlot]
-            ) | 0;
+            const rc = ccNum('rl_fs_read', ['string', 'number', 'number'], [name, outDataSlot, outSizeSlot]) | 0;
             const dataPtr = heapU32[outDataSlot >>> 2] >>> 0;
             const size = heapU32[outSizeSlot >>> 2] >>> 0;
             if (rc !== 0 || !dataPtr) {
                 if (dataPtr) {
-                    moduleInstance.ccall('rl_fs_read_free', null, ['number'], [dataPtr]);
+                    reqModule().ccall('rl_fs_read_free', null, ['number'], [dataPtr]);
                 }
                 return null;
             }
@@ -807,7 +872,7 @@ RL.fs = {
             if (size > 0) {
                 out.set(heapU8.subarray(dataPtr, dataPtr + size));
             }
-            moduleInstance.ccall('rl_fs_read_free', null, ['number'], [dataPtr]);
+            reqModule().ccall('rl_fs_read_free', null, ['number'], [dataPtr]);
             return out;
         } finally {
             stackRestore(prevSp);
@@ -817,45 +882,40 @@ RL.fs = {
         if (typeof data === "string") {
             data = new TextEncoder().encode(data);
         }
-        const ptr = RL._mallocOrThrow(data.byteLength);
+        const ptr = mallocOrThrow(data.byteLength);
         try {
-            moduleInstance.HEAPU8.set(data, ptr);
-            return moduleInstance.ccall('rl_fs_write', 'number', ['string', 'number', 'number'], [path, ptr, data.byteLength]) | 0;
+            reqModule().HEAPU8.set(new Uint8Array(data.buffer, data.byteOffset, data.byteLength), ptr);
+            return ccNum('rl_fs_write', ['string', 'number', 'number'], [path, ptr, data.byteLength]) | 0;
         } finally {
-            RL._freeIfPossible(ptr);
+            freeIfPossible(ptr);
         }
     },
     mkdir: (path) => {
-        return moduleInstance.ccall('rl_fs_mkdir', 'number', ['string'], [path]) | 0;
+        return ccNum('rl_fs_mkdir', ['string'], [path]) | 0;
     },
     rmdir: (path) => {
-        return moduleInstance.ccall('rl_fs_rmdir', 'number', ['string'], [path]) | 0;
+        return ccNum('rl_fs_rmdir', ['string'], [path]) | 0;
     },
     exists: (filename) => {
-        return moduleInstance.ccall('rl_fs_exists', 'number', ['string'], [filename]) !== 0;
+        return ccNum('rl_fs_exists', ['string'], [filename]) !== 0;
     }
-};
+} satisfies RLFs;
 
-RL.asset = {
+const asset = {
     ADD_TASK_OK: 0,
     ADD_TASK_ERR_INVALID: -1,
     ADD_TASK_ERR_QUEUE_FULL: -2,
     pingHost: (assetHost = "") => {
-        return moduleInstance.ccall(
-            'rl_asset_ping_host',
-            'number',
-            ['string'],
-            [assetHost || ""]
-        );
+        return ccNum('rl_asset_ping_host', ['string'], [assetHost || ""]);
     },
     setHost: (assetHost) => {
         if (typeof assetHost !== "string") {
             return -1;
         }
-        return moduleInstance.ccall('rl_asset_set_host', 'number', ['string'], [assetHost]) | 0;
+        return ccNum('rl_asset_set_host', ['string'], [assetHost]) | 0;
     },
     getHost: () => {
-        return moduleInstance.ccall('rl_asset_get_host', 'string', [], []);
+        return ccStr('rl_asset_get_host', [], []);
     },
     ensure: async (localPath, src = null) => {
         if (typeof localPath === "string" && /\.gltf(?:[?#].*)?$/i.test(localPath)) {
@@ -864,34 +924,28 @@ RL.asset = {
                 `Use asset.ensureAsync(), rl.helpers.waitForAssetEnsureAsync(), or rl.helpers.createTaskGroup() instead.`
             );
         }
-        return await moduleInstance.ccall(
-            'rl_asset_ensure',
-            'number',
-            ['string', 'string'],
-            [localPath, src ?? null],
-            { async: true }
-        );
+        return await ccNum('rl_asset_ensure', ['string', 'string'], [localPath, src ?? null], { async: true });
     },
     ensureAsync: (localPath, src = null) => {
-        return moduleInstance.ccall('rl_asset_ensure_async', 'number', ['string', 'string'], [localPath, src ?? null]);
+        return ccNum('rl_asset_ensure_async', ['string', 'string'], [localPath, src ?? null]);
     },
     ensureGroupAsync: (filenames) => {
-        const count = moduleInstance.writeScratchStringTable(filenames);
-        return moduleInstance.ccall('rl_asset_ensure_many_from_scratch_async', 'number', ['number'], [count]);
+        const count = reqModule().writeScratchStringTable(filenames);
+        return ccNum('rl_asset_ensure_many_from_scratch_async', ['number'], [count]);
     },
     pollTask: (task) => {
-        return moduleInstance.ccall('rl_asset_poll_task', 'number', ['number'], [task]) !== 0;
+        return ccNum('rl_asset_poll_task', ['number'], [task]) !== 0;
     },
     finishTask: (task) => {
-        return moduleInstance.ccall('rl_asset_finish_task', 'number', ['number'], [task]);
+        return ccNum('rl_asset_finish_task', ['number'], [task]);
     },
     getTaskPath: (task) => {
-        return moduleInstance.ccall('rl_asset_get_task_path', 'string', ['number'], [task]);
+        return ccStr('rl_asset_get_task_path', ['number'], [task]);
     },
     freeTask: (task) => {
-        return moduleInstance.ccall('rl_asset_free_task', null, ['number'], [task]);
+        return reqModule().ccall('rl_asset_free_task', null, ['number'], [task]);
     },
-    addTask: (task, onSuccess = null, onFailure = null, ctx = null) => {
+    addTask: (task: RLHandle, onSuccess: RLAssetTaskCallback | null = null, onFailure: RLAssetTaskCallback | null = null, ctx: unknown = null) => {
         let successPtr = 0;
         let failurePtr = 0;
         let cleanedUp = false;
@@ -901,20 +955,20 @@ RL.asset = {
             }
             cleanedUp = true;
             if (successPtr) {
-                moduleInstance.removeFunction(successPtr);
+                reqModule().removeFunction?.(successPtr);
                 successPtr = 0;
             }
             if (failurePtr) {
-                moduleInstance.removeFunction(failurePtr);
+                reqModule().removeFunction?.(failurePtr);
                 failurePtr = 0;
             }
         };
-        const decodePath = (pathPtr) => {
+        const decodePath = (pathPtr: number) => {
             if (!pathPtr) {
                 return "";
             }
-            if (typeof moduleInstance.UTF8ToString === "function") {
-                return moduleInstance.UTF8ToString(pathPtr >>> 0);
+            if (typeof reqModule().UTF8ToString === "function") {
+                return reqModule().UTF8ToString(pathPtr >>> 0);
             }
             console.error("UTF8ToString runtime method is unavailable; cannot decode loader callback path");
             return "";
@@ -923,19 +977,19 @@ RL.asset = {
         // Mirror the cpp binding's rl_asset_add_task behavior with local JS
         // springboards. The closures capture the provided callbacks/context, so
         // we do not need a separate userdata registry on the JS side.
-        successPtr = moduleInstance.addFunction((pathPtr, _userData) => {
+        successPtr = reqModule().addFunction((pathPtr: unknown, _userData: unknown) => {
             try {
                 if (typeof onSuccess === "function") {
-                    onSuccess(decodePath(pathPtr), ctx);
+                    onSuccess(decodePath(pathPtr as number), ctx);
                 }
             } finally {
                 cleanup();
             }
         }, "vii");
-        failurePtr = moduleInstance.addFunction((pathPtr, _userData) => {
+        failurePtr = reqModule().addFunction((pathPtr: unknown, _userData: unknown) => {
             try {
                 if (typeof onFailure === "function") {
-                    onFailure(decodePath(pathPtr), ctx);
+                    onFailure(decodePath(pathPtr as number), ctx);
                 }
             } finally {
                 cleanup();
@@ -943,12 +997,7 @@ RL.asset = {
         }, "vii");
 
         try {
-            const rc = moduleInstance.ccall(
-                'rl_asset_add_task',
-                'number',
-                ['number', 'number', 'number', 'number'],
-                [task, successPtr, failurePtr, 0]
-            );
+            const rc = ccNum('rl_asset_add_task', ['number', 'number', 'number', 'number'], [task, successPtr, failurePtr, 0]);
             if ((rc | 0) !== 0) {
                 cleanup();
             }
@@ -959,13 +1008,13 @@ RL.asset = {
         }
     },
     tick: () => {
-        moduleInstance.ccall('rl_asset_tick', null, [], []);
+        reqModule().ccall('rl_asset_tick', null, [], []);
     }
-};
+} satisfies RLAsset;
 
-RL.event = {
+const event = {
     emit: (eventName, payload = 0) => {
-        return moduleInstance.ccall('rl_event_emit', 'number', ['string', 'number'], [eventName, payload]);
+        return ccNum('rl_event_emit', ['string', 'number'], [eventName, payload]);
     },
     on: (eventName, callback) => {
         let callbackMap = null;
@@ -976,29 +1025,29 @@ RL.event = {
             return -1;
         }
 
-        RL._ensureEventDispatchPtr();
-        if (RL._eventDispatchPtr === 0) {
+        ensureEventDispatchPtr();
+        if (eventDispatchPtr === 0) {
             return -1;
         }
 
-        callbackMap = RL._eventListenerIdsByCallback.get(callback);
+        callbackMap = eventListenerIdsByCallback.get(callback);
         if (!callbackMap) {
             callbackMap = new Map();
-            RL._eventListenerIdsByCallback.set(callback, callbackMap);
+            eventListenerIdsByCallback.set(callback, callbackMap);
         }
 
         if (callbackMap.has(eventName)) {
             return 0;
         }
 
-        listenerId = RL._nextEventListenerId++;
-        rc = moduleInstance.ccall('rl_event_on', 'number', ['string', 'number', 'number'], [eventName, RL._eventDispatchPtr, listenerId]);
+        listenerId = nextEventListenerId++;
+        rc = ccNum('rl_event_on', ['string', 'number', 'number'], [eventName, eventDispatchPtr, listenerId]);
         if (rc !== 0) {
             return rc;
         }
 
         callbackMap.set(eventName, listenerId);
-        RL._eventListenersById.set(listenerId, { eventName, callback });
+        eventListenersById.set(listenerId, { eventName, callback });
         return 0;
     },
     once: (eventName, callback) => {
@@ -1010,29 +1059,29 @@ RL.event = {
             return -1;
         }
 
-        RL._ensureEventDispatchPtr();
-        if (RL._eventDispatchPtr === 0) {
+        ensureEventDispatchPtr();
+        if (eventDispatchPtr === 0) {
             return -1;
         }
 
-        callbackMap = RL._eventListenerIdsByCallback.get(callback);
+        callbackMap = eventListenerIdsByCallback.get(callback);
         if (!callbackMap) {
             callbackMap = new Map();
-            RL._eventListenerIdsByCallback.set(callback, callbackMap);
+            eventListenerIdsByCallback.set(callback, callbackMap);
         }
 
         if (callbackMap.has(eventName)) {
             return 0;
         }
 
-        listenerId = RL._nextEventListenerId++;
-        rc = moduleInstance.ccall('rl_event_once', 'number', ['string', 'number', 'number'], [eventName, RL._eventDispatchPtr, listenerId]);
+        listenerId = nextEventListenerId++;
+        rc = ccNum('rl_event_once', ['string', 'number', 'number'], [eventName, eventDispatchPtr, listenerId]);
         if (rc !== 0) {
             return rc;
         }
 
         callbackMap.set(eventName, listenerId);
-        RL._eventListenersById.set(listenerId, { eventName, callback });
+        eventListenersById.set(listenerId, { eventName, callback });
         return 0;
     },
     off: (eventName, callback) => {
@@ -1044,127 +1093,122 @@ RL.event = {
             return -1;
         }
 
-        callbackMap = RL._eventListenerIdsByCallback.get(callback);
+        callbackMap = eventListenerIdsByCallback.get(callback);
         if (!callbackMap || !callbackMap.has(eventName)) {
             return 0;
         }
 
         listenerId = callbackMap.get(eventName);
-        rc = moduleInstance.ccall('rl_event_off', 'number', ['string', 'number', 'number'], [eventName, RL._eventDispatchPtr, listenerId]);
+        rc = ccNum('rl_event_off', ['string', 'number', 'number'], [eventName, eventDispatchPtr, listenerId]);
         if (rc === 0) {
-            RL._forgetListenerById(listenerId);
+            forgetListenerById(listenerId);
         }
         return rc;
     },
     clearListeners: (eventName) => {
-        const rc = moduleInstance.ccall('rl_event_off_all', 'number', ['string'], [eventName]);
+        const rc = ccNum('rl_event_off_all', ['string'], [eventName]);
         if (rc === 0) {
-            RL._clearListenerCacheForEvent(eventName);
+            clearListenerCacheForEvent(eventName);
         }
         return rc;
     },
     getListenerCount: (eventName) => {
-        return moduleInstance.ccall('rl_event_listener_count', 'number', ['string'], [eventName]);
+        return ccNum('rl_event_listener_count', ['string'], [eventName]);
     }
-};
+} satisfies RLEvent;
 
-RL.window = {
+const window = {
     setSize: (width, height) => {
-        return moduleInstance.ccall('rl_window_set_size', null, ['number', 'number'], [width, height]);
+        return reqModule().ccall('rl_window_set_size', null, ['number', 'number'], [width, height]);
     },
     isCloseRequested: () => {
-        return !!moduleInstance.ccall('rl_window_close_requested', 'number', [], []);
+        return !!ccNum('rl_window_close_requested', [], []);
     },
     getMonitorCount: () => {
-        return moduleInstance.ccall('rl_window_get_monitor_count', 'number', [], []);
+        return ccNum('rl_window_get_monitor_count', [], []);
     },
     setTitle: (title) => {
-        return moduleInstance.ccall('rl_window_set_title', null, ['string'], [title]);
+        return reqModule().ccall('rl_window_set_title', null, ['string'], [title]);
     },
     getCurrentMonitor: () => {
-        return moduleInstance.ccall('rl_window_get_current_monitor', 'number', [], []);
+        return ccNum('rl_window_get_current_monitor', [], []);
     },
     setMonitor: (monitor) => {
-        return moduleInstance.ccall('rl_window_set_monitor', null, ['number'], [monitor]);
+        return reqModule().ccall('rl_window_set_monitor', null, ['number'], [monitor]);
     },
     getMonitorWidth: (monitor) => {
-        return moduleInstance.ccall('rl_window_get_monitor_width', 'number', ['number'], [monitor]);
+        return ccNum('rl_window_get_monitor_width', ['number'], [monitor]);
     },
     getMonitorHeight: (monitor) => {
-        return moduleInstance.ccall('rl_window_get_monitor_height', 'number', ['number'], [monitor]);
+        return ccNum('rl_window_get_monitor_height', ['number'], [monitor]);
     },
     setPosition: (x, y) => {
-        return moduleInstance.ccall('rl_window_set_position', null, ['number', 'number'], [x, y]);
+        return reqModule().ccall('rl_window_set_position', null, ['number', 'number'], [x, y]);
     },
     getScreenSize: () => {
-        moduleInstance.ccall('rl_window_get_screen_size_to_scratch', null, [], []);
-        return moduleInstance.getVector2();
+        reqModule().ccall('rl_window_get_screen_size_to_scratch', null, [], []);
+        return reqModule().getVector2();
     },
     getPosition: () => {
-        moduleInstance.ccall('rl_window_get_position_to_scratch', null, [], []);
-        return moduleInstance.getVector2();
+        reqModule().ccall('rl_window_get_position_to_scratch', null, [], []);
+        return reqModule().getVector2();
     },
     getMonitorPosition: (monitor = 0) => {
-        moduleInstance.ccall('rl_window_get_monitor_position_to_scratch', null, ['number'], [monitor]);
-        return moduleInstance.getVector2();
+        reqModule().ccall('rl_window_get_monitor_position_to_scratch', null, ['number'], [monitor]);
+        return reqModule().getVector2();
     }
-};
+} satisfies RLWindow;
 
-RL.render = {
+const render = {
     begin: () => {
-        return moduleInstance.ccall('rl_render_begin', null, [], []);
+        return reqModule().ccall('rl_render_begin', null, [], []);
     },
     end: () => {
-        return moduleInstance.ccall('rl_render_end', null, [], []);
+        return reqModule().ccall('rl_render_end', null, [], []);
     },
     beginMode2D: (camera) => {
-        return moduleInstance.ccall('rl_render_begin_mode_2d', null, ['number'], [camera]);
+        return reqModule().ccall('rl_render_begin_mode_2d', null, ['number'], [camera]);
     },
     endMode2D: () => {
-        return moduleInstance.ccall('rl_render_end_mode_2d', null, [], []);
+        return reqModule().ccall('rl_render_end_mode_2d', null, [], []);
     },
     beginMode3D: () => {
-        return moduleInstance.ccall('rl_render_begin_mode_3d', null, [], []);
+        return reqModule().ccall('rl_render_begin_mode_3d', null, [], []);
     },
     endMode3D: () => {
-        return moduleInstance.ccall('rl_render_end_mode_3d', null, [], []);
+        return reqModule().ccall('rl_render_end_mode_3d', null, [], []);
     },
     clearBackground: (color) => {
-        return moduleInstance.ccall('rl_render_clear_background', null, ['number'], [color]);
+        return reqModule().ccall('rl_render_clear_background', null, ['number'], [color]);
     },
     enableLighting: () => {
-        return moduleInstance.ccall('rl_enable_lighting', null, [], []);
+        return reqModule().ccall('rl_enable_lighting', null, [], []);
     },
     disableLighting: () => {
-        return moduleInstance.ccall('rl_disable_lighting', null, [], []);
+        return reqModule().ccall('rl_disable_lighting', null, [], []);
     },
     isLightingEnabled: () => {
-        return moduleInstance.ccall('rl_is_lighting_enabled', 'number', [], []) !== 0;
+        return ccNum('rl_is_lighting_enabled', [], []) !== 0;
     },
     setLightDirection: (x, y, z) => {
-        return moduleInstance.ccall('rl_set_light_direction', null, ['number', 'number', 'number'], [x, y, z]);
+        return reqModule().ccall('rl_set_light_direction', null, ['number', 'number', 'number'], [x, y, z]);
     },
     setLightAmbient: (ambient) => {
-        return moduleInstance.ccall('rl_set_light_ambient', null, ['number'], [ambient]);
+        return reqModule().ccall('rl_set_light_ambient', null, ['number'], [ambient]);
     }
-};
+} satisfies RLRender;
 
-RL.camera3d = {
+const camera3d = {
     create: (
         positionX, positionY, positionZ,
         targetX, targetY, targetZ,
         upX, upY, upZ,
         fovy, projection
     ) => {
-        return moduleInstance.ccall(
-            'rl_camera3d_create',
-            'number',
-            ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'],
-            [positionX, positionY, positionZ, targetX, targetY, targetZ, upX, upY, upZ, fovy, projection]
-        );
+        return ccNum('rl_camera3d_create', ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'], [positionX, positionY, positionZ, targetX, targetY, targetZ, upX, upY, upZ, fovy, projection]);
     },
     getDefault: () => {
-        return moduleInstance.ccall('rl_camera3d_get_default', 'number', [], []);
+        return ccNum('rl_camera3d_get_default', [], []);
     },
     set: (
         camera,
@@ -1173,27 +1217,22 @@ RL.camera3d = {
         upX, upY, upZ,
         fovy, projection
     ) => {
-        return moduleInstance.ccall(
-            'rl_camera3d_set',
-            'number',
-            ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'],
-            [camera, positionX, positionY, positionZ, targetX, targetY, targetZ, upX, upY, upZ, fovy, projection]
-        ) !== 0;
+        return ccNum('rl_camera3d_set', ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'], [camera, positionX, positionY, positionZ, targetX, targetY, targetZ, upX, upY, upZ, fovy, projection]) !== 0;
     },
     setActive: (camera) => {
-        return moduleInstance.ccall('rl_camera3d_set_active', 'number', ['number'], [camera]) !== 0;
+        return ccNum('rl_camera3d_set_active', ['number'], [camera]) !== 0;
     },
     getActive: () => {
-        return moduleInstance.ccall('rl_camera3d_get_active', 'number', [], []);
+        return ccNum('rl_camera3d_get_active', [], []);
     },
     destroy: (camera) => {
-        return moduleInstance.ccall('rl_camera3d_destroy', null, ['number'], [camera]);
+        return reqModule().ccall('rl_camera3d_destroy', null, ['number'], [camera]);
     }
-};
+} satisfies RLCamera3d;
 
-RL.shape = {
+const shape = {
     drawCube: (positionX, positionY, positionZ, width, height, length, color) => {
-        return moduleInstance.ccall(
+        return reqModule().ccall(
             'rl_shape_draw_cube',
             null,
             ['number', 'number', 'number', 'number', 'number', 'number', 'number'],
@@ -1201,18 +1240,18 @@ RL.shape = {
         );
     },
     drawRectangle: (x, y, width, height, color) => {
-        return moduleInstance.ccall(
+        return reqModule().ccall(
             'rl_shape_draw_rectangle',
             null,
             ['number', 'number', 'number', 'number', 'number'],
             [x | 0, y | 0, width | 0, height | 0, color >>> 0]
         );
     }
-};
+} satisfies RLShape;
 
-RL.debug = {
+const debug = {
     enableFps: (x, y, fontSize, font = 0) => {
-        return moduleInstance.ccall(
+        return reqModule().ccall(
             'rl_debug_enable_fps',
             null,
             ['number', 'number', 'number', 'number'],
@@ -1220,60 +1259,56 @@ RL.debug = {
         );
     },
     disable: () => {
-        return moduleInstance.ccall('rl_debug_disable', null, [], []);
+        return reqModule().ccall('rl_debug_disable', null, [], []);
     }
-};
+} satisfies RLDebug;
 
-RL.text = {
+const text = {
     drawFps: (x, y) => {
-        return moduleInstance.ccall('rl_text_draw_fps', null, ['number', 'number'], [x, y]);
+        return reqModule().ccall('rl_text_draw_fps', null, ['number', 'number'], [x, y]);
     },
     drawFpsEx: (font, x, y, fontSize, color) => {
-        moduleInstance.ccall('rl_text_draw_fps_ex', null, ['number', 'number', 'number', 'number', 'number'], [font, x, y, fontSize, color]);
+        reqModule().ccall('rl_text_draw_fps_ex', null, ['number', 'number', 'number', 'number', 'number'], [font, x, y, fontSize, color]);
     },
     draw: (text, x, y, fontSize, color) => {
-        return moduleInstance.ccall('rl_text_draw', null, ['string', 'number', 'number', 'number', 'number'], [text, x, y, fontSize, color]);
+        return reqModule().ccall('rl_text_draw', null, ['string', 'number', 'number', 'number', 'number'], [text, x, y, fontSize, color]);
     },
     drawEx: (font, text, x, y, fontSize, spacing, tint) => {
-        return moduleInstance.ccall('rl_text_draw_ex', null, ['number', 'string', 'number', 'number', 'number', 'number', 'number'], [font, text, x, y, fontSize, spacing, tint]);
+        return reqModule().ccall('rl_text_draw_ex', null, ['number', 'string', 'number', 'number', 'number', 'number', 'number'], [font, text, x, y, fontSize, spacing, tint]);
     },
     measure: (text, fontSize) => {
-        return moduleInstance.ccall('rl_text_measure', 'number', ['string', 'number'], [text, fontSize]);
+        return ccNum('rl_text_measure', ['string', 'number'], [text, fontSize]);
     },
     measureEx: (font, text, fontSize, spacing = 1) => {
-        moduleInstance.ccall('rl_text_measure_ex_to_scratch', 'number', ['number', 'string', 'number', 'number'], [font, text, fontSize, spacing]);
-        return moduleInstance.getVector2();
+        ccNum('rl_text_measure_ex_to_scratch', ['number', 'string', 'number', 'number'], [font, text, fontSize, spacing]);
+        return reqModule().getVector2();
     },
     // End Scratch-backed wrappers
-};
+} satisfies RLText;
 
-RL.texture = {
-    getDefault: () => moduleInstance.ccall(
-        "rl_texture_get_default", "number", [], []
-    ),
-    create: (path) => moduleInstance.ccall(
-        "rl_texture_create", "number", ["string"], [path]
-    ),
-    destroy: (texture) => moduleInstance.ccall(
+const texture = {
+    getDefault: () => ccHandle("rl_texture_get_default"),
+    create: (path: string) => ccHandle("rl_texture_create", ["string"], [path]),
+    destroy: (texture: RLHandle) => reqModule().ccall(
         "rl_texture_destroy", null, ["number"], [texture]
     ),
     drawEx: (texture, x, y, scale, rotation, tint) => {
-        return moduleInstance.ccall('rl_texture_draw_ex', null, ['number', 'number', 'number', 'number', 'number', 'number'], [texture, x, y, scale, rotation, tint]);
+        return reqModule().ccall('rl_texture_draw_ex', null, ['number', 'number', 'number', 'number', 'number', 'number'], [texture, x, y, scale, rotation, tint]);
     },
     drawGround: (texture, positionX, positionY, positionZ, width, length, tint) => {
-        return moduleInstance.ccall('rl_texture_draw_ground', null, ['number', 'number', 'number', 'number', 'number', 'number', 'number'], [texture, positionX, positionY, positionZ, width, length, tint]);
+        return reqModule().ccall('rl_texture_draw_ground', null, ['number', 'number', 'number', 'number', 'number', 'number', 'number'], [texture, positionX, positionY, positionZ, width, length, tint]);
     }
-};
+} satisfies RLTexture;
 
-RL.input = {
+const input = {
     pollEvents: () => {
-        return moduleInstance.ccall('rl_input_poll_events', null, [], []);
+        return reqModule().ccall('rl_input_poll_events', null, [], []);
     },
     getMouseWheel: () => {
-        return moduleInstance.ccall('rl_input_get_mouse_wheel', 'number', [], []);
+        return ccNum('rl_input_get_mouse_wheel', [], []);
     },
     getMouseButton: (button) => {
-        return moduleInstance.ccall('rl_input_get_mouse_button', 'number', ['number'], [button]);
+        return ccNum('rl_input_get_mouse_button', ['number'], [button]);
     },
 
     // Begin Scratch-backed wrappers
@@ -1282,7 +1317,7 @@ RL.input = {
     // We provide a uniform calling so js isn't aware of the intermediate scratch area use, 
     // while desktop gets the return structure directly,
     getMouseState: () => {
-        const mouse = moduleInstance.getMouseState();
+        const mouse = reqModule().getMouseState();
         return {
             x: mouse.x,
             y: mouse.y,
@@ -1293,77 +1328,68 @@ RL.input = {
             buttons: mouse.buttons
         };
     },
-    getKeyboardState: () => {
-        return moduleInstance.getKeyboard();
-    },
-    getGamepads: () => {
-        if (!moduleInstance || typeof moduleInstance.getGamepads !== "function") {
+    getKeyboardState: (): RLKeyboardState =>
+        reqModule().getKeyboard() as unknown as RLKeyboardState,
+    getGamepads: (): RLGamepadState[] => {
+        const mod = reqModule();
+        if (typeof mod.getGamepads !== "function") {
             return [];
         }
-        return moduleInstance.getGamepads();
+        return mod.getGamepads() as RLGamepadState[];
     },
-    getGamepad: (id) => {
-        if (!moduleInstance || typeof moduleInstance.getGamepad !== "function") {
+    getGamepad: (id: number): RLGamepadState | null => {
+        const mod = reqModule();
+        if (typeof mod.getGamepad !== "function") {
             return null;
         }
-        return moduleInstance.getGamepad(id | 0);
+        return mod.getGamepad(id | 0) as RLGamepadState | null;
     },
-    getTouchpoints: () => {
-        if (!moduleInstance || typeof moduleInstance.getTouchpoints !== "function") {
+    getTouchpoints: (): RLTouchpoint[] => {
+        const mod = reqModule();
+        if (typeof mod.getTouchpoints !== "function") {
             return [];
         }
-        return moduleInstance.getTouchpoints();
+        return mod.getTouchpoints() as RLTouchpoint[];
     },
-    getTouchpoint: (id) => {
-        if (!moduleInstance || typeof moduleInstance.getTouchpoint !== "function") {
+    getTouchpoint: (id: number): RLTouchpoint | null => {
+        const mod = reqModule();
+        if (typeof mod.getTouchpoint !== "function") {
             return null;
         }
-        return moduleInstance.getTouchpoint(id | 0);
+        return mod.getTouchpoint(id | 0) as RLTouchpoint | null;
     },
     getMousePosition: () => {
-        moduleInstance.ccall('rl_input_get_mouse_position_to_scratch', null, [], []);
-        return moduleInstance.getVector2();
+        reqModule().ccall('rl_input_get_mouse_position_to_scratch', null, [], []);
+        return reqModule().getVector2();
     }
-};
+} satisfies RLInput;
 
-RL.color = {
-    create: (r, g, b, a) => moduleInstance.ccall(
-        "rl_color_create", "number", ["number", "number", "number", "number"], [r, g, b, a]
-    ),
-    destroy: (color) => moduleInstance.ccall(
+const color = {
+    create: (r: number, g: number, b: number, a: number) =>
+        ccHandle("rl_color_create", ["number", "number", "number", "number"], [r, g, b, a]),
+    destroy: (color: RLHandle) => reqModule().ccall(
         "rl_color_destroy", null, ["number"], [color]
     )
-};
+} satisfies RLColor;
 
-RL.font = {
-    create: (path, fontSize) => moduleInstance.ccall(
-        "rl_font_create", "number", ["string", "number"], [path, fontSize]
-    ),
-    destroy: (font) => moduleInstance.ccall(
+const font = {
+    create: (path: string, fontSize: number) =>
+        ccHandle("rl_font_create", ["string", "number"], [path, fontSize]),
+    destroy: (font: RLHandle) => reqModule().ccall(
         "rl_font_destroy", null, ["number"], [font]
     ),
-    getDefault: () => moduleInstance.ccall(
-        "rl_font_get_default", "number", [], []
-    )
-};
+    getDefault: () => ccHandle("rl_font_get_default"),
+} satisfies RLFont;
 
-RL.model = {
-    getDefaultAsset: () => moduleInstance.ccall(
-        "rl_model_get_default_asset", "number", [], []
-    ),
-    loadAsset: (path) => moduleInstance.ccall(
-        "rl_model_load_asset", "number", ["string"], [path]
-    ),
-    destroyAsset: (asset) => moduleInstance.ccall(
+const model = {
+    getDefaultAsset: () => ccHandle("rl_model_get_default_asset"),
+    loadAsset: (path: string) => ccHandle("rl_model_load_asset", ["string"], [path]),
+    destroyAsset: (asset: RLHandle) => reqModule().ccall(
         "rl_model_destroy_asset", null, ["number"], [asset]
     ),
-    create: (asset) => moduleInstance.ccall(
-        "rl_model_create", "number", ["number"], [asset]
-    ),
-    createFromFile: (path) => moduleInstance.ccall(
-        "rl_model_create_from_file", "number", ["string"], [path]
-    ),
-    setAsset: (model, asset) => moduleInstance.ccall(
+    create: (asset: RLHandle) => ccHandle("rl_model_create", ["number"], [asset]),
+    createFromFile: (path: string) => ccHandle("rl_model_create_from_file", ["string"], [path]),
+    setAsset: (model, asset) => reqModule().ccall(
         "rl_model_set_asset", "number", ["number", "number"], [model, asset]
     ) !== 0,
     setTransform: (
@@ -1371,60 +1397,58 @@ RL.model = {
         positionX, positionY, positionZ,
         rotationX, rotationY, rotationZ,
         scaleX, scaleY, scaleZ
-    ) => moduleInstance.ccall(
+    ) => reqModule().ccall(
         "rl_model_set_transform",
         "number",
         ["number", "number", "number", "number", "number", "number", "number", "number", "number", "number"],
         [model, positionX, positionY, positionZ, rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ]
     ) !== 0,
-    draw: (model, tint) => moduleInstance.ccall(
+    draw: (model, tint) => reqModule().ccall(
         "rl_model_draw", null, ["number", "number"], [model, tint]
     ),
-    isValid: (model) => moduleInstance.ccall(
+    isValid: (model) => reqModule().ccall(
         "rl_model_is_valid", "number", ["number"], [model]
     ) !== 0,
-    isValidStrict: (model) => moduleInstance.ccall(
+    isValidStrict: (model) => reqModule().ccall(
         "rl_model_is_valid_strict", "number", ["number"], [model]
     ) !== 0,
-    getAnimationCount: (model) => moduleInstance.ccall(
-        "rl_model_get_animation_count", "number", ["number"], [model]
-    ),
-    getAnimationFrameCount: (model, animationIndex) => moduleInstance.ccall(
-        "rl_model_get_animation_frame_count", "number", ["number", "number"], [model, animationIndex]
-    ),
-    updateAnimation: (model, animationIndex, frame) => moduleInstance.ccall(
+    getAnimationCount: (model: RLHandle) =>
+        ccNum("rl_model_get_animation_count", ["number"], [model]),
+    getAnimationFrameCount: (model: RLHandle, animationIndex: number) =>
+        ccNum("rl_model_get_animation_frame_count", ["number", "number"], [model, animationIndex]),
+    updateAnimation: (model, animationIndex, frame) => reqModule().ccall(
         "rl_model_update_animation", null, ["number", "number", "number"], [model, animationIndex, frame]
     ),
-    setAnimation: (model, animationIndex) => moduleInstance.ccall(
+    setAnimation: (model, animationIndex) => reqModule().ccall(
         "rl_model_set_animation", "number", ["number", "number"], [model, animationIndex]
     ) !== 0,
-    setAnimationSpeed: (model, speed) => moduleInstance.ccall(
+    setAnimationSpeed: (model, speed) => reqModule().ccall(
         "rl_model_set_animation_speed", "number", ["number", "number"], [model, speed]
     ) !== 0,
-    setAnimationLoop: (model, shouldLoop) => moduleInstance.ccall(
+    setAnimationLoop: (model, shouldLoop) => reqModule().ccall(
         "rl_model_set_animation_loop", "number", ["number", "number"], [model, shouldLoop ? 1 : 0]
     ) !== 0,
-    setTint: (model, color = 0) => moduleInstance.ccall(
+    setTint: (model, color = 0) => reqModule().ccall(
         "rl_model_set_tint", "number", ["number", "number"], [model, color]
     ) !== 0,
-    animate: (model, deltaSeconds) => moduleInstance.ccall(
+    animate: (model, deltaSeconds) => reqModule().ccall(
         "rl_model_animate", "number", ["number", "number"], [model, deltaSeconds]
     ) !== 0,
-    destroy: (model) => moduleInstance.ccall(
+    destroy: (model) => reqModule().ccall(
         "rl_model_destroy", null, ["number"], [model]
     )
-};
+} satisfies RLModel;
 
-RL.pick = {
+const pick = {
     model: (camera, model, mouseX, mouseY) => {
-        const hit = moduleInstance.ccall(
+        const hit = reqModule().ccall(
             "rl_pick_model_to_scratch",
             "number",
             ["number", "number", "number", "number"],
             [camera, model, mouseX, mouseY]
         ) !== 0;
-        const point = moduleInstance.getVector3();
-        const normalDistance = moduleInstance.getVector4();
+        const point = reqModule().getVector3();
+        const normalDistance = reqModule().getVector4();
         return {
             hit,
             distance: normalDistance.w,
@@ -1437,14 +1461,14 @@ RL.pick = {
         };
     },
     sprite3d: (camera, sprite3d, mouseX, mouseY) => {
-        const hit = moduleInstance.ccall(
+        const hit = reqModule().ccall(
             "rl_pick_sprite3d_to_scratch",
             "number",
             ["number", "number", "number", "number"],
             [camera, sprite3d, mouseX, mouseY]
         ) !== 0;
-        const point = moduleInstance.getVector3();
-        const normalDistance = moduleInstance.getVector4();
+        const point = reqModule().getVector3();
+        const normalDistance = reqModule().getVector4();
         return {
             hit,
             distance: normalDistance.w,
@@ -1457,97 +1481,87 @@ RL.pick = {
         };
     },
     resetStats: () => {
-        moduleInstance.ccall("rl_pick_reset_stats", null, [], []);
+        reqModule().ccall("rl_pick_reset_stats", null, [], []);
     }
-};
+} satisfies RLPick;
 
-RL.music = {
-    create: (path) => moduleInstance.ccall(
-        "rl_music_create", "number", ["string"], [path]
-    ),
-    destroy: (music) => moduleInstance.ccall(
+const music = {
+    create: (path: string) => ccHandle("rl_music_create", ["string"], [path]),
+    destroy: (music) => reqModule().ccall(
         "rl_music_destroy", null, ["number"], [music]
     ),
-    play: (music) => moduleInstance.ccall(
+    play: (music) => reqModule().ccall(
         "rl_music_play", "number", ["number"], [music]
     ) !== 0,
-    pause: (music) => moduleInstance.ccall(
+    pause: (music) => reqModule().ccall(
         "rl_music_pause", "number", ["number"], [music]
     ) !== 0,
-    stop: (music) => moduleInstance.ccall(
+    stop: (music) => reqModule().ccall(
         "rl_music_stop", "number", ["number"], [music]
     ) !== 0,
-    setLoop: (music, shouldLoop) => moduleInstance.ccall(
+    setLoop: (music, shouldLoop) => reqModule().ccall(
         "rl_music_set_loop", "number", ["number", "number"], [music, shouldLoop ? 1 : 0]
     ) !== 0,
-    setVolume: (music, volume) => moduleInstance.ccall(
+    setVolume: (music, volume) => reqModule().ccall(
         "rl_music_set_volume", "number", ["number", "number"], [music, volume]
     ) !== 0,
-    isPlaying: (music) => moduleInstance.ccall(
+    isPlaying: (music) => reqModule().ccall(
         "rl_music_is_playing", "number", ["number"], [music]
     ) !== 0,
-    update: (music) => moduleInstance.ccall(
+    update: (music) => reqModule().ccall(
         "rl_music_update", "number", ["number"], [music]
     ) !== 0,
-    updateAll: () => moduleInstance.ccall(
+    updateAll: () => reqModule().ccall(
         "rl_music_update_all", null, [], []
     )
-};
+} satisfies RLMusic;
 
-RL.sound = {
-    create: (path) => moduleInstance.ccall(
-        "rl_sound_create", "number", ["string"], [path]
-    ),
-    destroy: (sound) => moduleInstance.ccall(
+const sound = {
+    create: (path: string) => ccHandle("rl_sound_create", ["string"], [path]),
+    destroy: (sound) => reqModule().ccall(
         "rl_sound_destroy", null, ["number"], [sound]
     ),
-    play: (sound) => moduleInstance.ccall(
+    play: (sound) => reqModule().ccall(
         "rl_sound_play", "number", ["number"], [sound]
     ) !== 0,
-    pause: (sound) => moduleInstance.ccall(
+    pause: (sound) => reqModule().ccall(
         "rl_sound_pause", "number", ["number"], [sound]
     ) !== 0,
-    resume: (sound) => moduleInstance.ccall(
+    resume: (sound) => reqModule().ccall(
         "rl_sound_resume", "number", ["number"], [sound]
     ) !== 0,
-    stop: (sound) => moduleInstance.ccall(
+    stop: (sound) => reqModule().ccall(
         "rl_sound_stop", "number", ["number"], [sound]
     ) !== 0,
-    setVolume: (sound, volume) => moduleInstance.ccall(
+    setVolume: (sound, volume) => reqModule().ccall(
         "rl_sound_set_volume", "number", ["number", "number"], [sound, volume]
     ) !== 0,
-    setPitch: (sound, pitch) => moduleInstance.ccall(
+    setPitch: (sound, pitch) => reqModule().ccall(
         "rl_sound_set_pitch", "number", ["number", "number"], [sound, pitch]
     ) !== 0,
-    setPan: (sound, pan) => moduleInstance.ccall(
+    setPan: (sound, pan) => reqModule().ccall(
         "rl_sound_set_pan", "number", ["number", "number"], [sound, pan]
     ) !== 0,
-    isPlaying: (sound) => moduleInstance.ccall(
+    isPlaying: (sound) => reqModule().ccall(
         "rl_sound_is_playing", "number", ["number"], [sound]
     ) !== 0
-};
+} satisfies RLSound;
 
-RL.sprite3d = {
-    create: (texture) => moduleInstance.ccall(
-        "rl_sprite3d_create", "number", ["number"], [texture]
-    ),
-    createFromFile: (path) => moduleInstance.ccall(
-        "rl_sprite3d_create_from_file", "number", ["string"], [path]
-    ),
-    setTexture: (sprite, texture) => moduleInstance.ccall(
+const sprite3d = {
+    create: (texture: RLHandle) => ccHandle("rl_sprite3d_create", ["number"], [texture]),
+    createFromFile: (path: string) => ccHandle("rl_sprite3d_create_from_file", ["string"], [path]),
+    setTexture: (sprite, texture) => reqModule().ccall(
         "rl_sprite3d_set_texture", "number", ["number", "number"], [sprite, texture]
     ) !== 0,
-    setTransform: (sprite, positionX, positionY, positionZ, size) => moduleInstance.ccall(
+    setTransform: (sprite, positionX, positionY, positionZ, size) => reqModule().ccall(
         "rl_sprite3d_set_transform", "number", ["number", "number", "number", "number", "number"], [sprite, positionX, positionY, positionZ, size]
     ) !== 0,
-    getDefaultTexture: () => moduleInstance.ccall(
-        "rl_sprite3d_get_default_texture", "number", [], []
-    ),
+    getDefaultTexture: () => ccHandle("rl_sprite3d_get_default_texture"),
     getTransform: (sprite) => {
-        const stackSave = moduleInstance.stackSave;
-        const stackRestore = moduleInstance.stackRestore;
-        const stackAlloc = moduleInstance.stackAlloc;
-        const heapF32 = moduleInstance.HEAPF32;
+        const stackSave = reqModule().stackSave;
+        const stackRestore = reqModule().stackRestore;
+        const stackAlloc = reqModule().stackAlloc;
+        const heapF32 = reqModule().HEAPF32;
         if (
             typeof stackSave !== "function" ||
             typeof stackRestore !== "function" ||
@@ -1562,7 +1576,7 @@ RL.sprite3d = {
             const positionYPtr = stackAlloc(4) >>> 0;
             const positionZPtr = stackAlloc(4) >>> 0;
             const sizePtr = stackAlloc(4) >>> 0;
-            const ok = moduleInstance.ccall(
+            const ok = reqModule().ccall(
                 "rl_sprite3d_get_transform",
                 "number",
                 ["number", "number", "number", "number", "number"],
@@ -1581,76 +1595,68 @@ RL.sprite3d = {
             stackRestore(prevSp);
         }
     },
-    setTint: (sprite, color = 0) => moduleInstance.ccall(
+    setTint: (sprite, color = 0) => reqModule().ccall(
         "rl_sprite3d_set_tint", "number", ["number", "number"], [sprite, color]
     ) !== 0,
-    draw: (sprite, tint = 0) => moduleInstance.ccall(
+    draw: (sprite, tint = 0) => reqModule().ccall(
         "rl_sprite3d_draw", null, ["number", "number"], [sprite, tint]
     ),
-    destroy: (sprite) => moduleInstance.ccall(
+    destroy: (sprite) => reqModule().ccall(
         "rl_sprite3d_destroy", null, ["number"], [sprite]
     )
-};
+} satisfies RLSprite3d;
 
-RL.sprite2d = {
-    create: (texture) => moduleInstance.ccall(
-        "rl_sprite2d_create", "number", ["number"], [texture]
-    ),
-    createFromFile: (path) => moduleInstance.ccall(
-        "rl_sprite2d_create_from_file", "number", ["string"], [path]
-    ),
-    getDefaultTexture: () => moduleInstance.ccall(
-        "rl_sprite2d_get_default_texture", "number", [], []
-    ),
-    setTexture: (sprite, texture) => moduleInstance.ccall(
+const sprite2d = {
+    create: (texture: RLHandle) => ccHandle("rl_sprite2d_create", ["number"], [texture]),
+    createFromFile: (path: string) => ccHandle("rl_sprite2d_create_from_file", ["string"], [path]),
+    getDefaultTexture: () => ccHandle("rl_sprite2d_get_default_texture"),
+    setTexture: (sprite, texture) => reqModule().ccall(
         "rl_sprite2d_set_texture", "number", ["number", "number"], [sprite, texture]
     ) !== 0,
-    setTransform: (sprite, x, y, scale, rotation) => moduleInstance.ccall(
+    setTransform: (sprite, x, y, scale, rotation) => reqModule().ccall(
         "rl_sprite2d_set_transform", "number", ["number", "number", "number", "number", "number"], [sprite, x, y, scale, rotation]
     ) !== 0,
-    setTint: (sprite, color = 0) => moduleInstance.ccall(
+    setTint: (sprite, color = 0) => reqModule().ccall(
         "rl_sprite2d_set_tint", "number", ["number", "number"], [sprite, color]
     ) !== 0,
-    draw: (sprite, tint = 0) => moduleInstance.ccall(
+    draw: (sprite, tint = 0) => reqModule().ccall(
         "rl_sprite2d_draw", null, ["number", "number"], [sprite, tint]
     ),
-    destroy: (sprite) => moduleInstance.ccall(
+    destroy: (sprite) => reqModule().ccall(
         "rl_sprite2d_destroy", null, ["number"], [sprite]
     )
-};
+} satisfies RLSprite2d;
 
-RL.text2d = {
-    create: (font, size) => moduleInstance.ccall(
-        "rl_text2d_create", "number", ["number", "number"], [font, size]
-    ),
-    setFont: (handle, font) => moduleInstance.ccall(
+const text2d = {
+    create: (font: RLHandle, size: number) => ccHandle("rl_text2d_create", ["number", "number"], [font, size]),
+    setFont: (handle, font) => reqModule().ccall(
         "rl_text2d_set_font", null, ["number", "number"], [handle, font]
     ),
-    setSize: (handle, size) => moduleInstance.ccall(
+    setSize: (handle, size) => reqModule().ccall(
         "rl_text2d_set_size", null, ["number", "number"], [handle, size]
     ),
-    setContent: (handle, content) => moduleInstance.ccall(
+    setContent: (handle, content) => reqModule().ccall(
         "rl_text2d_set_content", null, ["number", "string"], [handle, content]
     ),
-    setPosition: (handle, x, y) => moduleInstance.ccall(
+    setPosition: (handle, x, y) => reqModule().ccall(
         "rl_text2d_set_position", null, ["number", "number", "number"], [handle, x, y]
     ),
-    setColor: (handle, color) => moduleInstance.ccall(
+    setColor: (handle, color) => reqModule().ccall(
         "rl_text2d_set_color", null, ["number", "number"], [handle, color]
     ),
-    draw: (handle) => moduleInstance.ccall(
+    draw: (handle) => reqModule().ccall(
         "rl_text2d_draw", null, ["number"], [handle]
     ),
-    destroy: (handle) => moduleInstance.ccall(
+    destroy: (handle) => reqModule().ccall(
         "rl_text2d_destroy", null, ["number"], [handle]
     )
-};
+} satisfies RLText2d;
 
-RL.logger = {
-    message: (level, message) => moduleInstance.ccall(
+const logger = {
+    message: (level, message) => reqModule().ccall(
         "rl_logger_message", null, ["number", "string"], [level, String(message ?? "").replaceAll("%", "%%")]
     ),
-    messageSource: (level, sourceFile, sourceLine, message) => moduleInstance.ccall(
+    messageSource: (level, sourceFile, sourceLine, message) => reqModule().ccall(
         "rl_logger_message_source",
         null,
         ["number", "string", "number", "string"],
@@ -1661,75 +1667,84 @@ RL.logger = {
             String(message ?? "").replaceAll("%", "%%"),
         ]
     ),
-    setLevel: (level) => moduleInstance.ccall(
+    setLevel: (level) => reqModule().ccall(
         "rl_logger_set_level", null, ["number"], [level]
     )
-};
+} satisfies RLLogger;
 
-RL.helpers = {
+async function waitForTask(task: RLHandle, pollMs = 16): Promise<number> {
+    if (!task) {
+        return -1;
+    }
+
+    while (!asset.pollTask(task)) {
+        await new Promise((resolve) => setTimeout(resolve, pollMs));
+    }
+
+    const rc = asset.finishTask(task);
+    asset.freeTask(task);
+    return rc;
+}
+
+const helpers = {
     waitForFsReady: async (timeoutMs = 2000) => {
         const start = performance.now();
         while (performance.now() - start < timeoutMs) {
-            if (RL.fs.isReady()) {
+            if (fs.isReady()) {
                 return true;
             }
             await new Promise((resolve) => setTimeout(resolve, 16));
         }
-        return RL.fs.isReady();
+        return fs.isReady();
     },
     taskIsValid: (task) => {
         return task !== 0;
     },
-    waitForTask: async (task, pollMs = 16) => {
-        let rc = 0;
-
-        if (!task) {
-            return -1;
-        }
-
-        while (!RL.asset.pollTask(task)) {
-            await new Promise((resolve) => setTimeout(resolve, pollMs));
-        }
-
-        rc = RL.asset.finishTask(task);
-        RL.asset.freeTask(task);
-        return rc;
-    },
-    waitForFsRestoreAsync: async () => {
-        return RL.helpers.waitForTask(RL.fs.restoreAsync());
-    },
-    waitForAssetEnsureAsync: async (filename, src = null) => {
-        return RL.helpers.waitForTask(RL.asset.ensureAsync(filename, src));
-    },
-    waitForAssetEnsureGroupAsync: async (filenames) => {
-        return RL.helpers.waitForTask(RL.asset.ensureGroupAsync(filenames));
-    },
-    createTaskGroup: (onComplete = null, onError = null, ctx = null) => {
+    waitForTask,
+    waitForFsRestoreAsync: async () => waitForTask(fs.restoreAsync()),
+    waitForAssetEnsureAsync: async (filename: string, src: string | null = null) =>
+        waitForTask(asset.ensureAsync(filename, src)),
+    waitForAssetEnsureGroupAsync: async (filenames: string[]) =>
+        waitForTask(asset.ensureGroupAsync(filenames)),
+    createTaskGroup: <T = unknown>(
+        onComplete: RLTaskGroupCallback<T> | null = null,
+        onError: RLTaskGroupCallback<T> | null = null,
+        ctx: T | null = null,
+    ): RLTaskGroup<T> => {
+        type TaskGroupEntry = {
+            task: RLHandle;
+            path: string;
+            done: boolean;
+            rc: number;
+            onSuccess: RLTaskGroupTaskCallback<T> | null;
+            onError: RLTaskGroupTaskCallback<T> | null;
+        };
+        const entries: TaskGroupEntry[] = [];
         const group = {
-            entries: [],
+            entries,
             callbackContext: ctx,
             onCompleteCallback: typeof onComplete === "function" ? onComplete : null,
             onErrorCallback: typeof onError === "function" ? onError : null,
             terminalCallbackInvoked: false,
             failedCount: 0,
             completedCount: 0,
-            addTask(task, onSuccess = null, onTaskError = null) {
+            addTask(task: RLHandle, onSuccess: RLTaskGroupTaskCallback<T> | null = null, onTaskError: RLTaskGroupTaskCallback<T> | null = null) {
                 if (!task) {
                     return;
                 }
                 this.entries.push({
                     task,
-                    path: RL.asset.getTaskPath(task),
+                    path: asset.getTaskPath(task),
                     done: false,
                     rc: 1,
                     onSuccess: typeof onSuccess === "function" ? onSuccess : null,
                     onError: typeof onTaskError === "function" ? onTaskError : null,
                 });
             },
-            addImportTask(path, onSuccess = null, onTaskError = null) {
-                this.addTask(RL.asset.ensureAsync(path), onSuccess, onTaskError);
+            addImportTask(path: string, onSuccess: RLTaskGroupTaskCallback<T> | null = null, onTaskError: RLTaskGroupTaskCallback<T> | null = null) {
+                this.addTask(asset.ensureAsync(path), onSuccess, onTaskError);
             },
-            addImportTasks(paths, onSuccess = null, onTaskError = null) {
+            addImportTasks(paths: string[], onSuccess: RLTaskGroupTaskCallback<T> | null = null, onTaskError: RLTaskGroupTaskCallback<T> | null = null) {
                 if (!Array.isArray(paths)) {
                     return;
                 }
@@ -1747,25 +1762,25 @@ RL.helpers = {
                 return this.failedCount > 0;
             },
             tick() {
-                RL.asset.tick();
+                asset.tick();
                 for (const entry of this.entries) {
                     if (entry.done) {
                         continue;
                     }
-                    if (!RL.asset.pollTask(entry.task)) {
+                    if (!asset.pollTask(entry.task)) {
                         continue;
                     }
-                    entry.rc = RL.asset.finishTask(entry.task);
-                    RL.asset.freeTask(entry.task);
+                    entry.rc = asset.finishTask(entry.task);
+                    asset.freeTask(entry.task);
                     entry.done = true;
                     this.completedCount += 1;
                     if (entry.rc !== 0) {
                         this.failedCount += 1;
                         if (entry.onError) {
-                            entry.onError(entry.path, this.callbackContext);
+                            entry.onError(entry.path, this.callbackContext as T);
                         }
                     } else if (entry.onSuccess) {
-                        entry.onSuccess(entry.path, this.callbackContext);
+                        entry.onSuccess(entry.path, this.callbackContext as T);
                     }
                 }
                 return this.remainingTasks() > 0;
@@ -1776,10 +1791,10 @@ RL.helpers = {
                     this.terminalCallbackInvoked = true;
                     if (this.hasFailures()) {
                         if (this.onErrorCallback) {
-                            this.onErrorCallback(this, this.callbackContext);
+                            this.onErrorCallback(this, this.callbackContext as T);
                         }
                     } else if (this.onCompleteCallback) {
-                        this.onCompleteCallback(this, this.callbackContext);
+                        this.onCompleteCallback(this, this.callbackContext as T);
                     }
                 }
                 return this.remainingTasks();
@@ -1794,23 +1809,25 @@ RL.helpers = {
                 return out;
             },
         };
-        return group;
+        return group as RLTaskGroup<T>;
     },
     getScreenWidth: () => {
-        return RL.window.getScreenSize().x;
+        return window.getScreenSize().x;
     },
     getScreenHeight: () => {
-        return RL.window.getScreenSize().y;
+        return window.getScreenSize().y;
     },
-    getPickStats: () => {
-        return {
-            broadphaseTests: moduleInstance.ccall("rl_pick_get_broadphase_tests", "number", [], []),
-            broadphaseRejects: moduleInstance.ccall("rl_pick_get_broadphase_rejects", "number", [], []),
-            narrowphaseTests: moduleInstance.ccall("rl_pick_get_narrowphase_tests", "number", [], []),
-            narrowphaseHits: moduleInstance.ccall("rl_pick_get_narrowphase_hits", "number", [], [])
-        };
-    },
-};
+    getPickStats: () => ({
+            broadphaseTests: ccNum("rl_pick_get_broadphase_tests"),
+            broadphaseRejects: ccNum("rl_pick_get_broadphase_rejects"),
+            narrowphaseTests: ccNum("rl_pick_get_narrowphase_tests"),
+            narrowphaseHits: ccNum("rl_pick_get_narrowphase_hits"),
+        }),
+} satisfies RLHelpers;
 
-export const rl = RL;
-export default RL;
+export const rl = {
+    ...rlCore,
+    fs, asset, event, window, render, camera3d, shape, debug, text, texture, input, color, font, model, pick, music, sound, sprite3d, sprite2d, text2d, logger, helpers,
+} satisfies RLApi;
+
+export default rl;

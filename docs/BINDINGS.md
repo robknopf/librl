@@ -16,7 +16,7 @@ All user-facing binding APIs must expose native language types — not C FFI typ
 | Nim | `int`, `float`, `string`, `bool` | `cint`, `cfloat`, `cstring` in `_c`/`_raw` procs |
 | Haxe | `Int`, `Float`, `String`, `Bool` | hxcpp externs stay inside `RLImpl.*.hx` |
 | Lua | Lua number, string | C types internal to `bindings/lua/*.c` |
-| JS | JS `number`, `string` | `ccall` / Emscripten internals stay in `bindings/js/rl.js` |
+| JS | JS `number`, `string` | `ccall` / Emscripten internals stay in `bindings/js/dist/rl.js` |
 
 **Rule:** if a user would need to write `.cint`, `.cfloat`, `.cstring`, or an explicit integer cast at the call site, the binding is incomplete and needs a wrapper.
 
@@ -39,17 +39,17 @@ All bindings (Nim, Haxe, Lua, JS) call the C API directly. There is no frame com
 
 Files:
 
-- `bindings/js/rl.js`
+- `bindings/js/dist/rl.js`
 
 Role:
 
 - `lib/librl.js` + `lib/librl.wasm` are the raw Emscripten runtime artifacts.
-- `bindings/js/rl.js` is the standalone JS binding wrapper that imports `lib/librl.js` and exposes the higher-level `RL` object.
+- `bindings/js/dist/rl.js` is the standalone JS binding wrapper that imports `lib/librl.js` and exposes the higher-level `RL` object.
 - Calls C exports via `ccall`.
 - Initializes and reads the scratch area bridge for vectors/input state.
 - Provides browser-oriented runtime setup helpers (`canvas`, module boot/init flow).
 - Window/viewport resize and letterboxing are host/runner concerns (for example `examples/www/public/js/example_runner.js`); the JS binding does not install browser resize listeners or call `rl_window_set_size` during init.
-- Exposes explicit scratch refresh on JS only (`refreshScratch()` in `bindings/js/rl.js`, invoked automatically at the start of `tick()`). Haxe/Lua/Nim do not expose scratch-bridge entry points — desktop uses direct C struct returns; wasm Haxe/Nim use `tick()` which forwards to the JS binding.
+- Exposes explicit scratch refresh on JS only (`refreshScratch()` in `bindings/js/dist/rl.js`, invoked automatically at the start of `tick()`). Haxe/Lua/Nim do not expose scratch-bridge entry points — desktop uses direct C struct returns; wasm Haxe/Nim use `tick()` which forwards to the JS binding.
 
 Scratch design goals:
 
@@ -58,7 +58,7 @@ Scratch design goals:
   - `*_from_scratch`: C reads host-provided data from scratch memory (used where needed).
 - Keep JS-facing APIs abstracted from scratch internals:
   - JS wrappers expose normal methods (`getWindowPosition()`, `measureTextEx()`, etc.).
-  - Internally, wrappers may call a `*_to_scratch` bridge and then read via `bindings/js/rl.js`.
+  - Internally, wrappers may call a `*_to_scratch` bridge and then read via `bindings/js/dist/rl.js`.
 - Reduce boundary overhead:
   - For vec/struct-like return values, one wasm call + one scratch read is preferred over many scalar calls.
 
@@ -88,7 +88,7 @@ Direct scratch reads (no `*_to_scratch` call; require `refreshScratch()` or `tic
 Notes:
 
 - C symbols in the first table are wasm export/implementation details — do not call them from application JS; use the `RL.*` wrapper.
-- `bindings/js/rl.js` reads scratch through internal module helpers (`getVector2`, `getVector3`, `getVector4`, `getMouseState`, …) initialized at boot from `rl_scratch_get_base()` and `rl_scratch_get_offsets()`.
+- `bindings/js/dist/rl.js` reads scratch through internal module helpers (`getVector2`, `getVector3`, `getVector4`, `getMouseState`, …) initialized at boot from `rl_scratch_get_base()` and `rl_scratch_get_offsets()`.
 - Haxe/Lua/Nim intentionally omit `scratch_refresh` / `scratchRefresh` / `rl_scratch_refresh` on their public surfaces (commented in binding sources with rationale). Wasm Haxe/Nim callers rely on `tick()` → JS `refreshScratch()`. Layout and lifecycle details: `docs/API.md` § Scratch Area.
 
 Used by:
@@ -116,7 +116,7 @@ Notes:
   - Returns `BOOT_*` codes (not `INIT_*`): `BOOT_OK` (0), `BOOT_ERR_UNKNOWN` (-10), `BOOT_ERR_LOADER` (-11), `BOOT_ERR_VERSION_MISMATCH` (-12).
   - This is useful when callers need the loader-only/bootstrap path first, for example `boot() -> RL.fs.init() -> init()`.
   - `boot(...)` is the canonical place for module/browser options such as `canvasId`, `modulePath`, `wasmPath`, `idealWidth`, `idealHeight`, and optional callback hooks like `print`, `printErr`, and `locateFile`.
-  - `modulePath` selects the raw Emscripten JS runtime module (`lib/librl.js` by default, resolved relative to `bindings/js/rl.js`).
+  - `modulePath` selects the raw Emscripten JS runtime module (`lib/librl.js` by default, resolved relative to `bindings/js/dist/rl.js`).
   - `init(...)` and `initAsync(...)` reuse the booted module instance when one already exists.
 - **C init entry points:** `rl_init_values` / `rl_init_values_async` (scalar args; see `docs/API.md`). **`rl_init` / `rl_init_async` (struct pointer) and `rl_init_config_sizeof` are removed** — no struct-based init in the public C ABI.
 - **Init contract (all bindings):** public API is config/table/object only — `init(config)` (run to completion; JS/wasm returns a Promise because init may suspend on fs/JSPI) and `initAsync(config)` (immediate return; poll `tick()` until `RL_TICK_RUNNING`). Bindings accept native config types and call `rl_init_values*` internally. Do not re-add positional `initValues*` wrappers on user-facing binding APIs.
@@ -134,11 +134,11 @@ Notes:
   - Haxe: `RL.versionMajor()`, … (plus `RL.VERSION_*` constants)
   - Lua: `rl.version_major()`, …
 - Binding/core alignment: `make binding-version` (runs with `desktop` / `shared` / `wasm` / `rl_lua`) writes `bindings/*/gen/*` from `include/rl_version.h`. Each binding queries `rl_version_*` from librl, compares to its stamp, logs both versions, and applies local policy (`validate_version()` / `validateVersion()` / `rl_validate_version()` return `0` ok, `1` patch drift, `< 0` fatal). Checks run at load/boot (not `init`): Lua on `require("rl")` and `rl.boot()`; JS after wasm load; Nim/Haxe on `rl_boot()` / `RL.boot()`.
-- JS TypeScript declarations: `make binding-types` (runs with `desktop` / `shared` / `wasm`) regenerates `types/librl.d.ts` from `bindings/js/rl.js` via `tools/gen_librl_dts.py`. Do not hand-edit `types/librl.d.ts`; after adding or renaming JS binding methods/constants, run `make binding-types` (or any of those build targets). The build copies the result to `lib/librl.d.ts`. Tighter method signatures can be added in `SIGNATURE_OVERRIDES` inside the generator; everything else gets generic `unknown` signatures so the file stays complete without manual upkeep.
+- JS TypeScript declarations: `make binding-types` (runs with `desktop` / `shared` / `wasm`) esbuild-bundles `bindings/js/src/rl.ts` → `bindings/js/dist/rl.js` and emits `bindings/js/dist/rl.d.ts` from `bindings/js/src/types.ts` via `npm run build --prefix bindings/js`. Do not hand-edit generated outputs. After adding or renaming JS binding methods/constants, update `bindings/js/src/types.ts` when signatures change, then run `make binding-types` (or any of those build targets).
 - **Binding tooling (maintainers/agents):** full table, platform policy, and workflow in `docs/MAINTAINER.md` § Tools.
   - `python3 tools/audit_binding_parity.py` — gap report vs `docs/API.md`; update `docs/ROADMAP.md` after binding work
   - `make binding-version` → `tools/gen_binding_versions.py`
-  - `make binding-types` → `tools/gen_librl_dts.py`
+  - `make binding-types` → `npm run build --prefix bindings/js` (esbuild bundle + `tsc` declarations from `bindings/js/src/types.ts`)
   - `python3 tools/gen_haxe_public_sections.py` — Haxe section façades
 - JS `pickModel(camera, model, mouseX, mouseY)` and `pickSprite3d(camera, sprite3d, mouseX, mouseY)` return local-space `point` / `normal` data from `rl_pick_result_t`.
 - JS fs/asset namespaces (mirror `rl_fs.h` / `rl_asset.h`):
@@ -216,7 +216,7 @@ Notes:
   - `RL_FLAG_MSAA_4X_HINT`
 - Window close polling is exposed in Nim as `rl_window_close_requested()`.
 - Nim exposes `rl_boot([config])`.
-  - On JS, `rl_boot` dynamically imports `bindings/js/rl.js`, boots the wrapper, and patches color constants.
+  - On JS, `rl_boot` dynamically imports `bindings/js/dist/rl.js`, boots the wrapper, and patches color constants.
   - `RLBootConfig` on JS currently exposes:
     - `bindingsPath`
     - `canvasId`
@@ -227,7 +227,7 @@ Notes:
     - `print`
     - `printErr`
     - `locateFile`
-  - `bindingsPath` lets callers override the runtime path to `bindings/js/rl.js`; if omitted, Nim JS defaults to `"/bindings/js/rl.js"`.
+  - `bindingsPath` lets callers override the runtime path to `bindings/js/dist/rl.js`; if omitted, Nim JS defaults to `"/bindings/js/dist/rl.js"`.
   - On Nim JS, `print` and `printErr` are forwarded into the wrapper `env` object. `locateFile` is currently accepted for API parity but ignored with a warning.
   - On native targets, `rl_boot` loads nothing (static link) but still runs the binding/core version check, then returns `RL_INIT_OK`.
 - Fs/asset helpers in Nim (all return native `int` or `bool`):
@@ -269,7 +269,7 @@ Files:
 - `bindings/haxe/rl/helpers/*.hx` — binding ergonomics (not C API), e.g. `rl.helpers.TaskGroup.create()`, `rl.helpers.Log.info()`, `rl.helpers.Wait.waitForTask()`. JS equivalent bucket: `RL.helpers.*` (where applicable).
 - `tools/gen_haxe_public_sections.py` — regenerates section façade files from the `SECTIONS` map (see MAINTAINER § Binding tooling).
 - `bindings/haxe/rl/impl/RLImpl.cpp.hx` — current hxcpp backend implementation. Contains all `@:native`, `untyped __cpp__`, `@:functionCode`, and bridge classes.
-- `bindings/haxe/rl/impl/RLImpl.js.hx` — Haxe `js` backend. It is a thin adapter over the standalone JS binding exported from `bindings/js/rl.js`.
+- `bindings/haxe/rl/impl/RLImpl.js.hx` — Haxe `js` backend. It is a thin adapter over the standalone JS binding exported from `bindings/js/dist/rl.js`.
 - `bindings/haxe/rl/impl/RLImpl.hx` — unsupported fallback that fails compilation for targets without a backend.
 - `bindings/haxe/rl/Types.hx` — shared binding types (`RLHandle`, `RLVec2`, config structs, input state, …).
 - `bindings/haxe/rl/impl/RLFileioImpl.cpp.hx` — current hxcpp-only fs/asset impl (`RLFileio` internal class).
@@ -300,15 +300,15 @@ Current state:
 - `RL.boot(?config)` is the backend bootstrap hook:
   - Returns `RL.BOOT_*` codes (not `RL.INIT_*`): `BOOT_OK` (0), `BOOT_ERR_UNKNOWN` (-10), `BOOT_ERR_LOADER` (-11, wasm/module/JSPI load failure), `BOOT_ERR_VERSION_MISMATCH` (-12).
   - On hxcpp/cppia it returns `Int`, runs the binding/core version check, and succeeds immediately when load is not required.
-  - On Haxe JS it returns `js.lib.Promise<Int>` so the JS backend can import `bindings/js/rl.js`, which then instantiates `lib/librl.js` / `lib/librl.wasm` before normal `RL.init(...)` calls.
-  - The current Haxe JS backend expects the generated raw `lib/librl.js` JSPI build plus the standalone wrapper in `bindings/js/rl.js`. If `WebAssembly.Suspending` / `WebAssembly.promising` are unavailable, `RL.boot()` returns an error code and leaves the backend unbooted.
+  - On Haxe JS it returns `js.lib.Promise<Int>` so the JS backend can import `bindings/js/dist/rl.js`, which then instantiates `lib/librl.js` / `lib/librl.wasm` before normal `RL.init(...)` calls.
+  - The current Haxe JS backend expects the generated raw `lib/librl.js` JSPI build plus the standalone wrapper in `bindings/js/dist/rl.js`. If `WebAssembly.Suspending` / `WebAssembly.promising` are unavailable, `RL.boot()` returns an error code and leaves the backend unbooted.
   - Haxe JS uses a typed `RLBootConfig` surface with flattened fields like `bindingsPath`, `canvasId`, `modulePath`, `wasmPath`, `idealWidth`, `idealHeight`, `print`, `printErr`, and `locateFile`.
 - Haxe JS returns Promises for blocking JSPI-backed calls:
   - `RL.init(...)`, `RL.initAsync(...)`, `RL.deinit()`
   - `Fs.init(...)`, `Fs.deinit()`, `Asset.ensure(...)`
   - The `*Async` task-starting APIs keep their C semantics: they return immediate status/task handles and are polled/finished through the asset task API.
 - The Haxe JS backend now reuses `bindings/js/*` exclusively. `RLImpl.js.hx` no longer calls the wasm exports directly; all browser-side behavior flows through the JS binding layer.
-- On Haxe JS, scratch refresh is internal to `RL.tick()` (forwards to `bindings/js/rl.js` `refreshScratch()`). `RL.scratchRefresh()` is intentionally not on the Haxe public surface.
+- On Haxe JS, scratch refresh is internal to `RL.tick()` (forwards to `bindings/js/dist/rl.js` `refreshScratch()`). `RL.scratchRefresh()` is intentionally not on the Haxe public surface.
 - `RLImpl.cpp.hx` keeps the raw C extern table private as `RLExterns`; authored code never imports it directly.
 - There is no generic runtime fallback. New targets must add an explicit backend such as `RLImpl.lua.hx`.
 - `examples/haxe-js-simple` is the current compile/run smoke test for the Haxe `js` backend. It exercises `RL.boot()` and fs init/deinit; in runtimes without JSPI support, boot returns an error code without instantiating wasm.
@@ -447,7 +447,7 @@ Notes:
   - Nim: snake_case aligned with C names, but all public procs use native Nim types (`int`/`float`/`string`). Internal C bridge procs use `_c` or `_raw` suffix.
   - Haxe: verb-first methods on section classes (`Fs.init`, `Asset.ensure`, `Text2d.setFont`, …); impl layer is C-aligned.
     - examples: `frameBufferSubmit`, `windowGetScreenSize`
-  - JavaScript (`bindings/js/rl.js`): nested namespaces per C header (`RL.fs`, `RL.asset`, …); verb-first for handle-instance methods (`setText2dFont`, `createSprite3d`, `getDefaultTexture`).
+  - JavaScript (`bindings/js/dist/rl.js`): nested namespaces per C header (`RL.fs`, `RL.asset`, …); verb-first for handle-instance methods (`setText2dFont`, `createSprite3d`, `getDefaultTexture`).
 - Avoid inventing alternate verb ordering in Haxe/Lua/Nim if the C API is clear.
   - prefer section-first semantics equivalent to `rl_<section>_<action>` on those bindings.
 

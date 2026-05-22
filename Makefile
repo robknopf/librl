@@ -328,9 +328,6 @@ WASM_OBJS = $(addprefix $(OBJ_WASM_DIR)/,$(WASM_SRCS:.c=.o))
 # Output directories
 OUT_LIB_DIR = lib
 OUT_INC_DIR = include
-TYPES_DIR = types
-TYPE_LIBRL_DECL = $(TYPES_DIR)/librl.d.ts
-OUT_LIBRL_DECL = $(OUT_LIB_DIR)/librl.d.ts
 OUT_WASM ?= $(OUT_LIB_DIR)/$(LIBRL_BASENAME)$(DEV_SUFFIX).js
 # Browser-consumable Emscripten module output (.js + companion .wasm).
 OUT_WASM_ARCHIVE ?= $(OUT_LIB_DIR)/$(LIBRL_BASENAME)$(DEV_SUFFIX).wasm.a
@@ -469,7 +466,6 @@ desktop: binding-version binding-types libraylib_desktop wgutils_desktop ensure_
 	$(Q)ar rcs $(OUT_DESKTOP) $(DESKTOP_OBJS) $(OBJ_DESKTOP_DIR)/.raylib_unpack/*.o $(OBJ_DESKTOP_DIR)/.wgutils_unpack/*.o
 
 BINDING_GEN_SCRIPT := $(LIBRL_ROOT)/tools/gen_binding_versions.py
-BINDING_TYPES_SCRIPT := $(LIBRL_ROOT)/tools/gen_librl_dts.py
 PYTHON ?= python3
 
 .PHONY: binding-version
@@ -477,8 +473,8 @@ binding-version: include/rl_version.h $(BINDING_GEN_SCRIPT)
 	$(Q)$(PYTHON) "$(BINDING_GEN_SCRIPT)" "$(abspath $(LIBRL_ROOT))"
 
 .PHONY: binding-types
-binding-types: bindings/js/rl.js $(BINDING_TYPES_SCRIPT)
-	$(Q)$(PYTHON) "$(BINDING_TYPES_SCRIPT)" "$(abspath $(LIBRL_ROOT))"
+binding-types: binding-version bindings/js/src/rl.ts bindings/js/src/types.ts bindings/js/gen/rl_version.ts bindings/js/package.json package.json
+	$(Q)npm run build:js-binding
 
 # Desktop shared core library (C API only, no Lua module entrypoint)
 LIBRL_SHARED_SO := $(OUT_LIB_DIR)/librl.so
@@ -555,8 +551,6 @@ $(OBJ_WASM_DIR)/%.o: %.c
 ensure_out_dir:
 	$(Q)mkdir -p $(OUT_LIB_DIR)
 	$(Q)mkdir -p $(OUT_INC_DIR)
-	$(Q)test -f "$(TYPE_LIBRL_DECL)" || (echo "Missing type declaration: $(TYPE_LIBRL_DECL)" && exit 1)
-	$(Q)cp "$(TYPE_LIBRL_DECL)" "$(OUT_LIBRL_DECL)"
 
 # Ensure the object directory exists
 ensure_obj_dir:
@@ -567,6 +561,7 @@ ensure_obj_dir:
 clean:
 	$(Q)rm -rf $(OUT_LIB_DIR)
 	$(Q)rm -rf $(OBJ_BASE_DIR)
+	$(Q)rm -rf bindings/js/dist
 #	@$(MAKE) -C $(LIBRAYLIB_ROOT) clean
 
 

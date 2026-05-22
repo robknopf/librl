@@ -1127,13 +1127,14 @@ abstract RLImpl(RLExterns) {
     return RLExterns.eventOnceNative(eventName, RLEventBridge.ensureTrampoline(), untyped __cpp__('(void*)(intptr_t)id'));
   }
   public static function eventOff(eventName: String, callback: Dynamic->Void): Int {
-    var id = RLEventBridge.findId(eventName, callback);
-    if (id == null) {
+    var found = RLEventBridge.findId(eventName, callback);
+    if (found == null) {
       return -1;
     }
-    var rc = RLExterns.eventOffNative(eventName, RLEventBridge.ensureTrampoline(), untyped __cpp__('(void*)(intptr_t)id'));
+    var listenerId: Int = found;
+    var rc = RLExterns.eventOffNative(eventName, RLEventBridge.ensureTrampoline(), untyped __cpp__('(void*)(intptr_t)listenerId'));
     if (rc == 0) {
-      RLEventBridge.unregister(id);
+      RLEventBridge.unregister(listenerId);
     }
     return rc;
   }
@@ -1145,8 +1146,8 @@ abstract RLImpl(RLExterns) {
     return rc;
   }
   public static function eventEmit(eventName: String, ?payload: Int): Int {
-    var p = payload == null ? 0 : payload;
-    return RLExterns.eventEmit(eventName, untyped __cpp__('(void*)(intptr_t)p'));
+    var payloadInt: Int = payload != null ? payload : 0;
+    return RLExterns.eventEmit(eventName, untyped __cpp__('(void*)(intptr_t)payloadInt'));
   }
   public static function eventListenerCount(eventName: String): Int {
     return RLExterns.eventListenerCount(eventName);

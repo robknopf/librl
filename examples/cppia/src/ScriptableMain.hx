@@ -35,7 +35,7 @@ import haxe.io.Path;
 
 
 class ScriptableRuntime implements IRuntime {
-	#if (emscripten || PLATFORM_WEB)
+	#if (emscripten || PLATFORM_WEB || js)
 	final ASSET_HOST:String = "./";
 	#else
 	final ASSET_HOST:String = "https://192.168.1.100:4444";

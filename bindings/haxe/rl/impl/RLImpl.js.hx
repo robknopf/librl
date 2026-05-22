@@ -1162,9 +1162,9 @@ class RLImpl {
 			return [];
 		}
 		var out:Array<RLGamepad> = [];
-		var len:Int = untyped __js__('value.length');
+		var len:Int = cast js.Syntax.code("{0}.length", value);
 		for (i in 0...len) {
-			out.push(toGamepad(untyped __js__('value[{0}]', i)));
+			out.push(toGamepad(js.Syntax.code("{0}[{1}]", value, i)));
 		}
 		return out;
 	}
@@ -1185,9 +1185,9 @@ class RLImpl {
 			return [];
 		}
 		var out:Array<RLTouchpoint> = [];
-		var len:Int = untyped __js__('value.length');
+		var len:Int = cast js.Syntax.code("{0}.length", value);
 		for (i in 0...len) {
-			out.push(toTouchpoint(untyped __js__('value[{0}]', i)));
+			out.push(toTouchpoint(js.Syntax.code("{0}[{1}]", value, i)));
 		}
 		return out;
 	}
@@ -1208,9 +1208,9 @@ class RLImpl {
 			return [];
 		}
 		var out:Array<Float> = [];
-		var len:Int = untyped __js__('value.length');
+		var len:Int = cast js.Syntax.code("{0}.length", value);
 		for (i in 0...len) {
-			out.push(untyped __js__('value[{0}]', i));
+			out.push(cast js.Syntax.code("{0}[{1}]", value, i));
 		}
 		return out;
 	}
@@ -1220,9 +1220,9 @@ class RLImpl {
 			return [];
 		}
 		var out:Array<Int> = [];
-		var len:Int = untyped __js__('value.length');
+		var len:Int = cast js.Syntax.code("{0}.length", value);
 		for (i in 0...len) {
-			out.push(untyped __js__('value[{0}]', i));
+			out.push(cast js.Syntax.code("{0}[{1}]", value, i));
 		}
 		return out;
 	}

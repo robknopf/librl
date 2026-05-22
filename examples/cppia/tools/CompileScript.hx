@@ -147,6 +147,9 @@ class CompileScript {
 		// note that we don't set buildMode to release in an else clause, allowing --debug to be an override of the default
 		if (hasDebugFlag(sysArgs)) {
 			buildMode = Debug;
+			warn("CPPIA debug builds embed hxcpp-debug-server (default ws://127.0.0.1:6972). "
+				+ "In wasm the connection is made from the browser, so 127.0.0.1 is the machine running the tab "
+				+ "(debug server or reverse tunnel must be reachable there).");
 		}
 
 		if (scriptClassName == null) {

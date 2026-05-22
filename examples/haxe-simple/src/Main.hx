@@ -18,6 +18,7 @@ import rl.Pick;
 import rl.helpers.Log;
 import rl.Types.RLHandle;
 import rl.Types.RLPickResult;
+import rl.Types.RLAsyncVoid;
 import InjectWasmExports;
 import haxe.io.Path;
 
@@ -279,7 +280,7 @@ class SimpleRuntime implements IRuntime {
 	}
 
 	@async
-	public function onShutdown():VoidResult {
+	public function onShutdown():RLAsyncVoid {
 		return @await RL.deinit();
 	}
 
@@ -426,7 +427,7 @@ interface IRuntime {
 	function onBoot():Int;
 	function onInit():Int;
 	function onTick(deltaTimeSec:Float):Int;
-	function onShutdown():VoidResult;  // hxasync doesn't play well with Void
+	function onShutdown():RLAsyncVoid;
 }
 
 @:expose

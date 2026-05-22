@@ -189,6 +189,13 @@ Approximate sizes for the example builds (release/optimized, no debug symbols). 
   2. Touch or re-save relevant entry file if HMR does not recover.
   3. Restart Vite only if file watching still does not pick up rebuilt outputs.
 - **Manual wasm smoke (optional):** with Vite running on port 4444, `node tests/smoke/haxe_wasm_smoke.mjs` loads the Haxe wasm example in headless Chromium and prints console/page errors. Not wired into `make test` yet. See `tests/README.md`.
+- **Testbed deploy:** `npm run deploy` runs `build:all:release` then rsyncs `examples/www/dist/` to the remote testbed host.
+  - `build:librl:release` — `make wasm` + `npm run build:js-binding` (`lib/` + `bindings/js/dist/`)
+  - `build:librl` — debug build (`make DEV=1 wasm` + JS binding)
+  - `build:examples:release` — all listed www examples (wasm + js targets, including cppia)
+  - `vite build` — static shell from `examples/www/`
+  - `npm run stage:www:dist` — copies built example artifacts into `examples/www/dist/`
+  - Example keys in `examples/www/index.html`: remote, js, c-lua, c-simple, nim-wasm-simple, nim-js-simple, haxe-wasm-simple, haxe-js-simple, cppia
 
 ## Scripting Runtime Direction
 

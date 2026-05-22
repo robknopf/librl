@@ -49,7 +49,7 @@ export default defineConfig({
   base: "./",
   assetsInclude: ["**/*.glb", "**/*.gltf"],
   build: {
-    assetsDir: "bundles",
+    assetsDir: "./",
   },
   appType: "mpa", // just so we get a 404 if we try to fetch something that doesn't exist (vs getting index.html again for a SPA)
   define: {

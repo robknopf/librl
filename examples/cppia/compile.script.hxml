@@ -4,6 +4,7 @@
 
 # usage:  haxe compile.script.hxml <script class>
 # example: haxe compile.script.hxml MainScript
+# Release by default. Pass --debug to embed hxcpp-debug-server (127.0.0.1:6972 from the browser tab).
 
 --run tools.CompileScript
 

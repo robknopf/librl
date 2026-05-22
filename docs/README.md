@@ -5,7 +5,7 @@
 | [API.md](API.md) | Integrators | Public C API reference (`include/*.h`) |
 | [BINDINGS.md](BINDINGS.md) | Binding authors | JS, Haxe, Nim, and Lua binding conventions |
 | [MAINTAINER.md](MAINTAINER.md) | Maintainers | Build matrix, repo conventions, gotchas, current architecture |
-| [ROADMAP.md](ROADMAP.md) | Maintainers | Work tracking — **now / next / backlog / research / parked / done** (includes binding parity gap table) |
+| [ROADMAP.md](ROADMAP.md) | Maintainers | Work tracking — **now / next / backlog / research / parked / done** |
 
 Repo root [AGENTS.md](../AGENTS.md) defines the agent/editor contract (binding parity, API docs, commit policy).
 

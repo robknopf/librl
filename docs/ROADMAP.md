@@ -18,23 +18,7 @@ Committed near-term work — pick up when Now is clear.
 
 ### Bindings and docs
 
-- **Binding parity (audit snapshot)** — `python3 tools/audit_binding_parity.py` (172 public C functions in `docs/API.md`; excludes scratch/SAB, logger macros, `examples/remote/`):
-
-  | Binding | Covered | Gaps |
-  |---------|--------:|-----:|
-  | JS (`bindings/js/rl.js`) | 172/172 | 0 |
-  | Haxe (`bindings/haxe/rl/*`) | 172/172 | 0 |
-  | Nim desktop (`bindings/nim/impl/rl_native.nim`) | 166/172 | 6 |
-  | Lua (`bindings/lua/`) | 169/172 | 3 |
-
-  **Fix (Nim desktop — 6):**
-  - `rl_fs_normalize_path`, `rl_fs_read`, `rl_fs_read_free`
-  - `rl_sprite2d_get_default_texture`, `rl_sprite3d_get_default_texture`, `rl_sprite3d_get_transform`
-
-  **Fix (Lua — 3):**
-  - `rl_sprite2d_get_default_texture`, `rl_sprite3d_get_default_texture`, `rl_sprite3d_get_transform`
-
-  Re-run the audit script after binding changes. Intentional non-gaps: scratch/SAB, `rl_frame_command*` — see `docs/BINDINGS.md`.
+- **Binding parity** — closed (172/172 all bindings). Re-run `python3 tools/audit_binding_parity.py` after C API or binding changes; see Done (2025-05).
 
 - Binding tooling for agents/maintainers — see `docs/MAINTAINER.md` § Tools (Python-first policy; generators, parity audit, `make binding-types` / `binding-version`).
 - remove scratch/ABI bindings from non-JS bindings — done for `scratch_refresh` / `scratchRefresh` / `rl_scratch_refresh` (commented in sources; see `docs/BINDINGS.md`); audit for any other `*_to_scratch` / `*_from_scratch` if added later
@@ -212,12 +196,9 @@ Explicitly deferred — not on the near-term path.
 
 Changelog — trim periodically.
 
+- Binding parity complete (2025-05): all bindings 172/172; `tools/audit_binding_parity.py`; Nim `rl_asset.h` FFI imports + string wrappers; `rl_fs_read*`, `rl_fs_normalize_path`, sprite default-texture/get-transform on Nim + Lua
 - C init ABI flattening (2025-05): public init is `rl_init_values` / `rl_init_values_async`; removed struct-based `rl_init*` and `rl_config.h`
 - JS init flattening (2025-05): `RL.init()` calls `rl_init_values`; struct marshaling removed from `bindings/js/rl.js`
-- Binding parity audit (2025-05):
-  - `tools/audit_binding_parity.py` added; 172 C functions audited (excludes `rl_init_config_sizeof`, scratch, init values helpers)
-  - JS 172/172; Haxe 172/172; Nim desktop 166/172; Lua 169/172
-  - gap table in **Next → Binding parity** above
 - Docs consolidation (2025-05):
   - single work tracker: `docs/ROADMAP.md` (now / next / backlog / research / parked / done)
   - maintainer reference renamed: `docs/DEV_NOTES.md` → `docs/MAINTAINER.md`

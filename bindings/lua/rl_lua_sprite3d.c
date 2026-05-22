@@ -22,6 +22,37 @@ static int rl_sprite3d_create_from_file_lua(lua_State *L)
     return 1;
 }
 
+static int rl_sprite3d_get_default_texture_lua(lua_State *L)
+{
+    lua_pushinteger(L, (lua_Integer)rl_sprite3d_get_default_texture());
+    return 1;
+}
+
+static int rl_sprite3d_get_transform_lua(lua_State *L)
+{
+    rl_handle_t sprite = (rl_handle_t)luaL_checkinteger(L, 1);
+    float x = 0.0f;
+    float y = 0.0f;
+    float z = 0.0f;
+    float size = 0.0f;
+
+    if (!rl_sprite3d_get_transform(sprite, &x, &y, &z, &size)) {
+        lua_pushnil(L);
+        return 1;
+    }
+
+    lua_createtable(L, 0, 4);
+    lua_pushnumber(L, x);
+    lua_setfield(L, -2, "x");
+    lua_pushnumber(L, y);
+    lua_setfield(L, -2, "y");
+    lua_pushnumber(L, z);
+    lua_setfield(L, -2, "z");
+    lua_pushnumber(L, size);
+    lua_setfield(L, -2, "size");
+    return 1;
+}
+
 static int rl_sprite3d_set_texture_lua(lua_State *L)
 {
     rl_handle_t sprite = (rl_handle_t)luaL_checkinteger(L, 1);
@@ -72,8 +103,14 @@ void rl_register_sprite3d_bindings(lua_State *L)
     lua_pushcfunction(L, rl_sprite3d_create_from_file_lua);
     lua_setfield(L, -2, "sprite3d_create_from_file");
 
+    lua_pushcfunction(L, rl_sprite3d_get_default_texture_lua);
+    lua_setfield(L, -2, "sprite3d_get_default_texture");
+
     lua_pushcfunction(L, rl_sprite3d_set_texture_lua);
     lua_setfield(L, -2, "sprite3d_set_texture");
+
+    lua_pushcfunction(L, rl_sprite3d_get_transform_lua);
+    lua_setfield(L, -2, "sprite3d_get_transform");
 
     lua_pushcfunction(L, rl_sprite3d_set_transform_lua);
     lua_setfield(L, -2, "sprite3d_set_transform");

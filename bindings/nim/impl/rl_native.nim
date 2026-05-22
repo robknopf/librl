@@ -2,6 +2,7 @@
 ## Included by rl.nim when not defined(js).  Do not import directly.
 when not declared(rl_async):
   import ../rl_async
+import std/options
 
 
 include ../gen/rl_version
@@ -67,6 +68,9 @@ type RLInitConfig* = object
   windowFlags*: RLWindowFlags
   assetHost*: string
   fsRootDir*: string
+
+type RLSprite3dTransform* = object
+  positionX*, positionY*, positionZ*, size*: float
 
 var rlFileioClosureTasks: seq[RLAssetClosureTask] = @[]
 
@@ -137,10 +141,10 @@ proc rl_fs_init*(baseDir: cstring): cint {.importc, cdecl, header: "rl_fs.h".}
 proc rl_fs_init_async*(baseDir: cstring): cint {.importc, cdecl, header: "rl_fs.h".}
 proc rl_fs_deinit*() {.importc, cdecl, header: "rl_fs.h".}
 proc rl_fs_is_initialized*(): bool {.importc, cdecl, header: "rl_fs.h".}
-proc rl_asset_set_host*(assetHost: cstring): cint {.importc, cdecl, header: "rl_fs.h".}
-proc rl_asset_get_host*(): cstring {.importc, cdecl, header: "rl_fs.h".}
+proc rl_asset_set_host_c(assetHost: cstring): cint {.importc: "rl_asset_set_host", cdecl, header: "rl_asset.h".}
+proc rl_asset_get_host_c(): cstring {.importc: "rl_asset_get_host", cdecl, header: "rl_asset.h".}
 proc rl_fs_get_root_dir*(): cstring {.importc, cdecl, header: "rl_fs.h".}
-proc rl_asset_ping_host*(assetHost: cstring): cfloat {.importc, cdecl, header: "rl_fs.h".}
+proc rl_asset_ping_host_c(assetHost: cstring): cfloat {.importc: "rl_asset_ping_host", cdecl, header: "rl_asset.h".}
 proc rl_fs_is_ready*(): bool {.importc, cdecl, header: "rl_fs.h".}
 proc rl_fs_flush*(): cint {.importc, cdecl, header: "rl_fs.h".}
 proc rl_fs_deinit_async*(): RLHandle {.importc, cdecl, header: "rl_fs.h".}
@@ -148,9 +152,9 @@ proc rl_fs_write*(path: cstring, data: ptr byte, size: csize_t): cint {.importc,
 proc rl_fs_mkdir*(path: cstring): cint {.importc, cdecl, header: "rl_fs.h".}
 proc rl_fs_rmdir*(path: cstring): cint {.importc, cdecl, header: "rl_fs.h".}
 proc rl_fs_restore_async*(): RLHandle {.importc, cdecl, header: "rl_fs.h".}
-proc rl_asset_ensure_async*(localPath: cstring, src: cstring): RLHandle {.importc, cdecl, header: "rl_fs.h".}
-proc rl_asset_ensure*(localPath: cstring, src: cstring): cint {.importc, cdecl, header: "rl_fs.h".}
-proc rl_asset_ensure_many_async_raw(filenames: ptr cstring, filenameCount: csize_t): RLHandle {.importc: "rl_asset_ensure_many_async", cdecl, header: "rl_fs.h".}
+proc rl_asset_ensure_async*(localPath: cstring, src: cstring): RLHandle {.importc, cdecl, header: "rl_asset.h".}
+proc rl_asset_ensure*(localPath: cstring, src: cstring): cint {.importc, cdecl, header: "rl_asset.h".}
+proc rl_asset_ensure_many_async_raw(filenames: ptr cstring, filenameCount: csize_t): RLHandle {.importc: "rl_asset_ensure_many_async", cdecl, header: "rl_asset.h".}
 
 proc rl_asset_ensure_many_async*(filenames: openArray[string]): RLHandle =
   if filenames.len == 0:
@@ -160,15 +164,18 @@ proc rl_asset_ensure_many_async*(filenames: openArray[string]): RLHandle =
     cstrs[i] = s.cstring
   return rl_asset_ensure_many_async_raw(addr cstrs[0], cstrs.len.csize_t)
 
-proc rl_asset_poll_task*(task: RLHandle): bool {.importc, cdecl, header: "rl_fs.h".}
-proc rl_asset_finish_c(task: RLHandle): cint {.importc: "rl_asset_finish_task", cdecl, header: "rl_fs.h".}
-proc rl_asset_get_task_path*(task: RLHandle): cstring {.importc, cdecl, header: "rl_fs.h".}
-proc rl_asset_free_task*(task: RLHandle) {.importc, cdecl, header: "rl_fs.h".}
+proc rl_asset_poll_task*(task: RLHandle): bool {.importc, cdecl, header: "rl_asset.h".}
+proc rl_asset_finish_c(task: RLHandle): cint {.importc: "rl_asset_finish_task", cdecl, header: "rl_asset.h".}
+proc rl_asset_get_task_path_c(task: RLHandle): cstring {.importc: "rl_asset_get_task_path", cdecl, header: "rl_asset.h".}
+proc rl_asset_free_task*(task: RLHandle) {.importc, cdecl, header: "rl_asset.h".}
 proc rl_asset_add_task_raw*(task: RLHandle,
                          onSuccess: RLFileioCallbackFn, onFailure: RLFileioCallbackFn,
-                         userData: pointer): cint {.importc: "rl_asset_add_task", cdecl, header: "rl_fs.h".}
-proc rl_asset_tick*() {.importc, cdecl, header: "rl_fs.h".}
+                         userData: pointer): cint {.importc: "rl_asset_add_task", cdecl, header: "rl_asset.h".}
+proc rl_asset_tick*() {.importc, cdecl, header: "rl_asset.h".}
 proc rl_fs_exists*(filename: cstring): bool {.importc, cdecl, header: "rl_fs.h".}
+proc rl_fs_read_raw(path: cstring, outData: ptr pointer, outSize: ptr csize_t): cint {.importc: "rl_fs_read", cdecl, header: "rl_fs.h".}
+proc rl_fs_read_free_raw(data: pointer) {.importc: "rl_fs_read_free", cdecl, header: "rl_fs.h".}
+proc rl_fs_normalize_path_raw(path: cstring, buf: cstring, bufSize: csize_t) {.importc: "rl_fs_normalize_path", cdecl, header: "rl_fs.h".}
 proc rl_fs_remove*(filename: cstring): cint {.importc, cdecl, header: "rl_fs.h".}
 proc rl_fs_clear*(): cint {.importc, cdecl, header: "rl_fs.h".}
 
@@ -240,10 +247,16 @@ proc rl_fs_init_async*(): int {.inline.} =
   rl_fs_init_async(nil).int
 
 proc rl_asset_set_host*(assetHost: string): int {.inline.} =
-  rl_asset_set_host(assetHost.cstring).int
+  rl_asset_set_host_c(assetHost.cstring).int
+
+proc rl_asset_get_host*(): string {.inline.} =
+  $rl_asset_get_host_c()
 
 proc rl_asset_ping_host*(assetHost: string): float {.inline.} =
-  rl_asset_ping_host(assetHost.cstring).float
+  rl_asset_ping_host_c(assetHost.cstring).float
+
+proc rl_asset_get_task_path*(task: RLHandle): string {.inline.} =
+  $rl_asset_get_task_path_c(task)
 
 proc rl_asset_ensure_async*(localPath: string, src: string = ""): RLHandle {.inline.} =
   let srcPtr = if src.len == 0: nil else: src.cstring
@@ -255,13 +268,32 @@ proc rl_fs_exists*(filename: string): bool {.inline.} =
 proc rl_fs_remove*(filename: string): int {.inline.} =
   rl_fs_remove(filename.cstring).int
 
+const RL_FS_PATH_MAX = 4096
+
+proc rl_fs_read*(filename: string): seq[byte] =
+  var data: pointer = nil
+  var size: csize_t = 0
+  let rc = rl_fs_read_raw(filename.cstring, addr data, addr size)
+  if rc != 0 or data == nil:
+    rl_fs_read_free_raw(data)
+    return @[]
+  result = newSeq[byte](size.int)
+  if size > 0:
+    copyMem(addr result[0], data, size)
+  rl_fs_read_free_raw(data)
+
+proc rl_fs_normalize_path*(path: string): string =
+  var buf: array[RL_FS_PATH_MAX, char]
+  rl_fs_normalize_path_raw(path.cstring, cast[cstring](addr buf[0]), RL_FS_PATH_MAX.csize_t)
+  result = $cast[cstring](addr buf[0])
+
 proc rl_asset_ensure*(localPath: string, src: string = ""): int {.inline.} =
   let srcPtr = if src.len == 0: nil else: src.cstring
   rl_asset_ensure(localPath.cstring, srcPtr).int
 
 proc assetPingHost*(assetHost = ""): float =
   let host = if assetHost.len == 0: nil else: assetHost.cstring
-  rl_asset_ping_host(host).float
+  rl_asset_ping_host_c(host).float
 
 type
   RLTaskGroupTaskCallback*[T] = proc(path: string, ctx: var T) {.closure.}
@@ -306,7 +338,7 @@ proc addTask*[T](
     return
   group.entries.add(RLTaskGroupEntry[T](
     task: task,
-    path: $rl_asset_get_task_path(task),
+    path: rl_asset_get_task_path(task),
     done: false,
     rc: 1,
     onSuccess: onSuccess,
@@ -563,8 +595,13 @@ proc rl_texture_draw_ex*(texture: RLHandle, x: cfloat, y: cfloat, scale: cfloat,
 proc rl_texture_draw_ground*(texture: RLHandle, x: cfloat, y: cfloat, z: cfloat,
                              width: cfloat, length: cfloat, tint: RLHandle) {.importc, cdecl, header: "rl_texture.h".}
 proc rl_sprite3d_create*(texture: RLHandle): RLHandle {.importc, cdecl, header: "rl_sprite3d.h".}
+proc rl_sprite3d_get_default_texture*(): RLHandle {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_create_from_file*(filename: cstring): RLHandle {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_set_texture*(sprite: RLHandle, texture: RLHandle): bool {.importc, cdecl, header: "rl_sprite3d.h".}
+proc rl_sprite3d_get_transform_raw(
+  sprite: RLHandle,
+  positionX, positionY, positionZ, size: ptr cfloat
+): bool {.importc: "rl_sprite3d_get_transform", cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_set_transform*(
   sprite: RLHandle,
   positionX: cfloat, positionY: cfloat, positionZ: cfloat,
@@ -574,6 +611,7 @@ proc rl_sprite3d_set_tint*(sprite: RLHandle, color: RLHandle = 0): bool {.import
 proc rl_sprite3d_draw*(sprite: RLHandle, tint: RLHandle = 0) {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_destroy*(sprite: RLHandle) {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite2d_create*(texture: RLHandle): RLHandle {.importc, cdecl, header: "rl_sprite2d.h".}
+proc rl_sprite2d_get_default_texture*(): RLHandle {.importc, cdecl, header: "rl_sprite2d.h".}
 proc rl_sprite2d_create_from_file*(filename: cstring): RLHandle {.importc, cdecl, header: "rl_sprite2d.h".}
 proc rl_sprite2d_set_texture*(sprite: RLHandle, texture: RLHandle): bool {.importc, cdecl, header: "rl_sprite2d.h".}
 proc rl_sprite2d_set_transform*(
@@ -789,6 +827,17 @@ proc rl_sprite3d_create_from_file*(filename: string): RLHandle {.inline.} =
 proc rl_sprite3d_set_transform*(sprite: RLHandle,
                                 positionX, positionY, positionZ, size: float): bool {.inline.} =
   rl_sprite3d_set_transform(sprite, positionX.cfloat, positionY.cfloat, positionZ.cfloat, size.cfloat)
+
+proc rl_sprite3d_get_transform*(sprite: RLHandle): Option[RLSprite3dTransform] =
+  var positionX, positionY, positionZ, size: cfloat
+  if not rl_sprite3d_get_transform_raw(sprite, addr positionX, addr positionY, addr positionZ, addr size):
+    return none(RLSprite3dTransform)
+  some(RLSprite3dTransform(
+    positionX: positionX.float,
+    positionY: positionY.float,
+    positionZ: positionZ.float,
+    size: size.float,
+  ))
 
 proc rl_sprite2d_create_from_file*(filename: string): RLHandle {.inline.} =
   rl_sprite2d_create_from_file(filename.cstring)

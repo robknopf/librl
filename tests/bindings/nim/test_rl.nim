@@ -50,7 +50,7 @@ suite "rl bindings":
     rl_window_set_size(640, 480)
     rl_set_target_fps(30)
     check rl_asset_set_host("https://example.com/assets") == 0
-    check $rl_asset_get_host() == "https://example.com/assets"
+    check rl_asset_get_host() == "https://example.com/assets"
     let size = rl_window_get_screen_size()
     check size.x >= 0.0
     check size.y >= 0.0
@@ -69,12 +69,12 @@ suite "rl bindings":
   test "asset host":
     check rl_boot() == RL_INIT_OK
     check rl_init() == RL_INIT_OK
-    let host: cstring = rl_asset_get_host()
-    check not host.isNil
+    let host = rl_asset_get_host()
+    check host.len > 0
     let rc = rl_asset_set_host("https://example.com/assets")
     check rc == 0 or rc != 0
-    let host2: cstring = rl_asset_get_host()
-    check not host2.isNil
+    let host2 = rl_asset_get_host()
+    check host2.len > 0
     rl_deinit()
 
   test "lighting":

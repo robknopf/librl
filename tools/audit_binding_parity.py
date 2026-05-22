@@ -286,11 +286,13 @@ def render_roadmap_block(audited: list[str], gaps: list[dict]) -> str:
         [
             "**Follow-ups:**",
             "- Re-run `python3 tools/audit_binding_parity.py` after binding changes.",
-            "- Nim desktop gaps (`rl_fs_read*`, sprite default/get_transform) block parity with Lua/Haxe desktop paths.",
-            "- Align logging ergonomics: prefer `log.debug` / `RL.Logger.*` over raw `rl_logger_message*`.",
-            "",
         ]
     )
+    if gaps:
+        lines.append("- Close remaining gaps above or document intentional omissions in `docs/BINDINGS.md`.")
+    else:
+        lines.append("- No open binding parity gaps.")
+    lines.append("")
     return "\n".join(lines)
 
 

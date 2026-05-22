@@ -503,112 +503,25 @@ const RL = {
             return RL.BOOT_ERR_UNKNOWN;
         }
     },
+    _initValuesCcallArgs: (initOptions) => [
+        (initOptions.windowWidth || 0) | 0,
+        (initOptions.windowHeight || 0) | 0,
+        initOptions.windowTitle ?? "",
+        (initOptions.windowFlags || 0) >>> 0,
+        initOptions.assetHost ?? "",
+        initOptions.fsRootDir ?? "",
+    ],
     _callInitWithOptionsAsync: async (opts, symbolName, asyncOptions) => {
         await RL._ensureModuleInstance();
         const initOptions = RL._prepareInitOptions(opts);
 
-        const cfgSize = moduleInstance.ccall("rl_init_config_sizeof", "number", [], []) >>> 0;
-        if (!cfgSize) {
-            throw new Error("rl_init_config_sizeof returned 0");
-        }
-
-        const heapMalloc = moduleInstance && (moduleInstance._malloc || moduleInstance.malloc);
-        const useHeapAlloc = typeof heapMalloc === "function";
-        const canUseStack =
-            moduleInstance &&
-            typeof moduleInstance.stackSave === "function" &&
-            typeof moduleInstance.stackAlloc === "function" &&
-            typeof moduleInstance.stackRestore === "function";
-        if (!useHeapAlloc && !canUseStack) {
-            throw new Error("init config allocation unavailable (need malloc or stackAlloc)");
-        }
-
-        let stackTop = 0;
-        const allocTemp = (size) => {
-            if (useHeapAlloc) {
-                return RL._mallocOrThrow(size);
-            }
-            return moduleInstance.stackAlloc(size) >>> 0;
-        };
-        const freeTemp = (ptr) => {
-            if (useHeapAlloc) {
-                RL._freeIfPossible(ptr);
-            }
-        };
-        const stringToTempUtf8OrNull = (s) => {
-            if (s == null) {
-                return 0;
-            }
-            if (typeof s !== "string") {
-                s = String(s);
-            }
-            const len = (moduleInstance.lengthBytesUTF8 ? moduleInstance.lengthBytesUTF8(s) : (s.length * 4 + 1)) + 1;
-            const ptr = allocTemp(len);
-            if (moduleInstance.stringToUTF8) {
-                moduleInstance.stringToUTF8(s, ptr, len);
-                return ptr >>> 0;
-            }
-            throw new Error("stringToUTF8 not available; cannot encode JS strings to wasm memory");
-        };
-
-        const allocatedPtrs = [];
-        let initRc = -1;
-        if (symbolName === "rl_init_values" || symbolName === "rl_init_values_async") {
-            initRc = (await moduleInstance.ccall(
-                symbolName,
-                "number",
-                ["number", "number", "string", "number", "string", "string"],
-                [
-                    (initOptions.windowWidth || 0) | 0,
-                    (initOptions.windowHeight || 0) | 0,
-                    initOptions.windowTitle ?? "",
-                    (initOptions.windowFlags || 0) >>> 0,
-                    initOptions.assetHost ?? "",
-                    initOptions.fsRootDir ?? "",
-                ],
-                asyncOptions
-            )) | 0;
-        } else {
-            try {
-                if (!useHeapAlloc) {
-                    stackTop = moduleInstance.stackSave();
-                }
-
-                const cfgPtr = allocTemp(cfgSize);
-                allocatedPtrs.push(cfgPtr);
-                const heapU8 = moduleInstance.HEAPU8;
-                heapU8.fill(0, cfgPtr, cfgPtr + cfgSize);
-
-                const heapI32 = moduleInstance.HEAP32;
-                const setI32 = (offset, v) => {
-                    heapI32[(cfgPtr + offset) >> 2] = v | 0;
-                };
-
-                // Layout must match `rl_init_config_t` in include/rl_config.h
-                setI32(0, (initOptions.windowWidth || 0) | 0);
-                setI32(4, (initOptions.windowHeight || 0) | 0);
-
-                const titlePtr = stringToTempUtf8OrNull(initOptions.windowTitle);
-                const assetPtr = stringToTempUtf8OrNull(initOptions.assetHost);
-                const cachePtr = stringToTempUtf8OrNull(initOptions.fsRootDir);
-                allocatedPtrs.push(titlePtr, assetPtr, cachePtr);
-
-                setI32(8, titlePtr >>> 0);
-                setI32(12, (initOptions.windowFlags || 0) >>> 0);
-                setI32(16, assetPtr >>> 0);
-                setI32(20, cachePtr >>> 0);
-
-                initRc = (await moduleInstance.ccall(symbolName, "number", ["number"], [cfgPtr], asyncOptions)) | 0;
-            } finally {
-                if (useHeapAlloc) {
-                    for (const ptr of allocatedPtrs) {
-                        freeTemp(ptr);
-                    }
-                } else if (canUseStack) {
-                    moduleInstance.stackRestore(stackTop);
-                }
-            }
-        }
+        const initRc = (await moduleInstance.ccall(
+            symbolName,
+            "number",
+            ["number", "number", "string", "number", "string", "string"],
+            RL._initValuesCcallArgs(initOptions),
+            asyncOptions
+        )) | 0;
 
         if (initRc !== 0) {
             return initRc;
@@ -623,106 +536,12 @@ const RL = {
             throw new Error("Module must be booted before calling polling-style init APIs");
         }
 
-        let initRc = -1;
-        if (symbolName === "rl_init_values_async") {
-            initRc = moduleInstance.ccall(
-                symbolName,
-                "number",
-                ["number", "number", "string", "number", "string", "string"],
-                [
-                    (initOptions.windowWidth || 0) | 0,
-                    (initOptions.windowHeight || 0) | 0,
-                    initOptions.windowTitle ?? "",
-                    (initOptions.windowFlags || 0) >>> 0,
-                    initOptions.assetHost ?? "",
-                    initOptions.fsRootDir ?? "",
-                ]
-            ) | 0;
-        } else {
-            const cfgSize = moduleInstance.ccall("rl_init_config_sizeof", "number", [], []) >>> 0;
-            if (!cfgSize) {
-                throw new Error("rl_init_config_sizeof returned 0");
-            }
-
-            const heapMalloc = moduleInstance && (moduleInstance._malloc || moduleInstance.malloc);
-            const useHeapAlloc = typeof heapMalloc === "function";
-            const canUseStack =
-                moduleInstance &&
-                typeof moduleInstance.stackSave === "function" &&
-                typeof moduleInstance.stackAlloc === "function" &&
-                typeof moduleInstance.stackRestore === "function";
-            if (!useHeapAlloc && !canUseStack) {
-                throw new Error("init config allocation unavailable (need malloc or stackAlloc)");
-            }
-
-            let stackTop = 0;
-            const allocTemp = (size) => {
-                if (useHeapAlloc) {
-                    return RL._mallocOrThrow(size);
-                }
-                return moduleInstance.stackAlloc(size) >>> 0;
-            };
-            const freeTemp = (ptr) => {
-                if (useHeapAlloc) {
-                    RL._freeIfPossible(ptr);
-                }
-            };
-            const stringToTempUtf8OrNull = (s) => {
-                if (s == null) {
-                    return 0;
-                }
-                if (typeof s !== "string") {
-                    s = String(s);
-                }
-                const len = (moduleInstance.lengthBytesUTF8 ? moduleInstance.lengthBytesUTF8(s) : (s.length * 4 + 1)) + 1;
-                const ptr = allocTemp(len);
-                if (moduleInstance.stringToUTF8) {
-                    moduleInstance.stringToUTF8(s, ptr, len);
-                    return ptr >>> 0;
-                }
-                throw new Error("stringToUTF8 not available; cannot encode JS strings to wasm memory");
-            };
-
-            const allocatedPtrs = [];
-            try {
-                if (!useHeapAlloc) {
-                    stackTop = moduleInstance.stackSave();
-                }
-
-                const cfgPtr = allocTemp(cfgSize);
-                allocatedPtrs.push(cfgPtr);
-                const heapU8 = moduleInstance.HEAPU8;
-                heapU8.fill(0, cfgPtr, cfgPtr + cfgSize);
-
-                const heapI32 = moduleInstance.HEAP32;
-                const setI32 = (offset, v) => {
-                    heapI32[(cfgPtr + offset) >> 2] = v | 0;
-                };
-
-                setI32(0, (initOptions.windowWidth || 0) | 0);
-                setI32(4, (initOptions.windowHeight || 0) | 0);
-
-                const titlePtr = stringToTempUtf8OrNull(initOptions.windowTitle);
-                const assetPtr = stringToTempUtf8OrNull(initOptions.assetHost);
-                const cachePtr = stringToTempUtf8OrNull(initOptions.fsRootDir);
-                allocatedPtrs.push(titlePtr, assetPtr, cachePtr);
-
-                setI32(8, titlePtr >>> 0);
-                setI32(12, (initOptions.windowFlags || 0) >>> 0);
-                setI32(16, assetPtr >>> 0);
-                setI32(20, cachePtr >>> 0);
-
-                initRc = moduleInstance.ccall(symbolName, "number", ["number"], [cfgPtr]) | 0;
-            } finally {
-                if (useHeapAlloc) {
-                    for (const ptr of allocatedPtrs) {
-                        freeTemp(ptr);
-                    }
-                } else if (canUseStack) {
-                    moduleInstance.stackRestore(stackTop);
-                }
-            }
-        }
+        const initRc = moduleInstance.ccall(
+            symbolName,
+            "number",
+            ["number", "number", "string", "number", "string", "string"],
+            RL._initValuesCcallArgs(initOptions)
+        ) | 0;
 
         if (initRc !== 0) {
             return initRc;
@@ -731,7 +550,7 @@ const RL = {
         return 0;
     },
     init: async (opts) => {
-        return await RL._callInitWithOptionsAsync(opts, "rl_init", { async: true });
+        return await RL._callInitWithOptionsAsync(opts, "rl_init_values", { async: true });
     },
     initAsync: (opts) => {
         return RL._callInitWithOptionsImmediate(opts, "rl_init_values_async");

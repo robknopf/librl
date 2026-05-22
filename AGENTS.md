@@ -78,7 +78,8 @@ When adding new procs to any binding, always check: would a user need to write `
 ## Testing
 
 - **Desktop:** `make -C tests test_desktop` — no special Node requirement.
-- **Wasm / JS bindings:** `make -C tests test_wasm` (or full `make -C tests test`) requires a Node runtime with **JSPI** support (`WebAssembly.Suspending` must be a function). Use the **system Node ≥ 25** (e.g. via nvm), not an IDE-bundled older Node that may appear first on `PATH`.
-  - Quick check: `node -e "console.log(typeof WebAssembly.Suspending)"` → expect `function`.
-  - Override when needed: `make -C tests test_wasm NODE=/path/to/node` (Makefiles honor `NODE=`).
-  - Symptom of wrong Node: `TypeError: WebAssembly.Suspending is not a constructor` during wasm JS binding or Haxe JS boot tests.
+- **Wasm / JS bindings:** `make -C tests test_wasm` (or full `make -C tests test`) requires a Node runtime with **JSPI** support (`WebAssembly.Suspending` must be a function).
+  - **Do not use `which node` or assume PATH** — Cursor and other tools may inject a non-JSPI Node. Makefiles resolve via `python3 tools/find_node_jspi.py` (nvm Node ≥ 25, e.g. `v26.1.0`).
+  - Quick check: `python3 tools/find_node_jspi.py` → should print a path under `~/.nvm/versions/node/...`.
+  - Override when needed: `make -C tests test_wasm NODE=/path/to/node` (only honored when that binary has JSPI).
+  - Symptom of wrong Node: `Node at ... lacks JSPI` or `TypeError: WebAssembly.Suspending is not a constructor`.

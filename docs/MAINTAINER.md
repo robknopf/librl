@@ -334,7 +334,7 @@ Prefer **Python 3** for repo tooling under `tools/` (and new maintainer scripts 
 - **Do:** new generators, audits, probes, and Makefile helpers as `tools/*.py` with `#!/usr/bin/env python3`
 - **Avoid:** new `tools/*.sh` unless there is a strong reason (document it in the script header)
 - **Invoke:** `python3 tools/foo.py` from Makefiles — use `python3` explicitly, not `python`
-- **Existing shell:** `tests/bindings/*/test_version_mismatch.sh` and example scripts (`examples/remote/start_server.sh`) remain; migrate to Python when those tests are next touched
+- **Existing shell:** `tests/bindings/lua/test_version_mismatch.sh` and example scripts (`examples/remote/start_server.sh`) remain; migrate when those tests are next touched. JS version mismatch is `tests/bindings/js/test_version_mismatch.mjs` only.
 
 ### Binding tooling
 

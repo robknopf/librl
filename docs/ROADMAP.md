@@ -18,28 +18,23 @@ Committed near-term work — pick up when Now is clear.
 
 ### Bindings and docs
 
-- **Binding parity (audit snapshot)** — `python3 tools/audit_binding_parity.py` (173 public C functions in `docs/API.md`; excludes scratch/SAB, `rl_init_values*`, logger macros, `examples/remote/`):
+- **Binding parity (audit snapshot)** — `python3 tools/audit_binding_parity.py` (172 public C functions in `docs/API.md`; excludes scratch/SAB, `rl_init_values*`, `rl_init_config_sizeof`, logger macros, `examples/remote/`):
 
   | Binding | Covered | Gaps |
   |---------|--------:|-----:|
-  | JS (`bindings/js/rl.js`) | 173/173 | 0 |
-  | Haxe (`bindings/haxe/rl/*`) | 172/173 | 1 |
-  | Nim desktop (`bindings/nim/impl/rl_native.nim`) | 166/173 | 7 |
-  | Lua (`bindings/lua/`) | 169/173 | 4 |
+  | JS (`bindings/js/rl.js`) | 172/172 | 0 |
+  | Haxe (`bindings/haxe/rl/*`) | 172/172 | 0 |
+  | Nim desktop (`bindings/nim/impl/rl_native.nim`) | 166/172 | 6 |
+  | Lua (`bindings/lua/`) | 169/172 | 3 |
 
-  **Fix (Nim desktop — 7):**
+  **Fix (Nim desktop — 6):**
   - `rl_fs_normalize_path`, `rl_fs_read`, `rl_fs_read_free`
   - `rl_sprite2d_get_default_texture`, `rl_sprite3d_get_default_texture`, `rl_sprite3d_get_transform`
-  - `rl_init_config_sizeof` (optional — FFI internal; wasm/JS only today)
 
-  **Fix (Lua — 4):**
+  **Fix (Lua — 3):**
   - `rl_sprite2d_get_default_texture`, `rl_sprite3d_get_default_texture`, `rl_sprite3d_get_transform`
-  - `rl_init_config_sizeof` (optional — FFI internal)
 
-  **Fix (Haxe — 1):**
-  - `rl_init_config_sizeof` (optional — cpp uses struct layout directly; **remove** if init flattening backlog lands)
-
-  Re-run the audit script after binding changes. Intentional non-gaps: scratch/SAB, `rl_init_values*`, `rl_frame_command*` — see `docs/BINDINGS.md`.
+  Re-run the audit script after binding changes. Intentional non-gaps: scratch/SAB, `rl_init_values*`, `rl_init_config_sizeof`, `rl_frame_command*` — see `docs/BINDINGS.md`.
 
 - Binding tooling for agents/maintainers — see `docs/MAINTAINER.md` § Tools (Python-first policy; generators, parity audit, `make binding-types` / `binding-version`).
 - remove scratch/ABI bindings from non-JS bindings — done for `scratch_refresh` / `scratchRefresh` / `rl_scratch_refresh` (commented in sources; see `docs/BINDINGS.md`); audit for any other `*_to_scratch` / `*_from_scratch` if added later
@@ -124,12 +119,7 @@ Designed enough to implement when prioritized.
 
 ### Init / C ABI (wasm-friendly flattening)
 
-Today: **`RL.initAsync()`** already calls **`rl_init_values_async`** (flat args). **`RL.init()`** still marshals `rl_init_config_t` by hand via **`rl_init_config_sizeof`** + wasm heap layout — redundant with the values helpers.
-
-**Near-term (bindings only, no C contract change):**
-- Change **`RL.init()`** to call **`rl_init_values`** with the same flattened fields as `initAsync` (sync fs path vs async fs path stays the difference).
-- Delete duplicated struct-packing in `bindings/js/rl.js` (`_callInitWithOptions*` else branches).
-- Document **`rl_init_config_sizeof`** as wasm-internal / candidate for removal once JS no longer uses it.
+**Done (bindings only):** JS `RL.init()` and `RL.initAsync()` both flatten config and call `rl_init_values` / `rl_init_values_async`; struct packing and `rl_init_config_sizeof` usage removed from `bindings/js/rl.js`.
 
 **Consider (C ABI reshape — needs explicit approval per `AGENTS.md`):**
 - Make **`rl_init_values` / `rl_init_values_async`** the primary **exported** init entry points for wasm (FFI-friendly scalars + strings).
@@ -236,9 +226,10 @@ Explicitly deferred — not on the near-term path.
 
 Changelog — trim periodically.
 
+- JS init flattening (2025-05): `RL.init()` calls `rl_init_values`; struct marshaling removed from `bindings/js/rl.js`
 - Binding parity audit (2025-05):
-  - `tools/audit_binding_parity.py` added; 173 C functions audited
-  - JS 173/173; Haxe 172/173; Nim desktop 166/173; Lua 169/173
+  - `tools/audit_binding_parity.py` added; 172 C functions audited (excludes `rl_init_config_sizeof`, scratch, init values helpers)
+  - JS 172/172; Haxe 172/172; Nim desktop 166/172; Lua 169/172
   - gap table in **Next → Binding parity** above
 - Docs consolidation (2025-05):
   - single work tracker: `docs/ROADMAP.md` (now / next / backlog / research / parked / done)

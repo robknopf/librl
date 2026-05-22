@@ -3,7 +3,15 @@ ROOT_DIR ?= $(abspath ..)
 CC_WASM ?= emcc
 CC_DESKTOP ?= gcc
 FIND_NODE_JSPI := $(abspath $(ROOT_DIR)/tools/find_node_jspi.py)
-NODE ?= $(shell python3 "$(FIND_NODE_JSPI)" 2>/dev/null || true)
+# Resolve JSPI-capable Node even when the environment sets NODE to a non-JSPI binary
+# (e.g. Cursor's bundled Node). Explicit `make NODE=/path` still wins when that path has JSPI.
+NODE := $(shell \
+	_n="$(NODE)"; \
+	if [ -n "$$_n" ] && "$$_n" -e 'process.exit(typeof WebAssembly.Suspending==="function"?0:1)' 2>/dev/null; then \
+		printf '%s' "$$_n"; \
+	else \
+		python3 "$(FIND_NODE_JSPI)" 2>/dev/null; \
+	fi)
 export NODE
 CHROME ?= $(shell command -v google-chrome 2>/dev/null || command -v chromium-browser 2>/dev/null || command -v chromium 2>/dev/null)
 EM_CACHE_DIR ?= $(abspath $(ROOT_DIR)/.emcache)

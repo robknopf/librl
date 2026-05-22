@@ -1,6 +1,12 @@
 ROOT_DIR ?= $(abspath ../../..)
 FIND_NODE_JSPI := $(abspath $(ROOT_DIR)/tools/find_node_jspi.py)
-NODE ?= $(shell "$(FIND_NODE_JSPI)" 2>/dev/null || true)
+NODE := $(shell \
+	_n="$(NODE)"; \
+	if [ -n "$$_n" ] && "$$_n" -e 'process.exit(typeof WebAssembly.Suspending==="function"?0:1)' 2>/dev/null; then \
+		printf '%s' "$$_n"; \
+	else \
+		python3 "$(FIND_NODE_JSPI)" 2>/dev/null; \
+	fi)
 export NODE
 SCRIPT_DIR := $(abspath .)
 
@@ -9,7 +15,7 @@ SCRIPT_DIR := $(abspath .)
 test: check_node build
 	@$(NODE) "$(SCRIPT_DIR)/test_version_validate.mjs"
 	@$(NODE) "$(SCRIPT_DIR)/test_version_binding.mjs"
-	@bash "$(SCRIPT_DIR)/test_version_mismatch.sh" "$(ROOT_DIR)"
+	@$(NODE) "$(SCRIPT_DIR)/test_version_mismatch.mjs"
 	@echo "JS binding version tests passed."
 
 build:
@@ -22,7 +28,7 @@ test_version_binding: check_node build
 	@$(NODE) "$(SCRIPT_DIR)/test_version_binding.mjs"
 
 test_version_mismatch: check_node build
-	@bash "$(SCRIPT_DIR)/test_version_mismatch.sh" "$(ROOT_DIR)"
+	@$(NODE) "$(SCRIPT_DIR)/test_version_mismatch.mjs"
 
 check_node:
 	@if [ -z "$(NODE)" ]; then \

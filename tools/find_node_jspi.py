@@ -74,6 +74,13 @@ def nvm_node_candidates() -> list[str]:
 
 
 def main() -> int:
+    env_node = os.environ.get("NODE", "").strip()
+    if env_node:
+        ok = try_node(env_node)
+        if ok:
+            print(ok)
+            return 0
+
     for name in ("node", "nodejs"):
         found = shutil.which(name)
         if found:

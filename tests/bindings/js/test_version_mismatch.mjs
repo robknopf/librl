@@ -1,31 +1,114 @@
 #!/usr/bin/env node
 /**
- * Boot rl.js with a mismatched binding stamp (gen file patched by test_version_mismatch.sh).
+ * Version policy via RL.boot(): major/minor mismatch → BOOT_ERR_VERSION_MISMATCH;
+ * patch drift → BOOT_OK.
+ *
+ * Driver mode patches bindings/js/gen/rl_version.js and spawns a fresh Node worker
+ * per case (ESM caches static imports within a process). Restores gen on exit.
+ *
+ * Worker mode: `node test_version_mismatch.mjs --worker <mismatch|ok>`
  */
+import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../../..', import.meta.url));
-const bindingsRl = path.join(root, 'bindings/js/rl.js') + '?mismatch=' + Date.now();
+const genPath = path.join(root, 'bindings/js/gen/rl_version.js');
 const librlJs = path.join(root, 'lib/librl.js');
+const bindingsRlBase = path.join(root, 'bindings/js/rl.js');
+const selfPath = fileURLToPath(import.meta.url);
 
-const { rl: RL } = await import(bindingsRl);
+function assertJspi() {
+    if (typeof WebAssembly?.Suspending !== 'function') {
+        throw new Error('test_version_mismatch: need Node >= 25 with JSPI (WebAssembly.Suspending)');
+    }
+}
 
-try {
-    await RL.boot({
+function writeGen(major, minor, patch) {
+    fs.writeFileSync(
+        genPath,
+        `/* GENERATED — DO NOT EDIT (test override) */
+export const RL_BINDING_BUILT_MAJOR = ${major};
+export const RL_BINDING_BUILT_MINOR = ${minor};
+export const RL_BINDING_BUILT_PATCH = ${patch};
+export const RL_BINDING_BUILT_VERSION_STRING = "${major}.${minor}.${patch}";
+`,
+        'utf8',
+    );
+}
+
+async function workerMain(mode) {
+    assertJspi();
+    const bindingsRl = `${bindingsRlBase}?worker=${Date.now()}`;
+    const { rl: RL } = await import(bindingsRl);
+    const rc = await RL.boot({
         modulePath: librlJs,
         env: {
             locateFile: (p) => path.join(root, 'lib', p),
         },
     });
-    console.error('expected rl.boot() to fail on version mismatch');
-    process.exit(0);
-} catch (err) {
-    const message = String(err && err.message ? err.message : err);
-    console.error(message);
-    if (!/incompatible|major|mismatch|differs/i.test(message)) {
-        console.error('expected version mismatch message');
-        process.exit(2);
+
+    if (mode === 'mismatch' && rc === RL.BOOT_ERR_VERSION_MISMATCH) {
+        process.exit(0);
     }
+    if (mode === 'ok' && rc === RL.BOOT_OK) {
+        process.exit(0);
+    }
+
+    console.error(`worker: expected ${mode}, boot() returned ${rc}`);
     process.exit(1);
+}
+
+function runWorker(mode) {
+    const result = spawnSync(process.execPath, [selfPath, '--worker', mode], {
+        cwd: root,
+        stdio: 'inherit',
+    });
+    if (result.status !== 0) {
+        throw new Error(`worker --worker ${mode} failed with exit ${result.status ?? 'signal'}`);
+    }
+}
+
+function expectVersionMismatch(label, major, minor, patch) {
+    writeGen(major, minor, patch);
+    runWorker('mismatch');
+    console.log(`OK: ${label} — boot() returned BOOT_ERR_VERSION_MISMATCH`);
+}
+
+function expectBootOk(label, major, minor, patch) {
+    writeGen(major, minor, patch);
+    runWorker('ok');
+    console.log(`OK: ${label} — boot() returned BOOT_OK (patch drift is non-fatal)`);
+}
+
+async function driverMain() {
+    if (!fs.existsSync(genPath)) {
+        console.error(`test_version_mismatch: missing ${genPath} (run make binding-version)`);
+        process.exit(1);
+    }
+
+    if (!fs.existsSync(librlJs)) {
+        console.error(`test_version_mismatch: missing ${librlJs} (run make wasm)`);
+        process.exit(1);
+    }
+
+    assertJspi();
+
+    const originalGen = fs.readFileSync(genPath, 'utf8');
+
+    try {
+        expectVersionMismatch('major mismatch (9.0.1 vs runtime)', 9, 0, 1);
+        expectVersionMismatch('minor mismatch (0.9.1 vs runtime)', 0, 9, 1);
+        expectBootOk('patch drift (0.0.9 vs runtime)', 0, 0, 9);
+    } finally {
+        fs.writeFileSync(genPath, originalGen, 'utf8');
+    }
+}
+
+const args = process.argv.slice(2);
+if (args[0] === '--worker') {
+    await workerMain(args[1]);
+} else {
+    await driverMain();
 }

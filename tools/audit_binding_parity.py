@@ -64,6 +64,8 @@ def should_exclude_symbol(name: str) -> str | None:
         return "examples/remote only"
     if name in ("rl_init_values", "rl_init_values_async"):
         return "internal init helper; bindings use init/initAsync"
+    if name == "rl_init_config_sizeof":
+        return "FFI struct-size helper; bindings flatten via rl_init_values*"
     if name.startswith("rl_scratch_") or "_to_scratch" in name or "_from_scratch" in name:
         return "scratch/SAB bridge"
     return None
@@ -122,10 +124,10 @@ def parse_js_bindings() -> set[str]:
         else:
             covered.add(sym)
 
-    if re.search(r"""['"]rl_init['"]""", text):
-        covered.add("rl_init")
     if "rl_init_async" in text or "rl_init_values_async" in text:
         covered.add("rl_init_async")
+    if re.search(r"""['"]rl_init_values['"]""", text):
+        covered.add("rl_init")
 
     # Scratch-backed input snapshots (documented in BINDINGS.md).
     if re.search(r"\bgetMouseState\s*:", text):
@@ -246,6 +248,7 @@ def load_documented_omissions() -> list[str]:
     items = [
         "scratch/SAB bridge (`rl_scratch_*`, `*_to_scratch`, `*_from_scratch`) — JS/wasm only; see `docs/BINDINGS.md`",
         "`rl_init_values` / `rl_init_values_async` — internal; public bindings expose `init` / `initAsync` only",
+        "`rl_init_config_sizeof` — FFI struct-size helper; bindings flatten via `rl_init_values*`",
         "`rl_asset_ensure_many_from_scratch_async` — wasm scratch path; covered by JS `ensureGroupAsync` → `rl_asset_ensure_many_async`",
         "Logger convenience macros (`rl_logger_trace`, …) — bindings expose `setLevel` / message helpers instead",
     ]

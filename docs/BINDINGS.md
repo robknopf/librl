@@ -120,8 +120,7 @@ Notes:
   - `init(...)` and `initAsync(...)` reuse the booted module instance when one already exists.
 - **Init contract (all bindings):** public API is config/table/object only — `init(config)` (run to completion; JS/wasm returns a Promise because init may suspend on fs/JSPI) and `initAsync(config)` (immediate return; poll `tick()` until `RL_TICK_RUNNING`). Bindings accept native config types (`RLInitOptions`, `RLInitConfig`, Nim `RLInitConfig`, Lua init table, etc.) and marshal internally.
 - **`rl_init_values` / `rl_init_values_async` are intentionally not exposed on binding public surfaces.** They remain in the C API and wasm exports for internal FFI (bindings flatten config and call them from implementation code). Do not re-add `initValues`, `initValuesAsync`, `initConfigAsync`, `init_values`, or positional init wrappers to user-facing binding APIs.
-- JS `init(opts)` marshals opts and calls `rl_init(...)` (may suspend via JSPI during fs restore).
-- JS `initAsync(opts)` flattens opts and calls `rl_init_values_async(...)` internally.
+- JS `init(opts)` and `initAsync(opts)` flatten opts and call `rl_init_values(...)` / `rl_init_values_async(...)` internally (`init` may suspend via JSPI during fs restore).
 - Example: `await rl.init({ windowWidth: 800, windowHeight: 600, windowTitle: "Title", windowFlags: rl.FLAG_MSAA_4X_HINT, assetHost })`
 - Init result constants are exposed (`INIT_OK`, `INIT_ERR_UNKNOWN`, `INIT_ERR_ALREADY_INITIALIZED`, `INIT_ERR_LOADER`, `INIT_ERR_ASSET_HOST`, `INIT_ERR_WINDOW`).
 - In JS, polling-style `*Async` init/fs entrypoints keep the immediate-return contract:

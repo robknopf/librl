@@ -136,6 +136,11 @@ Notes:
   - Lua: `rl.version_major()`, …
 - Binding/core alignment: `make binding-version` (runs with `desktop` / `shared` / `wasm` / `rl_lua`) writes `bindings/*/gen/*` from `include/rl_version.h`. Each binding queries `rl_version_*` from librl, compares to its stamp, logs both versions, and applies local policy (`validate_version()` / `validateVersion()` / `rl_validate_version()` return `0` ok, `1` patch drift, `< 0` fatal). Checks run at load/boot (not `init`): Lua on `require("rl")` and `rl.boot()`; JS after wasm load; Nim/Haxe on `rl_boot()` / `RL.boot()`.
 - JS TypeScript declarations: `make binding-types` (runs with `desktop` / `shared` / `wasm`) regenerates `types/librl.d.ts` from `bindings/js/rl.js` via `tools/gen_librl_dts.py`. Do not hand-edit `types/librl.d.ts`; after adding or renaming JS binding methods/constants, run `make binding-types` (or any of those build targets). The build copies the result to `lib/librl.d.ts`. Tighter method signatures can be added in `SIGNATURE_OVERRIDES` inside the generator; everything else gets generic `unknown` signatures so the file stays complete without manual upkeep.
+- **Binding tooling (maintainers/agents):** full table, platform policy, and workflow in `docs/MAINTAINER.md` § Tools.
+  - `python3 tools/audit_binding_parity.py` — gap report vs `docs/API.md`; update `docs/ROADMAP.md` after binding work
+  - `make binding-version` → `tools/gen_binding_versions.py`
+  - `make binding-types` → `tools/gen_librl_dts.py`
+  - `python3 tools/gen_haxe_public_sections.py` — Haxe section façades
 - JS `pickModel(camera, model, mouseX, mouseY)` and `pickSprite3d(camera, sprite3d, mouseX, mouseY)` return local-space `point` / `normal` data from `rl_pick_result_t`.
 - JS fs/asset namespaces (mirror `rl_fs.h` / `rl_asset.h`):
   - `RL.fs.init([rootDir])`, `RL.fs.initAsync([rootDir])`, `RL.fs.deinit()`, `RL.fs.isReady()`, `RL.fs.getRootDir()`, `RL.fs.normalizePath(path)`, `RL.fs.restoreAsync()`, `RL.fs.read(filename)`, `RL.fs.remove(filename)`, `RL.fs.clear()`, …
@@ -263,7 +268,7 @@ Files:
 - `bindings/haxe/rl/RL.hx` — core lifecycle only: `boot`, `init`, `deinit`, `tick`, version, timing, shared init/tick constants.
 - `bindings/haxe/rl/{Fs,Asset,Window,Render,Model,...}.hx` — one public class per C API section in `package rl` (e.g. `rl.Fs.init()`, `rl.Asset.ensure()`). Method names are verb-first within each class; the impl layer keeps C-aligned names (`RLImpl.fsInit`, …).
 - `bindings/haxe/rl/helpers/*.hx` — binding ergonomics (not C API), e.g. `rl.helpers.TaskGroup.create()`, `rl.helpers.Log.info()`, `rl.helpers.Wait.waitForTask()`. JS equivalent bucket: `RL.helpers.*` (where applicable).
-- `tools/gen_haxe_public_sections.py` — regenerates section façade files from `include/*.h` (parity audits can be run per generated file).
+- `tools/gen_haxe_public_sections.py` — regenerates section façade files from the `SECTIONS` map (see MAINTAINER § Binding tooling).
 - `bindings/haxe/rl/impl/RLImpl.cpp.hx` — current hxcpp backend implementation. Contains all `@:native`, `untyped __cpp__`, `@:functionCode`, and bridge classes.
 - `bindings/haxe/rl/impl/RLImpl.js.hx` — Haxe `js` backend. It is a thin adapter over the standalone JS binding exported from `bindings/js/rl.js`.
 - `bindings/haxe/rl/impl/RLImpl.hx` — unsupported fallback that fails compilation for targets without a backend.

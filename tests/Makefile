@@ -2,8 +2,8 @@ ROOT_DIR ?= $(abspath ..)
 
 CC_WASM ?= emcc
 CC_DESKTOP ?= gcc
-FIND_NODE_JSPI := $(abspath $(ROOT_DIR)/tools/find_node_jspi.sh)
-NODE ?= $(shell "$(FIND_NODE_JSPI)" 2>/dev/null || true)
+FIND_NODE_JSPI := $(abspath $(ROOT_DIR)/tools/find_node_jspi.py)
+NODE ?= $(shell python3 "$(FIND_NODE_JSPI)" 2>/dev/null || true)
 export NODE
 CHROME ?= $(shell command -v google-chrome 2>/dev/null || command -v chromium-browser 2>/dev/null || command -v chromium 2>/dev/null)
 EM_CACHE_DIR ?= $(abspath $(ROOT_DIR)/.emcache)

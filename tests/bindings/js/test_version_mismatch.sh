@@ -8,8 +8,8 @@ set -euo pipefail
 ROOT="${1:-$(cd "$(dirname "$0")/../../.." && pwd)}"
 GEN="${ROOT}/bindings/js/gen/rl_version.js"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-FIND_NODE_JSPI="${ROOT}/tools/find_node_jspi.sh"
-NODE="${NODE:-$("${FIND_NODE_JSPI}" 2>/dev/null || command -v node 2>/dev/null || command -v nodejs 2>/dev/null || true)}"
+FIND_NODE_JSPI="${ROOT}/tools/find_node_jspi.py"
+NODE="${NODE:-$(python3 "${FIND_NODE_JSPI}" 2>/dev/null || command -v node 2>/dev/null || command -v nodejs 2>/dev/null || true)}"
 
 if [ -z "${NODE}" ]; then
   echo "test_version_mismatch: no Node.js with JSPI found (need Node >= 25)" >&2

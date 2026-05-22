@@ -1,5 +1,5 @@
 ROOT_DIR ?= $(abspath ../../..)
-FIND_NODE_JSPI := $(abspath $(ROOT_DIR)/tools/find_node_jspi.sh)
+FIND_NODE_JSPI := $(abspath $(ROOT_DIR)/tools/find_node_jspi.py)
 NODE ?= $(shell "$(FIND_NODE_JSPI)" 2>/dev/null || true)
 export NODE
 SCRIPT_DIR := $(abspath .)

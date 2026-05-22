@@ -43,3 +43,15 @@ make -C tests test_wasm
 - `unit_test_wasm`: runs librl wasm unit tests under Node.
 - `probe_idbfs_build`: builds headless IDBFS probe wasm/js.
 - `probe_idbfs`: executes headless browser IDBFS persistence probe.
+
+## Manual smoke tests (`tests/smoke/`)
+
+Optional, not part of `make test` yet:
+
+- `tests/smoke/haxe_wasm_smoke.mjs` — Puppeteer load of the Haxe wasm web example via Vite (`https://127.0.0.1:4444/?example=haxe` by default). Start Vite first; then:
+
+```bash
+node tests/smoke/haxe_wasm_smoke.mjs
+```
+
+Env: `SMOKE_URL`, `CHROMIUM`, `SMOKE_SETTLE_MS`. Requires `puppeteer-core`.

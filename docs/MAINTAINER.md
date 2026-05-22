@@ -1,6 +1,8 @@
-# Development Notes
+# Maintainer Handbook
 
-Internal maintainer notes for quick session handoff. Keep this practical and current.
+Internal reference for building, navigating, and changing librl.
+
+**Work tracking:** [ROADMAP.md](ROADMAP.md) is the single source for tasks (now / next / backlog / research / parked / done). This file is reference only — do not add task lists here.
 
 ## Fast Start
 
@@ -186,6 +188,7 @@ Approximate sizes for the example builds (release/optimized, no debug symbols). 
   1. Rebuild wasm/js outputs (`make wasm` or target-specific make).
   2. Touch or re-save relevant entry file if HMR does not recover.
   3. Restart Vite only if file watching still does not pick up rebuilt outputs.
+- **Manual wasm smoke (optional):** with Vite running on port 4444, `node tests/smoke/haxe_wasm_smoke.mjs` loads the Haxe wasm example in headless Chromium and prints console/page errors. Not wired into `make test` yet. See `tests/README.md`.
 
 ## Scripting Runtime Direction
 
@@ -221,18 +224,12 @@ Approximate sizes for the example builds (release/optimized, no debug symbols). 
   - mouse snapshot
   - window/screen info as needed
 - Host calls script `update(...)` once per tick.
-- Script owns gameplay state and emits transient frame commands using host-managed handles.
-- After script update, the thin host drains the frame command buffer and performs:
-  - draw calls
-  - audio playback commands
-  - other immediate frame-side effects
-- Frame commands should be cleared every frame. Do not make render state persistent by default.
+- Script calls `rl_*` directly (via bindings) for draw, audio, and resource work — immediate-mode; **no frame-command buffer in core librl** (see `docs/BINDINGS.md`).
 - Current status:
-  - `include/rl_module.h` now contains the typed frame-command ABI
-  - `examples/c-lua/main.c` is the current reference thin host
-  - the host resets and drains a per-tick command buffer in clear / audio / 3D / 2D passes
-  - Lua now owns almost all demo-specific scene/resource behavior
-  - the Lua module keeps its own small caches so reloads can reuse stable script-visible handles for already-requested resources/colors
+  - `examples/c-lua/` — Lua lifecycle host; scripts use wrapper modules that call the flat C API
+  - `examples/cppia/` — Haxe cppia scripting host
+  - `examples/haxe-simple/`, `examples/nim-simple/` — direct binding usage from game code
+  - `examples/remote/` — **isolated experiment**: server streams a private command protocol to a thin client (`examples/remote/include/rl_frame_command.h`); not part of core `include/` or binding parity
 
 ### API Shape We Want
 
@@ -241,22 +238,17 @@ Approximate sizes for the example builds (release/optimized, no debug symbols). 
   - create/load resource
   - destroy resource
   - query lightweight state if needed
-- Prefer a transient per-frame command buffer for hot-path operations:
-  - draw
-  - play/stop audio
-  - similar immediate commands
-- Events are acceptable for orchestration and notifications, but should not become the primary render/audio command surface.
-- Prefer a typed command structure or tagged union over stringly-typed event payloads for per-frame work.
-- A ring buffer remains a reasonable future refinement if fixed-capacity/no-allocation frame submission is desirable.
+- Per-frame draw/audio/input work uses direct `rl_*` calls from script update code (same as C hosts).
+- Events are acceptable for orchestration and notifications, but should not replace direct render/audio APIs for hot-path work.
 
 ### Practical Goal
 
 - In the ideal workflow, the existing C example should be usable as a thin host shell where gameplay can be authored in scripts with a basic text editor.
 - To make that real, the script layer still needs a coherent contract for:
-  - `init/update/draw`-style lifecycle or equivalent
+  - `init/update`-style lifecycle (or equivalent)
   - input access
   - resource creation returning handles
-  - handle-based draw/audio commands
+  - handle-based draw/audio via direct bindings
   - predictable hot reload behavior
   - good source-aware logging/errors
 
@@ -315,24 +307,6 @@ Approximate sizes for the example builds (release/optimized, no debug symbols). 
   - `Model.load(path)` returns a table with transform/animation fields and `:draw()`, `:pick()`, `:destroy()`
   - similar shape for texture/sprite/sound/music/font/camera wrappers
 
-## Immediate Next Steps
-
-- Decide how Lua event listener ownership should work across reloads:
-  - current script-facing API exists: `event_on`, `event_off`, `event_emit`
-  - current temporary policy is script-managed listener teardown
-  - follow-up is ownership/generation tracking so reload cleanup can be selective
-- Decide whether the host fallback `ClearBackground(RAYWHITE)` remains in `main.c` or whether Lua fully owns frame clear.
-- Harden the current frame-command path instead of redesigning it from scratch:
-  - clarify overflow behavior
-  - decide whether the host-local fixed buffer is enough or should become shared infrastructure
-  - document the current command drain order and ownership more explicitly
-- HCR follow-up after adding `load/unload/serialize/unserialize`:
-  - decide exact persistence rules for script globals vs restored state
-  - decide whether reload should stay in the same VM or move toward new-VM swap later
-  - decide whether unload/load should become mandatory for script modules or remain optional hooks
-  - decide whether event listeners should remain script-managed or become auto-cleaned once listener ownership metadata exists
-- Document the Lua script-facing surface in a smaller user-facing note once the lifecycle and wrappers stabilize.
-
 ## Assets and Credits
 
 - Credits file is at `examples/www/public/assets/CREDITS.md`.
@@ -349,3 +323,34 @@ Approximate sizes for the example builds (release/optimized, no debug symbols). 
   - `bindings/js/rl.js`
   - `bindings/nim/rl.nim`
   - `docs/API.md`
+- After C API or binding surface changes, run `python3 tools/audit_binding_parity.py` and update `docs/ROADMAP.md` gap table if needed.
+
+## Tools
+
+### Platform policy
+
+Prefer **Python 3** for repo tooling under `tools/` (and new maintainer scripts invoked from Makefiles). Python runs on Linux, macOS, and Windows without bash-specific behavior.
+
+- **Do:** new generators, audits, probes, and Makefile helpers as `tools/*.py` with `#!/usr/bin/env python3`
+- **Avoid:** new `tools/*.sh` unless there is a strong reason (document it in the script header)
+- **Invoke:** `python3 tools/foo.py` from Makefiles — use `python3` explicitly, not `python`
+- **Existing shell:** `tests/bindings/*/test_version_mismatch.sh` and example scripts (`examples/remote/start_server.sh`) remain; migrate to Python when those tests are next touched
+
+### Binding tooling
+
+Python helpers under `tools/` — use these instead of hand-editing generated binding artifacts.
+
+| Script | Make target | Purpose |
+|--------|-------------|---------|
+| `tools/audit_binding_parity.py` | — | Compare `docs/API.md` C functions to JS/Haxe/Nim/Lua public surfaces; prints gap table and ROADMAP-ready markdown. **Run after binding or API changes.** |
+| `tools/gen_binding_versions.py` | `make binding-version` | Regenerate version stamps in `bindings/*/gen/` from `include/rl_version.h`. Runs automatically with `make desktop` / `wasm` / `shared`. |
+| `tools/gen_librl_dts.py` | `make binding-types` | Regenerate `types/librl.d.ts` from `bindings/js/rl.js`. Do not hand-edit `.d.ts`. Runs automatically with desktop/wasm/shared builds. Tight signatures: edit `SIGNATURE_OVERRIDES` in the generator. |
+| `tools/gen_haxe_public_sections.py` | — | Regenerate Haxe section façade files (`bindings/haxe/rl/Fs.hx`, `Asset.hx`, …) from the `SECTIONS` map. Run after adding RLImpl methods; then review/commit generated output. |
+| `tools/find_node_jspi.py` | — | Locate Node ≥25 with JSPI for wasm tests; used by `tests/Makefile` when `NODE` is unset. |
+
+**Agent workflow:** C header change → update `docs/API.md` + all four bindings → `make binding-types` (if JS changed) → `python3 tools/audit_binding_parity.py` → fix gaps or document intentional omissions in `docs/BINDINGS.md`.
+
+One-off migration scripts (`migrate_fileio_to_fs_asset.py`, `rename_fileio_public_api.py`) are historical; do not run unless explicitly reviving a migration.
+
+Other dev scripts (not binding parity): `show_wasm_sources.py`, `generate_devtools_workspace.py`.
+

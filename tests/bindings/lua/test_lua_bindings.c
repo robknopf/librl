@@ -125,21 +125,21 @@ int main(int argc, char *argv[])
         lua_pop(L, 1);
     }
 
-    /* fileio_create_task_group (embedded task group, same as Haxe RL.fileioCreateTaskGroup) */
+    /* asset_create_task_group (embedded task group, same as Haxe RL.fileioCreateTaskGroup) */
     status = luaL_dostring(L,
-        "if type(rl.fileio_create_task_group) ~= 'function' then\n"
-        "  error('rl.fileio_create_task_group missing')\n"
+        "if type(rl.asset_create_task_group) ~= 'function' then\n"
+        "  error('rl.asset_create_task_group missing')\n"
         "end\n"
-        "if type(rl.fileio_ping_asset_host) ~= 'function' then\n"
-        "  error('rl.fileio_ping_asset_host missing')\n"
+        "if type(rl.asset_ping_host) ~= 'function' then\n"
+        "  error('rl.asset_ping_host missing')\n"
         "end\n"
-        "local g = rl.fileio_create_task_group()\n"
+        "local g = rl.asset_create_task_group()\n"
         "if g == nil or type(g.remaining_tasks) ~= 'function' then\n"
         "  error('task group object invalid')\n"
         "end\n"
-        "print('OK: fileio_create_task_group (remaining', g:remaining_tasks(), ')')");
+        "print('OK: asset_create_task_group (remaining', g:remaining_tasks(), ')')");
     if (status != LUA_OK) {
-        fprintf(stderr, "Error testing fileio_create_task_group: %s\n", lua_tostring(L, -1));
+        fprintf(stderr, "Error testing asset_create_task_group: %s\n", lua_tostring(L, -1));
         lua_pop(L, 1);
     }
 

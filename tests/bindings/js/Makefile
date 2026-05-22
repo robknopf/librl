@@ -1,5 +1,7 @@
 ROOT_DIR ?= $(abspath ../../..)
-NODE ?= $(shell command -v node 2>/dev/null || command -v nodejs 2>/dev/null)
+FIND_NODE_JSPI := $(abspath $(ROOT_DIR)/tools/find_node_jspi.sh)
+NODE ?= $(shell "$(FIND_NODE_JSPI)" 2>/dev/null || true)
+export NODE
 SCRIPT_DIR := $(abspath .)
 
 .PHONY: test build test_version_validate test_version_binding test_version_mismatch check_node
@@ -24,6 +26,10 @@ test_version_mismatch: check_node build
 
 check_node:
 	@if [ -z "$(NODE)" ]; then \
-		echo "Error: no Node.js interpreter found (tried node, nodejs)"; \
+		echo "Error: no Node.js with JSPI found (need Node >= 25; try nvm install 26)"; \
+		exit 1; \
+	fi
+	@if ! "$(NODE)" -e 'process.exit(typeof WebAssembly.Suspending === "function" ? 0 : 1)' 2>/dev/null; then \
+		echo "Error: $(NODE) lacks JSPI; set NODE=/path/to/node >= 25"; \
 		exit 1; \
 	fi

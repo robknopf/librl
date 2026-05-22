@@ -51,7 +51,7 @@ proc getPlatformText(): string =
 
 proc queueAssets() =
   echo "queuing assets!!"
-  ctx.loadingGroup = fileioCreateTaskGroup(
+  ctx.loadingGroup = assetCreateTaskGroup(
     addr ctx,
     onComplete = proc(group: RLTaskGroup[AppContext], loadedCtx: var AppContext) =
       loadedCtx.loadingGroup = nil,
@@ -169,7 +169,7 @@ proc onInit(): int {.rlAsync.} =
   # move the window to the other screen 
   rl_window_set_monitor(1)
 
-  discard rl_fileio_clear()
+  discard rl_fs_clear()
 
   rl_enable_lighting()
   rl_set_light_direction(-0.6, -1.0, -0.5)

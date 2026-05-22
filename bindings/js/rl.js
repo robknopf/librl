@@ -446,7 +446,7 @@ const RL = {
             windowTitle: opts.windowTitle ?? moduleOptions.windowTitle ?? "",
             windowFlags: opts.windowFlags ?? moduleOptions.windowFlags ?? 0,
             assetHost: opts.assetHost ?? moduleOptions.assetHost ?? "",
-            fileioBaseDir: opts.fileioBaseDir ?? moduleOptions.fileioBaseDir ?? "",
+            fsRootDir: opts.fsRootDir ?? moduleOptions.fsRootDir ?? "",
             idealWidth: moduleOptions.idealWidth ?? opts.windowWidth ?? 1024,
             idealHeight: moduleOptions.idealHeight ?? opts.windowHeight ?? 1280,
         };
@@ -538,7 +538,7 @@ const RL = {
                     initOptions.windowTitle ?? "",
                     (initOptions.windowFlags || 0) >>> 0,
                     initOptions.assetHost ?? "",
-                    initOptions.fileioBaseDir ?? "",
+                    initOptions.fsRootDir ?? "",
                 ],
                 asyncOptions
             )) | 0;
@@ -564,7 +564,7 @@ const RL = {
 
                 const titlePtr = stringToTempUtf8OrNull(initOptions.windowTitle);
                 const assetPtr = stringToTempUtf8OrNull(initOptions.assetHost);
-                const cachePtr = stringToTempUtf8OrNull(initOptions.fileioBaseDir);
+                const cachePtr = stringToTempUtf8OrNull(initOptions.fsRootDir);
                 allocatedPtrs.push(titlePtr, assetPtr, cachePtr);
 
                 setI32(8, titlePtr >>> 0);
@@ -609,7 +609,7 @@ const RL = {
                     initOptions.windowTitle ?? "",
                     (initOptions.windowFlags || 0) >>> 0,
                     initOptions.assetHost ?? "",
-                    initOptions.fileioBaseDir ?? "",
+                    initOptions.fsRootDir ?? "",
                 ]
             ) | 0;
         } else {
@@ -678,7 +678,7 @@ const RL = {
 
                 const titlePtr = stringToTempUtf8OrNull(initOptions.windowTitle);
                 const assetPtr = stringToTempUtf8OrNull(initOptions.assetHost);
-                const cachePtr = stringToTempUtf8OrNull(initOptions.fileioBaseDir);
+                const cachePtr = stringToTempUtf8OrNull(initOptions.fsRootDir);
                 allocatedPtrs.push(titlePtr, assetPtr, cachePtr);
 
                 setI32(8, titlePtr >>> 0);
@@ -791,54 +791,106 @@ const RL = {
         }
         return moduleInstance.ccall('rl_version_string', 'string', [], []);
     },
-    fileioRemove: (filename) => {
-        return moduleInstance.ccall('rl_fileio_remove', 'number', ['string'], [filename]);
+    tick: () => {
+        moduleInstance.ccall('rl_scratch_refresh', null, [], []);
+        return moduleInstance.ccall('rl_tick', 'number', [], []);
     },
-    fileioClear: () => {
-        return moduleInstance.ccall('rl_fileio_clear', 'number', [], []);
+    getDeltaTime: () => {
+        return moduleInstance.ccall('rl_get_delta_time', 'number', [], []);
     },
-    fileioInit: async (baseDir = "") => {
-        return await moduleInstance.ccall('rl_fileio_init', 'number', ['string'], [baseDir || ""], { async: true });
-    },
-    fileioInitAsync: (baseDir = "") => {
-        return moduleInstance.ccall('rl_fileio_init_async', 'number', ['string'], [baseDir || ""]);
-    },
-    fileioDeinitAsync: () => {
-        return moduleInstance.ccall('rl_fileio_deinit_async', 'number', [], []) >>> 0;
-    },
-    fileioDeinit: async () => {
-        moduleInstance.ccall('rl_fileio_deinit', null, [], [], { async: true });
-    },
-    fileioIsInitialized: () => {
-        return moduleInstance.ccall('rl_fileio_is_initialized', 'number', [], []) !== 0;
-    },
-    fileioIsReady: () => {
-        return moduleInstance.ccall('rl_fileio_is_ready', 'number', [], []) !== 0;
-    },
-    fileioFlush: () => {
-        return moduleInstance.ccall('rl_fileio_flush', 'number', [], []) | 0;
-    },
-    fileioGetBaseDir: () => {
-        return moduleInstance.ccall('rl_fileio_get_base_dir', 'string', [], []);
-    },
-    fileioPingAssetHost: (assetHost = "") => {
-        return moduleInstance.ccall(
-            'rl_fileio_ping_asset_host',
-            'number',
-            ['string'],
-            [assetHost || ""]
-        );
-    },
-    fileioSetAssetHost: (assetHost) => {
-        if (typeof assetHost !== "string") {
-            return -1;
+    setTargetFPS: (fps) => moduleInstance.ccall(
+        "rl_set_target_fps", null, ["number"], [fps]
+    ),
+
+    _colorHandle: (index, generation) => ((generation << 16) | index) >>> 0,
+    _RL_COLOR_NAMES: [
+        "DEFAULT", "LIGHTGRAY", "GRAY", "DARKGRAY",
+        "YELLOW", "GOLD", "ORANGE", "PINK",
+        "RED", "MAROON", "GREEN", "LIME",
+        "DARKGREEN", "SKYBLUE", "BLUE", "DARKBLUE",
+        "PURPLE", "VIOLET", "DARKPURPLE",
+        "BEIGE", "BROWN", "DARKBROWN",
+        "WHITE", "BLACK", "BLANK", "MAGENTA", "RAYWHITE"
+    ],
+    _patchColorConstants: () => {
+        if (!moduleInstance || !(moduleInstance.HEAPU32 || moduleInstance.HEAP32)) {
+            return;
         }
-        return moduleInstance.ccall('rl_fileio_set_asset_host', 'number', ['string'], [assetHost]) | 0;
+        const heap = moduleInstance.HEAPU32 || moduleInstance.HEAP32;
+        for (const name of RL._RL_COLOR_NAMES) {
+            const ptr = moduleInstance["_RL_COLOR_" + name];
+            if (ptr == null) continue;
+            const value = heap[ptr >>> 2] >>> 0;
+            RL["COLOR_" + name] = value;
+        }
     },
-    fileioGetAssetHost: () => {
-        return moduleInstance.ccall('rl_fileio_get_asset_host', 'string', [], []);
+    INIT_OK: 0,
+    INIT_ERR_UNKNOWN: -1,
+    INIT_ERR_ALREADY_INITIALIZED: -2,
+    INIT_ERR_LOADER: -3,
+    INIT_ERR_ASSET_HOST: -4,
+    INIT_ERR_WINDOW: -5,
+    CAMERA_PERSPECTIVE: 0,
+    CAMERA_ORTHOGRAPHIC: 1,
+    FLAG_FULLSCREEN_MODE: 0x00000002,
+    FLAG_WINDOW_RESIZABLE: 4,
+    FLAG_WINDOW_UNDECORATED: 0x00000008,
+    FLAG_WINDOW_TRANSPARENT: 0x00000010,
+    FLAG_MSAA_4X_HINT: 32,
+    FLAG_VSYNC_HINT: 0x00000040,
+    FLAG_WINDOW_HIDDEN: 0x00000080,
+    FLAG_WINDOW_ALWAYS_RUN: 0x00000100,
+    FLAG_WINDOW_MINIMIZED: 0x00000200,
+    FLAG_WINDOW_MAXIMIZED: 0x00000400,
+    FLAG_WINDOW_UNFOCUSED: 0x00000800,
+    FLAG_WINDOW_TOPMOST: 0x00001000,
+    FLAG_WINDOW_HIGHDPI: 0x00002000,
+    FLAG_INTERLACED_HINT: 0x00010000,
+    LOGGER_LEVEL_TRACE: 0,
+    LOGGER_LEVEL_DEBUG: 1,
+    LOGGER_LEVEL_INFO: 2,
+    LOGGER_LEVEL_WARN: 3,
+    LOGGER_LEVEL_ERROR: 4,
+    LOGGER_LEVEL_FATAL: 5,
+    BUTTON_UP: 0,
+    BUTTON_PRESSED: 1,
+    BUTTON_DOWN: 2,
+    BUTTON_RELEASED: 3,
+
+};
+
+RL.fs = {
+    remove: (filename) => {
+        return moduleInstance.ccall('rl_fs_remove', 'number', ['string'], [filename]);
     },
-    fileioNormalizePath: (path) => {
+    clear: () => {
+        return moduleInstance.ccall('rl_fs_clear', 'number', [], []);
+    },
+    init: async (rootDir = "") => {
+        return await moduleInstance.ccall('rl_fs_init', 'number', ['string'], [rootDir || ""], { async: true });
+    },
+    initAsync: (rootDir = "") => {
+        return moduleInstance.ccall('rl_fs_init_async', 'number', ['string'], [rootDir || ""]);
+    },
+    deinitAsync: () => {
+        return moduleInstance.ccall('rl_fs_deinit_async', 'number', [], []) >>> 0;
+    },
+    deinit: async () => {
+        moduleInstance.ccall('rl_fs_deinit', null, [], [], { async: true });
+    },
+    isInitialized: () => {
+        return moduleInstance.ccall('rl_fs_is_initialized', 'number', [], []) !== 0;
+    },
+    isReady: () => {
+        return moduleInstance.ccall('rl_fs_is_ready', 'number', [], []) !== 0;
+    },
+    flush: () => {
+        return moduleInstance.ccall('rl_fs_flush', 'number', [], []) | 0;
+    },
+    getRootDir: () => {
+        return moduleInstance.ccall('rl_fs_get_root_dir', 'string', [], []);
+    },
+    normalizePath: (path) => {
         if (path == null) {
             return "";
         }
@@ -846,7 +898,7 @@ const RL = {
         const bufferPtr = RL._mallocOrThrow(bufferSize);
         try {
             moduleInstance.ccall(
-                'rl_fileio_normalize_path',
+                'rl_fs_normalize_path',
                 null,
                 ['string', 'number', 'number'],
                 [String(path), bufferPtr, bufferSize]
@@ -859,42 +911,10 @@ const RL = {
             RL._freeIfPossible(bufferPtr);
         }
     },
-    fileioRestoreAsync: () => {
-        return moduleInstance.ccall('rl_fileio_restore_async', 'number', [], []);
+    restoreAsync: () => {
+        return moduleInstance.ccall('rl_fs_restore_async', 'number', [], []);
     },
-    fileioEnsure: async (localPath, src = null) => {
-        if (typeof localPath === "string" && /\.gltf(?:[?#].*)?$/i.test(localPath)) {
-            console.warn(
-                `[librl] fileioEnsure("${localPath}") does not currently follow .gltf dependencies. ` +
-                `Use fileioEnsureAsync(), rl.helpers.waitForFileioEnsureAsync(), or rl.helpers.createTaskGroup() instead.`
-            );
-        }
-        return await moduleInstance.ccall(
-            'rl_fileio_ensure',
-            'number',
-            ['string', 'string'],
-            [localPath, src ?? null],
-            { async: true }
-        );
-    },
-    fileioEnsureAsync: (localPath, src = null) => {
-        return moduleInstance.ccall('rl_fileio_ensure_async', 'number', ['string', 'string'], [localPath, src ?? null]);
-    },
-    fileioEnsureGroupAsync: (filenames) => {
-        const count = moduleInstance.writeScratchStringTable(filenames);
-        return moduleInstance.ccall('rl_fileio_ensure_group_from_scratch_async', 'number', ['number'], [count]);
-    },
-    fileioPollTask: (task) => {
-        return moduleInstance.ccall('rl_fileio_poll_task', 'number', ['number'], [task]) !== 0;
-    },
-    fileioFinishTask: (task) => {
-        return moduleInstance.ccall('rl_fileio_finish_task', 'number', ['number'], [task]);
-    },
-    fileioGetTaskPath: (task) => {
-        return moduleInstance.ccall('rl_fileio_get_task_path', 'string', ['number'], [task]);
-    },
-
-    fileioRead: (filename) => {
+    read: (filename) => {
         if (!moduleInstance) {
             return null;
         }
@@ -921,7 +941,7 @@ const RL = {
             heapU32[outDataSlot >>> 2] = 0;
             heapU32[outSizeSlot >>> 2] = 0;
             const rc = moduleInstance.ccall(
-                'rl_fileio_read',
+                'rl_fs_read',
                 'number',
                 ['string', 'number', 'number'],
                 [name, outDataSlot, outSizeSlot]
@@ -930,7 +950,7 @@ const RL = {
             const size = heapU32[outSizeSlot >>> 2] >>> 0;
             if (rc !== 0 || !dataPtr) {
                 if (dataPtr) {
-                    moduleInstance.ccall('rl_fileio_read_free', null, ['number'], [dataPtr]);
+                    moduleInstance.ccall('rl_fs_read_free', null, ['number'], [dataPtr]);
                 }
                 return null;
             }
@@ -938,35 +958,91 @@ const RL = {
             if (size > 0) {
                 out.set(heapU8.subarray(dataPtr, dataPtr + size));
             }
-            moduleInstance.ccall('rl_fileio_read_free', null, ['number'], [dataPtr]);
+            moduleInstance.ccall('rl_fs_read_free', null, ['number'], [dataPtr]);
             return out;
         } finally {
             stackRestore(prevSp);
         }
     },
-    fileioWrite: (path, data) => {
+    write: (path, data) => {
         if (typeof data === "string") {
             data = new TextEncoder().encode(data);
         }
         const ptr = RL._mallocOrThrow(data.byteLength);
         try {
             moduleInstance.HEAPU8.set(data, ptr);
-            return moduleInstance.ccall('rl_fileio_write', 'number', ['string', 'number', 'number'], [path, ptr, data.byteLength]) | 0;
+            return moduleInstance.ccall('rl_fs_write', 'number', ['string', 'number', 'number'], [path, ptr, data.byteLength]) | 0;
         } finally {
             RL._freeIfPossible(ptr);
         }
     },
-    fileioMkdir: (path) => {
-        return moduleInstance.ccall('rl_fileio_mkdir', 'number', ['string'], [path]) | 0;
+    mkdir: (path) => {
+        return moduleInstance.ccall('rl_fs_mkdir', 'number', ['string'], [path]) | 0;
     },
-    fileioRmdir: (path) => {
-        return moduleInstance.ccall('rl_fileio_rmdir', 'number', ['string'], [path]) | 0;
+    rmdir: (path) => {
+        return moduleInstance.ccall('rl_fs_rmdir', 'number', ['string'], [path]) | 0;
     },
+    exists: (filename) => {
+        return moduleInstance.ccall('rl_fs_exists', 'number', ['string'], [filename]) !== 0;
+    }
+};
 
-    fileioFreeTask: (task) => {
-        return moduleInstance.ccall('rl_fileio_free_task', null, ['number'], [task]);
+RL.asset = {
+    ADD_TASK_OK: 0,
+    ADD_TASK_ERR_INVALID: -1,
+    ADD_TASK_ERR_QUEUE_FULL: -2,
+    pingHost: (assetHost = "") => {
+        return moduleInstance.ccall(
+            'rl_asset_ping_host',
+            'number',
+            ['string'],
+            [assetHost || ""]
+        );
     },
-    fileioAddTask: (task, onSuccess = null, onFailure = null, ctx = null) => {
+    setHost: (assetHost) => {
+        if (typeof assetHost !== "string") {
+            return -1;
+        }
+        return moduleInstance.ccall('rl_asset_set_host', 'number', ['string'], [assetHost]) | 0;
+    },
+    getHost: () => {
+        return moduleInstance.ccall('rl_asset_get_host', 'string', [], []);
+    },
+    ensure: async (localPath, src = null) => {
+        if (typeof localPath === "string" && /\.gltf(?:[?#].*)?$/i.test(localPath)) {
+            console.warn(
+                `[librl] asset.ensure("${localPath}") does not currently follow .gltf dependencies. ` +
+                `Use asset.ensureAsync(), rl.helpers.waitForAssetEnsureAsync(), or rl.helpers.createTaskGroup() instead.`
+            );
+        }
+        return await moduleInstance.ccall(
+            'rl_asset_ensure',
+            'number',
+            ['string', 'string'],
+            [localPath, src ?? null],
+            { async: true }
+        );
+    },
+    ensureAsync: (localPath, src = null) => {
+        return moduleInstance.ccall('rl_asset_ensure_async', 'number', ['string', 'string'], [localPath, src ?? null]);
+    },
+    ensureGroupAsync: (filenames) => {
+        const count = moduleInstance.writeScratchStringTable(filenames);
+        return moduleInstance.ccall('rl_asset_ensure_many_from_scratch_async', 'number', ['number'], [count]);
+    },
+    pollTask: (task) => {
+        return moduleInstance.ccall('rl_asset_poll_task', 'number', ['number'], [task]) !== 0;
+    },
+    finishTask: (task) => {
+        return moduleInstance.ccall('rl_asset_finish_task', 'number', ['number'], [task]);
+    },
+    getTaskPath: (task) => {
+        return moduleInstance.ccall('rl_asset_get_task_path', 'string', ['number'], [task]);
+    },
+    freeTask: (task) => {
+        return moduleInstance.ccall('rl_asset_free_task', null, ['number'], [task]);
+    },
+    addTask: (task, onSuccess = null, onFailure = null, ctx = null) => {
         let successPtr = 0;
         let failurePtr = 0;
         let cleanedUp = false;
@@ -995,7 +1071,7 @@ const RL = {
             return "";
         };
 
-        // Mirror the cpp binding's rl_fileio_add_task behavior with local JS
+        // Mirror the cpp binding's rl_asset_add_task behavior with local JS
         // springboards. The closures capture the provided callbacks/context, so
         // we do not need a separate userdata registry on the JS side.
         successPtr = moduleInstance.addFunction((pathPtr, _userData) => {
@@ -1019,7 +1095,7 @@ const RL = {
 
         try {
             const rc = moduleInstance.ccall(
-                'rl_fileio_add_task',
+                'rl_asset_add_task',
                 'number',
                 ['number', 'number', 'number', 'number'],
                 [task, successPtr, failurePtr, 0]
@@ -1033,16 +1109,16 @@ const RL = {
             throw err;
         }
     },
-    fileioTick: () => {
-        moduleInstance.ccall('rl_fileio_tick', null, [], []);
-    },
-    fileioExists: (filename) => {
-        return moduleInstance.ccall('rl_fileio_exists', 'number', ['string'], [filename]) !== 0;
-    },
-    emitEvent: (eventName, payload = 0) => {
+    tick: () => {
+        moduleInstance.ccall('rl_asset_tick', null, [], []);
+    }
+};
+
+RL.event = {
+    emit: (eventName, payload = 0) => {
         return moduleInstance.ccall('rl_event_emit', 'number', ['string', 'number'], [eventName, payload]);
     },
-    onEvent: (eventName, callback) => {
+    on: (eventName, callback) => {
         let callbackMap = null;
         let listenerId = 0;
         let rc = 0;
@@ -1076,7 +1152,7 @@ const RL = {
         RL._eventListenersById.set(listenerId, { eventName, callback });
         return 0;
     },
-    onceEvent: (eventName, callback) => {
+    once: (eventName, callback) => {
         let callbackMap = null;
         let listenerId = 0;
         let rc = 0;
@@ -1110,7 +1186,7 @@ const RL = {
         RL._eventListenersById.set(listenerId, { eventName, callback });
         return 0;
     },
-    offEvent: (eventName, callback) => {
+    off: (eventName, callback) => {
         let callbackMap = null;
         let listenerId = 0;
         let rc = 0;
@@ -1131,32 +1207,35 @@ const RL = {
         }
         return rc;
     },
-    clearEventListeners: (eventName) => {
+    clearListeners: (eventName) => {
         const rc = moduleInstance.ccall('rl_event_off_all', 'number', ['string'], [eventName]);
         if (rc === 0) {
             RL._clearListenerCacheForEvent(eventName);
         }
         return rc;
     },
-    getEventListenerCount: (eventName) => {
+    getListenerCount: (eventName) => {
         return moduleInstance.ccall('rl_event_listener_count', 'number', ['string'], [eventName]);
-    },
-    setWindowSize: (width, height) => {
+    }
+};
+
+RL.window = {
+    setSize: (width, height) => {
         return moduleInstance.ccall('rl_window_set_size', null, ['number', 'number'], [width, height]);
     },
-    isWindowCloseRequested: () => {
+    isCloseRequested: () => {
         return !!moduleInstance.ccall('rl_window_close_requested', 'number', [], []);
     },
     getMonitorCount: () => {
         return moduleInstance.ccall('rl_window_get_monitor_count', 'number', [], []);
     },
-    setWindowTitle: (title) => {
+    setTitle: (title) => {
         return moduleInstance.ccall('rl_window_set_title', null, ['string'], [title]);
     },
     getCurrentMonitor: () => {
         return moduleInstance.ccall('rl_window_get_current_monitor', 'number', [], []);
     },
-    setWindowMonitor: (monitor) => {
+    setMonitor: (monitor) => {
         return moduleInstance.ccall('rl_window_set_monitor', null, ['number'], [monitor]);
     },
     getMonitorWidth: (monitor) => {
@@ -1165,13 +1244,28 @@ const RL = {
     getMonitorHeight: (monitor) => {
         return moduleInstance.ccall('rl_window_get_monitor_height', 'number', ['number'], [monitor]);
     },
-    setWindowPosition: (x, y) => {
+    setPosition: (x, y) => {
         return moduleInstance.ccall('rl_window_set_position', null, ['number', 'number'], [x, y]);
     },
-    beginDrawing: () => {
+    getScreenSize: () => {
+        moduleInstance.ccall('rl_window_get_screen_size_to_scratch', null, [], []);
+        return moduleInstance.getVector2();
+    },
+    getPosition: () => {
+        moduleInstance.ccall('rl_window_get_position_to_scratch', null, [], []);
+        return moduleInstance.getVector2();
+    },
+    getMonitorPosition: (monitor = 0) => {
+        moduleInstance.ccall('rl_window_get_monitor_position_to_scratch', null, ['number'], [monitor]);
+        return moduleInstance.getVector2();
+    }
+};
+
+RL.render = {
+    begin: () => {
         return moduleInstance.ccall('rl_render_begin', null, [], []);
     },
-    endDrawing: () => {
+    end: () => {
         return moduleInstance.ccall('rl_render_end', null, [], []);
     },
     beginMode2D: (camera) => {
@@ -1180,57 +1274,14 @@ const RL = {
     endMode2D: () => {
         return moduleInstance.ccall('rl_render_end_mode_2d', null, [], []);
     },
-    beginMode3d: () => {
+    beginMode3D: () => {
         return moduleInstance.ccall('rl_render_begin_mode_3d', null, [], []);
     },
-    endMode3d: () => {
+    endMode3D: () => {
         return moduleInstance.ccall('rl_render_end_mode_3d', null, [], []);
     },
-    tick: () => {
-        moduleInstance.ccall('rl_scratch_refresh', null, [], []);
-        return moduleInstance.ccall('rl_tick', 'number', [], []);
-    },
-    getDeltaTime: () => {
-        return moduleInstance.ccall('rl_get_delta_time', 'number', [], []);
-    },
-    createCamera3d: (
-        positionX, positionY, positionZ,
-        targetX, targetY, targetZ,
-        upX, upY, upZ,
-        fovy, projection
-    ) => {
-        return moduleInstance.ccall(
-            'rl_camera3d_create',
-            'number',
-            ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'],
-            [positionX, positionY, positionZ, targetX, targetY, targetZ, upX, upY, upZ, fovy, projection]
-        );
-    },
-    getDefaultCamera3d: () => {
-        return moduleInstance.ccall('rl_camera3d_get_default', 'number', [], []);
-    },
-    setCamera3d: (
-        camera,
-        positionX, positionY, positionZ,
-        targetX, targetY, targetZ,
-        upX, upY, upZ,
-        fovy, projection
-    ) => {
-        return moduleInstance.ccall(
-            'rl_camera3d_set',
-            'number',
-            ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'],
-            [camera, positionX, positionY, positionZ, targetX, targetY, targetZ, upX, upY, upZ, fovy, projection]
-        ) !== 0;
-    },
-    setActiveCamera3d: (camera) => {
-        return moduleInstance.ccall('rl_camera3d_set_active', 'number', ['number'], [camera]) !== 0;
-    },
-    getActiveCamera3d: () => {
-        return moduleInstance.ccall('rl_camera3d_get_active', 'number', [], []);
-    },
-    destroyCamera3d: (camera) => {
-        return moduleInstance.ccall('rl_camera3d_destroy', null, ['number'], [camera]);
+    clearBackground: (color) => {
+        return moduleInstance.ccall('rl_render_clear_background', null, ['number'], [color]);
     },
     enableLighting: () => {
         return moduleInstance.ccall('rl_enable_lighting', null, [], []);
@@ -1246,10 +1297,52 @@ const RL = {
     },
     setLightAmbient: (ambient) => {
         return moduleInstance.ccall('rl_set_light_ambient', null, ['number'], [ambient]);
+    }
+};
+
+RL.camera3d = {
+    create: (
+        positionX, positionY, positionZ,
+        targetX, targetY, targetZ,
+        upX, upY, upZ,
+        fovy, projection
+    ) => {
+        return moduleInstance.ccall(
+            'rl_camera3d_create',
+            'number',
+            ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'],
+            [positionX, positionY, positionZ, targetX, targetY, targetZ, upX, upY, upZ, fovy, projection]
+        );
     },
-    clearBackground: (color) => {
-        return moduleInstance.ccall('rl_render_clear_background', null, ['number'], [color]);
+    getDefault: () => {
+        return moduleInstance.ccall('rl_camera3d_get_default', 'number', [], []);
     },
+    set: (
+        camera,
+        positionX, positionY, positionZ,
+        targetX, targetY, targetZ,
+        upX, upY, upZ,
+        fovy, projection
+    ) => {
+        return moduleInstance.ccall(
+            'rl_camera3d_set',
+            'number',
+            ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'],
+            [camera, positionX, positionY, positionZ, targetX, targetY, targetZ, upX, upY, upZ, fovy, projection]
+        ) !== 0;
+    },
+    setActive: (camera) => {
+        return moduleInstance.ccall('rl_camera3d_set_active', 'number', ['number'], [camera]) !== 0;
+    },
+    getActive: () => {
+        return moduleInstance.ccall('rl_camera3d_get_active', 'number', [], []);
+    },
+    destroy: (camera) => {
+        return moduleInstance.ccall('rl_camera3d_destroy', null, ['number'], [camera]);
+    }
+};
+
+RL.shape = {
     drawCube: (positionX, positionY, positionZ, width, height, length, color) => {
         return moduleInstance.ccall(
             'rl_shape_draw_cube',
@@ -1265,8 +1358,11 @@ const RL = {
             ['number', 'number', 'number', 'number', 'number'],
             [x | 0, y | 0, width | 0, height | 0, color >>> 0]
         );
-    },
-    debugEnableFps: (x, y, fontSize, font = 0) => {
+    }
+};
+
+RL.debug = {
+    enableFps: (x, y, fontSize, font = 0) => {
         return moduleInstance.ccall(
             'rl_debug_enable_fps',
             null,
@@ -1274,31 +1370,54 @@ const RL = {
             [x | 0, y | 0, fontSize | 0, font >>> 0]
         );
     },
-    debugDisable: () => {
+    disable: () => {
         return moduleInstance.ccall('rl_debug_disable', null, [], []);
-    },
-    drawFPS: (x, y) => {
+    }
+};
+
+RL.text = {
+    drawFps: (x, y) => {
         return moduleInstance.ccall('rl_text_draw_fps', null, ['number', 'number'], [x, y]);
     },
-    drawFPSEx: (font, x, y, fontSize, color) => {
+    drawFpsEx: (font, x, y, fontSize, color) => {
         moduleInstance.ccall('rl_text_draw_fps_ex', null, ['number', 'number', 'number', 'number', 'number'], [font, x, y, fontSize, color]);
     },
-    drawText: (text, x, y, fontSize, color) => {
+    draw: (text, x, y, fontSize, color) => {
         return moduleInstance.ccall('rl_text_draw', null, ['string', 'number', 'number', 'number', 'number'], [text, x, y, fontSize, color]);
     },
-    drawTextEx: (font, text, x, y, fontSize, spacing, tint) => {
+    drawEx: (font, text, x, y, fontSize, spacing, tint) => {
         return moduleInstance.ccall('rl_text_draw_ex', null, ['number', 'string', 'number', 'number', 'number', 'number', 'number'], [font, text, x, y, fontSize, spacing, tint]);
     },
-    drawTextureEx: (texture, x, y, scale, rotation, tint) => {
-        return moduleInstance.ccall('rl_texture_draw_ex', null, ['number', 'number', 'number', 'number', 'number', 'number'], [texture, x, y, scale, rotation, tint]);
-    },
-    drawTextureGround: (texture, positionX, positionY, positionZ, width, length, tint) => {
-        return moduleInstance.ccall('rl_texture_draw_ground', null, ['number', 'number', 'number', 'number', 'number', 'number', 'number'], [texture, positionX, positionY, positionZ, width, length, tint]);
-    },
-    measureText: (text, fontSize) => {
+    measure: (text, fontSize) => {
         return moduleInstance.ccall('rl_text_measure', 'number', ['string', 'number'], [text, fontSize]);
     },
-    pollInputEvents: () => {
+    measureEx: (font, text, fontSize, spacing = 1) => {
+        moduleInstance.ccall('rl_text_measure_ex_to_scratch', 'number', ['number', 'string', 'number', 'number'], [font, text, fontSize, spacing]);
+        return moduleInstance.getVector2();
+    },
+    // End Scratch-backed wrappers
+};
+
+RL.texture = {
+    getDefault: () => moduleInstance.ccall(
+        "rl_texture_get_default", "number", [], []
+    ),
+    create: (path) => moduleInstance.ccall(
+        "rl_texture_create", "number", ["string"], [path]
+    ),
+    destroy: (texture) => moduleInstance.ccall(
+        "rl_texture_destroy", null, ["number"], [texture]
+    ),
+    drawEx: (texture, x, y, scale, rotation, tint) => {
+        return moduleInstance.ccall('rl_texture_draw_ex', null, ['number', 'number', 'number', 'number', 'number', 'number'], [texture, x, y, scale, rotation, tint]);
+    },
+    drawGround: (texture, positionX, positionY, positionZ, width, length, tint) => {
+        return moduleInstance.ccall('rl_texture_draw_ground', null, ['number', 'number', 'number', 'number', 'number', 'number', 'number'], [texture, positionX, positionY, positionZ, width, length, tint]);
+    }
+};
+
+RL.input = {
+    pollEvents: () => {
         return moduleInstance.ccall('rl_input_poll_events', null, [], []);
     },
     getMouseWheel: () => {
@@ -1312,7 +1431,7 @@ const RL = {
     // The following are wrappers that use the global scratch area to reduce js->wasm/wasm->js boundry calls
     // They either read scratch directly or via a *_to_scratch bridge.
     // We provide a uniform calling so js isn't aware of the intermediate scratch area use, 
-    // while desktop gets the return structure directly
+    // while desktop gets the return structure directly,
     getMouseState: () => {
         const mouse = moduleInstance.getMouseState();
         return {
@@ -1352,126 +1471,53 @@ const RL = {
         }
         return moduleInstance.getTouchpoint(id | 0);
     },
-    getScreenSize: () => {
-        moduleInstance.ccall('rl_window_get_screen_size_to_scratch', null, [], []);
-        return moduleInstance.getVector2();
-    },
-    getWindowPosition: () => {
-        moduleInstance.ccall('rl_window_get_position_to_scratch', null, [], []);
-        return moduleInstance.getVector2();
-    },
-    getMonitorPosition: (monitor = 0) => {
-        moduleInstance.ccall('rl_window_get_monitor_position_to_scratch', null, ['number'], [monitor]);
-        return moduleInstance.getVector2();
-    },
     getMousePosition: () => {
         moduleInstance.ccall('rl_input_get_mouse_position_to_scratch', null, [], []);
         return moduleInstance.getVector2();
-    },
-    measureTextEx: (font, text, fontSize, spacing = 1) => {
-        moduleInstance.ccall('rl_text_measure_ex_to_scratch', 'number', ['number', 'string', 'number', 'number'], [font, text, fontSize, spacing]);
-        return moduleInstance.getVector2();
-    },
-    // End Scratch-backed wrappers
+    }
+};
 
-    // Predefined color handles: export the C globals and read their values once at init.
-    // Uses EXPORTED_GLOBALS for _RL_COLOR_* so JS never redefines the numbers itself.
-    _colorHandle: (index, generation) => ((generation << 16) | index) >>> 0,
-    _RL_COLOR_NAMES: [
-        "DEFAULT", "LIGHTGRAY", "GRAY", "DARKGRAY",
-        "YELLOW", "GOLD", "ORANGE", "PINK",
-        "RED", "MAROON", "GREEN", "LIME",
-        "DARKGREEN", "SKYBLUE", "BLUE", "DARKBLUE",
-        "PURPLE", "VIOLET", "DARKPURPLE",
-        "BEIGE", "BROWN", "DARKBROWN",
-        "WHITE", "BLACK", "BLANK", "MAGENTA", "RAYWHITE"
-    ],
-    _patchColorConstants: () => {
-        if (!moduleInstance || !(moduleInstance.HEAPU32 || moduleInstance.HEAP32)) {
-            return;
-        }
-        const heap = moduleInstance.HEAPU32 || moduleInstance.HEAP32;
-        for (const name of RL._RL_COLOR_NAMES) {
-            const ptr = moduleInstance["_RL_COLOR_" + name];
-            if (ptr == null) continue;
-            const value = heap[ptr >>> 2] >>> 0;
-            RL["COLOR_" + name] = value;
-        }
-    },
-    INIT_OK: 0,
-    INIT_ERR_UNKNOWN: -1,
-    INIT_ERR_ALREADY_INITIALIZED: -2,
-    INIT_ERR_LOADER: -3,
-    INIT_ERR_ASSET_HOST: -4,
-    INIT_ERR_WINDOW: -5,
-    FILEIO_ADD_TASK_OK: 0,
-    FILEIO_ADD_TASK_ERR_INVALID: -1,
-    FILEIO_ADD_TASK_ERR_QUEUE_FULL: -2,
-    CAMERA_PERSPECTIVE: 0,
-    CAMERA_ORTHOGRAPHIC: 1,
-    FLAG_FULLSCREEN_MODE: 0x00000002,
-    FLAG_WINDOW_RESIZABLE: 4,
-    FLAG_WINDOW_UNDECORATED: 0x00000008,
-    FLAG_WINDOW_TRANSPARENT: 0x00000010,
-    FLAG_MSAA_4X_HINT: 32,
-    FLAG_VSYNC_HINT: 0x00000040,
-    FLAG_WINDOW_HIDDEN: 0x00000080,
-    FLAG_WINDOW_ALWAYS_RUN: 0x00000100,
-    FLAG_WINDOW_MINIMIZED: 0x00000200,
-    FLAG_WINDOW_MAXIMIZED: 0x00000400,
-    FLAG_WINDOW_UNFOCUSED: 0x00000800,
-    FLAG_WINDOW_TOPMOST: 0x00001000,
-    FLAG_WINDOW_HIGHDPI: 0x00002000,
-    FLAG_INTERLACED_HINT: 0x00010000,
-    LOGGER_LEVEL_TRACE: 0,
-    LOGGER_LEVEL_DEBUG: 1,
-    LOGGER_LEVEL_INFO: 2,
-    LOGGER_LEVEL_WARN: 3,
-    LOGGER_LEVEL_ERROR: 4,
-    LOGGER_LEVEL_FATAL: 5,
-    BUTTON_UP: 0,
-    BUTTON_PRESSED: 1,
-    BUTTON_DOWN: 2,
-    BUTTON_RELEASED: 3,
-    // },
-
-    createColor: (r, g, b, a) => moduleInstance.ccall(
+RL.color = {
+    create: (r, g, b, a) => moduleInstance.ccall(
         "rl_color_create", "number", ["number", "number", "number", "number"], [r, g, b, a]
     ),
-    destroyColor: (color) => moduleInstance.ccall(
+    destroy: (color) => moduleInstance.ccall(
         "rl_color_destroy", null, ["number"], [color]
-    ),
-    createFont: (path, fontSize) => moduleInstance.ccall(
+    )
+};
+
+RL.font = {
+    create: (path, fontSize) => moduleInstance.ccall(
         "rl_font_create", "number", ["string", "number"], [path, fontSize]
     ),
-    destroyFont: (font) => moduleInstance.ccall(
+    destroy: (font) => moduleInstance.ccall(
         "rl_font_destroy", null, ["number"], [font]
     ),
-    getDefaultFont: () => moduleInstance.ccall(
+    getDefault: () => moduleInstance.ccall(
         "rl_font_get_default", "number", [], []
-    ),
-    setTargetFPS: (fps) => moduleInstance.ccall(
-        "rl_set_target_fps", null, ["number"], [fps]
-    ),
-    getDefaultModelAsset: () => moduleInstance.ccall(
+    )
+};
+
+RL.model = {
+    getDefaultAsset: () => moduleInstance.ccall(
         "rl_model_get_default_asset", "number", [], []
     ),
-    loadModelAsset: (path) => moduleInstance.ccall(
+    loadAsset: (path) => moduleInstance.ccall(
         "rl_model_load_asset", "number", ["string"], [path]
     ),
-    destroyModelAsset: (asset) => moduleInstance.ccall(
+    destroyAsset: (asset) => moduleInstance.ccall(
         "rl_model_destroy_asset", null, ["number"], [asset]
     ),
-    createModel: (asset) => moduleInstance.ccall(
+    create: (asset) => moduleInstance.ccall(
         "rl_model_create", "number", ["number"], [asset]
     ),
-    createModelFromFile: (path) => moduleInstance.ccall(
+    createFromFile: (path) => moduleInstance.ccall(
         "rl_model_create_from_file", "number", ["string"], [path]
     ),
-    setModelAsset: (model, asset) => moduleInstance.ccall(
+    setAsset: (model, asset) => moduleInstance.ccall(
         "rl_model_set_asset", "number", ["number", "number"], [model, asset]
     ) !== 0,
-    setModelTransform: (
+    setTransform: (
         model,
         positionX, positionY, positionZ,
         rotationX, rotationY, rotationZ,
@@ -1482,43 +1528,46 @@ const RL = {
         ["number", "number", "number", "number", "number", "number", "number", "number", "number", "number"],
         [model, positionX, positionY, positionZ, rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ]
     ) !== 0,
-    drawModel: (model, tint) => moduleInstance.ccall(
+    draw: (model, tint) => moduleInstance.ccall(
         "rl_model_draw", null, ["number", "number"], [model, tint]
     ),
-    isModelValid: (model) => moduleInstance.ccall(
+    isValid: (model) => moduleInstance.ccall(
         "rl_model_is_valid", "number", ["number"], [model]
     ) !== 0,
-    isModelValidStrict: (model) => moduleInstance.ccall(
+    isValidStrict: (model) => moduleInstance.ccall(
         "rl_model_is_valid_strict", "number", ["number"], [model]
     ) !== 0,
-    getModelAnimationCount: (model) => moduleInstance.ccall(
+    getAnimationCount: (model) => moduleInstance.ccall(
         "rl_model_get_animation_count", "number", ["number"], [model]
     ),
-    getModelAnimationFrameCount: (model, animationIndex) => moduleInstance.ccall(
+    getAnimationFrameCount: (model, animationIndex) => moduleInstance.ccall(
         "rl_model_get_animation_frame_count", "number", ["number", "number"], [model, animationIndex]
     ),
-    updateModelAnimation: (model, animationIndex, frame) => moduleInstance.ccall(
+    updateAnimation: (model, animationIndex, frame) => moduleInstance.ccall(
         "rl_model_update_animation", null, ["number", "number", "number"], [model, animationIndex, frame]
     ),
-    setModelAnimation: (model, animationIndex) => moduleInstance.ccall(
+    setAnimation: (model, animationIndex) => moduleInstance.ccall(
         "rl_model_set_animation", "number", ["number", "number"], [model, animationIndex]
     ) !== 0,
-    setModelAnimationSpeed: (model, speed) => moduleInstance.ccall(
+    setAnimationSpeed: (model, speed) => moduleInstance.ccall(
         "rl_model_set_animation_speed", "number", ["number", "number"], [model, speed]
     ) !== 0,
-    setModelAnimationLoop: (model, shouldLoop) => moduleInstance.ccall(
+    setAnimationLoop: (model, shouldLoop) => moduleInstance.ccall(
         "rl_model_set_animation_loop", "number", ["number", "number"], [model, shouldLoop ? 1 : 0]
     ) !== 0,
-    setModelTint: (model, color = 0) => moduleInstance.ccall(
+    setTint: (model, color = 0) => moduleInstance.ccall(
         "rl_model_set_tint", "number", ["number", "number"], [model, color]
     ) !== 0,
-    animateModel: (model, deltaSeconds) => moduleInstance.ccall(
+    animate: (model, deltaSeconds) => moduleInstance.ccall(
         "rl_model_animate", "number", ["number", "number"], [model, deltaSeconds]
     ) !== 0,
-    destroyModel: (model) => moduleInstance.ccall(
+    destroy: (model) => moduleInstance.ccall(
         "rl_model_destroy", null, ["number"], [model]
-    ),
-    pickModel: (camera, model, mouseX, mouseY) => {
+    )
+};
+
+RL.pick = {
+    model: (camera, model, mouseX, mouseY) => {
         const hit = moduleInstance.ccall(
             "rl_pick_model_to_scratch",
             "number",
@@ -1538,7 +1587,7 @@ const RL = {
             }
         };
     },
-    pickSprite3d: (camera, sprite3d, mouseX, mouseY) => {
+    sprite3d: (camera, sprite3d, mouseX, mouseY) => {
         const hit = moduleInstance.ccall(
             "rl_pick_sprite3d_to_scratch",
             "number",
@@ -1558,91 +1607,91 @@ const RL = {
             }
         };
     },
-    resetPickStats: () => {
+    resetStats: () => {
         moduleInstance.ccall("rl_pick_reset_stats", null, [], []);
-    },
-    createMusic: (path) => moduleInstance.ccall(
+    }
+};
+
+RL.music = {
+    create: (path) => moduleInstance.ccall(
         "rl_music_create", "number", ["string"], [path]
     ),
-    destroyMusic: (music) => moduleInstance.ccall(
+    destroy: (music) => moduleInstance.ccall(
         "rl_music_destroy", null, ["number"], [music]
     ),
-    playMusic: (music) => moduleInstance.ccall(
+    play: (music) => moduleInstance.ccall(
         "rl_music_play", "number", ["number"], [music]
     ) !== 0,
-    pauseMusic: (music) => moduleInstance.ccall(
+    pause: (music) => moduleInstance.ccall(
         "rl_music_pause", "number", ["number"], [music]
     ) !== 0,
-    stopMusic: (music) => moduleInstance.ccall(
+    stop: (music) => moduleInstance.ccall(
         "rl_music_stop", "number", ["number"], [music]
     ) !== 0,
-    setMusicLoop: (music, shouldLoop) => moduleInstance.ccall(
+    setLoop: (music, shouldLoop) => moduleInstance.ccall(
         "rl_music_set_loop", "number", ["number", "number"], [music, shouldLoop ? 1 : 0]
     ) !== 0,
-    setMusicVolume: (music, volume) => moduleInstance.ccall(
+    setVolume: (music, volume) => moduleInstance.ccall(
         "rl_music_set_volume", "number", ["number", "number"], [music, volume]
     ) !== 0,
-    isMusicPlaying: (music) => moduleInstance.ccall(
+    isPlaying: (music) => moduleInstance.ccall(
         "rl_music_is_playing", "number", ["number"], [music]
     ) !== 0,
-    updateMusic: (music) => moduleInstance.ccall(
+    update: (music) => moduleInstance.ccall(
         "rl_music_update", "number", ["number"], [music]
     ) !== 0,
-    updateAllMusic: () => moduleInstance.ccall(
+    updateAll: () => moduleInstance.ccall(
         "rl_music_update_all", null, [], []
-    ),
-    createSound: (path) => moduleInstance.ccall(
+    )
+};
+
+RL.sound = {
+    create: (path) => moduleInstance.ccall(
         "rl_sound_create", "number", ["string"], [path]
     ),
-    destroySound: (sound) => moduleInstance.ccall(
+    destroy: (sound) => moduleInstance.ccall(
         "rl_sound_destroy", null, ["number"], [sound]
     ),
-    playSound: (sound) => moduleInstance.ccall(
+    play: (sound) => moduleInstance.ccall(
         "rl_sound_play", "number", ["number"], [sound]
     ) !== 0,
-    pauseSound: (sound) => moduleInstance.ccall(
+    pause: (sound) => moduleInstance.ccall(
         "rl_sound_pause", "number", ["number"], [sound]
     ) !== 0,
-    resumeSound: (sound) => moduleInstance.ccall(
+    resume: (sound) => moduleInstance.ccall(
         "rl_sound_resume", "number", ["number"], [sound]
     ) !== 0,
-    stopSound: (sound) => moduleInstance.ccall(
+    stop: (sound) => moduleInstance.ccall(
         "rl_sound_stop", "number", ["number"], [sound]
     ) !== 0,
-    setSoundVolume: (sound, volume) => moduleInstance.ccall(
+    setVolume: (sound, volume) => moduleInstance.ccall(
         "rl_sound_set_volume", "number", ["number", "number"], [sound, volume]
     ) !== 0,
-    setSoundPitch: (sound, pitch) => moduleInstance.ccall(
+    setPitch: (sound, pitch) => moduleInstance.ccall(
         "rl_sound_set_pitch", "number", ["number", "number"], [sound, pitch]
     ) !== 0,
-    setSoundPan: (sound, pan) => moduleInstance.ccall(
+    setPan: (sound, pan) => moduleInstance.ccall(
         "rl_sound_set_pan", "number", ["number", "number"], [sound, pan]
     ) !== 0,
-    isSoundPlaying: (sound) => moduleInstance.ccall(
+    isPlaying: (sound) => moduleInstance.ccall(
         "rl_sound_is_playing", "number", ["number"], [sound]
-    ) !== 0,
-    getDefaultTexture: () => moduleInstance.ccall(
-        "rl_texture_get_default", "number", [], []
-    ),
-    createTexture: (path) => moduleInstance.ccall(
-        "rl_texture_create", "number", ["string"], [path]
-    ),
-    destroyTexture: (texture) => moduleInstance.ccall(
-        "rl_texture_destroy", null, ["number"], [texture]
-    ),
-    createSprite3d: (texture) => moduleInstance.ccall(
+    ) !== 0
+};
+
+RL.sprite3d = {
+    create: (texture) => moduleInstance.ccall(
         "rl_sprite3d_create", "number", ["number"], [texture]
     ),
-    createSprite3dFromFile: (path) => moduleInstance.ccall(
+    createFromFile: (path) => moduleInstance.ccall(
         "rl_sprite3d_create_from_file", "number", ["string"], [path]
     ),
-    setSprite3dTexture: (sprite, texture) => moduleInstance.ccall(
+    setTexture: (sprite, texture) => moduleInstance.ccall(
         "rl_sprite3d_set_texture", "number", ["number", "number"], [sprite, texture]
     ) !== 0,
-    setSprite3dTransform: (sprite, positionX, positionY, positionZ, size) => moduleInstance.ccall(
+    setTransform: (sprite, positionX, positionY, positionZ, size) => moduleInstance.ccall(
         "rl_sprite3d_set_transform", "number", ["number", "number", "number", "number", "number"], [sprite, positionX, positionY, positionZ, size]
     ) !== 0,
-    getSprite3dTransform: (sprite) => {
+    getTransform: (sprite) => {
         const stackSave = moduleInstance.stackSave;
         const stackRestore = moduleInstance.stackRestore;
         const stackAlloc = moduleInstance.stackAlloc;
@@ -1680,64 +1729,73 @@ const RL = {
             stackRestore(prevSp);
         }
     },
-    setSprite3dTint: (sprite, color = 0) => moduleInstance.ccall(
+    setTint: (sprite, color = 0) => moduleInstance.ccall(
         "rl_sprite3d_set_tint", "number", ["number", "number"], [sprite, color]
     ) !== 0,
-    drawSprite3d: (sprite, tint = 0) => moduleInstance.ccall(
+    draw: (sprite, tint = 0) => moduleInstance.ccall(
         "rl_sprite3d_draw", null, ["number", "number"], [sprite, tint]
     ),
-    destroySprite3d: (sprite) => moduleInstance.ccall(
+    destroy: (sprite) => moduleInstance.ccall(
         "rl_sprite3d_destroy", null, ["number"], [sprite]
-    ),
-    createSprite2d: (texture) => moduleInstance.ccall(
+    )
+};
+
+RL.sprite2d = {
+    create: (texture) => moduleInstance.ccall(
         "rl_sprite2d_create", "number", ["number"], [texture]
     ),
-    createSprite2dFromFile: (path) => moduleInstance.ccall(
+    createFromFile: (path) => moduleInstance.ccall(
         "rl_sprite2d_create_from_file", "number", ["string"], [path]
     ),
-    setSprite2dTexture: (sprite, texture) => moduleInstance.ccall(
+    setTexture: (sprite, texture) => moduleInstance.ccall(
         "rl_sprite2d_set_texture", "number", ["number", "number"], [sprite, texture]
     ) !== 0,
-    setSprite2dTransform: (sprite, x, y, scale, rotation) => moduleInstance.ccall(
+    setTransform: (sprite, x, y, scale, rotation) => moduleInstance.ccall(
         "rl_sprite2d_set_transform", "number", ["number", "number", "number", "number", "number"], [sprite, x, y, scale, rotation]
     ) !== 0,
-    setSprite2dTint: (sprite, color = 0) => moduleInstance.ccall(
+    setTint: (sprite, color = 0) => moduleInstance.ccall(
         "rl_sprite2d_set_tint", "number", ["number", "number"], [sprite, color]
     ) !== 0,
-    drawSprite2d: (sprite, tint = 0) => moduleInstance.ccall(
+    draw: (sprite, tint = 0) => moduleInstance.ccall(
         "rl_sprite2d_draw", null, ["number", "number"], [sprite, tint]
     ),
-    destroySprite2d: (sprite) => moduleInstance.ccall(
+    destroy: (sprite) => moduleInstance.ccall(
         "rl_sprite2d_destroy", null, ["number"], [sprite]
-    ),
-    createText2d: (font, size) => moduleInstance.ccall(
+    )
+};
+
+RL.text2d = {
+    create: (font, size) => moduleInstance.ccall(
         "rl_text2d_create", "number", ["number", "number"], [font, size]
     ),
-    setText2dFont: (handle, font) => moduleInstance.ccall(
+    setFont: (handle, font) => moduleInstance.ccall(
         "rl_text2d_set_font", null, ["number", "number"], [handle, font]
     ),
-    setText2dSize: (handle, size) => moduleInstance.ccall(
+    setSize: (handle, size) => moduleInstance.ccall(
         "rl_text2d_set_size", null, ["number", "number"], [handle, size]
     ),
-    setText2dContent: (handle, content) => moduleInstance.ccall(
+    setContent: (handle, content) => moduleInstance.ccall(
         "rl_text2d_set_content", null, ["number", "string"], [handle, content]
     ),
-    setText2dPosition: (handle, x, y) => moduleInstance.ccall(
+    setPosition: (handle, x, y) => moduleInstance.ccall(
         "rl_text2d_set_position", null, ["number", "number", "number"], [handle, x, y]
     ),
-    setText2dColor: (handle, color) => moduleInstance.ccall(
+    setColor: (handle, color) => moduleInstance.ccall(
         "rl_text2d_set_color", null, ["number", "number"], [handle, color]
     ),
-    drawText2d: (handle) => moduleInstance.ccall(
+    draw: (handle) => moduleInstance.ccall(
         "rl_text2d_draw", null, ["number"], [handle]
     ),
-    destroyText2d: (handle) => moduleInstance.ccall(
+    destroy: (handle) => moduleInstance.ccall(
         "rl_text2d_destroy", null, ["number"], [handle]
-    ),
-    loggerMessage: (level, message) => moduleInstance.ccall(
+    )
+};
+
+RL.logger = {
+    message: (level, message) => moduleInstance.ccall(
         "rl_logger_message", null, ["number", "string"], [level, String(message ?? "").replaceAll("%", "%%")]
     ),
-    loggerMessageSource: (level, sourceFile, sourceLine, message) => moduleInstance.ccall(
+    messageSource: (level, sourceFile, sourceLine, message) => moduleInstance.ccall(
         "rl_logger_message_source",
         null,
         ["number", "string", "number", "string"],
@@ -1748,22 +1806,21 @@ const RL = {
             String(message ?? "").replaceAll("%", "%%"),
         ]
     ),
-    loggerSetLevel: (level) => moduleInstance.ccall(
+    setLevel: (level) => moduleInstance.ccall(
         "rl_logger_set_level", null, ["number"], [level]
-    ),
-
+    )
 };
 
 RL.helpers = {
-    waitForFileioReady: async (timeoutMs = 2000) => {
+    waitForFsReady: async (timeoutMs = 2000) => {
         const start = performance.now();
         while (performance.now() - start < timeoutMs) {
-            if (RL.fileioIsReady()) {
+            if (RL.fs.isReady()) {
                 return true;
             }
             await new Promise((resolve) => setTimeout(resolve, 16));
         }
-        return RL.fileioIsReady();
+        return RL.fs.isReady();
     },
     taskIsValid: (task) => {
         return task !== 0;
@@ -1775,22 +1832,22 @@ RL.helpers = {
             return -1;
         }
 
-        while (!RL.fileioPollTask(task)) {
+        while (!RL.asset.pollTask(task)) {
             await new Promise((resolve) => setTimeout(resolve, pollMs));
         }
 
-        rc = RL.fileioFinishTask(task);
-        RL.fileioFreeTask(task);
+        rc = RL.asset.finishTask(task);
+        RL.asset.freeTask(task);
         return rc;
     },
-    waitForFileioRestoreAsync: async () => {
-        return RL.helpers.waitForTask(RL.fileioRestoreAsync());
+    waitForFsRestoreAsync: async () => {
+        return RL.helpers.waitForTask(RL.fs.restoreAsync());
     },
-    waitForFileioEnsureAsync: async (filename, src = null) => {
-        return RL.helpers.waitForTask(RL.fileioEnsureAsync(filename, src));
+    waitForAssetEnsureAsync: async (filename, src = null) => {
+        return RL.helpers.waitForTask(RL.asset.ensureAsync(filename, src));
     },
-    waitForFileioEnsureGroupAsync: async (filenames) => {
-        return RL.helpers.waitForTask(RL.fileioEnsureGroupAsync(filenames));
+    waitForAssetEnsureGroupAsync: async (filenames) => {
+        return RL.helpers.waitForTask(RL.asset.ensureGroupAsync(filenames));
     },
     createTaskGroup: (onComplete = null, onError = null, ctx = null) => {
         const group = {
@@ -1807,7 +1864,7 @@ RL.helpers = {
                 }
                 this.entries.push({
                     task,
-                    path: RL.fileioGetTaskPath(task),
+                    path: RL.asset.getTaskPath(task),
                     done: false,
                     rc: 1,
                     onSuccess: typeof onSuccess === "function" ? onSuccess : null,
@@ -1815,7 +1872,7 @@ RL.helpers = {
                 });
             },
             addImportTask(path, onSuccess = null, onTaskError = null) {
-                this.addTask(RL.fileioEnsureAsync(path), onSuccess, onTaskError);
+                this.addTask(RL.asset.ensureAsync(path), onSuccess, onTaskError);
             },
             addImportTasks(paths, onSuccess = null, onTaskError = null) {
                 if (!Array.isArray(paths)) {
@@ -1835,16 +1892,16 @@ RL.helpers = {
                 return this.failedCount > 0;
             },
             tick() {
-                RL.fileioTick();
+                RL.asset.tick();
                 for (const entry of this.entries) {
                     if (entry.done) {
                         continue;
                     }
-                    if (!RL.fileioPollTask(entry.task)) {
+                    if (!RL.asset.pollTask(entry.task)) {
                         continue;
                     }
-                    entry.rc = RL.fileioFinishTask(entry.task);
-                    RL.fileioFreeTask(entry.task);
+                    entry.rc = RL.asset.finishTask(entry.task);
+                    RL.asset.freeTask(entry.task);
                     entry.done = true;
                     this.completedCount += 1;
                     if (entry.rc !== 0) {
@@ -1885,10 +1942,10 @@ RL.helpers = {
         return group;
     },
     getScreenWidth: () => {
-        return RL.getScreenSize().x;
+        return RL.window.getScreenSize().x;
     },
     getScreenHeight: () => {
-        return RL.getScreenSize().y;
+        return RL.window.getScreenSize().y;
     },
     getPickStats: () => {
         return {

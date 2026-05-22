@@ -26,14 +26,14 @@ Bindings mirror C API shape and intent, but use idiomatic naming per target. C i
 
 | Binding | Style | Examples |
 |---------|-------|----------|
-| **JavaScript** (`bindings/js/rl.js`) | Verb-first for handle/instance methods; section-first namespaces for modules | `setText2dFont`, `getDefaultTexture`, `getVersionMajor`, `animateModel`; keep `fileio*`, `logger*` |
-| **Haxe** (`bindings/haxe/rl/RL.hx`) | Section-first lowerCamelCase | `text2dSetFont`, `fileioEnsure`, `versionMajor` |
-| **Nim** | snake_case aligned with C | `rl_text2d_set_font`, `rl_fileio_ensure` |
-| **Lua** | lower snake_case aligned with C | `text2d_set_font`, `fileio_ensure` |
+| **JavaScript** (`bindings/js/rl.js`) | Nested namespaces per C header; verb-first for handle/instance methods | `RL.fs.init`, `RL.asset.setHost`, `RL.asset.ensure`, `setText2dFont`, `getVersionMajor` |
+| **Haxe** (`bindings/haxe/rl/RL.hx`) | Section-first lowerCamelCase | `fsInit`, `assetEnsure`, `text2dSetFont`, `versionMajor` |
+| **Nim** | snake_case aligned with C | `rl_fs_init`, `rl_asset_ensure`, `assetCreateTaskGroup` |
+| **Lua** | lower snake_case aligned with C | `fs_init`, `asset_ensure`, `text2d_set_font` |
 
 Cross-binding rules:
-- **Haxe JS bridge** (`RLImpl.js.hx`) maps Haxe section-first names to JS verb-first names at the boundary — do not rename Haxe public API to match JS.
-- **Nim JS backend** (`impl/rl_js.nim`) maps Nim/C names to JS verb-first `importjs` strings.
+- **Haxe JS bridge** (`RLImpl.js.hx`) maps Haxe section-first names to nested JS namespaces (`binding.fs.*`, `binding.asset.*`, …).
+- **Nim JS backend** (`impl/rl_js.nim`) maps Nim/C names to nested JS `importjs` paths (`__gRl.fs.*`, `__gRl.asset.*`, …).
 - Do not add backward-compat aliases when renaming JS methods; update call sites and regenerate types instead.
 - Full rationale and edge cases: `docs/BINDINGS.md` § Binding Naming.
 

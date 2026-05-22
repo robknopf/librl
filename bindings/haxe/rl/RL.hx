@@ -102,20 +102,20 @@ class RL {
 	static inline function get_CAMERA_ORTHOGRAPHIC():Int
 		return rl.impl.RLImpl.CAMERA_ORTHOGRAPHIC;
 
-	public static var FILEIO_ADD_TASK_OK(get, never):Int;
+	public static var ASSET_ADD_TASK_OK(get, never):Int;
 
-	static inline function get_FILEIO_ADD_TASK_OK():Int
-		return rl.impl.RLImpl.FILEIO_ADD_TASK_OK;
+	static inline function get_ASSET_ADD_TASK_OK():Int
+		return rl.impl.RLImpl.ASSET_ADD_TASK_OK;
 
-	public static var FILEIO_ADD_TASK_ERR_INVALID(get, never):Int;
+	public static var ASSET_ADD_TASK_ERR_INVALID(get, never):Int;
 
-	static inline function get_FILEIO_ADD_TASK_ERR_INVALID():Int
-		return rl.impl.RLImpl.FILEIO_ADD_TASK_ERR_INVALID;
+	static inline function get_ASSET_ADD_TASK_ERR_INVALID():Int
+		return rl.impl.RLImpl.ASSET_ADD_TASK_ERR_INVALID;
 
-	public static var FILEIO_ADD_TASK_ERR_QUEUE_FULL(get, never):Int;
+	public static var ASSET_ADD_TASK_ERR_QUEUE_FULL(get, never):Int;
 
-	static inline function get_FILEIO_ADD_TASK_ERR_QUEUE_FULL():Int
-		return rl.impl.RLImpl.FILEIO_ADD_TASK_ERR_QUEUE_FULL;
+	static inline function get_ASSET_ADD_TASK_ERR_QUEUE_FULL():Int
+		return rl.impl.RLImpl.ASSET_ADD_TASK_ERR_QUEUE_FULL;
 
 	public static var LOGGER_LEVEL_TRACE(get, never):Int;
 
@@ -394,12 +394,12 @@ class RL {
 		rl.impl.RLImpl.textDrawFpsEx(font, x, y, fontSize, color);
 	}
 
-	public static function fileioSetAssetHost(assetHost:String):Int {
-		return rl.impl.RLImpl.fileioSetAssetHost(assetHost);
+	public static function assetSetHost(assetHost:String):Int {
+		return rl.impl.RLImpl.assetSetHost(assetHost);
 	}
 
-	public static function fileioGetAssetHost():String {
-		return rl.impl.RLImpl.fileioGetAssetHost();
+	public static function assetGetHost():String {
+		return rl.impl.RLImpl.assetGetHost();
 	}
 
 	public static function musicCreate(filename:String):RLHandle {
@@ -811,98 +811,98 @@ class RL {
 	}
 
 	@async
-	public static function fileioInit(?baseDir:String):Int {
-		return cast rl.impl.RLImpl.fileioInit(baseDir);
+	public static function fsInit(?baseDir:String):Int {
+		return cast rl.impl.RLImpl.fsInit(baseDir);
 	}
 
-	public static function fileioInitAsync(?baseDir:String):Int {
-		return rl.impl.RLImpl.fileioInitAsync(baseDir);
-	}
-
-	@async
-	public static function fileioDeinit():VoidResult {
-		return rl.impl.RLImpl.fileioDeinit();
-	}
-
-	public static function fileioIsInitialized():Bool {
-		return rl.impl.RLImpl.fileioIsInitialized();
-	}
-
-	public static function fileioRestoreAsync():RLHandle {
-		return rl.impl.RLImpl.fileioRestoreAsync();
-	}
-
-	public static function fileioEnsureAsync(localPath:String, ?src:String):RLHandle {
-		return rl.impl.RLImpl.fileioEnsureAsync(localPath, src);
+	public static function fsInitAsync(?baseDir:String):Int {
+		return rl.impl.RLImpl.fsInitAsync(baseDir);
 	}
 
 	@async
-	public static function fileioEnsure(localPath:String, ?src:String):RLHandle {
-		return cast rl.impl.RLImpl.fileioEnsure(localPath, src);
+	public static function fsDeinit():VoidResult {
+		return rl.impl.RLImpl.fsDeinit();
 	}
 
-	public static function fileioEnsureGroupAsync(filenames:Array<String>):RLHandle {
-		return rl.impl.RLImpl.fileioEnsureGroupAsync(filenames);
+	public static function fsIsInitialized():Bool {
+		return rl.impl.RLImpl.fsIsInitialized();
 	}
 
-	public static function fileioPollTask(task:RLHandle):Bool {
-		return rl.impl.RLImpl.fileioPollTask(task);
+	public static function fsRestoreAsync():RLHandle {
+		return rl.impl.RLImpl.fsRestoreAsync();
 	}
 
-	public static function fileioFinishTask(task:RLHandle):Int {
-		return rl.impl.RLImpl.fileioFinishTask(task);
+	public static function assetEnsureAsync(localPath:String, ?src:String):RLHandle {
+		return rl.impl.RLImpl.assetEnsureAsync(localPath, src);
 	}
 
-	public static function fileioGetTaskPath(task:RLHandle):String {
-		return rl.impl.RLImpl.fileioGetTaskPath(task);
+	@async
+	public static function assetEnsure(localPath:String, ?src:String):RLHandle {
+		return cast rl.impl.RLImpl.assetEnsure(localPath, src);
 	}
 
-	public static function fileioRead(filename:String):Bytes {
-		return rl.impl.RLImpl.fileioRead(filename);
+	public static function assetEnsureGroupAsync(filenames:Array<String>):RLHandle {
+		return rl.impl.RLImpl.assetEnsureGroupAsync(filenames);
 	}
 
-	public static function fileioFreeTask(task:RLHandle):Void {
-		rl.impl.RLImpl.fileioFreeTask(task);
+	public static function assetPollTask(task:RLHandle):Bool {
+		return rl.impl.RLImpl.assetPollTask(task);
 	}
 
-	public static function fileioExists(filename:String):Bool {
-		return rl.impl.RLImpl.fileioExists(filename);
+	public static function assetFinishTask(task:RLHandle):Int {
+		return rl.impl.RLImpl.assetFinishTask(task);
 	}
 
-	public static function fileioPingAssetHost(?assetHost:String):Float {
-		return rl.impl.RLImpl.fileioPingAssetHost(assetHost);
+	public static function assetGetTaskPath(task:RLHandle):String {
+		return rl.impl.RLImpl.assetGetTaskPath(task);
 	}
 
-	public static function fileioGetBaseDir():String {
-		return rl.impl.RLImpl.fileioGetBaseDir();
+	public static function fsRead(filename:String):Bytes {
+		return rl.impl.RLImpl.fsRead(filename);
 	}
 
-	public static function fileioCreateTaskGroup<T>(?onComplete:RLTaskGroupCallback<T>, ?onError:RLTaskGroupCallback<T>, ?ctx:T):RLTaskGroup {
-		return rl.impl.RLImpl.fileioCreateTaskGroup(onComplete, onError, ctx);
+	public static function assetFreeTask(task:RLHandle):Void {
+		rl.impl.RLImpl.assetFreeTask(task);
 	}
 
-	public static function fileioTaskInvalid():RLHandle {
-		return rl.impl.RLImpl.fileioTaskInvalid();
+	public static function fsExists(filename:String):Bool {
+		return rl.impl.RLImpl.fsExists(filename);
 	}
 
-	public static function fileioTaskIsValid(task:RLHandle):Bool {
-		return rl.impl.RLImpl.fileioTaskIsValid(task);
+	public static function assetPingHost(?assetHost:String):Float {
+		return rl.impl.RLImpl.assetPingHost(assetHost);
 	}
 
-	public static function fileioAddTask<T>(task:RLHandle, onSuccess:String->T->Void, onFailure:String->T->Void, ctx:T):Int {
-		return rl.impl.RLImpl.fileioAddTask(task, onSuccess, onFailure, ctx);
+	public static function fsGetRootDir():String {
+		return rl.impl.RLImpl.fsGetRootDir();
 	}
 
-	public static function fileioTick():Void {
-		rl.impl.RLImpl.fileioTick();
+	public static function assetCreateTaskGroup<T>(?onComplete:RLTaskGroupCallback<T>, ?onError:RLTaskGroupCallback<T>, ?ctx:T):RLTaskGroup {
+		return rl.impl.RLImpl.assetCreateTaskGroup(onComplete, onError, ctx);
 	}
 
-	public static function fileioClear():Int {
-		return rl.impl.RLImpl.fileioClear();
+	public static function assetTaskInvalid():RLHandle {
+		return rl.impl.RLImpl.assetTaskInvalid();
 	}
 
-	public static function fileioRemove(filename:String):Int {
-		return rl.impl.RLImpl.fileioRemove(filename);
+	public static function assetTaskIsValid(task:RLHandle):Bool {
+		return rl.impl.RLImpl.assetTaskIsValid(task);
+	}
+
+	public static function assetAddTask<T>(task:RLHandle, onSuccess:String->T->Void, onFailure:String->T->Void, ctx:T):Int {
+		return rl.impl.RLImpl.assetAddTask(task, onSuccess, onFailure, ctx);
+	}
+
+	public static function assetTick():Void {
+		rl.impl.RLImpl.assetTick();
+	}
+
+	public static function fsClear():Int {
+		return rl.impl.RLImpl.fsClear();
+	}
+
+	public static function fsRemove(filename:String):Int {
+		return rl.impl.RLImpl.fsRemove(filename);
 	}
 
 	public static function loggerMessage(level:Int, message:String):Void {

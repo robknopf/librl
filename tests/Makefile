@@ -2,7 +2,9 @@ ROOT_DIR ?= $(abspath ..)
 
 CC_WASM ?= emcc
 CC_DESKTOP ?= gcc
-NODE ?= $(shell command -v node 2>/dev/null || command -v nodejs 2>/dev/null)
+FIND_NODE_JSPI := $(abspath $(ROOT_DIR)/tools/find_node_jspi.sh)
+NODE ?= $(shell "$(FIND_NODE_JSPI)" 2>/dev/null || true)
+export NODE
 CHROME ?= $(shell command -v google-chrome 2>/dev/null || command -v chromium-browser 2>/dev/null || command -v chromium 2>/dev/null)
 EM_CACHE_DIR ?= $(abspath $(ROOT_DIR)/.emcache)
 EM_ENV := EM_CACHE=$(EM_CACHE_DIR)
@@ -22,12 +24,12 @@ UNIT_TEST_SRCS := \
 	$(UNIT_TEST_DIR)/fetch_url_stub.c \
 	$(UNIT_TEST_DIR)/raylib_loader_stub.c \
 	$(UNIT_TEST_DIR)/rl_handle_pool_test.c \
-	$(UNIT_TEST_DIR)/rl_fileio_test.c \
+	$(UNIT_TEST_DIR)/rl_fs_test.c \
 	$(UNIT_TEST_DIR)/rl_version_test.c \
 	$(UNIT_TEST_DIR)/rl_text2d_test.c
 UNIT_TEST_LIB_SRCS := \
 	$(ROOT_DIR)/src/rl_handle_pool.c \
-	$(ROOT_DIR)/src/rl_fileio.c \
+	$(ROOT_DIR)/src/rl_fs.c \
 	$(ROOT_DIR)/src/rl_logger.c \
 	$(ROOT_DIR)/src/rl_scratch.c \
 	$(ROOT_DIR)/src/rl_version.c \
@@ -123,10 +125,15 @@ probe_idbfs: probe_idbfs_build check_chrome check_probe_python
 
 check_node:
 	@if [ -z "$(NODE)" ]; then \
-		echo "Missing Node.js runtime: install node (or set NODE=/path/to/node) to run wasm unit tests."; \
+		echo "Missing Node.js with JSPI support (WebAssembly.Suspending)."; \
+		echo "Install Node >= 25 (e.g. nvm install 26) or run: make test_wasm NODE=/path/to/node"; \
 		exit 1; \
 	fi
-	@echo "Using Node runtime: $(NODE)"
+	@if ! "$(NODE)" -e 'process.exit(typeof WebAssembly.Suspending === "function" ? 0 : 1)' 2>/dev/null; then \
+		echo "Node at $(NODE) lacks JSPI (WebAssembly.Suspending). Need Node >= 25."; \
+		exit 1; \
+	fi
+	@echo "Using Node runtime: $(NODE) ($$("$(NODE)" --version))"
 
 check_chrome:
 	@if [ -z "$(CHROME)" ]; then \

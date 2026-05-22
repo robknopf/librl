@@ -159,7 +159,7 @@ static bool start_async_load(rl_resource_handler_t *handler, uint32_t rid,
     return false;
   }
   
-  pending->loader_task = rl_fileio_ensure_async(filename, NULL);
+  pending->loader_task = rl_asset_ensure_async(filename, NULL);
   if (pending->loader_task == 0) {
     log_error("[ResourceHandler] Failed to start loader for: %s", filename);
     return false;
@@ -321,7 +321,7 @@ int rl_resource_handler_poll(rl_resource_handler_t *handler,
       continue;
     }
     
-    if (!rl_fileio_poll_task(pending->loader_task)) {
+    if (!rl_asset_poll_task(pending->loader_task)) {
       continue;
     }
     
@@ -329,8 +329,8 @@ int rl_resource_handler_poll(rl_resource_handler_t *handler,
       break;
     }
     
-    rc = rl_fileio_finish_task(pending->loader_task);
-    rl_fileio_free_task(pending->loader_task);
+    rc = rl_asset_finish_task(pending->loader_task);
+    rl_asset_free_task(pending->loader_task);
     pending->loader_task = 0;
     
     if (rc != 0) {
@@ -369,7 +369,7 @@ void rl_resource_handler_reset(rl_resource_handler_t *handler) {
 
   for (i = 0; i < RL_RESOURCE_HANDLER_MAX_PENDING; i++) {
     if (handler->pending[i].in_use && handler->pending[i].loader_task != 0) {
-      rl_fileio_free_task(handler->pending[i].loader_task);
+      rl_asset_free_task(handler->pending[i].loader_task);
     }
     handler->pending[i].in_use = false;
     handler->pending[i].loader_task = 0;

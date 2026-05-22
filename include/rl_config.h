@@ -10,9 +10,9 @@ extern "C" {
 /**
  * High-level init configuration for librl.
  *
- * - 0 for window_width, window_height, NULL for strings / fileio_base_dir: internal defaults.
+ * - 0 for window_width, window_height, NULL for strings / fs_root_dir: internal defaults.
  *   window_flags is not rewritten; 0 means no Raylib window flags.
- * - The window is opened during rl_init() (after rl_fileio_init).
+ * - The window is opened during rl_init() (after rl_fs_init).
  */
 typedef struct rl_init_config {
   int window_width;
@@ -20,7 +20,7 @@ typedef struct rl_init_config {
   const char *window_title;
   unsigned int window_flags;
   const char *asset_host;
-  const char *fileio_base_dir;
+  const char *fs_root_dir;
 } rl_init_config_t;
 
 size_t rl_init_config_sizeof(void);

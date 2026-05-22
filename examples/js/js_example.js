@@ -28,98 +28,64 @@ import { rl } from "../../bindings/js/rl.js";
     const spritePath = "assets/sprites/logo/wg-logo-bw-alpha.png";
     const fontPath = "assets/fonts/Komika/KOMIKAH_.ttf";
     const bgmPath = "assets/music/ethernight_club.mp3";
-    const greyAlphaColor = rl.createColor(0, 0, 0, 128);
+    const greyAlphaColor = rl.color.create(0, 0, 0, 128);
     let komika = 0;
     let komikaSmall = 0;
     let labelText2d = 0;
     let bgm = 0;
     let gumshoe = 0;
     let sprite = 0;
-    const camera = rl.createCamera3d(
+    const camera = rl.camera3d.create(
       12.0, 12.0, 12.0,
       0.0, 1.0, 0.0,
       0.0, 1.0, 0.0,
       45.0, rl.CAMERA_PERSPECTIVE
     );
 
-    rl.setActiveCamera3d(camera);
+    rl.camera3d.setActive(camera);
 
-    rl.enableLighting();
-    rl.setLightDirection(-0.6, -1.0, -0.5);
-    rl.setLightAmbient(0.25);
+    rl.render.enableLighting();
+    rl.render.setLightDirection(-0.6, -1.0, -0.5);
+    rl.render.setLightAmbient(0.25);
 
-    labelText2d = rl.createText2d(rl.getDefaultFont(), fontSize);
-    rl.setText2dContent(labelText2d, "rl_text2d: retained label");
-    rl.setText2dPosition(labelText2d, 10, 136);
-    rl.setText2dColor(labelText2d, rl.COLOR_GREEN);
+    labelText2d = rl.text2d.create(rl.font.getDefault(), fontSize);
+    rl.text2d.setContent(labelText2d, "rl_text2d: retained label");
+    rl.text2d.setPosition(labelText2d, 10, 136);
+    rl.text2d.setColor(labelText2d, rl.COLOR_GREEN);
 
-    // using a task group to load assets asynchronously
-    /*
-    let loadingGroup = rl.helpers.createTaskGroup(
-      () => {
-        loadingGroup = null;
-      },
-      (group, loadedCtx) => {
-        console.error(`asset import failed: ${group.failedPaths().join(", ")}`);
-        loadingGroup = null;
-        cleanup();
-      },
-      {}
-    );
-    loadingGroup.addImportTask(modelPath, (path) => {
-      gumshoe = rl.createModelFromFile(path);
-      rl.setModelAnimation(gumshoe, 1);
-      rl.setModelAnimationSpeed(gumshoe, 1.0);
-      rl.setModelAnimationLoop(gumshoe, true);
-    });
-    loadingGroup.addImportTask(spritePath, (path) => {
-      sprite = rl.createSprite3dFromFile(path);
-    });
-    loadingGroup.addImportTask(fontPath, (path) => {
-      komika = rl.createFont(path, fontSize);
-      komikaSmall = rl.createFont(path, smallFontSize);
-    });
-    loadingGroup.addImportTask(bgmPath, (path) => {
-      bgm = rl.createMusic(path);
-      rl.setMusicLoop(bgm, true);
-      rl.playMusic(bgm);
-    });
-    */
-
-    // helper to import assets tasks
     const importAssetTask = (path, onSuccess, onError) => {
-      const task = rl.fileioEnsureAsync(path, null);
+      const task = rl.asset.ensureAsync(path, null);
       if (task !== 0) {
-        rl.fileioAddTask(task, onSuccess, onError);
+        rl.asset.addTask(task, onSuccess, onError);
       } else {
         onError?.call(null, `invalid task: ${path}`);
       }
     };
 
     importAssetTask(modelPath, (path) => {
-      gumshoe = rl.createModelFromFile(path);
-      rl.setModelAnimation(gumshoe, 1);
-      rl.setModelAnimationSpeed(gumshoe, 1.0);
-      rl.setModelAnimationLoop(gumshoe, true);
+      gumshoe = rl.model.createFromFile(path);
+      rl.model.setAnimation(gumshoe, 1);
+      rl.model.setAnimationSpeed(gumshoe, 1.0);
+      rl.model.setAnimationLoop(gumshoe, true);
     }, (path, error) => {
       console.error(`asset import failed: ${path}: ${error}`);
     });
     importAssetTask(spritePath, (path) => {
-      sprite = rl.createSprite3dFromFile(path);
+      sprite = rl.sprite3d.createFromFile(path);
     }, (path, error) => {
       console.error(`asset import failed: ${path}: ${error}`);
     });
     importAssetTask(fontPath, (path) => {
-      komika = rl.createFont(path, fontSize);
-      komikaSmall = rl.createFont(path, smallFontSize);
-      if (labelText2d) rl.setText2dFont(labelText2d, komika);
+      komika = rl.font.create(path, fontSize);
+      komikaSmall = rl.font.create(path, smallFontSize);
+      if (labelText2d) rl.text2d.setFont(labelText2d, komika);
     }, (path, error) => {
       console.error(`asset import failed: ${path}: ${error}`);
     });
     importAssetTask(bgmPath, (path) => {
-      bgm = rl.createMusic(path);
-      rl.setMusicLoop(bgm, true);
-      rl.playMusic(bgm);
+      bgm = rl.music.create(path);
+      rl.music.setLoop(bgm, true);
+      rl.music.play(bgm);
     }, (path, error) => {
       console.error(`asset import failed: ${path}: ${error}`);
     });
@@ -134,14 +100,6 @@ import { rl } from "../../bindings/js/rl.js";
         window.cancelAnimationFrame(animationFrameId);
         animationFrameId = 0;
       }
-      //rl.disableLighting();
-      // Resources are automatically destroyed with rl.deinit()
-      //  rl.destroyModel(gumshoe);
-      //  rl.destroySprite3d(sprite);
-      //  rl.destroyFont(komika);
-      //    rl.destroyFont(komikaSmall);
-      //  rl.destroyColor(greyAlphaColor);
-      //  rl.destroyMusic(bgm);
       if (shutdownFn) {
         await rl.deinit();
         shutdownFn = null;
@@ -164,46 +122,39 @@ import { rl } from "../../bindings/js/rl.js";
       }
 
       rl.tick();
-      // tell RL to write the current state to the scratch area
       rl.refreshScratch();
 
-      rl.updateAllMusic();
+      rl.music.updateAll();
       const message = "Hello World!";
-      const mouse = rl.getMouseState();
-      rl.beginDrawing();
-      rl.clearBackground(rl.COLOR_RAYWHITE);
-      rl.beginMode3d();
-     // if (loadingGroup && loadingGroup.process() > 0) {
-     //   rl.endMode3d();
-     //   rl.endDrawing();
-     //   animationFrameId = window.requestAnimationFrame(mainLoop);
-     //   return;
-     // }
+      const mouse = rl.input.getMouseState();
+      rl.render.begin();
+      rl.render.clearBackground(rl.COLOR_RAYWHITE);
+      rl.render.beginMode3D();
       if (gumshoe) {
-        rl.animateModel(gumshoe, deltaTime);
-        rl.drawModel(gumshoe, rl.COLOR_WHITE);
+        rl.model.animate(gumshoe, deltaTime);
+        rl.model.draw(gumshoe, rl.COLOR_WHITE);
       }
       if (sprite) {
-        rl.drawSprite3d(sprite, rl.COLOR_WHITE);
+        rl.sprite3d.draw(sprite, rl.COLOR_WHITE);
       }
-      rl.endMode3d();
+      rl.render.endMode3D();
 
       const w = rl.helpers.getScreenWidth();
       const h = rl.helpers.getScreenHeight();
       if (komika) {
-        const textSize = rl.measureTextEx(komika, message, fontSize, 0);
-        rl.drawTextEx(komika, message, (w - textSize.x) / 2, (h - textSize.y) / 2, fontSize, 1, rl.COLOR_BLUE);
+        const textSize = rl.text.measureEx(komika, message, fontSize, 0);
+        rl.text.drawEx(komika, message, (w - textSize.x) / 2, (h - textSize.y) / 2, fontSize, 1, rl.COLOR_BLUE);
       }
       if (komikaSmall) {
-        rl.drawTextEx(komikaSmall, `Remaining: ${countdownTimer.toFixed(2)}`, 10, 36, smallFontSize, 1, rl.COLOR_BLACK);
-        rl.drawTextEx(komikaSmall, `Elapsed: ${totalTime.toFixed(2)}`, 10, 56, smallFontSize, 1, rl.COLOR_BLACK);
-        rl.drawTextEx(komikaSmall, `Mouse: (${mouse.x.toFixed(0)}, ${mouse.y.toFixed(0)})`, 10, 76, smallFontSize, 1, rl.COLOR_BLACK);
-        rl.drawFPSEx(komikaSmall, 10, 10, smallFontSize, rl.COLOR_BLUE);
+        rl.text.drawEx(komikaSmall, `Remaining: ${countdownTimer.toFixed(2)}`, 10, 36, smallFontSize, 1, rl.COLOR_BLACK);
+        rl.text.drawEx(komikaSmall, `Elapsed: ${totalTime.toFixed(2)}`, 10, 56, smallFontSize, 1, rl.COLOR_BLACK);
+        rl.text.drawEx(komikaSmall, `Mouse: (${mouse.x.toFixed(0)}, ${mouse.y.toFixed(0)})`, 10, 76, smallFontSize, 1, rl.COLOR_BLACK);
+        rl.text.drawFpsEx(komikaSmall, 10, 10, smallFontSize, rl.COLOR_BLUE);
       }
       if (labelText2d) {
-        rl.drawText2d(labelText2d);
+        rl.text2d.draw(labelText2d);
       }
-      rl.endDrawing();
+      rl.render.end();
       animationFrameId = window.requestAnimationFrame(mainLoop);
     };
     mainLoop();

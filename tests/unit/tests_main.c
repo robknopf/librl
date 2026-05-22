@@ -1,5 +1,5 @@
 #include "rl_handle_pool_test.h"
-#include "rl_fileio_test.h"
+#include "rl_fs_test.h"
 #include "rl_version_test.h"
 #include "rl_text2d_test.h"
 
@@ -18,7 +18,7 @@ int main(void)
         failed++;
     }
 
-    rc = test_rl_fileio_run();
+    rc = test_rl_fs_run();
     if (rc == 0) {
         passed++;
     } else {

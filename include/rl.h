@@ -9,7 +9,6 @@
 #include "rl_render.h" // IWYU pragma: keep
 #include "rl_font.h" // IWYU pragma: keep
 #include "rl_input.h" // IWYU pragma: keep
-#include "rl_fileio.h" // IWYU pragma: keep
 #include "rl_logger.h" // IWYU pragma: keep
 #include "rl_model.h" // IWYU pragma: keep
 #include "rl_music.h" // IWYU pragma: keep
@@ -53,18 +52,16 @@ int rl_init_values(int window_width,
                    const char *window_title,
                    unsigned int window_flags,
                    const char *asset_host,
-                   const char *fileio_base_dir);
+                   const char *fs_root_dir);
 int rl_init_values_async(int window_width,
                          int window_height,
                          const char *window_title,
                          unsigned int window_flags,
                          const char *asset_host,
-                         const char *fileio_base_dir);
+                         const char *fs_root_dir);
 bool rl_is_initialized(void);
 const char *rl_get_platform(void);
 void rl_deinit();
-int rl_set_asset_host(const char *asset_host);
-const char *rl_get_asset_host(void);
 void rl_enable_lighting();
 void rl_disable_lighting();
 int rl_is_lighting_enabled();

@@ -67,7 +67,7 @@ CFLAGS_WASM = \
 LDFLAGS_WASM = \
 	$(WASM_COMMON_LDFLAGS) \
 	-s JSPI=1 \
-	-s JSPI_EXPORTS='["rl_init","rl_init_values","rl_fileio_init","rl_fileio_ensure","rl_deinit","rl_fileio_deinit"]' \
+	-s JSPI_EXPORTS='["rl_init","rl_init_values","rl_fs_init","rl_asset_ensure","rl_deinit","rl_fs_deinit"]' \
 	-fwasm-exceptions \
 	-s INITIAL_MEMORY=67108864 \
 	-s EXPORTED_FUNCTIONS='[ \
@@ -210,39 +210,39 @@ LDFLAGS_WASM = \
 	"_rl_sprite3d_destroy", \
 		"_rl_text_measure", \
 			"_rl_text_measure_ex_to_scratch", \
-			"_rl_set_asset_host", \
-			"_rl_get_asset_host", \
-			"_rl_fileio_init", \
-			"_rl_fileio_init_async", \
-			"_rl_fileio_deinit", \
-			"_rl_fileio_deinit_async", \
-			"_rl_fileio_is_initialized", \
-			"_rl_fileio_is_ready", \
-			"_rl_fileio_flush", \
-			"_rl_fileio_restore_async", \
-			"_rl_fileio_get_base_dir", \
-			"_rl_fileio_set_asset_host", \
-			"_rl_fileio_get_asset_host", \
-			"_rl_fileio_ping_asset_host", \
-			"_rl_fileio_exists", \
-			"_rl_fileio_read", \
-			"_rl_fileio_read_free", \
-			"_rl_fileio_write", \
-			"_rl_fileio_remove", \
-			"_rl_fileio_mkdir", \
-			"_rl_fileio_rmdir", \
-			"_rl_fileio_clear", \
-			"_rl_fileio_normalize_path", \
-			"_rl_fileio_ensure", \
-			"_rl_fileio_ensure_async", \
-			"_rl_fileio_poll_task", \
-			"_rl_fileio_finish_task", \
-			"_rl_fileio_get_task_path", \
-			"_rl_fileio_free_task", \
-			"_rl_fileio_ensure_group_async", \
-			"_rl_fileio_ensure_group_from_scratch_async", \
-			"_rl_fileio_add_task", \
-			"_rl_fileio_tick", \
+			"_rl_asset_set_host", \
+			"_rl_asset_get_host", \
+			"_rl_fs_init", \
+			"_rl_fs_init_async", \
+			"_rl_fs_deinit", \
+			"_rl_fs_deinit_async", \
+			"_rl_fs_is_initialized", \
+			"_rl_fs_is_ready", \
+			"_rl_fs_flush", \
+			"_rl_fs_restore_async", \
+			"_rl_fs_get_root_dir", \
+			"_rl_asset_set_host", \
+			"_rl_asset_get_host", \
+			"_rl_asset_ping_host", \
+			"_rl_fs_exists", \
+			"_rl_fs_read", \
+			"_rl_fs_read_free", \
+			"_rl_fs_write", \
+			"_rl_fs_remove", \
+			"_rl_fs_mkdir", \
+			"_rl_fs_rmdir", \
+			"_rl_fs_clear", \
+			"_rl_fs_normalize_path", \
+			"_rl_asset_ensure", \
+			"_rl_asset_ensure_async", \
+			"_rl_asset_poll_task", \
+			"_rl_asset_finish_task", \
+			"_rl_asset_get_task_path", \
+			"_rl_asset_free_task", \
+			"_rl_asset_ensure_many_async", \
+			"_rl_asset_ensure_many_from_scratch_async", \
+			"_rl_asset_add_task", \
+			"_rl_asset_tick", \
 		"_rl_logger_message", \
 		"_rl_logger_set_level", \
 		"_rl_event_on", \

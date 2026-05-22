@@ -74,7 +74,7 @@ Wasm-only scratch bridge table (maintainer reference; JS callers use the right-h
 | `rl_text_measure_ex_to_scratch` | C → scratch | `measureTextEx(font, text, fontSize, spacing?)` | `vector2` (width/height) |
 | `rl_pick_model_to_scratch` | C → scratch | `pickModel(camera, model, mouseX, mouseY)` | `vector3` (point), `vector4` (normal xyz + distance w) |
 | `rl_pick_sprite3d_to_scratch` | C → scratch | `pickSprite3d(camera, sprite3d, mouseX, mouseY)` | `vector3` (point), `vector4` (normal xyz + distance w) |
-| `rl_fileio_ensure_group_from_scratch_async` | scratch → C | `fileioEnsureGroupAsync(filenames)` | JS writes string table via internal `writeScratchStringTable()` first |
+| `rl_asset_ensure_many_from_scratch_async` | scratch → C | `RL.asset.ensureGroupAsync(filenames)` | JS writes string table via internal `writeScratchStringTable()` first |
 
 Direct scratch reads (no `*_to_scratch` call; require `refreshScratch()` or `tick()` first so C has populated the snapshot):
 
@@ -113,19 +113,19 @@ Notes:
   - `resetPickStats()` on `rl` (C API)
   - aggregated pick telemetry on `rl.helpers.getPickStats()`
 - JS `boot(opts)` instantiates the Emscripten module and prepares the scratch/color helpers without calling `rl_init(...)`.
-  - This is useful when callers need the loader-only/bootstrap path first, for example `boot() -> fileioInit() -> init()`.
+  - This is useful when callers need the loader-only/bootstrap path first, for example `boot() -> RL.fs.init() -> init()`.
   - `boot(...)` is the canonical place for module/browser options such as `canvasId`, `modulePath`, `wasmPath`, `idealWidth`, `idealHeight`, and optional callback hooks like `print`, `printErr`, and `locateFile`.
   - `modulePath` selects the raw Emscripten JS runtime module (`lib/librl.js` by default, resolved relative to `bindings/js/rl.js`).
   - `init(...)` and `initAsync(...)` reuse the booted module instance when one already exists.
-- **Init contract (all bindings):** public API is config/table/object only — `init(config)` (run to completion; JS/wasm returns a Promise because init may suspend on fileio/JSPI) and `initAsync(config)` (immediate return; poll `tick()` until `RL_TICK_RUNNING`). Bindings accept native config types (`RLInitOptions`, `RLInitConfig`, Nim `RLInitConfig`, Lua init table, etc.) and marshal internally.
+- **Init contract (all bindings):** public API is config/table/object only — `init(config)` (run to completion; JS/wasm returns a Promise because init may suspend on fs/JSPI) and `initAsync(config)` (immediate return; poll `tick()` until `RL_TICK_RUNNING`). Bindings accept native config types (`RLInitOptions`, `RLInitConfig`, Nim `RLInitConfig`, Lua init table, etc.) and marshal internally.
 - **`rl_init_values` / `rl_init_values_async` are intentionally not exposed on binding public surfaces.** They remain in the C API and wasm exports for internal FFI (bindings flatten config and call them from implementation code). Do not re-add `initValues`, `initValuesAsync`, `initConfigAsync`, `init_values`, or positional init wrappers to user-facing binding APIs.
-- JS `init(opts)` marshals opts and calls `rl_init(...)` (may suspend via JSPI during fileio restore).
+- JS `init(opts)` marshals opts and calls `rl_init(...)` (may suspend via JSPI during fs restore).
 - JS `initAsync(opts)` flattens opts and calls `rl_init_values_async(...)` internally.
 - Example: `await rl.init({ windowWidth: 800, windowHeight: 600, windowTitle: "Title", windowFlags: rl.FLAG_MSAA_4X_HINT, assetHost })`
 - Init result constants are exposed (`INIT_OK`, `INIT_ERR_UNKNOWN`, `INIT_ERR_ALREADY_INITIALIZED`, `INIT_ERR_LOADER`, `INIT_ERR_ASSET_HOST`, `INIT_ERR_WINDOW`).
-- In JS, polling-style `*Async` init/fileio entrypoints keep the immediate-return contract:
-  - `initAsync(...)` and `fileioInitAsync(...)` return plain integer status codes.
-  - task-style fileio APIs like `fileioRestoreAsync()` / `fileioEnsureAsync()` return task handles immediately.
+- In JS, polling-style `*Async` init/fs entrypoints keep the immediate-return contract:
+  - `initAsync(...)` and `RL.fs.initAsync(...)` return plain integer status codes.
+  - task-style asset APIs like `RL.fs.restoreAsync()` / `RL.asset.ensureAsync()` return task handles immediately.
 - JS exposes `isInitialized()` for `rl_is_initialized()`.
 - JS exposes `getPlatform()` for `rl_get_platform()`.
 - Version queries (`rl_version_*` in `rl_version.h`) are exposed on all bindings:
@@ -136,32 +136,25 @@ Notes:
 - Binding/core alignment: `make binding-version` (runs with `desktop` / `shared` / `wasm` / `rl_lua`) writes `bindings/*/gen/*` from `include/rl_version.h`. Each binding queries `rl_version_*` from librl, compares to its stamp, logs both versions, and applies local policy (`validate_version()` / `validateVersion()` / `rl_validate_version()` return `0` ok, `1` patch drift, `< 0` fatal). Checks run at load/boot (not `init`): Lua on `require("rl")` and `rl.boot()`; JS after wasm load; Nim/Haxe on `rl_boot()` / `RL.boot()`.
 - JS TypeScript declarations: `make binding-types` (runs with `desktop` / `shared` / `wasm`) regenerates `types/librl.d.ts` from `bindings/js/rl.js` via `tools/gen_librl_dts.py`. Do not hand-edit `types/librl.d.ts`; after adding or renaming JS binding methods/constants, run `make binding-types` (or any of those build targets). The build copies the result to `lib/librl.d.ts`. Tighter method signatures can be added in `SIGNATURE_OVERRIDES` inside the generator; everything else gets generic `unknown` signatures so the file stays complete without manual upkeep.
 - JS `pickModel(camera, model, mouseX, mouseY)` and `pickSprite3d(camera, sprite3d, mouseX, mouseY)` return local-space `point` / `normal` data from `rl_pick_result_t`.
-- Fileio helpers currently exposed in JS:
-  - `fileioInit([baseDir])`
-  - `fileioInitAsync([baseDir])`
-  - `fileioDeinit()`
-  - `fileioIsReady()`
-  - `fileioSetAssetHost(assetHost)` / `fileioGetAssetHost()` — bindings expose `rl_fileio_set_asset_host` / `rl_fileio_get_asset_host` only (C also has root-level `rl_set_asset_host` / `rl_get_asset_host` delegating to the same implementation; bindings do not duplicate those names)
-  - `fileioNormalizePath(path)`
-  - `fileioRestoreAsync()` → task handle for `rl_fileio_restore_async()`
-  - `fileioEnsure(localPath, src?)` → Promise/integer result for `rl_fileio_ensure()`
-    - JS warns when `filename` ends in `.gltf`, because this synchronous/JSPI path does not currently follow `.gltf` dependencies.
-  - `fileioEnsureAsync(localPath, src?)` → task handle for `rl_fileio_ensure_async()`
-  - `fileioEnsureGroupAsync(filenames)` → task handle via the scratch ABI and `rl_fileio_ensure_group_from_scratch_async()`
-  - `fileioRead(filename)` → `rl_fileio_read` (copy into a `Uint8Array`) or `null` on error / missing data pointer
-  - `fileioRemove(filename)`
-  - `fileioClear()`
-- JS binding helpers (`rl.helpers.*`) — compositional sugar, not part of the C API:
-  - `waitForFileioReady(timeoutMs?)` — polls `fileioIsReady()` until restore completes (for `fileioInitAsync()` / boot-before-init flows)
+- JS fs/asset namespaces (mirror `rl_fs.h` / `rl_asset.h`):
+  - `RL.fs.init([rootDir])`, `RL.fs.initAsync([rootDir])`, `RL.fs.deinit()`, `RL.fs.isReady()`, `RL.fs.getRootDir()`, `RL.fs.normalizePath(path)`, `RL.fs.restoreAsync()`, `RL.fs.read(filename)`, `RL.fs.remove(filename)`, `RL.fs.clear()`, …
+  - `RL.asset.setHost(assetHost)` / `RL.asset.getHost()` — map to `rl_asset_set_host` / `rl_asset_get_host`
+  - `RL.asset.ensure(localPath, src?)` → Promise/integer result for `rl_asset_ensure()`
+    - JS warns when `localPath` ends in `.gltf`, because this synchronous/JSPI path does not currently follow `.gltf` dependencies.
+  - `RL.asset.ensureAsync(localPath, src?)` → task handle for `rl_asset_ensure_async()`
+  - `RL.asset.ensureGroupAsync(filenames)` → task handle via the scratch ABI and `rl_asset_ensure_many_from_scratch_async()`
+  - `RL.asset.pingHost([assetHost])`, `RL.asset.pollTask(task)`, `RL.asset.finishTask(task)`, `RL.asset.addTask(...)`, `RL.asset.tick()`
+- JS binding helpers (`RL.helpers.*`) — compositional sugar, not part of the C API:
+  - `waitForFsReady(timeoutMs?)` — polls `RL.fs.isReady()` until restore completes (for `RL.fs.initAsync()` / boot-before-init flows)
   - `taskIsValid(task)`
-  - `waitForTask(task, pollMs?)`, `waitForFileioRestoreAsync()`, `waitForFileioEnsureAsync(localPath, src?)`, `waitForFileioEnsureGroupAsync(filenames)`
+  - `waitForTask(task, pollMs?)`, `waitForFsRestoreAsync()`, `waitForAssetEnsureAsync(localPath, src?)`, `waitForAssetEnsureGroupAsync(filenames)`
   - `createTaskGroup(onComplete?, onError?, ctx?)` with `addTask`, `addImportTask`, `addImportTasks`, `tick()`, `process()`, `remainingTasks()`, `failedPaths()`
   - `getScreenWidth()` / `getScreenHeight()` — convenience over `getScreenSize()`
   - `getPickStats()` — aggregates the four `rl_pick_get_*` telemetry calls
-- Rule: symbols that map 1:1 to `include/*.h` (or documented scratch bridges for struct returns) live on `rl`. Helpers that compose multiple C calls or add JS/async sugar live on `rl.helpers`.
-- JS `addTask(task, onSuccess?, onFailure?, ctx?)` now mirrors the Haxe/cpp callback contract by installing local JS springboard callbacks around `rl_fileio_add_task(...)`.
+- Rule: symbols that map 1:1 to `include/*.h` (or documented scratch bridges for struct returns) live on `RL` or nested namespaces (`RL.fs`, `RL.asset`, …). Helpers that compose multiple C calls or add JS/async sugar live on `RL.helpers`.
+- JS `RL.asset.addTask(task, onSuccess?, onFailure?, ctx?)` mirrors the Haxe/cpp callback contract by installing local JS springboard callbacks around `rl_asset_add_task(...)`.
 - JS `create*` helpers now match the other bindings: they create resources from paths that are already available in librl's local filesystem/cache.
-  - Call `fileioEnsure(...)`, `rl.helpers.waitForFileioEnsureAsync(...)`, `rl.helpers.createTaskGroup(...)`, or another fileio flow first when the asset is not local yet.
+  - Call `RL.asset.ensure(...)`, `RL.helpers.waitForAssetEnsureAsync(...)`, `RL.helpers.createTaskGroup(...)`, or another asset flow first when the asset is not local yet.
   - This applies to `createFont`, `createModel`, `createMusic`, `createSound`, `createTexture`, `createSprite3d`, and `createSprite2d`.
 - JS shape/debug/logger helpers:
   - `drawRectangle(x, y, width, height, color)` → `rl_shape_draw_rectangle`
@@ -175,7 +168,7 @@ Notes:
   - `getDefaultCamera3d()` → `rl_camera3d_get_default`
   - Default handles use getters only (no binding-level `FONT_DEFAULT` / `CAMERA3D_DEFAULT` constants; C symbols remain for internal use)
 - JS handle-instance methods use verb-first naming (`setText2dFont`, `setSprite3dTransform`, `setModelAnimation`, `animateModel`, …). Haxe/Nim/Lua keep section-first names aligned with C (`text2dSetFont`, `sprite3dSetTransform`, …); Haxe JS maps through `RLImpl.js.hx`.
-- JS task-returning fileio helpers use the same naming convention as C: `_async` means the call starts work and returns a task handle. Default names such as `fileioEnsure(...)` follow the synchronous/default contract, even though JS callers still `await` them when JSPI is involved.
+- JS task-returning asset helpers use the same naming convention as C: `_async` / `*Async` means the call starts work and returns a task handle. Default names such as `RL.asset.ensure(...)` follow the synchronous/default contract, even though JS callers still `await` them when JSPI is involved.
 
 ## Nim Binding
 
@@ -232,30 +225,30 @@ Notes:
   - `bindingsPath` lets callers override the runtime path to `bindings/js/rl.js`; if omitted, Nim JS defaults to `"/bindings/js/rl.js"`.
   - On Nim JS, `print` and `printErr` are forwarded into the wrapper `env` object. `locateFile` is currently accepted for API parity but ignored with a warning.
   - On native targets, `rl_boot` loads nothing (static link) but still runs the binding/core version check, then returns `RL_INIT_OK`.
-- Fileio helpers in Nim (all return native `int` or `bool`):
-  - `rl_fileio_init([base_dir])` → `int`
-  - `rl_fileio_init_async([base_dir])` → `int`
-  - `rl_fileio_deinit()`
-  - `rl_fileio_is_initialized()` → `bool`
-  - `rl_fileio_set_asset_host(assetHost)` / `rl_fileio_get_asset_host()`
-  - `fileioPingAssetHost(assetHost?)` → `float` RTT ms, or `< 0` on failure
-  - `rl_fileio_restore_async()` → `RLHandle`
-  - `rl_fileio_ensure_async(localPath, src?)` → `RLHandle`
-  - `rl_fileio_ensure(localPath, src?)` → `int` (`0` success)
-  - `rl_fileio_ensure_group_async(filenames, count)` → `RLHandle`
-  - `rl_fileio_poll(task)` → `bool`
-  - `rl_fileio_finish(task)` → `int`
-  - `rl_fileio_free(task)`
-  - `rl_fileio_exists(filename)` → `bool`
-  - `rl_fileio_remove(filename)` → `int`
-  - `rl_fileio_clear()` → `int`
+- Fs/asset helpers in Nim (all return native `int` or `bool`):
+  - `rl_fs_init([base_dir])` → `int`
+  - `rl_fs_init_async([base_dir])` → `int`
+  - `rl_fs_deinit()`
+  - `rl_fs_is_initialized()` → `bool`
+  - `rl_asset_set_host(assetHost)` / `rl_asset_get_host()`
+  - `assetPingHost(assetHost?)` → `float` RTT ms, or `< 0` on failure
+  - `rl_fs_restore_async()` → `RLHandle`
+  - `rl_asset_ensure_async(localPath, src?)` → `RLHandle`
+  - `rl_asset_ensure(localPath, src?)` → `int` (`0` success)
+  - `rl_asset_ensure_many_async(filenames, count)` → `RLHandle`
+  - `rl_asset_poll_task(task)` → `bool`
+  - `rl_asset_finish_task(task)` → `int`
+  - `rl_asset_free_task(task)`
+  - `rl_fs_exists(filename)` → `bool`
+  - `rl_fs_remove(filename)` → `int`
+  - `rl_fs_clear()` → `int`
 - Init result constants are exposed as `RL_INIT_OK` / `RL_INIT_ERR_*` (plain `int`).
 - Nim also exposes `rl_init_async(config)` (polling init; immediate return).
 
-Binding-level async fileio ergonomics:
+Binding-level async asset ergonomics:
 
 - `RLTaskGroup[T]` is available in Nim via `bindings/nim/rl.nim`:
-  - `fileioCreateTaskGroup[T](ctx, onComplete?, onError?)`
+  - `assetCreateTaskGroup[T](ctx, onComplete?, onError?)`
   - `addTask`, `addImportTask`, `addImportTasks`
   - `tick()`, `process()`, `remainingTasks()`, `failedPaths()`
 - The Nim example (`examples/nim-simple/src/main.nim`) is the canonical pattern:
@@ -271,7 +264,7 @@ Files:
 - `bindings/haxe/rl/impl/RLImpl.js.hx` — Haxe `js` backend. It is a thin adapter over the standalone JS binding exported from `bindings/js/rl.js`.
 - `bindings/haxe/rl/impl/RLImpl.hx` — unsupported fallback that fails compilation for targets without a backend.
 - `bindings/haxe/rl/RLHandle.hx` — shared integer handle type.
-- `bindings/haxe/rl/impl/RLFileioImpl.cpp.hx` — current hxcpp-only fileio impl (`RLFileio` class).
+- `bindings/haxe/rl/impl/RLFileioImpl.cpp.hx` — current hxcpp-only fs/asset impl (`RLFileio` internal class; public API is `RL.fsInit`, `RL.assetEnsure`, …).
 - `bindings/haxe/rl/RLTaskGroup.hx` — pure Haxe task group helper; all methods are non-inline for cppia compatibility.
 - `bindings/haxe/rl/InjectLibRL.hx`
 - `examples/haxe-simple/src/Main.hx`
@@ -282,9 +275,9 @@ Role:
 - `RL.hx` is the script-facing/public API module and must remain free of `cpp.*`, `@:native`, and `untyped __cpp__`.
 - `RLImpl.cpp.hx` currently holds the hxcpp-specific backend and is compiled into the host binary with `-D scriptable`.
 - Uses `@:buildXml`, `@:functionCode` in `RLImpl.cpp.hx` to:
-  - Include `rl.h` / `rl_fileio.h`.
+  - Include `rl.h` / `rl_fs.h` / `rl_asset.h`.
   - Inject link flags (`librl.a` / `librl.wasm.a`).
-  - Bridge Haxe loader callbacks to `rl_fileio_add_task`.
+  - Bridge Haxe loader callbacks to `rl_asset_add_task`.
 
 ### Haxe Architecture Notes
 
@@ -302,13 +295,13 @@ Current state:
   - Haxe JS uses a typed `RLBootConfig` surface with flattened fields like `bindingsPath`, `canvasId`, `modulePath`, `wasmPath`, `idealWidth`, `idealHeight`, `print`, `printErr`, and `locateFile`.
 - Haxe JS returns Promises for blocking JSPI-backed calls:
   - `RL.init(...)`, `RL.initAsync(...)`, `RL.deinit()`
-  - `RL.fileioInit(...)`, `RL.fileioDeinit()`, `RL.fileioEnsure(...)`
-  - The `*Async` task-starting APIs keep their C semantics: they return immediate status/task handles and are polled/finished through the fileio task API.
+  - `RL.fsInit(...)`, `RL.fsDeinit()`, `RL.assetEnsure(...)`
+  - The `*Async` task-starting APIs keep their C semantics: they return immediate status/task handles and are polled/finished through the asset task API.
 - The Haxe JS backend now reuses `bindings/js/*` exclusively. `RLImpl.js.hx` no longer calls the wasm exports directly; all browser-side behavior flows through the JS binding layer.
 - On Haxe JS, scratch refresh is internal to `RL.tick()` (forwards to `bindings/js/rl.js` `refreshScratch()`). `RL.scratchRefresh()` is intentionally not on the Haxe public surface.
 - `RLImpl.cpp.hx` keeps the raw C extern table private as `RLExterns`; authored code never imports it directly.
 - There is no generic runtime fallback. New targets must add an explicit backend such as `RLImpl.lua.hx`.
-- `examples/haxe-js-simple` is the current compile/run smoke test for the Haxe `js` backend. It exercises `RL.boot()` and fileio init/deinit; in runtimes without JSPI support, boot returns an error code without instantiating wasm.
+- `examples/haxe-js-simple` is the current compile/run smoke test for the Haxe `js` backend. It exercises `RL.boot()` and fs init/deinit; in runtimes without JSPI support, boot returns an error code without instantiating wasm.
 
 Target-neutral direction:
 
@@ -318,7 +311,7 @@ Target-neutral direction:
   - `bindings/haxe/rl/impl/RLImpl.cpp.hx`
   - `bindings/haxe/rl/impl/RLImpl.js.hx`
   - `bindings/haxe/rl/impl/RLImpl.lua.hx`
-- The same pattern should be applied to fileio internals:
+- The same pattern should be applied to fs/asset internals:
   - `bindings/haxe/rl/impl/RLFileioImpl.cpp.hx`
   - `bindings/haxe/rl/impl/RLFileioImpl.lua.hx`
 
@@ -360,28 +353,28 @@ Notes:
   - Keep app/runtime export lists out of `bindings/haxe/rl/InjectLibRL.hx`; it should stay focused on librl link/config flags.
 - `examples/haxe-simple` is the canonical Haxe example and the canonical host/runtime ABI example for Haxe in this repo.
 
-Async fileio sugar:
+Async fs/asset sugar:
 
 - The binding exposes both init contracts:
   - `RL.init(...)`
   - `RL.initAsync(...)`
-  - `RL.fileioInit([baseDir])`
-  - `RL.fileioInitAsync([baseDir])`
-  - `RL.fileioIsInitialized(): Bool`
+  - `RL.fsInit([rootDir])`
+  - `RL.fsInitAsync([rootDir])`
+  - `RL.fsIsInitialized(): Bool`
 - The binding exposes:
-  - `RL.fileioSetAssetHost(assetHost: String): Int` / `RL.fileioGetAssetHost(): String`
-  - `RL.fileioPingAssetHost(assetHost?): Float` → RTT ms, or `< 0` on failure
-  - `RL.fileioEnsureAsync(localPath: String, ?src: String): RLHandle`
-  - `RLFileio.fileioAddTask(task, onSuccess, onFailure, userData)` with the callback path derived from `RLFileio.fileioGetPath(task)`
-  - `RL.fileioPoll(task: RLHandle): Bool`
-  - `RL.fileioFinish(task: RLHandle): Int`
-  - `RL.fileioCreateTaskGroup<T>(onComplete?, onError?, ctx?)`
+  - `RL.assetSetHost(assetHost: String): Int` / `RL.assetGetHost(): String`
+  - `RL.assetPingHost(assetHost?): Float` → RTT ms, or `< 0` on failure
+  - `RL.assetEnsureAsync(localPath: String, ?src: String): RLHandle`
+  - `RLFileio.assetAddTask(task, onSuccess, onFailure, userData)` with the callback path derived from `RLFileio.assetGetTaskPath(task)` (internal cpp class)
+  - `RL.assetPollTask(task: RLHandle): Bool`
+  - `RL.assetFinishTask(task: RLHandle): Int`
+  - `RL.assetCreateTaskGroup<T>(onComplete?, onError?, ctx?)`
   - `RLTaskGroup.addImportTask(path, onSuccess?, onError?)`
   - `RLTaskGroup.process()`, `RLTaskGroup.remainingTasks()`, `RLTaskGroup.failedPaths()`
-  - `RL.fileioAddTask(task, onSuccess, onFailure, ctx)`
-- `rl_fileio_add_task` is wrapped so Haxe fileio callbacks use plain `(path, ctx)` handlers:
-  - `RL.fileioAddTask(task, onAssetReady, onAssetFailed, ctx)`
-- `RL.fileioAddTask(...)` consumes the task handle when queueing succeeds; use task groups or callbacks rather than polling the same handle after queueing it.
+  - `RL.assetAddTask(task, onSuccess, onFailure, ctx)`
+- `rl_asset_add_task` is wrapped so Haxe asset callbacks use plain `(path, ctx)` handlers:
+  - `RL.assetAddTask(task, onAssetReady, onAssetFailed, ctx)`
+- `RL.assetAddTask(...)` consumes the task handle when queueing succeeds; use task groups or callbacks rather than polling the same handle after queueing it.
 - The example (`examples/haxe-simple/src/Main.hx`) is the canonical reference for:
   - Direct `RL.init` / frame loop / `RL.deinit` usage.
   - Non-blocking async import gating via `loadingGroup.process()`.
@@ -398,9 +391,9 @@ Files:
 Role:
 
 - `bindings/lua/rl_lua*.c` exposes direct C-backed Lua APIs.
-- **`rl.fileio_create_task_group`** is implemented in C (`rl_lua_task_group.c`), same role as:
-  - Haxe: `RL.fileioCreateTaskGroup` → `RLTaskGroup` (`rl/RL.hx`, `rl/RLTaskGroup.hx`)
-  - Nim: `fileioCreateTaskGroup` / `RLTaskGroup` in `rl.nim`
+- **`rl.asset_create_task_group`** is implemented in C (`rl_lua_task_group.c`), same role as:
+  - Haxe: `RL.assetCreateTaskGroup` → `RLTaskGroup` (`rl/RL.hx`, `rl/RLTaskGroup.hx`)
+  - Nim: `assetCreateTaskGroup` / `RLTaskGroup` in `rl.nim`
 
 Notes:
 
@@ -408,17 +401,17 @@ Notes:
 - Lua exposes mouse button state constants (`rl.RL_BUTTON_UP`, `rl.RL_BUTTON_PRESSED`, `rl.RL_BUTTON_DOWN`, `rl.RL_BUTTON_RELEASED`).
 - Lua exposes `rl.font_get_default()`, `rl.camera3d_get_default()`, and `rl.texture_get_default()` (no `RL_*_DEFAULT` handle constants).
 - Lua exposes `rl.init({...})` and `rl.init_async({...})` with a config table (same init contract as other bindings; no `init_values` / `init_values_async`).
-- Lua exposes `rl.boot()`, which runs the binding/core version check and returns `rl.RL_INIT_OK` (same check as `require("rl")`). Use `boot() -> fileio_init() -> init()` when mirroring JS/Haxe lifecycle; `require` alone already validated at load.
-- Lua exposes `rl.fileio_set_asset_host(asset_host)` and `rl.fileio_get_asset_host()` (no root-level `set_asset_host` / `get_asset_host` duplicates).
-- Lua exposes `rl.fileio_ping_asset_host([asset_host])`, returning RTT ms or `< 0` on failure, for proactive asset-host diagnostics before importing.
-- Lua exposes `rl.fileio_init([base_dir])` and `rl.fileio_deinit()` for fileio-only bootstrap without full `rl.init()`.
-- Lua also exposes `rl.fileio_init_async([base_dir])` and `rl.init_async([config])` for the polling-style fallback path.
-- Lua exposes `rl.fileio_is_ready()` for `rl_fileio_is_ready()`.
-- Lua exposes `rl.fileio_is_initialized()` for `rl_fileio_is_initialized()`.
-- Lua exposes `rl.fileio_ensure_async(local_path, src?)` for `rl_fileio_ensure_async()`.
-- Lua exposes `rl.fileio_ensure(local_path, src?)` → integer return code (`0` success); on wasm this follows the same constraints as the C API (see `rl_fileio_ensure` in `rl_fileio.h`).
-- Lua `rl.fileio_add_task(task, on_success?, on_failure?, ctx?)` derives the callback path from `rl_fileio_get_path(task)`. Fileio callbacks receive `(path, ctx)`.
-- Lua exposes fileio queue result constants (`rl.RL_FILEIO_ADD_TASK_OK`, `rl.RL_FILEIO_ADD_TASK_ERR_INVALID`, `rl.RL_FILEIO_ADD_TASK_ERR_QUEUE_FULL`).
+- Lua exposes `rl.boot()`, which runs the binding/core version check and returns `rl.RL_INIT_OK` (same check as `require("rl")`). Use `boot() -> fs_init() -> init()` when mirroring JS/Haxe lifecycle; `require` alone already validated at load.
+- Lua exposes `rl.asset_set_host(asset_host)` and `rl.asset_get_host()`.
+- Lua exposes `rl.asset_ping_host([asset_host])`, returning RTT ms or `< 0` on failure, for proactive asset-host diagnostics before importing.
+- Lua exposes `rl.fs_init([root_dir])` and `rl.fs_deinit()` for fs-only bootstrap without full `rl.init()`.
+- Lua also exposes `rl.fs_init_async([root_dir])` and `rl.init_async([config])` for the polling-style fallback path.
+- Lua exposes `rl.fs_is_ready()` for `rl_fs_is_ready()`.
+- Lua exposes `rl.fs_is_initialized()` for `rl_fs_is_initialized()`.
+- Lua exposes `rl.asset_ensure_async(local_path, src?)` for `rl_asset_ensure_async()`.
+- Lua exposes `rl.asset_ensure(local_path, src?)` → integer return code (`0` success); on wasm this follows the same constraints as the C API (see `rl_asset_ensure` in `rl_asset.h`).
+- Lua `rl.asset_add_task(task, on_success?, on_failure?, ctx?)` derives the callback path from `rl_asset_get_task_path(task)`. Asset callbacks receive `(path, ctx)`.
+- Lua exposes asset queue result constants (`rl.RL_ASSET_ADD_TASK_OK`, `rl.RL_ASSET_ADD_TASK_ERR_INVALID`, `rl.RL_ASSET_ADD_TASK_ERR_QUEUE_FULL`).
 - Lua exposes init result constants (`rl.RL_INIT_OK`, `rl.RL_INIT_ERR_UNKNOWN`, `rl.RL_INIT_ERR_ALREADY_INITIALIZED`, `rl.RL_INIT_ERR_LOADER`, `rl.RL_INIT_ERR_ASSET_HOST`, `rl.RL_INIT_ERR_WINDOW`).
 - Lua exposes `rl.is_initialized()` for `rl_is_initialized()`.
 - Lua exposes `rl.get_platform()` for `rl_get_platform()`.
@@ -439,9 +432,9 @@ Notes:
   - Lua: lower snake case function names.
     - examples: `frame_buffer_submit`, `window_get_screen_size`
   - Nim: snake_case aligned with C names, but all public procs use native Nim types (`int`/`float`/`string`). Internal C bridge procs use `_c` or `_raw` suffix.
-  - Haxe: lowerCamelCase method names, section-first (`text2dSetFont`, `fileioEnsure`, …).
+  - Haxe: lowerCamelCase method names, section-first (`text2dSetFont`, `assetEnsure`, …).
     - examples: `frameBufferSubmit`, `windowGetScreenSize`
-  - JavaScript (`bindings/js/rl.js`): verb-first for handle-instance methods (`setText2dFont`, `createSprite3d`, `getDefaultTexture`); `fileio*` / `logger*` remain section-first namespaces mirroring C modules.
+  - JavaScript (`bindings/js/rl.js`): nested namespaces per C header (`RL.fs`, `RL.asset`, …); verb-first for handle-instance methods (`setText2dFont`, `createSprite3d`, `getDefaultTexture`).
 - Avoid inventing alternate verb ordering in Haxe/Lua/Nim if the C API is clear.
   - prefer section-first semantics equivalent to `rl_<section>_<action>` on those bindings.
 

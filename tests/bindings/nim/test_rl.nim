@@ -49,8 +49,8 @@ suite "rl bindings":
     rl_window_set_title("librl nim double-init test")
     rl_window_set_size(640, 480)
     rl_set_target_fps(30)
-    check rl_fileio_set_asset_host("https://example.com/assets") == 0
-    check $rl_fileio_get_asset_host() == "https://example.com/assets"
+    check rl_asset_set_host("https://example.com/assets") == 0
+    check $rl_asset_get_host() == "https://example.com/assets"
     let size = rl_window_get_screen_size()
     check size.x >= 0.0
     check size.y >= 0.0
@@ -69,11 +69,11 @@ suite "rl bindings":
   test "asset host":
     check rl_boot() == RL_INIT_OK
     check rl_init() == RL_INIT_OK
-    let host: cstring = rl_fileio_get_asset_host()
+    let host: cstring = rl_asset_get_host()
     check not host.isNil
-    let rc = rl_fileio_set_asset_host("https://example.com/assets")
+    let rc = rl_asset_set_host("https://example.com/assets")
     check rc == 0 or rc != 0
-    let host2: cstring = rl_fileio_get_asset_host()
+    let host2: cstring = rl_asset_get_host()
     check not host2.isNil
     rl_deinit()
 

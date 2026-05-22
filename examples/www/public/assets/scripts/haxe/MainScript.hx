@@ -91,7 +91,7 @@ class MainScript extends Script {
 			windowTitle: SCREEN_TITLE,
 			windowFlags: SCREEN_FLAGS,
 			assetHost: ASSET_HOST,
-			// fileioBaseDir: LOADER_CACHE_DIR
+			// fsRootDir: LOADER_CACHE_DIR
 		});
 		if (err != 0) {
 			trace("Main: onInit failed with error: " + err);
@@ -100,7 +100,7 @@ class MainScript extends Script {
 
 		RL.windowSetMonitor(1);
 
-		RL.fileioClear();
+		RL.fsClear();
 
 		// Setup lighting and camera
 		RL.enableLighting();
@@ -134,24 +134,24 @@ class MainScript extends Script {
 	}
 
 	function loadAssets():Void {
-		RL.fileioAddTask(RL.fileioEnsureAsync(DEBUG_FONT_PATH), (path, _) -> {
+		RL.assetAddTask(RL.assetEnsureAsync(DEBUG_FONT_PATH), (path, _) -> {
 			ctx.debugFont = RL.fontCreate(path, DEBUG_FONT_SIZE);
 		}, null, ctx);
-		RL.fileioAddTask(RL.fileioEnsureAsync(KOMIKA_FONT_PATH), (path, _) -> {
+		RL.assetAddTask(RL.assetEnsureAsync(KOMIKA_FONT_PATH), (path, _) -> {
 			ctx.komikaFont = RL.fontCreate(path, KOMIKA_FONT_SIZE);
 			if (ctx.labelText2d != 0) {
 				RL.text2dSetFont(ctx.labelText2d, ctx.komikaFont);
 			}
 		}, null, ctx);
-		RL.fileioAddTask(RL.fileioEnsureAsync(MODEL_PATH), (path, _) -> {
+		RL.assetAddTask(RL.assetEnsureAsync(MODEL_PATH), (path, _) -> {
 			var modelAsset = RL.modelLoadAsset(MODEL_PATH);	
 			RL.modelSetAsset(ctx.model, modelAsset);
 		}, null, ctx);
-		RL.fileioAddTask(RL.fileioEnsureAsync(SPRITE_PATH), (path, _) -> {
+		RL.assetAddTask(RL.assetEnsureAsync(SPRITE_PATH), (path, _) -> {
 			ctx.sprite = RL.sprite3dCreateFromFile(path);
 			RL.sprite3dSetTransform(ctx.sprite, 0.0, 0.0, ctx.spriteYOffset, 1.0);
 		}, null, ctx);
-		RL.fileioAddTask(RL.fileioEnsureAsync(BGM_PATH), (path, _) -> {
+		RL.assetAddTask(RL.assetEnsureAsync(BGM_PATH), (path, _) -> {
 			ctx.bgm = RL.musicCreate(path);
 			RL.musicSetLoop(ctx.bgm, true);
 			RL.musicPlay(ctx.bgm);
@@ -316,7 +316,7 @@ class MainScript extends Script {
 			modelPath = "assets/models/gumshoe/gumshoe.glb";
 		}
 
-		RL.fileioAddTask(RL.fileioEnsureAsync(modelPath), (path, _) -> {
+		RL.assetAddTask(RL.assetEnsureAsync(modelPath), (path, _) -> {
 			var modelAsset = RL.modelLoadAsset(path);
 			//trace(modelAsset);
 			RL.modelSetAsset(ctx.model, modelAsset);

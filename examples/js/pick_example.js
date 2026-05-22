@@ -30,29 +30,30 @@ import { rl } from "../../bindings/js/rl.js";
     const spriteSize = 1.0;
 
     const fontPath = "assets/fonts/Komika/KOMIKAH_.ttf";
-    let rc = await rl.importAsset(fontPath);
+    let rc = await rl.asset.ensure(fontPath);
     if (rc !== 0) throw new Error(`Failed to import asset: ${fontPath} (rc=${rc})`);
-    rc = await rl.importAsset(modelPath);
+    rc = await rl.asset.ensure(modelPath);
     if (rc !== 0) throw new Error(`Failed to import asset: ${modelPath} (rc=${rc})`);
-    rc = await rl.importAsset(spritePath);
+    rc = await rl.asset.ensure(spritePath);
     if (rc !== 0) throw new Error(`Failed to import asset: ${spritePath} (rc=${rc})`);
 
-    const komika = rl.createFont(fontPath, fontSize);
-    const komikaSmall = rl.createFont(fontPath, smallFontSize);
-    const gumshoe = rl.createModelFromFile(modelPath);
-    const sprite = rl.createSprite3dFromFile(spritePath);
-    const camera = rl.createCamera3D(
+    const komika = rl.font.create(fontPath, fontSize);
+    const komikaSmall = rl.font.create(fontPath, smallFontSize);
+    const gumshoe = rl.model.createFromFile(modelPath);
+    const sprite = rl.sprite3d.createFromFile(spritePath);
+    rl.sprite3d.setTransform(sprite, spritePos.x, spritePos.y, spritePos.z, spriteSize);
+    const camera = rl.camera3d.create(
       12.0, 12.0, 12.0,
       0.0, 1.0, 0.0,
       0.0, 1.0, 0.0,
       45.0, rl.CAMERA_PERSPECTIVE
     );
 
-    rl.setActiveCamera3D(camera);
-    rl.setModelAnimation(gumshoe, 1);
-    rl.setModelAnimationSpeed(gumshoe, 1.0);
-    rl.setModelAnimationLoop(gumshoe, true);
-    rl.resetPickStats();
+    rl.camera3d.setActive(camera);
+    rl.model.setAnimation(gumshoe, 1);
+    rl.model.setAnimationSpeed(gumshoe, 1.0);
+    rl.model.setAnimationLoop(gumshoe, true);
+    rl.pick.resetStats();
 
     let lastTime = rl.getTime();
     let lastPick = null;
@@ -63,11 +64,11 @@ import { rl } from "../../bindings/js/rl.js";
       if (cleanedUp) return;
       cleanedUp = true;
       if (animationFrameId) window.cancelAnimationFrame(animationFrameId);
-      rl.destroyModel(gumshoe);
-      rl.destroySprite3D(sprite);
-      rl.destroyFont(komika);
-      rl.destroyFont(komikaSmall);
-      rl.destroyCamera3D(camera);
+      rl.model.destroy(gumshoe);
+      rl.sprite3d.destroy(sprite);
+      rl.font.destroy(komika);
+      rl.font.destroy(komikaSmall);
+      rl.camera3d.destroy(camera);
       rl.deinit();
     };
 
@@ -79,19 +80,10 @@ import { rl } from "../../bindings/js/rl.js";
       lastTime = now;
 
       rl.refreshScratch();
-      const mouse = rl.getMouseState();
+      const mouse = rl.input.getMouseState();
       if (mouse.left === rl.BUTTON_PRESSED) {
-        const modelPick = rl.pickModel(camera, gumshoe, mouse.x, mouse.y, 0, 0, 0, 1);
-        const spritePick = rl.pickSprite3D(
-          camera,
-          sprite,
-          mouse.x,
-          mouse.y,
-          spritePos.x,
-          spritePos.y,
-          spritePos.z,
-          spriteSize
-        );
+        const modelPick = rl.pick.model(camera, gumshoe, mouse.x, mouse.y);
+        const spritePick = rl.pick.sprite3d(camera, sprite, mouse.x, mouse.y);
         if (modelPick.hit && spritePick.hit) {
           lastPick = modelPick.distance <= spritePick.distance
             ? { ...modelPick, target: "model" }
@@ -105,37 +97,37 @@ import { rl } from "../../bindings/js/rl.js";
         }
       }
 
-      rl.beginDrawing();
-      rl.clearBackground(rl.COLOR_RAYWHITE);
+      rl.render.begin();
+      rl.render.clearBackground(rl.COLOR_RAYWHITE);
 
-      rl.beginMode3D();
-      rl.animateModel(gumshoe, dt);
-      rl.drawModel(gumshoe, 0.0, 0.0, 0.0, 1.0, rl.COLOR_RAYWHITE);
-      rl.drawSprite3D(sprite, spritePos.x, spritePos.y, spritePos.z, spriteSize, rl.COLOR_RAYWHITE);
-      rl.endMode3D();
+      rl.render.beginMode3D();
+      rl.model.animate(gumshoe, dt);
+      rl.model.draw(gumshoe, rl.COLOR_RAYWHITE);
+      rl.sprite3d.draw(sprite, rl.COLOR_RAYWHITE);
+      rl.render.endMode3D();
 
       const title = "Click model to test pick";
-      const size = rl.measureTextEx(komika, title, fontSize, 1);
-      rl.drawTextEx(komika, title, (rl.helpers.getScreenWidth() - size.x) * 0.5, 14, fontSize, 1, rl.COLOR_BLUE);
+      const size = rl.text.measureEx(komika, title, fontSize, 1);
+      rl.text.drawEx(komika, title, (rl.helpers.getScreenWidth() - size.x) * 0.5, 14, fontSize, 1, rl.COLOR_BLUE);
 
-      rl.drawTextEx(
+      rl.text.drawEx(
         komikaSmall,
         `Mouse: (${mouse.x}, ${mouse.y})`,
         10, 46, smallFontSize, 1, rl.COLOR_BLACK
       );
       const pickStats = rl.helpers.getPickStats();
       const skippedNarrowphase = pickStats.broadphaseRejects;
-      rl.drawTextEx(
+      rl.text.drawEx(
         komikaSmall,
         `Pick broad: ${pickStats.broadphaseTests} tests, ${pickStats.broadphaseRejects} rejects`,
         10, 86, smallFontSize, 1, rl.COLOR_DARKGRAY
       );
-      rl.drawTextEx(
+      rl.text.drawEx(
         komikaSmall,
         `Pick narrow: ${pickStats.narrowphaseTests} tests, ${pickStats.narrowphaseHits} hits`,
         10, 106, smallFontSize, 1, rl.COLOR_DARKGRAY
       );
-      rl.drawTextEx(
+      rl.text.drawEx(
         komikaSmall,
         `Narrow-phase skipped: ${skippedNarrowphase}`,
         10, 126, smallFontSize, 1, rl.COLOR_DARKGREEN
@@ -143,20 +135,20 @@ import { rl } from "../../bindings/js/rl.js";
 
       if (lastPick) {
         if (lastPick.hit) {
-          rl.drawTextEx(
+          rl.text.drawEx(
             komikaSmall,
             `Pick ${lastPick.target} hit d=${lastPick.distance.toFixed(2)} @ (${lastPick.point.x.toFixed(2)}, ${lastPick.point.y.toFixed(2)}, ${lastPick.point.z.toFixed(2)})`,
             10, 66, smallFontSize, 1, rl.COLOR_DARKGREEN
           );
         } else {
-          rl.drawTextEx(komikaSmall, "Pick miss", 10, 66, smallFontSize, 1, rl.COLOR_MAROON);
+          rl.text.drawEx(komikaSmall, "Pick miss", 10, 66, smallFontSize, 1, rl.COLOR_MAROON);
         }
       } else {
-        rl.drawTextEx(komikaSmall, "No pick yet", 10, 66, smallFontSize, 1, rl.COLOR_GRAY);
+        rl.text.drawEx(komikaSmall, "No pick yet", 10, 66, smallFontSize, 1, rl.COLOR_GRAY);
       }
 
-      rl.drawFPSEx(komikaSmall, 10, 148, smallFontSize, rl.COLOR_BLACK);
-      rl.endDrawing();
+      rl.text.drawFpsEx(komikaSmall, 10, 148, smallFontSize, rl.COLOR_BLACK);
+      rl.render.end();
       animationFrameId = window.requestAnimationFrame(mainLoop);
     };
 

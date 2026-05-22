@@ -78,18 +78,18 @@ do
 end
 
 -- initialize only the loader runtime so boot can fetch the entry script
-if rl.fileio_init() ~= 0 then
-    rl.error("rl.fileio_init failed")
+if rl.fs_init() ~= 0 then
+    rl.error("rl.fs_init failed")
     return
 end
 
-if rl.fileio_set_asset_host("https://localhost:4444") ~= 0 then
-    rl.error("rl.fileio_set_asset_host failed")
+if rl.asset_set_host("https://localhost:4444") ~= 0 then
+    rl.error("rl.asset_set_host failed")
     return
 end
 
 -- check if the asset host is available
-local rtt = rl.fileio_ping_asset_host()
+local rtt = rl.asset_ping_host()
 if rtt < 0 then
     rl.warn("asset host is not available, will not be able to fetch assets")
 else
@@ -105,20 +105,20 @@ local function await_import_asset(asset_path)
     end
     -- Coroutine: pump until import finishes, then just import the script
     local function load_entry_coroutine()
-        local task = rl.fileio_ensure_async(asset_path)
+        local task = rl.asset_ensure_async(asset_path)
         if not task or task == 0 then
-            rl.error("fileio_ensure_async failed for " .. asset_path)
+            rl.error("asset_ensure_async failed for " .. asset_path)
         end
-        while not rl.fileio_poll_task(task) do
-            rl.fileio_tick()
+        while not rl.asset_poll_task(task) do
+            rl.asset_tick()
             coroutine.yield("loading")
         end
-        local rc = rl.fileio_finish_task(task)
+        local rc = rl.asset_finish_task(task)
         if rc ~= 0 then
             rl.error("import failed (rc=" .. tostring(rc) .. "): " .. asset_path)
         end
-        local path = rl.fileio_get_task_path(task)
-        rl.fileio_free_task(task)
+        local path = rl.asset_get_task_path(task)
+        rl.asset_free_task(task)
         if not path or path == "" then
             rl.error("no local path after import: " .. asset_path)
         end
@@ -144,10 +144,10 @@ await_import_asset(MAIN_SCRIPT_PATH)
 
 
 -- debugging, force clear the cache
--- note that we could just clear the main.lua file with rl.fileio_remove(MAIN_SCRIPT_PATH)
+-- note that we could just clear the main.lua file with rl.fs_remove(MAIN_SCRIPT_PATH)
 -- but we'll start with a clean slate during development
 rl.info("clearing loader cache")
-rl.fileio_clear()
+rl.fs_clear()
 
 ---@enum ResultCode
 ResultCode = {
@@ -167,7 +167,7 @@ local rc = runtime.rt_boot(RUNTIME_MODULE)
 if rc ~= ResultCode.OK then return end
 
 -- shutdown the loader, letting the runtime own full rl lifecycle
-rl.fileio_deinit()
+rl.fs_deinit()
 
 
 rc = runtime.rt_init(nil)

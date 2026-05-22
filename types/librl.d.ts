@@ -64,7 +64,9 @@ export interface RLPickResult {
 }
 
 export interface RLSprite3dTransform {
-  position: RLVector3;
+  positionX: number;
+  positionY: number;
+  positionZ: number;
   size: number;
 }
 
@@ -83,7 +85,7 @@ export interface RLInitEnv {
 
 export interface RLInitOptions {
   assetHost?: string;
-  fileioBaseDir?: string;
+  fsRootDir?: string;
   windowWidth?: number;
   windowHeight?: number;
   windowTitle?: string;
@@ -114,113 +116,140 @@ export interface RLTaskGroup<T = unknown> {
 }
 
 export interface RLHelpers {
-  waitForFileioReady(timeoutMs?: number): Promise<boolean>;
+  waitForFsReady(timeoutMs?: number): Promise<boolean>;
   taskIsValid(task: number): boolean;
   waitForTask(task: number, pollMs?: number): Promise<number>;
-  waitForFileioRestoreAsync(): Promise<number>;
-  waitForFileioEnsureAsync(localPath: string, src?: string | null): Promise<number>;
-  waitForFileioEnsureGroupAsync(filenames: string[]): Promise<number>;
+  waitForFsRestoreAsync(): Promise<number>;
+  waitForAssetEnsureAsync(localPath: string, src?: string | null): Promise<number>;
+  waitForAssetEnsureGroupAsync(filenames: string[]): Promise<number>;
   createTaskGroup<T = unknown>(onComplete?: RLTaskGroupCallback<T> | null, onError?: RLTaskGroupCallback<T> | null, ctx?: T): RLTaskGroup<T>;
   getScreenWidth(): number;
   getScreenHeight(): number;
   getPickStats(): RLPickStats;
 }
 
-export interface RLApi {
-  helpers: RLHelpers;
-  TICK_RUNNING: number;
-  TICK_WAITING: number;
-  TICK_FAILED: number;
-  boot(opts?: RLInitOptions): Promise<number>;
-  init(opts?: RLInitOptions): Promise<number>;
-  initAsync(opts?: RLInitOptions): number;
-  refreshScratch(...args: unknown[]): unknown;
-  getTime(...args: unknown[]): unknown;
+export interface RLFs {
+  remove(...args: unknown[]): unknown;
+  clear(...args: unknown[]): unknown;
+  init(rootDir?: string): Promise<number>;
+  initAsync(rootDir?: string): number;
+  deinitAsync(...args: unknown[]): unknown;
   deinit(): Promise<void>;
   isInitialized(): boolean;
-  getPlatform(): string;
-  getVersionMajor(): number;
-  getVersionMinor(): number;
-  getVersionPatch(): number;
-  versionLabel(...args: unknown[]): unknown;
-  getVersionNumber(): number;
-  getVersionString(): string;
-  fileioRemove(...args: unknown[]): unknown;
-  fileioClear(...args: unknown[]): unknown;
-  fileioInit(baseDir?: string): Promise<number>;
-  fileioInitAsync(baseDir?: string): number;
-  fileioDeinitAsync(): number;
-  fileioDeinit(): Promise<number>;
-  fileioIsInitialized(): boolean;
-  fileioIsReady(): boolean;
-  fileioFlush(...args: unknown[]): unknown;
-  fileioGetBaseDir(): string;
-  fileioPingAssetHost(...args: unknown[]): unknown;
-  fileioSetAssetHost(assetHost: string): number;
-  fileioGetAssetHost(): string;
-  fileioNormalizePath(path: string): string;
-  fileioRestoreAsync(): number;
-  fileioEnsure(localPath: string, src?: string | null): Promise<number>;
-  fileioEnsureAsync(localPath: string, src?: string | null): number;
-  fileioEnsureGroupAsync(filenames: string[]): number;
-  fileioPollTask(task: number): boolean;
-  fileioFinishTask(...args: unknown[]): unknown;
-  fileioGetTaskPath(task: number): string;
-  fileioRead(filename: string): Uint8Array | null;
-  fileioWrite(path: string, data: ArrayBufferView): number;
-  fileioMkdir(...args: unknown[]): unknown;
-  fileioRmdir(...args: unknown[]): unknown;
-  fileioFreeTask(...args: unknown[]): unknown;
-  fileioAddTask(...args: unknown[]): unknown;
-  fileioTick(...args: unknown[]): unknown;
-  fileioExists(filename: string): boolean;
-  emitEvent(eventName: string, payload?: number): number;
-  onEvent(eventName: string, callback: RLEventCallback): number;
-  onceEvent(eventName: string, callback: RLEventCallback): number;
-  offEvent(eventName: string, callback: RLEventCallback): number;
-  clearEventListeners(...args: unknown[]): unknown;
-  getEventListenerCount(...args: unknown[]): unknown;
-  setWindowSize(...args: unknown[]): unknown;
-  isWindowCloseRequested(): boolean;
+  isReady(): boolean;
+  flush(...args: unknown[]): unknown;
+  getRootDir(): string;
+  normalizePath(path: string): string;
+  restoreAsync(): number;
+  read(filename: string): Uint8Array | null;
+  write(path: string, data: ArrayBufferView): number;
+  mkdir(...args: unknown[]): unknown;
+  rmdir(...args: unknown[]): unknown;
+  exists(filename: string): boolean;
+}
+export interface RLAsset {
+  ADD_TASK_OK: number;
+  ADD_TASK_ERR_INVALID: number;
+  ADD_TASK_ERR_QUEUE_FULL: number;
+  pingHost(...args: unknown[]): unknown;
+  setHost(assetHost: string): number;
+  getHost(): string;
+  ensure(localPath: string, src?: string | null): Promise<number>;
+  ensureAsync(localPath: string, src?: string | null): number;
+  ensureGroupAsync(filenames: string[]): number;
+  pollTask(task: number): boolean;
+  finishTask(...args: unknown[]): unknown;
+  getTaskPath(task: number): string;
+  freeTask(...args: unknown[]): unknown;
+  addTask(...args: unknown[]): unknown;
+  tick(...args: unknown[]): unknown;
+}
+export interface RLModel {
+  getDefaultAsset(...args: unknown[]): unknown;
+  loadAsset(...args: unknown[]): unknown;
+  destroyAsset(...args: unknown[]): unknown;
+  create(...args: unknown[]): unknown;
+  createFromFile(...args: unknown[]): unknown;
+  setAsset(...args: unknown[]): unknown;
+  setTransform(...args: unknown[]): unknown;
+  draw(...args: unknown[]): unknown;
+  isValid(model: RLHandle): boolean;
+  isValidStrict(model: RLHandle): boolean;
+  getAnimationCount(...args: unknown[]): unknown;
+  getAnimationFrameCount(...args: unknown[]): unknown;
+  updateAnimation(...args: unknown[]): unknown;
+  setAnimation(...args: unknown[]): unknown;
+  setAnimationSpeed(...args: unknown[]): unknown;
+  setAnimationLoop(...args: unknown[]): unknown;
+  setTint(...args: unknown[]): unknown;
+  animate(...args: unknown[]): unknown;
+  destroy(...args: unknown[]): unknown;
+}
+export interface RLSprite3d {
+  create(...args: unknown[]): unknown;
+  createFromFile(...args: unknown[]): unknown;
+  setTexture(...args: unknown[]): unknown;
+  setTransform(...args: unknown[]): unknown;
+  getTransform(sprite: RLHandle): RLSprite3dTransform | null;
+  setTint(...args: unknown[]): unknown;
+  draw(...args: unknown[]): unknown;
+  destroy(...args: unknown[]): unknown;
+}
+export interface RLSprite2d {
+  create(...args: unknown[]): unknown;
+  createFromFile(...args: unknown[]): unknown;
+  setTexture(...args: unknown[]): unknown;
+  setTransform(...args: unknown[]): unknown;
+  setTint(...args: unknown[]): unknown;
+  draw(...args: unknown[]): unknown;
+  destroy(...args: unknown[]): unknown;
+}
+export interface RLText2d {
+  create(font: RLHandle, size: number): RLHandle;
+  setFont(handle: RLHandle, font: RLHandle): void;
+  setSize(handle: RLHandle, size: number): void;
+  setContent(handle: RLHandle, content: string): void;
+  setPosition(handle: RLHandle, x: number, y: number): void;
+  setColor(handle: RLHandle, color: RLHandle): void;
+  draw(handle: RLHandle): void;
+  destroy(handle: RLHandle): void;
+}
+export interface RLTexture {
+  getDefault(): RLHandle;
+  create(...args: unknown[]): unknown;
+  destroy(...args: unknown[]): unknown;
+  drawEx(...args: unknown[]): unknown;
+  drawGround(...args: unknown[]): unknown;
+}
+export interface RLFont {
+  create(...args: unknown[]): unknown;
+  destroy(...args: unknown[]): unknown;
+  getDefault(): RLHandle;
+}
+export interface RLCamera3d {
+  create(...args: unknown[]): unknown;
+  getDefault(): RLHandle;
+  set(...args: unknown[]): unknown;
+  setActive(...args: unknown[]): unknown;
+  getActive(): RLHandle;
+  destroy(...args: unknown[]): unknown;
+}
+export interface RLWindow {
+  setSize(...args: unknown[]): unknown;
+  isCloseRequested(): boolean;
   getMonitorCount(...args: unknown[]): unknown;
-  setWindowTitle(...args: unknown[]): unknown;
+  setTitle(...args: unknown[]): unknown;
   getCurrentMonitor(...args: unknown[]): unknown;
-  setWindowMonitor(...args: unknown[]): unknown;
+  setMonitor(...args: unknown[]): unknown;
   getMonitorWidth(...args: unknown[]): unknown;
   getMonitorHeight(...args: unknown[]): unknown;
-  setWindowPosition(...args: unknown[]): unknown;
-  beginDrawing(...args: unknown[]): unknown;
-  endDrawing(...args: unknown[]): unknown;
-  beginMode2D(...args: unknown[]): unknown;
-  endMode2D(...args: unknown[]): unknown;
-  beginMode3d(...args: unknown[]): unknown;
-  endMode3d(...args: unknown[]): unknown;
-  tick(): number;
-  getDeltaTime(...args: unknown[]): unknown;
-  createCamera3d(...args: unknown[]): unknown;
-  getDefaultCamera3d(): RLHandle;
-  setCamera3d(...args: unknown[]): unknown;
-  setActiveCamera3d(...args: unknown[]): unknown;
-  getActiveCamera3d(): RLHandle;
-  destroyCamera3d(...args: unknown[]): unknown;
-  enableLighting(...args: unknown[]): unknown;
-  disableLighting(...args: unknown[]): unknown;
-  isLightingEnabled(): boolean;
-  setLightDirection(...args: unknown[]): unknown;
-  setLightAmbient(...args: unknown[]): unknown;
-  clearBackground(...args: unknown[]): unknown;
-  drawCube(...args: unknown[]): unknown;
-  drawRectangle(...args: unknown[]): unknown;
-  debugEnableFps(...args: unknown[]): unknown;
-  debugDisable(...args: unknown[]): unknown;
-  drawFPS(...args: unknown[]): unknown;
-  drawFPSEx(...args: unknown[]): unknown;
-  drawText(...args: unknown[]): unknown;
-  drawTextEx(...args: unknown[]): unknown;
-  drawTextureEx(...args: unknown[]): unknown;
-  drawTextureGround(...args: unknown[]): unknown;
-  measureText(...args: unknown[]): unknown;
-  pollInputEvents(...args: unknown[]): unknown;
+  setPosition(...args: unknown[]): unknown;
+  getScreenSize(): RLVector2;
+  getPosition(): RLVector2;
+  getMonitorPosition(monitor?: number): RLVector2;
+}
+export interface RLInput {
+  pollEvents(...args: unknown[]): unknown;
   getMouseWheel(...args: unknown[]): unknown;
   getMouseButton(...args: unknown[]): unknown;
   getMouseState(): RLMouseState;
@@ -229,20 +258,112 @@ export interface RLApi {
   getGamepad(id: number): RLGamepadState | null;
   getTouchpoints(): RLTouchpoint[];
   getTouchpoint(id: number): RLTouchpoint | null;
-  getScreenSize(): RLVector2;
-  getWindowPosition(): RLVector2;
-  getMonitorPosition(monitor?: number): RLVector2;
   getMousePosition(): RLVector2;
-  measureTextEx(font: RLHandle, text: string, fontSize: number, spacing?: number): RLVector2;
+}
+export interface RLRender {
+  begin(...args: unknown[]): unknown;
+  end(...args: unknown[]): unknown;
+  beginMode2D(...args: unknown[]): unknown;
+  endMode2D(...args: unknown[]): unknown;
+  beginMode3D(...args: unknown[]): unknown;
+  endMode3D(...args: unknown[]): unknown;
+  clearBackground(...args: unknown[]): unknown;
+  enableLighting(...args: unknown[]): unknown;
+  disableLighting(...args: unknown[]): unknown;
+  isLightingEnabled(): boolean;
+  setLightDirection(...args: unknown[]): unknown;
+  setLightAmbient(...args: unknown[]): unknown;
+}
+export interface RLText {
+  drawFps(...args: unknown[]): unknown;
+  drawFpsEx(...args: unknown[]): unknown;
+  draw(...args: unknown[]): unknown;
+  drawEx(...args: unknown[]): unknown;
+  measure(...args: unknown[]): unknown;
+  measureEx(font: RLHandle, text: string, fontSize: number, spacing?: number): RLVector2;
+}
+export interface RLShape {
+  drawCube(...args: unknown[]): unknown;
+  drawRectangle(...args: unknown[]): unknown;
+}
+export interface RLDebug {
+  enableFps(...args: unknown[]): unknown;
+  disable(...args: unknown[]): unknown;
+}
+export interface RLLogger {
+  message(...args: unknown[]): unknown;
+  messageSource(...args: unknown[]): unknown;
+  setLevel(...args: unknown[]): unknown;
+}
+export interface RLPick {
+  model(camera: RLHandle, model: RLHandle, mouseX: number, mouseY: number): RLPickResult;
+  sprite3d(camera: RLHandle, sprite3d: RLHandle, mouseX: number, mouseY: number): RLPickResult;
+  resetStats(...args: unknown[]): unknown;
+}
+export interface RLEvent {
+  emit(eventName: string, payload?: number): number;
+  on(eventName: string, callback: RLEventCallback): number;
+  once(eventName: string, callback: RLEventCallback): number;
+  off(eventName: string, callback: RLEventCallback): number;
+  clearListeners(...args: unknown[]): unknown;
+  getListenerCount(...args: unknown[]): unknown;
+}
+export interface RLColor {
+  create(...args: unknown[]): unknown;
+  destroy(...args: unknown[]): unknown;
+}
+export interface RLMusic {
+  create(...args: unknown[]): unknown;
+  destroy(...args: unknown[]): unknown;
+  play(...args: unknown[]): unknown;
+  pause(...args: unknown[]): unknown;
+  stop(...args: unknown[]): unknown;
+  setLoop(...args: unknown[]): unknown;
+  setVolume(...args: unknown[]): unknown;
+  isPlaying(music: RLHandle): boolean;
+  update(...args: unknown[]): unknown;
+  updateAll(...args: unknown[]): unknown;
+}
+export interface RLSound {
+  create(...args: unknown[]): unknown;
+  destroy(...args: unknown[]): unknown;
+  play(...args: unknown[]): unknown;
+  pause(...args: unknown[]): unknown;
+  resume(...args: unknown[]): unknown;
+  stop(...args: unknown[]): unknown;
+  setVolume(...args: unknown[]): unknown;
+  setPitch(...args: unknown[]): unknown;
+  setPan(...args: unknown[]): unknown;
+  isPlaying(sound: RLHandle): boolean;
+}
+
+export interface RLApi {
+  TICK_RUNNING: number;
+  TICK_WAITING: number;
+  TICK_FAILED: number;
+  boot(opts?: RLInitOptions): Promise<number>;
+  init(opts?: RLInitOptions): Promise<number>;
+  initAsync(opts?: RLInitOptions): number;
+  refreshScratch(): void;
+  getTime(): number;
+  deinit(): Promise<void>;
+  isInitialized(): boolean;
+  getPlatform(): string;
+  getVersionMajor(): number;
+  getVersionMinor(): number;
+  getVersionPatch(): number;
+  versionLabel(): string;
+  getVersionNumber(): number;
+  getVersionString(): string;
+  tick(): number;
+  getDeltaTime(): number;
+  setTargetFPS(fps: number): void;
   INIT_OK: number;
   INIT_ERR_UNKNOWN: number;
   INIT_ERR_ALREADY_INITIALIZED: number;
   INIT_ERR_LOADER: number;
   INIT_ERR_ASSET_HOST: number;
   INIT_ERR_WINDOW: number;
-  FILEIO_ADD_TASK_OK: number;
-  FILEIO_ADD_TASK_ERR_INVALID: number;
-  FILEIO_ADD_TASK_ERR_QUEUE_FULL: number;
   CAMERA_PERSPECTIVE: number;
   CAMERA_ORTHOGRAPHIC: number;
   FLAG_FULLSCREEN_MODE: number;
@@ -269,83 +390,7 @@ export interface RLApi {
   BUTTON_PRESSED: number;
   BUTTON_DOWN: number;
   BUTTON_RELEASED: number;
-  createColor(...args: unknown[]): unknown;
-  destroyColor(...args: unknown[]): unknown;
-  createFont(...args: unknown[]): unknown;
-  destroyFont(...args: unknown[]): unknown;
-  getDefaultFont(): RLHandle;
-  setTargetFPS(...args: unknown[]): unknown;
-  getDefaultModelAsset(...args: unknown[]): unknown;
-  loadModelAsset(...args: unknown[]): unknown;
-  destroyModelAsset(...args: unknown[]): unknown;
-  createModel(...args: unknown[]): unknown;
-  createModelFromFile(...args: unknown[]): unknown;
-  setModelAsset(...args: unknown[]): unknown;
-  setModelTransform(...args: unknown[]): unknown;
-  drawModel(...args: unknown[]): unknown;
-  isModelValid(model: RLHandle): boolean;
-  isModelValidStrict(model: RLHandle): boolean;
-  getModelAnimationCount(...args: unknown[]): unknown;
-  getModelAnimationFrameCount(...args: unknown[]): unknown;
-  updateModelAnimation(...args: unknown[]): unknown;
-  setModelAnimation(...args: unknown[]): unknown;
-  setModelAnimationSpeed(...args: unknown[]): unknown;
-  setModelAnimationLoop(...args: unknown[]): unknown;
-  setModelTint(...args: unknown[]): unknown;
-  animateModel(...args: unknown[]): unknown;
-  destroyModel(...args: unknown[]): unknown;
-  pickModel(camera: RLHandle, model: RLHandle, mouseX: number, mouseY: number): RLPickResult;
-  pickSprite3d(camera: RLHandle, sprite3d: RLHandle, mouseX: number, mouseY: number): RLPickResult;
-  resetPickStats(...args: unknown[]): unknown;
-  createMusic(...args: unknown[]): unknown;
-  destroyMusic(...args: unknown[]): unknown;
-  playMusic(...args: unknown[]): unknown;
-  pauseMusic(...args: unknown[]): unknown;
-  stopMusic(...args: unknown[]): unknown;
-  setMusicLoop(...args: unknown[]): unknown;
-  setMusicVolume(...args: unknown[]): unknown;
-  isMusicPlaying(music: RLHandle): boolean;
-  updateMusic(...args: unknown[]): unknown;
-  updateAllMusic(...args: unknown[]): unknown;
-  createSound(...args: unknown[]): unknown;
-  destroySound(...args: unknown[]): unknown;
-  playSound(...args: unknown[]): unknown;
-  pauseSound(...args: unknown[]): unknown;
-  resumeSound(...args: unknown[]): unknown;
-  stopSound(...args: unknown[]): unknown;
-  setSoundVolume(...args: unknown[]): unknown;
-  setSoundPitch(...args: unknown[]): unknown;
-  setSoundPan(...args: unknown[]): unknown;
-  isSoundPlaying(sound: RLHandle): boolean;
-  getDefaultTexture(): RLHandle;
-  createTexture(...args: unknown[]): unknown;
-  destroyTexture(...args: unknown[]): unknown;
-  createSprite3d(...args: unknown[]): unknown;
-  createSprite3dFromFile(...args: unknown[]): unknown;
-  setSprite3dTexture(...args: unknown[]): unknown;
-  setSprite3dTransform(...args: unknown[]): unknown;
-  getSprite3dTransform(sprite: RLHandle): RLSprite3dTransform;
-  setSprite3dTint(...args: unknown[]): unknown;
-  drawSprite3d(...args: unknown[]): unknown;
-  destroySprite3d(...args: unknown[]): unknown;
-  createSprite2d(...args: unknown[]): unknown;
-  createSprite2dFromFile(...args: unknown[]): unknown;
-  setSprite2dTexture(...args: unknown[]): unknown;
-  setSprite2dTransform(...args: unknown[]): unknown;
-  setSprite2dTint(...args: unknown[]): unknown;
-  drawSprite2d(...args: unknown[]): unknown;
-  destroySprite2d(...args: unknown[]): unknown;
-  createText2d(font: RLHandle, size: number): RLHandle;
-  setText2dFont(handle: RLHandle, font: RLHandle): void;
-  setText2dSize(handle: RLHandle, size: number): void;
-  setText2dContent(handle: RLHandle, content: string): void;
-  setText2dPosition(handle: RLHandle, x: number, y: number): void;
-  setText2dColor(handle: RLHandle, color: RLHandle): void;
-  drawText2d(handle: RLHandle): void;
-  destroyText2d(handle: RLHandle): void;
-  loggerMessage(...args: unknown[]): unknown;
-  loggerMessageSource(...args: unknown[]): unknown;
-  loggerSetLevel(...args: unknown[]): unknown;
+  helpers: RLHelpers;
   COLOR_DEFAULT: number;
   COLOR_LIGHTGRAY: number;
   COLOR_GRAY: number;
@@ -373,6 +418,27 @@ export interface RLApi {
   COLOR_BLANK: number;
   COLOR_MAGENTA: number;
   COLOR_RAYWHITE: number;
+  fs: RLFs;
+  asset: RLAsset;
+  model: RLModel;
+  sprite3d: RLSprite3d;
+  sprite2d: RLSprite2d;
+  text2d: RLText2d;
+  texture: RLTexture;
+  font: RLFont;
+  camera3d: RLCamera3d;
+  window: RLWindow;
+  input: RLInput;
+  render: RLRender;
+  text: RLText;
+  shape: RLShape;
+  debug: RLDebug;
+  logger: RLLogger;
+  pick: RLPick;
+  event: RLEvent;
+  color: RLColor;
+  music: RLMusic;
+  sound: RLSound;
 }
 
 export const rl: RLApi;

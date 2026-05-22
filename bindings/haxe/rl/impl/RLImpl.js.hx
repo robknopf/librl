@@ -46,9 +46,9 @@ class RLImpl {
 	public static inline var CAMERA_PERSPECTIVE:Int = 0;
 	public static inline var CAMERA_ORTHOGRAPHIC:Int = 1;
 
-	public static inline var FILEIO_ADD_TASK_OK:Int = 0;
-	public static inline var FILEIO_ADD_TASK_ERR_INVALID:Int = -1;
-	public static inline var FILEIO_ADD_TASK_ERR_QUEUE_FULL:Int = -2;
+	public static inline var ASSET_ADD_TASK_OK:Int = 0;
+	public static inline var ASSET_ADD_TASK_ERR_INVALID:Int = -1;
+	public static inline var ASSET_ADD_TASK_ERR_QUEUE_FULL:Int = -2;
 
 	public static inline var LOGGER_LEVEL_TRACE:Int = 0;
 	public static inline var LOGGER_LEVEL_DEBUG:Int = 1;
@@ -237,7 +237,7 @@ class RLImpl {
 			windowTitle: values.title,
 			windowFlags: values.flags,
 			assetHost: values.assetHost,
-			fileioBaseDir: values.fileioBaseDir,
+			fsRootDir: values.fsRootDir,
 		};
 	}
 
@@ -339,427 +339,427 @@ class RLImpl {
 	public static function colorCreate(r:Int, g:Int, b:Int, a:Int):RLHandle {
 		if (binding == null)
 			return 0;
-		return cast binding.createColor(r, g, b, a);
+		return cast binding.color.create(r, g, b, a);
 	}
 
 	public static function colorDestroy(color:RLHandle):Void {
 		if (binding != null)
-			binding.destroyColor(color);
+			binding.color.destroy(color);
 	}
 
 	public static function fontCreate(filename:String, fontSize:Int):RLHandle
-		return binding == null ? 0 : cast binding.createFont(filename, fontSize);
+		return binding == null ? 0 : cast binding.font.create(filename, fontSize);
 
 	public static function fontDestroy(font:RLHandle):Void {
 		if (binding != null)
-			binding.destroyFont(font);
+			binding.font.destroy(font);
 	}
 
 	public static function textDraw(text:String, x:Int, y:Int, fontSize:Int, color:RLHandle):Void {
 		if (binding != null)
-			binding.drawText(text, x, y, fontSize, color);
+			binding.text.draw(text, x, y, fontSize, color);
 	}
 
 	public static function textMeasure(text:String, fontSize:Int):Int
-		return binding == null ? 0 : cast binding.measureText(text, fontSize);
+		return binding == null ? 0 : cast binding.text.measure(text, fontSize);
 
 	public static function textDrawFps(x:Int, y:Int):Void {
 		if (binding != null)
-			binding.drawFPS(x, y);
+			binding.text.drawFps(x, y);
 	}
 
 	public static function textDrawEx(font:RLHandle, text:String, x:Int, y:Int, fontSize:Float, spacing:Float, color:RLHandle):Void {
 		if (binding != null)
-			binding.drawTextEx(font, text, x, y, fontSize, spacing, color);
+			binding.text.drawEx(font, text, x, y, fontSize, spacing, color);
 	}
 
 	public static function textMeasureEx(font:RLHandle, text:String, fontSize:Float, spacing:Float):RLVec2
-		return binding == null ? vec2() : cast binding.measureTextEx(font, text, fontSize, spacing);
+		return binding == null ? vec2() : cast binding.text.measureEx(font, text, fontSize, spacing);
 
 	public static function textDrawFpsEx(font:RLHandle, x:Int, y:Int, fontSize:Float, color:RLHandle):Void {
 		if (binding != null)
-			binding.drawFPSEx(font, x, y, fontSize, color);
+			binding.text.drawFpsEx(font, x, y, fontSize, color);
 	}
 
-	public static function fileioSetAssetHost(assetHost:String):Int {
-		return binding == null ? -1 : cast binding.fileioSetAssetHost(assetHost);
+	public static function assetSetHost(assetHost:String):Int {
+		return binding == null ? -1 : cast binding.asset.setHost(assetHost);
 	}
 
-	public static function fileioGetAssetHost():String {
-		return binding == null ? "" : cast binding.fileioGetAssetHost();
+	public static function assetGetHost():String {
+		return binding == null ? "" : cast binding.asset.getHost();
 	}
 
 	public static function musicCreate(filename:String):RLHandle
-		return binding == null ? 0 : cast binding.createMusic(filename);
+		return binding == null ? 0 : cast binding.music.create(filename);
 
 	public static function musicDestroy(music:RLHandle):Void {
 		if (binding != null)
-			binding.destroyMusic(music);
+			binding.music.destroy(music);
 	}
 
 	public static function musicPlay(music:RLHandle):Bool
-		return binding != null && cast binding.playMusic(music);
+		return binding != null && cast binding.music.play(music);
 
 	public static function musicPause(music:RLHandle):Bool
-		return binding != null && cast binding.pauseMusic(music);
+		return binding != null && cast binding.music.pause(music);
 
 	public static function musicStop(music:RLHandle):Bool
-		return binding != null && cast binding.stopMusic(music);
+		return binding != null && cast binding.music.stop(music);
 
 	public static function musicSetLoop(music:RLHandle, shouldLoop:Bool):Bool
-		return binding != null && cast binding.setMusicLoop(music, shouldLoop);
+		return binding != null && cast binding.music.setLoop(music, shouldLoop);
 
 	public static function musicSetVolume(music:RLHandle, volume:Float):Bool
-		return binding != null && cast binding.setMusicVolume(music, volume);
+		return binding != null && cast binding.music.setVolume(music, volume);
 
 	public static function musicIsPlaying(music:RLHandle):Bool
-		return binding != null && cast binding.isMusicPlaying(music);
+		return binding != null && cast binding.music.isPlaying(music);
 
 	public static function musicUpdate(music:RLHandle):Bool
-		return binding != null && cast binding.updateMusic(music);
+		return binding != null && cast binding.music.update(music);
 
 	public static function musicUpdateAll():Void {
 		if (binding != null)
-			binding.updateAllMusic();
+			binding.music.updateAll();
 	}
 
 	public static function soundCreate(filename:String):RLHandle
-		return binding == null ? 0 : cast binding.createSound(filename);
+		return binding == null ? 0 : cast binding.sound.create(filename);
 
 	public static function soundDestroy(sound:RLHandle):Void {
 		if (binding != null)
-			binding.destroySound(sound);
+			binding.sound.destroy(sound);
 	}
 
 	public static function soundPlay(sound:RLHandle):Bool
-		return binding != null && cast binding.playSound(sound);
+		return binding != null && cast binding.sound.play(sound);
 
 	public static function soundPause(sound:RLHandle):Bool
-		return binding != null && cast binding.pauseSound(sound);
+		return binding != null && cast binding.sound.pause(sound);
 
 	public static function soundResume(sound:RLHandle):Bool
-		return binding != null && cast binding.resumeSound(sound);
+		return binding != null && cast binding.sound.resume(sound);
 
 	public static function soundStop(sound:RLHandle):Bool
-		return binding != null && cast binding.stopSound(sound);
+		return binding != null && cast binding.sound.stop(sound);
 
 	public static function soundSetVolume(sound:RLHandle, volume:Float):Bool
-		return binding != null && cast binding.setSoundVolume(sound, volume);
+		return binding != null && cast binding.sound.setVolume(sound, volume);
 
 	public static function soundSetPitch(sound:RLHandle, pitch:Float):Bool
-		return binding != null && cast binding.setSoundPitch(sound, pitch);
+		return binding != null && cast binding.sound.setPitch(sound, pitch);
 
 	public static function soundSetPan(sound:RLHandle, pan:Float):Bool
-		return binding != null && cast binding.setSoundPan(sound, pan);
+		return binding != null && cast binding.sound.setPan(sound, pan);
 
 	public static function soundIsPlaying(sound:RLHandle):Bool
-		return binding != null && cast binding.isSoundPlaying(sound);
+		return binding != null && cast binding.sound.isPlaying(sound);
 
 	public static function enableLighting():Void {
 		if (binding != null)
-			binding.enableLighting();
+			binding.render.enableLighting();
 	}
 
 	public static function disableLighting():Void {
 		if (binding != null)
-			binding.disableLighting();
+			binding.render.disableLighting();
 	}
 
 	public static function isLightingEnabled():Int
-		return binding == null ? 0 : (cast binding.isLightingEnabled() ? 1 : 0);
+		return binding == null ? 0 : (cast binding.render.isLightingEnabled() ? 1 : 0);
 
 	public static function setLightDirection(x:Float, y:Float, z:Float):Void {
 		if (binding != null)
-			binding.setLightDirection(x, y, z);
+			binding.render.setLightDirection(x, y, z);
 	}
 
 	public static function setLightAmbient(ambient:Float):Void {
 		if (binding != null)
-			binding.setLightAmbient(ambient);
+			binding.render.setLightAmbient(ambient);
 	}
 
 	public static function renderBegin():Void {
 		if (binding != null)
-			binding.beginDrawing();
+			binding.render.begin();
 	}
 
 	public static function renderEnd():Void {
 		if (binding != null)
-			binding.endDrawing();
+			binding.render.end();
 	}
 
 	public static function renderClearBackground(color:RLHandle):Void {
 		if (binding != null)
-			binding.clearBackground(color);
+			binding.render.clearBackground(color);
 	}
 
 	public static function renderBeginMode2D(camera:RLHandle):Void {
 		if (binding != null)
-			binding.beginMode2D(camera);
+			binding.render.beginMode2D(camera);
 	}
 
 	public static function renderEndMode2D():Void {
 		if (binding != null)
-			binding.endMode2D();
+			binding.render.endMode2D();
 	}
 
 	public static function renderBeginMode3d():Void {
 		if (binding != null)
-			binding.beginMode3d();
+			binding.render.beginMode3D();
 	}
 
 	public static function renderEndMode3d():Void {
 		if (binding != null)
-			binding.endMode3d();
+			binding.render.endMode3D();
 	}
 
 	public static function windowCloseRequested():Bool
-		return binding != null && cast binding.isWindowCloseRequested();
+		return binding != null && cast binding.window.isCloseRequested();
 
 	public static function windowGetScreenSize():RLVec2
-		return binding == null ? vec2() : cast binding.getScreenSize();
+		return binding == null ? vec2() : cast binding.window.getScreenSize();
 
 	public static function windowGetMonitorCount():Int
-		return binding == null ? 0 : cast binding.getMonitorCount();
+		return binding == null ? 0 : cast binding.window.getMonitorCount();
 
 	public static function windowSetTitle(title:String):Void {
 		if (binding != null)
-			binding.setWindowTitle(title);
+			binding.window.setTitle(title);
 	}
 
 	public static function windowSetSize(width:Int, height:Int):Void {
 		if (binding != null)
-			binding.setWindowSize(width, height);
+			binding.window.setSize(width, height);
 	}
 
 	public static function windowGetCurrentMonitor():Int
-		return binding == null ? 0 : cast binding.getCurrentMonitor();
+		return binding == null ? 0 : cast binding.window.getCurrentMonitor();
 
 	public static function windowSetMonitor(monitor:Int):Void {
 		if (binding != null)
-			binding.setWindowMonitor(monitor);
+			binding.window.setMonitor(monitor);
 	}
 
 	public static function windowGetMonitorWidth(monitor:Int):Int
-		return binding == null ? 0 : cast binding.getMonitorWidth(monitor);
+		return binding == null ? 0 : cast binding.window.getMonitorWidth(monitor);
 
 	public static function windowGetMonitorHeight(monitor:Int):Int
-		return binding == null ? 0 : cast binding.getMonitorHeight(monitor);
+		return binding == null ? 0 : cast binding.window.getMonitorHeight(monitor);
 
 	public static function windowGetMonitorPosition(monitor:Int):RLVec2
-		return binding == null ? vec2() : cast binding.getMonitorPosition(monitor);
+		return binding == null ? vec2() : cast binding.window.getMonitorPosition(monitor);
 
 	public static function windowGetPosition():RLVec2
-		return binding == null ? vec2() : cast binding.getWindowPosition();
+		return binding == null ? vec2() : cast binding.window.getPosition();
 
 	public static function windowSetPosition(x:Int, y:Int):Void {
 		if (binding != null)
-			binding.setWindowPosition(x, y);
+			binding.window.setPosition(x, y);
 	}
 
 	public static function camera3dCreate(positionX:Float, positionY:Float, positionZ:Float, targetX:Float, targetY:Float, targetZ:Float, upX:Float,
 			upY:Float, upZ:Float, fovy:Float, projection:Int):RLHandle
-		return binding == null ? 0 : cast binding.createCamera3d(positionX, positionY, positionZ, targetX, targetY, targetZ, upX, upY, upZ, fovy, projection);
+		return binding == null ? 0 : cast binding.camera3d.create(positionX, positionY, positionZ, targetX, targetY, targetZ, upX, upY, upZ, fovy, projection);
 
 	public static function camera3dSet(camera:RLHandle, positionX:Float, positionY:Float, positionZ:Float, targetX:Float, targetY:Float, targetZ:Float,
 			upX:Float, upY:Float, upZ:Float, fovy:Float, projection:Int):Bool
 		return binding != null
-			&& cast binding.setCamera3d(camera, positionX, positionY, positionZ, targetX, targetY, targetZ, upX, upY, upZ, fovy, projection);
+			&& cast binding.camera3d.set(camera, positionX, positionY, positionZ, targetX, targetY, targetZ, upX, upY, upZ, fovy, projection);
 
 	public static function camera3dSetActive(camera:RLHandle):Bool
-		return binding != null && cast binding.setActiveCamera3d(camera);
+		return binding != null && cast binding.camera3d.setActive(camera);
 
 	public static function camera3dDestroy(camera:RLHandle):Void {
 		if (binding != null)
-			binding.destroyCamera3d(camera);
+			binding.camera3d.destroy(camera);
 	}
 
 	public static function modelGetDefaultAsset():RLHandle
-		return binding == null ? 0 : cast binding.getDefaultModelAsset();
+		return binding == null ? 0 : cast binding.model.getDefaultAsset();
 
 	public static function modelLoadAsset(filename:String):RLHandle
-		return binding == null ? 0 : cast binding.loadModelAsset(filename);
+		return binding == null ? 0 : cast binding.model.loadAsset(filename);
 
 	public static function modelDestroyAsset(asset:RLHandle):Void {
 		if (binding != null)
-			binding.destroyModelAsset(asset);
+			binding.model.destroyAsset(asset);
 	}
 
 	public static function modelCreate(asset:RLHandle):RLHandle
-		return binding == null ? 0 : cast binding.createModel(asset);
+		return binding == null ? 0 : cast binding.model.create(asset);
 
 	public static function modelCreateFromFile(filename:String):RLHandle
-		return binding == null ? 0 : cast binding.createModelFromFile(filename);
+		return binding == null ? 0 : cast binding.model.createFromFile(filename);
 
 	public static function modelSetAsset(model:RLHandle, asset:RLHandle):Bool
-		return binding != null && cast binding.setModelAsset(model, asset);
+		return binding != null && cast binding.model.setAsset(model, asset);
 
 	public static function modelSetTransform(model:RLHandle, positionX:Float, positionY:Float, positionZ:Float, rotationX:Float, rotationY:Float,
 			rotationZ:Float, scaleX:Float, scaleY:Float, scaleZ:Float):Bool
 		return binding != null
-			&& cast binding.setModelTransform(model, positionX, positionY, positionZ, rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ);
+			&& cast binding.model.setTransform(model, positionX, positionY, positionZ, rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ);
 
 	public static function modelDraw(model:RLHandle, tint:RLHandle = 0):Void {
 		if (binding != null)
-			binding.drawModel(model, tint);
+			binding.model.draw(model, tint);
 	}
 
 	public static function modelSetAnimation(model:RLHandle, animationIndex:Int):Bool
-		return binding != null && cast binding.setModelAnimation(model, animationIndex);
+		return binding != null && cast binding.model.setAnimation(model, animationIndex);
 
 	public static function modelSetAnimationSpeed(model:RLHandle, speed:Float):Bool
-		return binding != null && cast binding.setModelAnimationSpeed(model, speed);
+		return binding != null && cast binding.model.setAnimationSpeed(model, speed);
 
 	public static function modelSetAnimationLoop(model:RLHandle, shouldLoop:Bool):Bool
-		return binding != null && cast binding.setModelAnimationLoop(model, shouldLoop);
+		return binding != null && cast binding.model.setAnimationLoop(model, shouldLoop);
 
 	public static function modelSetTint(model:RLHandle, color:RLHandle):Bool
-		return binding != null && cast binding.setModelTint(model, color);
+		return binding != null && cast binding.model.setTint(model, color);
 
 	public static function modelAnimate(model:RLHandle, deltaSeconds:Float):Bool
-		return binding != null && cast binding.animateModel(model, deltaSeconds);
+		return binding != null && cast binding.model.animate(model, deltaSeconds);
 
 	public static function modelDestroy(model:RLHandle):Void {
 		if (binding != null)
-			binding.destroyModel(model);
+			binding.model.destroy(model);
 	}
 
 	public static function sprite3dCreate(texture:RLHandle):RLHandle
-		return binding == null ? 0 : cast binding.createSprite3d(texture);
+		return binding == null ? 0 : cast binding.sprite3d.create(texture);
 
 	public static function sprite3dCreateFromFile(filename:String):RLHandle
-		return binding == null ? 0 : cast binding.createSprite3dFromFile(filename);
+		return binding == null ? 0 : cast binding.sprite3d.createFromFile(filename);
 
 	public static function sprite3dSetTexture(sprite:RLHandle, texture:RLHandle):Bool
-		return binding != null && cast binding.setSprite3dTexture(sprite, texture);
+		return binding != null && cast binding.sprite3d.setTexture(sprite, texture);
 
 	public static function sprite3dSetTransform(sprite:RLHandle, positionX:Float, positionY:Float, positionZ:Float, size:Float):Bool
-		return binding != null && cast binding.setSprite3dTransform(sprite, positionX, positionY, positionZ, size);
+		return binding != null && cast binding.sprite3d.setTransform(sprite, positionX, positionY, positionZ, size);
 
 	public static function sprite3dSetTint(sprite:RLHandle, color:RLHandle = 0):Bool
-		return binding != null && cast binding.setSprite3dTint(sprite, color);
+		return binding != null && cast binding.sprite3d.setTint(sprite, color);
 
 	public static function sprite3dDraw(sprite:RLHandle, tint:RLHandle = 0):Void {
 		if (binding != null)
-			binding.drawSprite3d(sprite, tint);
+			binding.sprite3d.draw(sprite, tint);
 	}
 
 	public static function sprite3dDestroy(sprite:RLHandle):Void {
 		if (binding != null)
-			binding.destroySprite3d(sprite);
+			binding.sprite3d.destroy(sprite);
 	}
 
 	public static function sprite2dCreate(texture:RLHandle):RLHandle
-		return binding == null ? 0 : cast binding.createSprite2d(texture);
+		return binding == null ? 0 : cast binding.sprite2d.create(texture);
 
 	public static function sprite2dCreateFromFile(filename:String):RLHandle
-		return binding == null ? 0 : cast binding.createSprite2dFromFile(filename);
+		return binding == null ? 0 : cast binding.sprite2d.createFromFile(filename);
 
 	public static function sprite2dSetTexture(sprite:RLHandle, texture:RLHandle):Bool
-		return binding != null && cast binding.setSprite2dTexture(sprite, texture);
+		return binding != null && cast binding.sprite2d.setTexture(sprite, texture);
 
 	public static function sprite2dSetTransform(sprite:RLHandle, x:Float, y:Float, scale:Float, rotation:Float):Bool
-		return binding != null && cast binding.setSprite2dTransform(sprite, x, y, scale, rotation);
+		return binding != null && cast binding.sprite2d.setTransform(sprite, x, y, scale, rotation);
 
 	public static function sprite2dSetTint(sprite:RLHandle, color:RLHandle = 0):Bool
-		return binding != null && cast binding.setSprite2dTint(sprite, color);
+		return binding != null && cast binding.sprite2d.setTint(sprite, color);
 
 	public static function sprite2dDraw(sprite:RLHandle, tint:RLHandle = 0):Void {
 		if (binding != null)
-			binding.drawSprite2d(sprite, tint);
+			binding.sprite2d.draw(sprite, tint);
 	}
 
 	public static function sprite2dDestroy(sprite:RLHandle):Void {
 		if (binding != null)
-			binding.destroySprite2d(sprite);
+			binding.sprite2d.destroy(sprite);
 	}
 
 	public static function text2dCreate(font:RLHandle, size:Float):RLHandle
-		return binding == null ? 0 : cast binding.createText2d(font, size);
+		return binding == null ? 0 : cast binding.text2d.create(font, size);
 
 	public static function text2dSetFont(handle:RLHandle, font:RLHandle):Void {
 		if (binding != null)
-			binding.setText2dFont(handle, font);
+			binding.text2d.setFont(handle, font);
 	}
 
 	public static function text2dSetSize(handle:RLHandle, size:Float):Void {
 		if (binding != null)
-			binding.setText2dSize(handle, size);
+			binding.text2d.setSize(handle, size);
 	}
 
 	public static function text2dSetContent(handle:RLHandle, content:String):Void {
 		if (binding != null)
-			binding.setText2dContent(handle, content);
+			binding.text2d.setContent(handle, content);
 	}
 
 	public static function text2dSetPosition(handle:RLHandle, x:Float, y:Float):Void {
 		if (binding != null)
-			binding.setText2dPosition(handle, x, y);
+			binding.text2d.setPosition(handle, x, y);
 	}
 
 	public static function text2dSetColor(handle:RLHandle, color:RLHandle):Void {
 		if (binding != null)
-			binding.setText2dColor(handle, color);
+			binding.text2d.setColor(handle, color);
 	}
 
 	public static function text2dDraw(handle:RLHandle):Void {
 		if (binding != null)
-			binding.drawText2d(handle);
+			binding.text2d.draw(handle);
 	}
 
 	public static function text2dDestroy(handle:RLHandle):Void {
 		if (binding != null)
-			binding.destroyText2d(handle);
+			binding.text2d.destroy(handle);
 	}
 
 	public static function textureCreate(filename:String):RLHandle
-		return binding == null ? 0 : cast binding.createTexture(filename);
+		return binding == null ? 0 : cast binding.texture.create(filename);
 
 	public static function textureDestroy(texture:RLHandle):Void {
 		if (binding != null)
-			binding.destroyTexture(texture);
+			binding.texture.destroy(texture);
 	}
 
 	public static function textureDrawEx(texture:RLHandle, x:Float, y:Float, scale:Float, rotation:Float, tint:RLHandle):Void {
 		if (binding != null)
-			binding.drawTextureEx(texture, x, y, scale, rotation, tint);
+			binding.texture.drawEx(texture, x, y, scale, rotation, tint);
 	}
 
 	public static function textureDrawGround(texture:RLHandle, positionX:Float, positionY:Float, positionZ:Float, width:Float, length:Float,
 			tint:RLHandle):Void {
 		if (binding != null)
-			binding.drawTextureGround(texture, positionX, positionY, positionZ, width, length, tint);
+			binding.texture.drawGround(texture, positionX, positionY, positionZ, width, length, tint);
 	}
 
 	public static function inputPollEvents():Void {
 		if (binding != null)
-			binding.pollInputEvents();
+			binding.input.pollEvents();
 	}
 
 	public static function inputGetMousePosition():RLVec2
-		return binding == null ? vec2() : cast binding.getMousePosition();
+		return binding == null ? vec2() : cast binding.input.getMousePosition();
 
 	public static function inputGetMouseWheel():Int
-		return binding == null ? 0 : cast binding.getMouseWheel();
+		return binding == null ? 0 : cast binding.input.getMouseWheel();
 
 	public static function inputGetMouseButton(button:Int):Int
-		return binding == null ? 0 : cast binding.getMouseButton(button);
+		return binding == null ? 0 : cast binding.input.getMouseButton(button);
 
 	public static function inputGetMouseState():RLMouseState
-		return binding == null ? mouseState() : toMouseState(binding.getMouseState());
+		return binding == null ? mouseState() : toMouseState(binding.input.getMouseState());
 
 	public static function inputGetKeyboardState():RLKeyboardState
-		return binding == null ? new RLKeyboardState() : toKeyboardState(binding.getKeyboardState());
+		return binding == null ? new RLKeyboardState() : toKeyboardState(binding.input.getKeyboardState());
 
 	public static function pickModel(camera:RLHandle, model:RLHandle, mouseX:Float, mouseY:Float):RLPickResult
-		return binding == null ? pickResult() : toPickResult(binding.pickModel(camera, model, mouseX, mouseY));
+		return binding == null ? pickResult() : toPickResult(binding.pick.model(camera, model, mouseX, mouseY));
 
 	public static function pickSprite3d(camera:RLHandle, sprite3d:RLHandle, mouseX:Float, mouseY:Float):RLPickResult
-		return binding == null ? pickResult() : toPickResult(binding.pickSprite3d(camera, sprite3d, mouseX, mouseY));
+		return binding == null ? pickResult() : toPickResult(binding.pick.sprite3d(camera, sprite3d, mouseX, mouseY));
 
 	public static function pickResetStats():Void {
 		if (binding != null)
-			binding.resetPickStats();
+			binding.pick.resetStats();
 	}
 
 	public static function pickGetBroadphaseTests():Int
@@ -775,125 +775,125 @@ class RLImpl {
 		return binding == null ? 0 : cast binding.helpers.getPickStats().narrowphaseHits;
 
 	@async
-	public static function fileioInit(?baseDir:String):Promise<Int> {
+	public static function fsInit(?baseDir:String):Promise<Int> {
 		if (binding == null) {
 			return Promise.resolve(-1);
 		}
 		var path = baseDir == null ? "" : baseDir;
-		return cast binding.fileioInit(path);
+		return cast binding.fs.init(path);
 	}
 
-	public static function fileioInitAsync(?baseDir:String):Int {
+	public static function fsInitAsync(?baseDir:String):Int {
 		if (binding == null) {
 			return -1;
 		}
 		var path = baseDir == null ? "" : baseDir;
-		return cast binding.fileioInitAsync(path);
+		return cast binding.fs.initAsync(path);
 	}
 
 	@async
-	public static function fileioDeinit():Promise<Void> {
+	public static function fsDeinit():Promise<Void> {
 		if (binding == null) {
 			return Promise.resolve(null);
 		}
-		binding.fileioDeinit();
+		binding.fs.deinit();
 		return Promise.resolve(null);
 	}
 
-	public static function fileioIsInitialized():Bool {
-		return binding != null && cast binding.fileioIsInitialized();
+	public static function fsIsInitialized():Bool {
+		return binding != null && cast binding.fs.isInitialized();
 	}
 
-	public static function fileioRestoreAsync():RLHandle {
-		return binding == null ? 0 : cast binding.fileioRestoreAsync();
+	public static function fsRestoreAsync():RLHandle {
+		return binding == null ? 0 : cast binding.fs.restoreAsync();
 	}
 
-	public static function fileioEnsureAsync(localPath:String, ?src:String):RLHandle {
-		return binding == null ? 0 : cast binding.fileioEnsureAsync(localPath, src);
+	public static function assetEnsureAsync(localPath:String, ?src:String):RLHandle {
+		return binding == null ? 0 : cast binding.asset.ensureAsync(localPath, src);
 	}
 
-	public static function fileioEnsure(localPath:String, ?src:String):Promise<Int> {
+	public static function assetEnsure(localPath:String, ?src:String):Promise<Int> {
 		if (binding == null) {
 			return Promise.resolve(-1);
 		}
-		return cast binding.fileioEnsure(localPath, src);
+		return cast binding.asset.ensure(localPath, src);
 	}
 
-	public static function fileioEnsureGroupAsync(filenames:Array<String>):RLHandle
-		return binding == null ? 0 : cast binding.fileioEnsureGroupAsync(filenames);
+	public static function assetEnsureGroupAsync(filenames:Array<String>):RLHandle
+		return binding == null ? 0 : cast binding.asset.ensureGroupAsync(filenames);
 
-	public static function fileioPollTask(task:RLHandle):Bool {
-		return binding != null && cast binding.fileioPollTask(task);
+	public static function assetPollTask(task:RLHandle):Bool {
+		return binding != null && cast binding.asset.pollTask(task);
 	}
 
-	public static function fileioFinishTask(task:RLHandle):Int {
-		return binding == null ? -1 : cast binding.fileioFinishTask(task);
+	public static function assetFinishTask(task:RLHandle):Int {
+		return binding == null ? -1 : cast binding.asset.finishTask(task);
 	}
 
-	public static function fileioGetTaskPath(task:RLHandle):String {
-		return binding == null ? "" : cast binding.fileioGetTaskPath(task);
+	public static function assetGetTaskPath(task:RLHandle):String {
+		return binding == null ? "" : cast binding.asset.getTaskPath(task);
 	}
 
-	public static function fileioRead(filename:String):Bytes {
+	public static function fsRead(filename:String):Bytes {
 		if (binding == null)
 			return null;
-		var d = binding.fileioRead(filename);
+		var d = binding.fs.read(filename);
 		return d == null ? null : Bytes.ofData(cast d);
 	}
 
-	public static function fileioFreeTask(task:RLHandle):Void {
+	public static function assetFreeTask(task:RLHandle):Void {
 		if (binding != null)
-			binding.fileioFreeTask(task);
+			binding.asset.freeTask(task);
 	}
 
-	public static function fileioExists(filename:String):Bool {
-		return binding != null && cast binding.fileioExists(filename);
+	public static function fsExists(filename:String):Bool {
+		return binding != null && cast binding.fs.exists(filename);
 	}
 
-	public static function fileioPingAssetHost(?assetHost:String):Float {
+	public static function assetPingHost(?assetHost:String):Float {
 		var host = assetHost == null ? "" : assetHost;
-		return binding == null ? -1 : cast binding.fileioPingAssetHost(host);
+		return binding == null ? -1 : cast binding.asset.pingHost(host);
 	}
 
-	public static function fileioGetBaseDir():String {
-		return binding == null ? "" : cast binding.fileioGetBaseDir();
+	public static function fsGetRootDir():String {
+		return binding == null ? "" : cast binding.fs.getRootDir();
 	}
 
-	public static function fileioCreateTaskGroup<T>(?onComplete:RLTaskGroupCallback<T>, ?onError:RLTaskGroupCallback<T>, ?ctx:T):RLTaskGroup
+	public static function assetCreateTaskGroup<T>(?onComplete:RLTaskGroupCallback<T>, ?onError:RLTaskGroupCallback<T>, ?ctx:T):RLTaskGroup
 		return new RLTaskGroup(cast onComplete, cast onError, ctx);
 
-	public static function fileioTaskInvalid():RLHandle
+	public static function assetTaskInvalid():RLHandle
 		return 0;
 
-	public static function fileioTaskIsValid(task:RLHandle):Bool
+	public static function assetTaskIsValid(task:RLHandle):Bool
 		return task != 0;
 
-	public static function fileioAddTask<T>(task:RLHandle, onSuccess:String->T->Void, onFailure:String->T->Void, ctx:T):Int
-		return binding == null ? FILEIO_ADD_TASK_ERR_INVALID : cast binding.fileioAddTask(task, onSuccess, onFailure, ctx);
+	public static function assetAddTask<T>(task:RLHandle, onSuccess:String->T->Void, onFailure:String->T->Void, ctx:T):Int
+		return binding == null ? ASSET_ADD_TASK_ERR_INVALID : cast binding.asset.addTask(task, onSuccess, onFailure, ctx);
 
-	public static function fileioTick():Void {
+	public static function assetTick():Void {
 		if (binding != null)
-			binding.fileioTick();
+			binding.asset.tick();
 	}
 
-	public static function fileioClear():Int {
-		return binding == null ? -1 : cast binding.fileioClear();
+	public static function fsClear():Int {
+		return binding == null ? -1 : cast binding.fs.clear();
 	}
 
-	public static function fileioRemove(filename:String):Int {
-		return binding == null ? -1 : cast binding.fileioRemove(filename);
+	public static function fsRemove(filename:String):Int {
+		return binding == null ? -1 : cast binding.fs.remove(filename);
 	}
 
 	public static function loggerMessage(level:Int, message:String):Void {
 		if (binding != null)
-			binding.loggerMessage(level, message);
+			binding.logger.message(level, message);
 		else
 			js.Syntax.code("console.log({0})", message);
 	}
 
 	public static function loggerSetLevel(level:Int):Void {
 		if (binding != null)
-			binding.loggerSetLevel(level);
+			binding.logger.setLevel(level);
 	}
 
 	static inline function vec2():RLVec2 {
@@ -938,7 +938,7 @@ class RLImpl {
 		var title:String;
 		var flags:Int;
 		var assetHost:String;
-		var fileioBaseDir:String;
+		var fsRootDir:String;
 	} {
 		return {
 			width: config != null && config.windowWidth != null ? config.windowWidth : 0,
@@ -946,7 +946,7 @@ class RLImpl {
 			title: config != null && config.windowTitle != null ? config.windowTitle : "",
 			flags: config != null && config.windowFlags != null ? config.windowFlags : 0,
 			assetHost: config != null && config.assetHost != null ? config.assetHost : "",
-			fileioBaseDir: config != null && config.fileioBaseDir != null ? config.fileioBaseDir : ""};
+			fsRootDir: config != null && config.fsRootDir != null ? config.fsRootDir : ""};
 	}
 
 	static inline function pickResult():RLPickResult {

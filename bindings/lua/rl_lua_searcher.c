@@ -8,8 +8,8 @@
 #include <string.h>
 
 #include "fetch_url/fetch_url.h"
-#include "fileio/fileio.h"
-#include "rl_fileio.h"
+#include "rl_fs.h"
+#include "rl_asset.h"
 #include "rl_lua_searcher.h"
 
 #ifndef LUA_OK
@@ -58,19 +58,19 @@ int rl_lua_fetch_to_fileio(const char *relative_path)
         return -1;
     }
 
-    if (rl_fileio_exists(relative_path)) {
+    if (rl_fs_exists(relative_path)) {
         return 0;
     }
 
-    while (!rl_fileio_is_ready()) {
-        rl_fileio_tick();
+    while (!rl_fs_is_ready()) {
+        rl_asset_tick();
     }
 
-    if (rl_fileio_exists(relative_path)) {
+    if (rl_fs_exists(relative_path)) {
         return 0;
     }
 
-    asset_host = rl_fileio_get_asset_host();
+    asset_host = rl_asset_get_host();
     if (asset_host == NULL || asset_host[0] == '\0') {
         return -1;
     }
@@ -81,7 +81,7 @@ int rl_lua_fetch_to_fileio(const char *relative_path)
         return rc != 0 ? rc : -1;
     }
 
-    rc = fileio_write(relative_path, result.data, result.size);
+    rc = rl_fs_write(relative_path, result.data, result.size);
     free(result.data);
     return rc;
 }
@@ -97,15 +97,15 @@ int rl_lua_load_file_chunk(lua_State *L, const char *filename)
         return LUA_ERRFILE;
     }
 
-    rc = rl_fileio_read(filename, &data, &size);
+    rc = rl_fs_read(filename, &data, &size);
     if (rc != 0 || data == NULL || size == 0) {
-        rl_fileio_read_free(data);
+        rl_fs_read_free(data);
         return LUA_ERRFILE;
     }
 
     (void)snprintf(chunk_name, sizeof(chunk_name), "@%s", filename);
     rc = luaL_loadbuffer(L, (const char *)data, size, chunk_name);
-    rl_fileio_read_free(data);
+    rl_fs_read_free(data);
     return rc;
 }
 
@@ -120,15 +120,15 @@ int rl_lua_resolve_path(const char *filename, char *resolved_path, size_t resolv
     explicit_path = rl_lua_is_explicit_path(filename);
 
     if (explicit_path) {
-        rl_fileio_normalize_path(filename, resolved_path, resolved_path_size);
-        if (rl_fileio_exists(resolved_path)) {
+        rl_fs_normalize_path(filename, resolved_path, resolved_path_size);
+        if (rl_fs_exists(resolved_path)) {
             return 0;
         }
     }
 
     if (!explicit_path) {
-        rl_fileio_normalize_path(filename, resolved_path, resolved_path_size);
-        if (rl_fileio_exists(resolved_path)) {
+        rl_fs_normalize_path(filename, resolved_path, resolved_path_size);
+        if (rl_fs_exists(resolved_path)) {
             return 0;
         }
     }
@@ -177,11 +177,11 @@ static int rl_lua_require_searcher(lua_State *L)
                         templ = strtok_r(NULL, ";", &saveptr);
                         continue;
                     }
-                    rl_fileio_normalize_path(candidate, candidate, sizeof(candidate));
-                    if (candidate[0] != '/' && !rl_fileio_exists(candidate)) {
+                    rl_fs_normalize_path(candidate, candidate, sizeof(candidate));
+                    if (candidate[0] != '/' && !rl_fs_exists(candidate)) {
                         (void)rl_lua_fetch_to_fileio(candidate);
                     }
-                    if (rl_fileio_exists(candidate)) {
+                    if (rl_fs_exists(candidate)) {
                         lua_pop(L, 2);
                         rc = rl_lua_load_file_chunk(L, candidate);
                         if (rc == LUA_OK) {
@@ -220,11 +220,11 @@ static int rl_lua_require_searcher(lua_State *L)
                         templ = strtok_r(NULL, ";", &saveptr);
                         continue;
                     }
-                    rl_fileio_normalize_path(candidate, candidate, sizeof(candidate));
+                    rl_fs_normalize_path(candidate, candidate, sizeof(candidate));
                     if (candidate[0] != '/') {
                         (void)rl_lua_fetch_to_fileio(candidate);
                     }
-                    if (rl_fileio_exists(candidate)) {
+                    if (rl_fs_exists(candidate)) {
                         native_fetched = 1;
                     }
                 }

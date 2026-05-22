@@ -55,7 +55,7 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
   - `make librl_lua` -> builds both
 - WASM note:
   - Desktop-style Lua dynamic module loading (`rl.so`) does not apply to wasm.
-  - For wasm Lua scripting, use the embedded Lua VM module path (`modules/lua`) and its require/searcher + fetch/fileio flow.
+  - For wasm Lua scripting, use the embedded Lua VM module path (`modules/lua`) and its require/searcher + fetch/fs/asset flow.
 
 ## Nested Repo Note (`deps/libraylib`)
 
@@ -93,8 +93,8 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
   - `rl_frame_runner_run`
   - `rl_module_lua_get_api`
 - For async starters that return a pollable task, make that explicit with `_async`:
-  - `rl_fileio_ensure_async`
-  - `rl_fileio_restore_async`
+  - `rl_asset_ensure_async`
+  - `rl_fs_restore_async`
   - `fetch_url_async`
 - Keep async task lifecycle verbs readable and non-suffixed:
   - `*_poll_task`

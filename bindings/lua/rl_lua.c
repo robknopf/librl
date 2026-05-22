@@ -68,8 +68,8 @@ static int rl_init_lua(lua_State *L)
         cfg.asset_host = lua_isstring(L, -1) ? lua_tostring(L, -1) : NULL;
         lua_pop(L, 1);
 
-        lua_getfield(L, 1, "fileio_base_dir");
-        cfg.fileio_base_dir = lua_isstring(L, -1) ? lua_tostring(L, -1) : NULL;
+        lua_getfield(L, 1, "fs_root_dir");
+        cfg.fs_root_dir = lua_isstring(L, -1) ? lua_tostring(L, -1) : NULL;
         lua_pop(L, 1);
     }
 
@@ -104,8 +104,8 @@ static int rl_init_async_lua(lua_State *L)
         cfg.asset_host = lua_isstring(L, -1) ? lua_tostring(L, -1) : NULL;
         lua_pop(L, 1);
 
-        lua_getfield(L, 1, "fileio_base_dir");
-        cfg.fileio_base_dir = lua_isstring(L, -1) ? lua_tostring(L, -1) : NULL;
+        lua_getfield(L, 1, "fs_root_dir");
+        cfg.fs_root_dir = lua_isstring(L, -1) ? lua_tostring(L, -1) : NULL;
         lua_pop(L, 1);
     }
 

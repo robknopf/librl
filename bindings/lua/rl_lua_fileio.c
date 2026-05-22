@@ -7,7 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "rl_fileio.h"
+#include "rl_fs.h"
+#include "rl_asset.h"
 #include "rl_lua_fileio.h"
 
 #if LUA_VERSION_NUM < 502
@@ -123,14 +124,14 @@ static void rl_lua_fileio_on_failure(const char *path, void *user_data)
     rl_lua_fileio_release_callback(entry);
 }
 
-static int rl_fileio_set_asset_host_lua(lua_State *L)
+static int rl_asset_set_host_lua(lua_State *L)
 {
     const char *asset_host = luaL_checkstring(L, 1);
-    lua_pushinteger(L, rl_fileio_set_asset_host(asset_host));
+    lua_pushinteger(L, rl_asset_set_host(asset_host));
     return 1;
 }
 
-static int rl_fileio_init_lua(lua_State *L)
+static int rl_fs_init_lua(lua_State *L)
 {
     const char *base_dir = NULL;
 
@@ -138,11 +139,11 @@ static int rl_fileio_init_lua(lua_State *L)
         base_dir = luaL_checkstring(L, 1);
     }
 
-    lua_pushinteger(L, rl_fileio_init(base_dir));
+    lua_pushinteger(L, rl_fs_init(base_dir));
     return 1;
 }
 
-static int rl_fileio_init_async_lua(lua_State *L)
+static int rl_fs_init_async_lua(lua_State *L)
 {
     const char *base_dir = NULL;
 
@@ -150,40 +151,40 @@ static int rl_fileio_init_async_lua(lua_State *L)
         base_dir = luaL_checkstring(L, 1);
     }
 
-    lua_pushinteger(L, rl_fileio_init_async(base_dir));
+    lua_pushinteger(L, rl_fs_init_async(base_dir));
     return 1;
 }
 
-static int rl_fileio_deinit_lua(lua_State *L)
+static int rl_fs_deinit_lua(lua_State *L)
 {
     (void)L;
-    rl_fileio_deinit();
+    rl_fs_deinit();
     return 0;
 }
 
-static int rl_fileio_deinit_async_lua(lua_State *L)
+static int rl_fs_deinit_async_lua(lua_State *L)
 {
     (void)L;
-    rl_handle_t task = rl_fileio_deinit_async();
+    rl_handle_t task = rl_fs_deinit_async();
     lua_pushinteger(L, (lua_Integer)task);
     return 1;
 }
 
-static int rl_fileio_get_asset_host_lua(lua_State *L)
+static int rl_asset_get_host_lua(lua_State *L)
 {
     (void)L;
-    lua_pushstring(L, rl_fileio_get_asset_host());
+    lua_pushstring(L, rl_asset_get_host());
     return 1;
 }
 
-static int rl_fileio_get_base_dir_lua(lua_State *L)
+static int rl_fs_get_root_dir_lua(lua_State *L)
 {
     (void)L;
-    lua_pushstring(L, rl_fileio_get_base_dir());
+    lua_pushstring(L, rl_fs_get_root_dir());
     return 1;
 }
 
-static int rl_fileio_ping_asset_host_lua(lua_State *L)
+static int rl_asset_ping_host_lua(lua_State *L)
 {
     const char *asset_host = NULL;
     double rtt_ms = 0.0;
@@ -191,41 +192,41 @@ static int rl_fileio_ping_asset_host_lua(lua_State *L)
     if (!lua_isnoneornil(L, 1)) {
         asset_host = luaL_checkstring(L, 1);
     }
-    rtt_ms = (double)rl_fileio_ping_asset_host(asset_host);
+    rtt_ms = (double)rl_asset_ping_host(asset_host);
     lua_pushnumber(L, rtt_ms);
     return 1;
 }
 
-static int rl_fileio_is_initialized_lua(lua_State *L)
+static int rl_fs_is_initialized_lua(lua_State *L)
 {
     (void)L;
-    lua_pushboolean(L, rl_fileio_is_initialized() ? 1 : 0);
+    lua_pushboolean(L, rl_fs_is_initialized() ? 1 : 0);
     return 1;
 }
 
-static int rl_fileio_is_ready_lua(lua_State *L)
+static int rl_fs_is_ready_lua(lua_State *L)
 {
     (void)L;
-    lua_pushboolean(L, rl_fileio_is_ready() ? 1 : 0);
+    lua_pushboolean(L, rl_fs_is_ready() ? 1 : 0);
     return 1;
 }
 
-static int rl_fileio_flush_lua(lua_State *L)
+static int rl_fs_flush_lua(lua_State *L)
 {
     (void)L;
-    lua_pushinteger(L, rl_fileio_flush());
+    lua_pushinteger(L, rl_fs_flush());
     return 1;
 }
 
-static int rl_fileio_restore_async_lua(lua_State *L)
+static int rl_fs_restore_async_lua(lua_State *L)
 {
     (void)L;
-    rl_handle_t task = rl_fileio_restore_async();
+    rl_handle_t task = rl_fs_restore_async();
     lua_pushinteger(L, (lua_Integer)task);
     return 1;
 }
 
-static int rl_fileio_ensure_async_lua(lua_State *L)
+static int rl_asset_ensure_async_lua(lua_State *L)
 {
     const char *local_path = luaL_checkstring(L, 1);
     const char *src = NULL;
@@ -234,12 +235,12 @@ static int rl_fileio_ensure_async_lua(lua_State *L)
         src = luaL_checkstring(L, 2);
     }
 
-    rl_handle_t task = rl_fileio_ensure_async(local_path, src);
+    rl_handle_t task = rl_asset_ensure_async(local_path, src);
     lua_pushinteger(L, (lua_Integer)task);
     return 1;
 }
 
-static int rl_fileio_ensure_lua(lua_State *L)
+static int rl_asset_ensure_lua(lua_State *L)
 {
     const char *local_path = luaL_checkstring(L, 1);
     const char *src = NULL;
@@ -248,11 +249,11 @@ static int rl_fileio_ensure_lua(lua_State *L)
         src = luaL_checkstring(L, 2);
     }
 
-    lua_pushinteger(L, rl_fileio_ensure(local_path, src));
+    lua_pushinteger(L, rl_asset_ensure(local_path, src));
     return 1;
 }
 
-static int rl_fileio_ensure_group_async_lua(lua_State *L)
+static int rl_asset_ensure_many_async_lua(lua_State *L)
 {
     size_t count = 0;
     size_t i = 0;
@@ -279,38 +280,38 @@ static int rl_fileio_ensure_group_async_lua(lua_State *L)
         lua_pop(L, 1);
     }
 
-    task = rl_fileio_ensure_group_async(filenames, count);
+    task = rl_asset_ensure_many_async(filenames, count);
     free(filenames);
 
     lua_pushinteger(L, (lua_Integer)task);
     return 1;
 }
 
-static int rl_fileio_poll_lua(lua_State *L)
+static int rl_asset_poll_lua(lua_State *L)
 {
     rl_handle_t task = (rl_handle_t)luaL_checkinteger(L, 1);
-    lua_pushboolean(L, rl_fileio_poll_task(task) ? 1 : 0);
+    lua_pushboolean(L, rl_asset_poll_task(task) ? 1 : 0);
     return 1;
 }
 
-static int rl_fileio_finish_lua(lua_State *L)
+static int rl_asset_finish_lua(lua_State *L)
 {
     rl_handle_t task = (rl_handle_t)luaL_checkinteger(L, 1);
-    lua_pushinteger(L, rl_fileio_finish_task(task));
+    lua_pushinteger(L, rl_asset_finish_task(task));
     return 1;
 }
 
-static int rl_fileio_free_lua(lua_State *L)
+static int rl_asset_free_lua(lua_State *L)
 {
     rl_handle_t task = (rl_handle_t)luaL_checkinteger(L, 1);
-    rl_fileio_free_task(task);
+    rl_asset_free_task(task);
     return 0;
 }
 
-static int rl_fileio_get_path_lua(lua_State *L)
+static int rl_asset_get_path_lua(lua_State *L)
 {
     rl_handle_t task = (rl_handle_t)luaL_checkinteger(L, 1);
-    const char *path = rl_fileio_get_task_path(task);
+    const char *path = rl_asset_get_task_path(task);
     if (path == NULL) {
         lua_pushnil(L);
     } else {
@@ -319,22 +320,22 @@ static int rl_fileio_get_path_lua(lua_State *L)
     return 1;
 }
 
-static int rl_fileio_exists_lua(lua_State *L)
+static int rl_fs_exists_lua(lua_State *L)
 {
     const char *filename = luaL_checkstring(L, 1);
-    lua_pushboolean(L, rl_fileio_exists(filename) ? 1 : 0);
+    lua_pushboolean(L, rl_fs_exists(filename) ? 1 : 0);
     return 1;
 }
 
-static int rl_fileio_read_lua(lua_State *L)
+static int rl_fs_read_lua(lua_State *L)
 {
     const char *filename = luaL_checkstring(L, 1);
     unsigned char *data = NULL;
     size_t size = 0;
-    int rc = rl_fileio_read(filename, &data, &size);
+    int rc = rl_fs_read(filename, &data, &size);
 
     if (rc != 0 || data == NULL) {
-        rl_fileio_read_free(data);
+        rl_fs_read_free(data);
         lua_pushnil(L);
         lua_pushinteger(L, 0);
         lua_pushinteger(L, rc);
@@ -345,58 +346,58 @@ static int rl_fileio_read_lua(lua_State *L)
     lua_pushinteger(L, (lua_Integer)size);
     lua_pushinteger(L, 0);
 
-    rl_fileio_read_free(data);
+    rl_fs_read_free(data);
     return 3;
 }
 
-static int rl_fileio_write_lua(lua_State *L)
+static int rl_fs_write_lua(lua_State *L)
 {
     const char *path = luaL_checkstring(L, 1);
     size_t size = 0;
     const char *data = luaL_checklstring(L, 2, &size);
-    lua_pushinteger(L, rl_fileio_write(path, (const unsigned char *)data, size));
+    lua_pushinteger(L, rl_fs_write(path, (const unsigned char *)data, size));
     return 1;
 }
 
-static int rl_fileio_remove_lua(lua_State *L)
+static int rl_fs_remove_lua(lua_State *L)
 {
     const char *filename = luaL_checkstring(L, 1);
-    lua_pushinteger(L, rl_fileio_remove(filename));
+    lua_pushinteger(L, rl_fs_remove(filename));
     return 1;
 }
 
-static int rl_fileio_mkdir_lua(lua_State *L)
+static int rl_fs_mkdir_lua(lua_State *L)
 {
     const char *path = luaL_checkstring(L, 1);
-    lua_pushinteger(L, rl_fileio_mkdir(path));
+    lua_pushinteger(L, rl_fs_mkdir(path));
     return 1;
 }
 
-static int rl_fileio_rmdir_lua(lua_State *L)
+static int rl_fs_rmdir_lua(lua_State *L)
 {
     const char *path = luaL_checkstring(L, 1);
-    lua_pushinteger(L, rl_fileio_rmdir(path));
+    lua_pushinteger(L, rl_fs_rmdir(path));
     return 1;
 }
 
-static int rl_fileio_clear_lua(lua_State *L)
+static int rl_fs_clear_lua(lua_State *L)
 {
     (void)L;
-    lua_pushinteger(L, rl_fileio_clear());
+    lua_pushinteger(L, rl_fs_clear());
     return 1;
 }
 
-static int rl_fileio_normalize_path_lua(lua_State *L)
+static int rl_fs_normalize_path_lua(lua_State *L)
 {
     const char *path = luaL_checkstring(L, 1);
     char buffer[RL_LUA_FILEIO_NORMALIZE_BUFFER];
     buffer[0] = '\0';
-    rl_fileio_normalize_path(path, buffer, sizeof(buffer));
+    rl_fs_normalize_path(path, buffer, sizeof(buffer));
     lua_pushstring(L, buffer);
     return 1;
 }
 
-static int rl_fileio_add_task_lua(lua_State *L)
+static int rl_asset_add_task_lua(lua_State *L)
 {
     rl_handle_t task = (rl_handle_t)luaL_checkinteger(L, 1);
     int success_ref = LUA_NOREF;
@@ -427,12 +428,12 @@ static int rl_fileio_add_task_lua(lua_State *L)
         if (success_ref != LUA_NOREF) luaL_unref(L, LUA_REGISTRYINDEX, success_ref);
         if (failure_ref != LUA_NOREF) luaL_unref(L, LUA_REGISTRYINDEX, failure_ref);
         if (ctx_ref != LUA_NOREF) luaL_unref(L, LUA_REGISTRYINDEX, ctx_ref);
-        rl_fileio_free_task(task);
+        rl_asset_free_task(task);
         lua_pushinteger(L, -2);
         return 1;
     }
 
-    rc = rl_fileio_add_task(task,
+    rc = rl_asset_add_task(task,
                             success_ref == LUA_NOREF ? NULL : rl_lua_fileio_on_success,
                             failure_ref == LUA_NOREF ? NULL : rl_lua_fileio_on_failure,
                             (void *)(uintptr_t)entry->id);
@@ -445,10 +446,10 @@ static int rl_fileio_add_task_lua(lua_State *L)
     return 1;
 }
 
-static int rl_fileio_tick_lua(lua_State *L)
+static int rl_asset_tick_lua(lua_State *L)
 {
     (void)L;
-    rl_fileio_tick();
+    rl_asset_tick();
     return 0;
 }
 
@@ -456,99 +457,99 @@ void rl_register_fileio_bindings(lua_State *L)
 {
     rl_lua_fileio_state = L;
 
-    lua_pushinteger(L, RL_FILEIO_ADD_TASK_OK);
-    lua_setfield(L, -2, "RL_FILEIO_ADD_TASK_OK");
+    lua_pushinteger(L, RL_ASSET_ADD_TASK_OK);
+    lua_setfield(L, -2, "RL_ASSET_ADD_TASK_OK");
 
-    lua_pushinteger(L, RL_FILEIO_ADD_TASK_ERR_INVALID);
-    lua_setfield(L, -2, "RL_FILEIO_ADD_TASK_ERR_INVALID");
+    lua_pushinteger(L, RL_ASSET_ADD_TASK_ERR_INVALID);
+    lua_setfield(L, -2, "RL_ASSET_ADD_TASK_ERR_INVALID");
 
-    lua_pushinteger(L, RL_FILEIO_ADD_TASK_ERR_QUEUE_FULL);
-    lua_setfield(L, -2, "RL_FILEIO_ADD_TASK_ERR_QUEUE_FULL");
+    lua_pushinteger(L, RL_ASSET_ADD_TASK_ERR_QUEUE_FULL);
+    lua_setfield(L, -2, "RL_ASSET_ADD_TASK_ERR_QUEUE_FULL");
 
-    lua_pushcfunction(L, rl_fileio_init_lua);
-    lua_setfield(L, -2, "fileio_init");
+    lua_pushcfunction(L, rl_fs_init_lua);
+    lua_setfield(L, -2, "fs_init");
 
-    lua_pushcfunction(L, rl_fileio_init_async_lua);
-    lua_setfield(L, -2, "fileio_init_async");
+    lua_pushcfunction(L, rl_fs_init_async_lua);
+    lua_setfield(L, -2, "fs_init_async");
 
-    lua_pushcfunction(L, rl_fileio_deinit_lua);
-    lua_setfield(L, -2, "fileio_deinit");
+    lua_pushcfunction(L, rl_fs_deinit_lua);
+    lua_setfield(L, -2, "fs_deinit");
 
-    lua_pushcfunction(L, rl_fileio_deinit_async_lua);
-    lua_setfield(L, -2, "fileio_deinit_async");
+    lua_pushcfunction(L, rl_fs_deinit_async_lua);
+    lua_setfield(L, -2, "fs_deinit_async");
 
-    lua_pushcfunction(L, rl_fileio_set_asset_host_lua);
-    lua_setfield(L, -2, "fileio_set_asset_host");
+    lua_pushcfunction(L, rl_asset_set_host_lua);
+    lua_setfield(L, -2, "asset_set_host");
 
-    lua_pushcfunction(L, rl_fileio_get_asset_host_lua);
-    lua_setfield(L, -2, "fileio_get_asset_host");
+    lua_pushcfunction(L, rl_asset_get_host_lua);
+    lua_setfield(L, -2, "asset_get_host");
 
-    lua_pushcfunction(L, rl_fileio_get_base_dir_lua);
-    lua_setfield(L, -2, "fileio_get_base_dir");
+    lua_pushcfunction(L, rl_fs_get_root_dir_lua);
+    lua_setfield(L, -2, "fs_get_root_dir");
 
-    lua_pushcfunction(L, rl_fileio_ping_asset_host_lua);
-    lua_setfield(L, -2, "fileio_ping_asset_host");
+    lua_pushcfunction(L, rl_asset_ping_host_lua);
+    lua_setfield(L, -2, "asset_ping_host");
 
-    lua_pushcfunction(L, rl_fileio_is_initialized_lua);
-    lua_setfield(L, -2, "fileio_is_initialized");
+    lua_pushcfunction(L, rl_fs_is_initialized_lua);
+    lua_setfield(L, -2, "fs_is_initialized");
 
-    lua_pushcfunction(L, rl_fileio_is_ready_lua);
-    lua_setfield(L, -2, "fileio_is_ready");
+    lua_pushcfunction(L, rl_fs_is_ready_lua);
+    lua_setfield(L, -2, "fs_is_ready");
 
-    lua_pushcfunction(L, rl_fileio_flush_lua);
-    lua_setfield(L, -2, "fileio_flush");
+    lua_pushcfunction(L, rl_fs_flush_lua);
+    lua_setfield(L, -2, "fs_flush");
 
-    lua_pushcfunction(L, rl_fileio_restore_async_lua);
-    lua_setfield(L, -2, "fileio_restore_async");
+    lua_pushcfunction(L, rl_fs_restore_async_lua);
+    lua_setfield(L, -2, "fs_restore_async");
 
-    lua_pushcfunction(L, rl_fileio_ensure_async_lua);
-    lua_setfield(L, -2, "fileio_ensure_async");
+    lua_pushcfunction(L, rl_asset_ensure_async_lua);
+    lua_setfield(L, -2, "asset_ensure_async");
 
-    lua_pushcfunction(L, rl_fileio_ensure_lua);
-    lua_setfield(L, -2, "fileio_ensure");
+    lua_pushcfunction(L, rl_asset_ensure_lua);
+    lua_setfield(L, -2, "asset_ensure");
 
-    lua_pushcfunction(L, rl_fileio_ensure_group_async_lua);
-    lua_setfield(L, -2, "fileio_ensure_group_async");
+    lua_pushcfunction(L, rl_asset_ensure_many_async_lua);
+    lua_setfield(L, -2, "asset_ensure_group_async");
 
-    lua_pushcfunction(L, rl_fileio_poll_lua);
-    lua_setfield(L, -2, "fileio_poll_task");
+    lua_pushcfunction(L, rl_asset_poll_lua);
+    lua_setfield(L, -2, "asset_poll_task");
 
-    lua_pushcfunction(L, rl_fileio_finish_lua);
-    lua_setfield(L, -2, "fileio_finish_task");
+    lua_pushcfunction(L, rl_asset_finish_lua);
+    lua_setfield(L, -2, "asset_finish_task");
 
-    lua_pushcfunction(L, rl_fileio_free_lua);
-    lua_setfield(L, -2, "fileio_free_task");
+    lua_pushcfunction(L, rl_asset_free_lua);
+    lua_setfield(L, -2, "asset_free_task");
 
-    lua_pushcfunction(L, rl_fileio_get_path_lua);
-    lua_setfield(L, -2, "fileio_get_task_path");
+    lua_pushcfunction(L, rl_asset_get_path_lua);
+    lua_setfield(L, -2, "asset_get_task_path");
 
-    lua_pushcfunction(L, rl_fileio_exists_lua);
-    lua_setfield(L, -2, "fileio_exists");
+    lua_pushcfunction(L, rl_fs_exists_lua);
+    lua_setfield(L, -2, "fs_exists");
 
-    lua_pushcfunction(L, rl_fileio_read_lua);
-    lua_setfield(L, -2, "fileio_read");
+    lua_pushcfunction(L, rl_fs_read_lua);
+    lua_setfield(L, -2, "fs_read");
 
-    lua_pushcfunction(L, rl_fileio_write_lua);
-    lua_setfield(L, -2, "fileio_write");
+    lua_pushcfunction(L, rl_fs_write_lua);
+    lua_setfield(L, -2, "fs_write");
 
-    lua_pushcfunction(L, rl_fileio_remove_lua);
-    lua_setfield(L, -2, "fileio_remove");
+    lua_pushcfunction(L, rl_fs_remove_lua);
+    lua_setfield(L, -2, "fs_remove");
 
-    lua_pushcfunction(L, rl_fileio_mkdir_lua);
-    lua_setfield(L, -2, "fileio_mkdir");
+    lua_pushcfunction(L, rl_fs_mkdir_lua);
+    lua_setfield(L, -2, "fs_mkdir");
 
-    lua_pushcfunction(L, rl_fileio_rmdir_lua);
-    lua_setfield(L, -2, "fileio_rmdir");
+    lua_pushcfunction(L, rl_fs_rmdir_lua);
+    lua_setfield(L, -2, "fs_rmdir");
 
-    lua_pushcfunction(L, rl_fileio_clear_lua);
-    lua_setfield(L, -2, "fileio_clear");
+    lua_pushcfunction(L, rl_fs_clear_lua);
+    lua_setfield(L, -2, "fs_clear");
 
-    lua_pushcfunction(L, rl_fileio_normalize_path_lua);
-    lua_setfield(L, -2, "fileio_normalize_path");
+    lua_pushcfunction(L, rl_fs_normalize_path_lua);
+    lua_setfield(L, -2, "fs_normalize_path");
 
-    lua_pushcfunction(L, rl_fileio_add_task_lua);
-    lua_setfield(L, -2, "fileio_add_task");
+    lua_pushcfunction(L, rl_asset_add_task_lua);
+    lua_setfield(L, -2, "asset_add_task");
 
-    lua_pushcfunction(L, rl_fileio_tick_lua);
-    lua_setfield(L, -2, "fileio_tick");
+    lua_pushcfunction(L, rl_asset_tick_lua);
+    lua_setfield(L, -2, "asset_tick");
 }

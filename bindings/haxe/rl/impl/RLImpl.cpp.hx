@@ -1201,47 +1201,6 @@ abstract RLImpl(RLExterns) {
   public static function pickGetNarrowphaseTests(): Int { return RLExterns.pickGetNarrowphaseTests(); }
   public static function pickGetNarrowphaseHits(): Int { return RLExterns.pickGetNarrowphaseHits(); }
 
-  public static function keyboardGetKeyState(state: RLKeyboardState, key: Int): Int {
-    if (state.keys == null || key < 0 || key >= state.max_num_keys || key >= state.keys.length) {
-      return 0;
-    }
-    return state.keys[key];
-  }
-
-  public static function keyboardIsKeyDown(state: RLKeyboardState, key: Int): Bool {
-    return keyboardGetKeyState(state, key) != 0;
-  }
-
-  public static function keyboardGetPressedKey(state: RLKeyboardState, index: Int): Int {
-    if (state.pressed_keys == null || index < 0 || index >= state.num_pressed_keys || index >= state.pressed_keys.length) {
-      return 0;
-    }
-    return state.pressed_keys[index];
-  }
-
-  public static function keyboardGetPressedChar(state: RLKeyboardState, index: Int): Int {
-    if (state.pressed_chars == null || index < 0 || index >= state.num_pressed_chars || index >= state.pressed_chars.length) {
-      return 0;
-    }
-    return state.pressed_chars[index];
-  }
-
-  public static function keyboardGetPressedKeys(state: RLKeyboardState): Array<Int> {
-    var result = new Array<Int>();
-    for (i in 0...state.num_pressed_keys) {
-      result.push(keyboardGetPressedKey(state, i));
-    }
-    return result;
-  }
-
-  public static function keyboardGetPressedChars(state: RLKeyboardState): Array<Int> {
-    var result = new Array<Int>();
-    for (i in 0...state.num_pressed_chars) {
-      result.push(keyboardGetPressedChar(state, i));
-    }
-    return result;
-  }
-
   public static function init(?config: RLInitConfig): Int {
     var values = normalizeInitConfig(config);
     return RLExterns.initValuesNative(values.w, values.h, values.title, values.flags, values.asset, values.cache);
@@ -1509,30 +1468,6 @@ abstract RLImpl(RLExterns) {
 
   public static function loggerSetLevel(level: Int): Void {
     RLLoggerBridge.setLevel(level);
-  }
-
-  public static function logTrace(message: String): Void {
-    loggerMessage(RLExterns.LOGGER_LEVEL_TRACE, message);
-  }
-
-  public static function logDebug(message: String): Void {
-    loggerMessage(RLExterns.LOGGER_LEVEL_DEBUG, message);
-  }
-
-  public static function logInfo(message: String): Void {
-    loggerMessage(RLExterns.LOGGER_LEVEL_INFO, message);
-  }
-
-  public static function logWarn(message: String): Void {
-    loggerMessage(RLExterns.LOGGER_LEVEL_WARN, message);
-  }
-
-  public static function logError(message: String): Void {
-    loggerMessage(RLExterns.LOGGER_LEVEL_ERROR, message);
-  }
-
-  public static function logFatal(message: String): Void {
-    loggerMessage(RLExterns.LOGGER_LEVEL_FATAL, message);
   }
 }
 #end

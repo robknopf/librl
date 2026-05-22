@@ -2,7 +2,6 @@
 package rl;
 
 import rl.Types.RLHandle;
-import rl.Types.RLAsyncVoid;
 
 @:keep
 class Asset {
@@ -10,6 +9,7 @@ class Asset {
 	public static inline var ADD_TASK_OK:Int = rl.impl.RLImpl.ASSET_ADD_TASK_OK;
 	public static inline var ADD_TASK_ERR_INVALID:Int = rl.impl.RLImpl.ASSET_ADD_TASK_ERR_INVALID;
 	public static inline var ADD_TASK_ERR_QUEUE_FULL:Int = rl.impl.RLImpl.ASSET_ADD_TASK_ERR_QUEUE_FULL;
+
 
 	public static function setHost(assetHost:String):Int {
 		return rl.impl.RLImpl.assetSetHost(assetHost);

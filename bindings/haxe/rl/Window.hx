@@ -10,6 +10,7 @@ class Window {
 	public static inline var FLAG_MSAA_4X_HINT:Int = rl.impl.RLImpl.FLAG_MSAA_4X_HINT;
 	public static inline var FLAG_VSYNC_HINT:Int = rl.impl.RLImpl.FLAG_VSYNC_HINT;
 
+
 	public static function closeRequested():Bool {
 		return rl.impl.RLImpl.windowCloseRequested();
 	}

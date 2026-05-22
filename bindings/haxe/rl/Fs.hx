@@ -1,16 +1,13 @@
 /** Public façade: Fs subsystem. */
 package rl;
 
-import haxe.io.Bytes;
 import rl.Types.RLHandle;
-import rl.Types.RLVec2;
-import rl.Types.RLPickResult;
-import rl.Types.RLMouseState;
-import rl.Types.RLKeyboardState;
 import rl.Types.RLAsyncVoid;
+import haxe.io.Bytes;
 
 @:keep
 class Fs {
+
 
 	@async
 	public static function init(?baseDir:String):Int {

@@ -186,14 +186,14 @@ class ScriptableRuntime implements IRuntime {
 
 		// start the loader so we can cache the main script
 		rc = Fs.init();
-		if (rc != 0) {
-			Log.error("[script] Loader init failed");
+		if (rc != RL.INIT_OK) {
+			Log.error("[script] Loader init failed (code $rc)");
 			return RT_FAILED;
 		}
 
 		rc = Asset.setHost(ASSET_HOST);
-		if (rc != 0) {
-			Log.error("[script] Loader set asset host failed");
+		if (rc != RL.INIT_OK) {
+			Log.error("[script] Loader set asset host failed (code $rc)");
 			return RT_FAILED;
 		}
 
@@ -212,7 +212,7 @@ class ScriptableRuntime implements IRuntime {
 		// Synchronously fetch the main cppia into the loader cache. On wasm
 		// this suspends through JSPI; on desktop it's a normal blocking fetch.
 		var impRc = Asset.ensure(MAIN_CPPIA_FILE);
-		if (impRc != 0) {
+		if (impRc != RL.INIT_OK) {
 			Log.error('[script] sync import failed for $MAIN_CPPIA_FILE (code $impRc)');
 			Fs.deinit();
 			return RT_FAILED;

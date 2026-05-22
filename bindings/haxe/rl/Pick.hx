@@ -2,14 +2,11 @@
 package rl;
 
 import rl.Types.RLHandle;
-import rl.Types.RLVec2;
 import rl.Types.RLPickResult;
-import rl.Types.RLMouseState;
-import rl.Types.RLKeyboardState;
-import rl.Types.RLAsyncVoid;
 
 @:keep
 class Pick {
+
 
 	public static function model(camera:RLHandle, model:RLHandle, mouseX:Float, mouseY:Float):RLPickResult {
 		return rl.impl.RLImpl.pickModel(camera, model, mouseX, mouseY);

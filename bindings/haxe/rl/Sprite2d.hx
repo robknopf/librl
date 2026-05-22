@@ -2,14 +2,10 @@
 package rl;
 
 import rl.Types.RLHandle;
-import rl.Types.RLVec2;
-import rl.Types.RLPickResult;
-import rl.Types.RLMouseState;
-import rl.Types.RLKeyboardState;
-import rl.Types.RLAsyncVoid;
 
 @:keep
 class Sprite2d {
+
 
 	public static function create(texture:RLHandle):RLHandle {
 		return rl.impl.RLImpl.sprite2dCreate(texture);

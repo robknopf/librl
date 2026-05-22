@@ -9,6 +9,7 @@ class Camera3d {
 	public static inline var PERSPECTIVE:Int = rl.impl.RLImpl.CAMERA_PERSPECTIVE;
 	public static inline var ORTHOGRAPHIC:Int = rl.impl.RLImpl.CAMERA_ORTHOGRAPHIC;
 
+
 	public static function create(positionX:Float, positionY:Float, positionZ:Float, targetX:Float, targetY:Float, targetZ:Float, upX:Float, upY:Float, upZ:Float, fovy:Float, projection:Int):RLHandle {
 		return rl.impl.RLImpl.camera3dCreate(positionX, positionY, positionZ, targetX, targetY, targetZ, upX, upY, upZ, fovy, projection);
 	}

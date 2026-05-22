@@ -328,12 +328,12 @@ SIGNATURES: dict[str, str] = {
     "modelIsValidStrict": "public static function isValidStrict(model:RLHandle):Bool",
     "modelGetAnimationCount": "public static function getAnimationCount(model:RLHandle):Int",
     "modelGetAnimationFrameCount": "public static function getAnimationFrameCount(model:RLHandle, animationIndex:Int):Int",
-    "modelUpdateAnimation": "public static function updateAnimation(model:RLHandle, deltaSeconds:Float):Bool",
+    "modelUpdateAnimation": "public static function updateAnimation(model:RLHandle, animationIndex:Int, frame:Int):Void",
     "sprite3dCreate": "public static function create(texture:RLHandle):RLHandle",
     "sprite3dCreateFromFile": "public static function createFromFile(filename:String):RLHandle",
     "sprite3dSetTexture": "public static function setTexture(sprite:RLHandle, texture:RLHandle):Bool",
     "sprite3dSetTransform": "public static function setTransform(sprite:RLHandle, positionX:Float, positionY:Float, positionZ:Float, size:Float):Bool",
-    "sprite3dGetTransform": "public static function getTransform(sprite:RLHandle):RLVec2",
+    "sprite3dGetTransform": "public static function getTransform(sprite:RLHandle):RLSprite3dTransform",
     "sprite3dSetTint": "public static function setTint(sprite:RLHandle, color:RLHandle = 0):Bool",
     "sprite3dDraw": "public static function draw(sprite:RLHandle, tint:RLHandle = 0):Void",
     "sprite3dDestroy": "public static function destroy(sprite:RLHandle):Void",
@@ -479,26 +479,76 @@ def call_expr(impl: str, sig: str) -> str:
     return f"rl.impl.RLImpl.{impl}({args})"
 
 
+CLASS_PREAMBLES: dict[str, list[str]] = {
+    "Input": [
+        "public static inline var BUTTON_UP:Int = rl.impl.RLImpl.BUTTON_UP;",
+        "public static inline var BUTTON_PRESSED:Int = rl.impl.RLImpl.BUTTON_PRESSED;",
+        "public static inline var BUTTON_DOWN:Int = rl.impl.RLImpl.BUTTON_DOWN;",
+        "public static inline var BUTTON_RELEASED:Int = rl.impl.RLImpl.BUTTON_RELEASED;",
+    ],
+    "Window": [
+        "public static inline var FLAG_WINDOW_RESIZABLE:Int = rl.impl.RLImpl.FLAG_WINDOW_RESIZABLE;",
+        "public static inline var FLAG_MSAA_4X_HINT:Int = rl.impl.RLImpl.FLAG_MSAA_4X_HINT;",
+        "public static inline var FLAG_VSYNC_HINT:Int = rl.impl.RLImpl.FLAG_VSYNC_HINT;",
+    ],
+    "Camera3d": [
+        "public static inline var PERSPECTIVE:Int = rl.impl.RLImpl.CAMERA_PERSPECTIVE;",
+        "public static inline var ORTHOGRAPHIC:Int = rl.impl.RLImpl.CAMERA_ORTHOGRAPHIC;",
+    ],
+    "Asset": [
+        "public static inline var ADD_TASK_OK:Int = rl.impl.RLImpl.ASSET_ADD_TASK_OK;",
+        "public static inline var ADD_TASK_ERR_INVALID:Int = rl.impl.RLImpl.ASSET_ADD_TASK_ERR_INVALID;",
+        "public static inline var ADD_TASK_ERR_QUEUE_FULL:Int = rl.impl.RLImpl.ASSET_ADD_TASK_ERR_QUEUE_FULL;",
+    ],
+    "Logger": [
+        "public static inline var LEVEL_TRACE:Int = rl.impl.RLImpl.LOGGER_LEVEL_TRACE;",
+        "public static inline var LEVEL_DEBUG:Int = rl.impl.RLImpl.LOGGER_LEVEL_DEBUG;",
+        "public static inline var LEVEL_INFO:Int = rl.impl.RLImpl.LOGGER_LEVEL_INFO;",
+        "public static inline var LEVEL_WARN:Int = rl.impl.RLImpl.LOGGER_LEVEL_WARN;",
+        "public static inline var LEVEL_ERROR:Int = rl.impl.RLImpl.LOGGER_LEVEL_ERROR;",
+        "public static inline var LEVEL_FATAL:Int = rl.impl.RLImpl.LOGGER_LEVEL_FATAL;",
+    ],
+}
+
+TYPE_IMPORT_LINES: list[tuple[str, str]] = [
+    ("RLHandle", "import rl.Types.RLHandle;"),
+    ("RLVec2", "import rl.Types.RLVec2;"),
+    ("RLPickResult", "import rl.Types.RLPickResult;"),
+    ("RLMouseState", "import rl.Types.RLMouseState;"),
+    ("RLKeyboardState", "import rl.Types.RLKeyboardState;"),
+    ("RLGamepad", "import rl.Types.RLGamepad;"),
+    ("RLTouchpoint", "import rl.Types.RLTouchpoint;"),
+    ("RLSprite3dTransform", "import rl.Types.RLSprite3dTransform;"),
+    ("RLAsyncVoid", "import rl.Types.RLAsyncVoid;"),
+    ("Bytes", "import haxe.io.Bytes;"),
+]
+
+
+def imports_for_class(class_name: str, methods: list[tuple[str, str, str]]) -> list[str]:
+    sig_text = "\n".join(SIGNATURES[impl] for _, impl, _ in methods)
+    imports: list[str] = []
+    for type_name, line in TYPE_IMPORT_LINES:
+        if type_name in sig_text and line not in imports:
+            imports.append(line)
+    if class_name == "Fs" and "import haxe.io.Bytes;" not in imports:
+        imports.insert(0, "import haxe.io.Bytes;")
+    return imports
+
+
 def fix_method_block(content: str, class_name: str, methods: list) -> str:
-    """Regenerate with proper bodies."""
+    """Regenerate with proper bodies and minimal imports."""
     out = [
         f"/** Public façade: {class_name} subsystem. */",
         "package rl;",
         "",
     ]
-    if class_name == "Fs":
-        out.append("import haxe.io.Bytes;")
-    out.extend([
-        "import rl.Types.RLHandle;",
-        "import rl.Types.RLVec2;",
-        "import rl.Types.RLPickResult;",
-        "import rl.Types.RLMouseState;",
-        "import rl.Types.RLKeyboardState;",
-        "import rl.Types.RLAsyncVoid;",
-        "",
-        "@:keep",
-        f"class {class_name} {{",
-    ])
+    out.extend(imports_for_class(class_name, methods))
+    out.extend(["", "@:keep", f"class {class_name} {{", ""])
+
+    for line in CLASS_PREAMBLES.get(class_name, []):
+        out.append(f"\t{line}")
+    if CLASS_PREAMBLES.get(class_name):
+        out.append("")
 
     for _pub, impl, extra in methods:
         sig = SIGNATURES[impl]

@@ -3,13 +3,10 @@ package rl;
 
 import rl.Types.RLHandle;
 import rl.Types.RLVec2;
-import rl.Types.RLPickResult;
-import rl.Types.RLMouseState;
-import rl.Types.RLKeyboardState;
-import rl.Types.RLAsyncVoid;
 
 @:keep
 class Text {
+
 
 	public static function draw(text:String, x:Int, y:Int, fontSize:Int, color:RLHandle):Void {
 		rl.impl.RLImpl.textDraw(text, x, y, fontSize, color);

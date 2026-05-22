@@ -1,6 +1,7 @@
 /** Public façade: Logger subsystem. */
 package rl;
 
+
 @:keep
 class Logger {
 
@@ -10,6 +11,7 @@ class Logger {
 	public static inline var LEVEL_WARN:Int = rl.impl.RLImpl.LOGGER_LEVEL_WARN;
 	public static inline var LEVEL_ERROR:Int = rl.impl.RLImpl.LOGGER_LEVEL_ERROR;
 	public static inline var LEVEL_FATAL:Int = rl.impl.RLImpl.LOGGER_LEVEL_FATAL;
+
 
 	public static function message(level:Int, message:String):Void {
 		rl.impl.RLImpl.loggerMessage(level, message);

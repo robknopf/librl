@@ -2,12 +2,19 @@ package tests.bindings.haxe;
 
 import utest.Assert;
 import rl.RL;
+import rl.Window;
+import rl.Camera3d;
+import rl.Color;
+import rl.Render;
+import rl.Asset;
+import rl.Input;
+import rl.Text2d;
 import rl.gen.RLVersion;
 
 class TestRL extends utest.Test {
   #if cpp
   /**
-   * If a test fails (or `rl_init` returns non-zero) and we don't reach the
+   * If a test fails (or `RL.init` returns non-zero) and we don't reach the
    * per-test `RL.deinit()`, the runtime can remain initialized and the next
    * `RL.init()` will fail with EBUSY-style behavior. These hooks keep each test isolated.
    */
@@ -33,11 +40,11 @@ class TestRL extends utest.Test {
   #end
 
   public function testConstants() {
-    Assert.equals(0x00000004, RL.FLAG_WINDOW_RESIZABLE);
-    Assert.equals(0x00000020, RL.FLAG_MSAA_4X_HINT);
-    Assert.equals(0x00000040, RL.FLAG_VSYNC_HINT);
-    Assert.equals(0, RL.CAMERA_PERSPECTIVE);
-    Assert.equals(1, RL.CAMERA_ORTHOGRAPHIC);
+    Assert.equals(0x00000004, Window.FLAG_WINDOW_RESIZABLE);
+    Assert.equals(0x00000020, Window.FLAG_MSAA_4X_HINT);
+    Assert.equals(0x00000040, Window.FLAG_VSYNC_HINT);
+    Assert.equals(0, Camera3d.PERSPECTIVE);
+    Assert.equals(1, Camera3d.ORTHOGRAPHIC);
   }
 
   #if cpp
@@ -64,30 +71,30 @@ class TestRL extends utest.Test {
 
   public function testAssetHost() {
     Assert.equals(0, RL.init());
-    var host = RL.assetGetHost();
+    var host = Asset.getHost();
     Assert.notEquals(null, host);
-    var rc = RL.assetSetHost("https://example.com/assets");
+    var rc = Asset.setHost("https://example.com/assets");
     Assert.isTrue(rc == 0 || rc != 0, "assetSetHost returns int");
-    host = RL.assetGetHost();
+    host = Asset.getHost();
     Assert.notEquals(null, host);
     RL.deinit();
   }
 
   public function testLighting() {
     Assert.equals(0, RL.init());
-    RL.enableLighting();
-    Assert.equals(1, RL.isLightingEnabled());
-    RL.disableLighting();
-    Assert.equals(0, RL.isLightingEnabled());
-    RL.setLightDirection(1, 0, 0);
-    RL.setLightAmbient(0.5);
+    Render.enableLighting();
+    Assert.equals(1, Render.isLightingEnabled());
+    Render.disableLighting();
+    Assert.equals(0, Render.isLightingEnabled());
+    Render.setLightDirection(1, 0, 0);
+    Render.setLightAmbient(0.5);
     RL.deinit();
   }
 
   public function testWindowGetScreenSize() {
     // Requires window or display; may return 0,0 without
     Assert.equals(0, RL.init());
-    var size = RL.windowGetScreenSize();
+    var size = Window.getScreenSize();
     var ok = (size.x >= 0) && (size.y >= 0);
     Assert.isTrue(ok, "screen size non-negative");
     RL.deinit();
@@ -95,23 +102,23 @@ class TestRL extends utest.Test {
 
   public function testWindowGetMonitorCount() {
     Assert.equals(0, RL.init());
-    var count = RL.windowGetMonitorCount();
+    var count = Window.getMonitorCount();
     Assert.isTrue(count >= 0, "monitor count non-negative");
     RL.deinit();
   }
 
   public function testColorCreateDestroy() {
     Assert.equals(0, RL.init());
-    var c = RL.colorCreate(10, 20, 30, 40);
+    var c = Color.create(10, 20, 30, 40);
     // Just ensure we got some handle back; value is opaque.
     Assert.notEquals(0, c);
-    RL.colorDestroy(c);
+    Color.destroy(c);
     RL.deinit();
   }
 
   public function testInputMouseState() {
     Assert.equals(0, RL.init());
-    var mouse = RL.inputGetMouseState();
+    var mouse = Input.getMouseState();
     // Validate fields exist and are numeric; exact values depend on environment.
     Assert.isTrue(mouse.x >= 0 || mouse.x <= 0, "mouse.x is an Int");
     Assert.isTrue(mouse.y >= 0 || mouse.y <= 0, "mouse.y is an Int");
@@ -120,14 +127,14 @@ class TestRL extends utest.Test {
 
   public function testText2dCreateDestroy() {
     Assert.equals(0, RL.init());
-    var label = RL.text2dCreate(0, 16.0);
+    var label = Text2d.create(0, 16.0);
     Assert.notEquals(0, label, "text2d handle should be non-zero");
-    RL.text2dSetContent(label, "hello text2d");
-    RL.text2dSetPosition(label, 10.0, 20.0);
-    RL.text2dSetColor(label, 0);
-    RL.text2dSetSize(label, 24.0);
-    RL.text2dSetFont(label, 0);
-    RL.text2dDestroy(label);
+    Text2d.setContent(label, "hello text2d");
+    Text2d.setPosition(label, 10.0, 20.0);
+    Text2d.setColor(label, 0);
+    Text2d.setSize(label, 24.0);
+    Text2d.setFont(label, 0);
+    Text2d.destroy(label);
     RL.deinit();
   }
   #end

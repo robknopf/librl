@@ -167,7 +167,7 @@ Notes:
   - `getDefaultFont()` → `rl_font_get_default`
   - `getDefaultCamera3d()` → `rl_camera3d_get_default`
   - Default handles use getters only (no binding-level `FONT_DEFAULT` / `CAMERA3D_DEFAULT` constants; C symbols remain for internal use)
-- JS handle-instance methods use verb-first naming (`setText2dFont`, `setSprite3dTransform`, `setModelAnimation`, `animateModel`, …). Haxe/Nim/Lua keep section-first names aligned with C (`text2dSetFont`, `sprite3dSetTransform`, …); Haxe JS maps through `RLImpl.js.hx`.
+- JS handle-instance methods use verb-first naming (`setText2dFont`, `setSprite3dTransform`, `setModelAnimation`, `animateModel`, …). Haxe public section classes use verb-first names (`Text2d.setFont`, `Sprite3d.setTransform`, …); the impl layer keeps C-aligned names (`RLImpl.text2dSetFont`, …). Nim/Lua keep section-first names aligned with C.
 - JS task-returning asset helpers use the same naming convention as C: `_async` / `*Async` means the call starts work and returns a task handle. Default names such as `RL.asset.ensure(...)` follow the synchronous/default contract, even though JS callers still `await` them when JSPI is involved.
 
 ## Nim Binding
@@ -259,20 +259,23 @@ Binding-level async asset ergonomics:
 
 Files:
 
-- `bindings/haxe/rl/RL.hx` — public `rl.RL` module used by authored Haxe code.
+- `bindings/haxe/rl/RL.hx` — core lifecycle only: `boot`, `init`, `deinit`, `tick`, version, timing, shared init/tick constants.
+- `bindings/haxe/rl/{Fs,Asset,Window,Render,Model,...}.hx` — one public class per C API section in `package rl` (e.g. `rl.Fs.init()`, `rl.Asset.ensure()`). Method names are verb-first within each class; the impl layer keeps C-aligned names (`RLImpl.fsInit`, …).
+- `bindings/haxe/rl/helpers/*.hx` — binding ergonomics (not C API), e.g. `rl.helpers.TaskGroup.create()`, `rl.helpers.Log.info()`. JS equivalent bucket: `RL.helpers.*` (where applicable).
+- `tools/gen_haxe_public_sections.py` — regenerates section façade files from `include/*.h` (parity audits can be run per generated file).
 - `bindings/haxe/rl/impl/RLImpl.cpp.hx` — current hxcpp backend implementation. Contains all `@:native`, `untyped __cpp__`, `@:functionCode`, and bridge classes.
 - `bindings/haxe/rl/impl/RLImpl.js.hx` — Haxe `js` backend. It is a thin adapter over the standalone JS binding exported from `bindings/js/rl.js`.
 - `bindings/haxe/rl/impl/RLImpl.hx` — unsupported fallback that fails compilation for targets without a backend.
-- `bindings/haxe/rl/RLHandle.hx` — shared integer handle type.
-- `bindings/haxe/rl/impl/RLFileioImpl.cpp.hx` — current hxcpp-only fs/asset impl (`RLFileio` internal class; public API is `RL.fsInit`, `RL.assetEnsure`, …).
-- `bindings/haxe/rl/RLTaskGroup.hx` — pure Haxe task group helper; all methods are non-inline for cppia compatibility.
+- `bindings/haxe/rl/Types.hx` — shared binding types (`RLHandle`, `RLVec2`, config structs, input state, …).
+- `bindings/haxe/rl/impl/RLFileioImpl.cpp.hx` — current hxcpp-only fs/asset impl (`RLFileio` internal class).
+- `bindings/haxe/rl/helpers/TaskGroup.hx` — binding helper (not C API); uses `Asset.*` for task polling.
 - `bindings/haxe/rl/InjectLibRL.hx`
 - `examples/haxe-simple/src/Main.hx`
 
 Role:
 
 - Exposes `librl` APIs to Haxe via hxcpp externs (C++ FFI).
-- `RL.hx` is the script-facing/public API module and must remain free of `cpp.*`, `@:native`, and `untyped __cpp__`.
+- Section façade classes (`rl.Fs`, `rl.Asset`, …) and `RL.hx` are script-facing/public API modules and must remain free of `cpp.*`, `@:native`, and `untyped __cpp__`.
 - `RLImpl.cpp.hx` currently holds the hxcpp-specific backend and is compiled into the host binary with `-D scriptable`.
 - Uses `@:buildXml`, `@:functionCode` in `RLImpl.cpp.hx` to:
   - Include `rl.h` / `rl_fs.h` / `rl_asset.h`.
@@ -283,8 +286,9 @@ Role:
 
 Current state:
 
-- `RL.hx` is now a real façade class with no target branches in its public method bodies.
-- `RL.hx` delegates into `rl.impl.RLImpl`, which resolves by target:
+- `RL.hx` owns core lifecycle and shared constants only.
+- Subsystem APIs live in sibling classes under `package rl` (`Fs`, `Asset`, `Window`, `Render`, `Model`, …).
+- Each section class delegates into `rl.impl.RLImpl`, which resolves by target:
   - `RLImpl.cpp.hx` on `cpp`
   - `RLImpl.js.hx` on `js`
   - `RLImpl.hx` for unsupported targets, which fails at compile time
@@ -295,7 +299,7 @@ Current state:
   - Haxe JS uses a typed `RLBootConfig` surface with flattened fields like `bindingsPath`, `canvasId`, `modulePath`, `wasmPath`, `idealWidth`, `idealHeight`, `print`, `printErr`, and `locateFile`.
 - Haxe JS returns Promises for blocking JSPI-backed calls:
   - `RL.init(...)`, `RL.initAsync(...)`, `RL.deinit()`
-  - `RL.fsInit(...)`, `RL.fsDeinit()`, `RL.assetEnsure(...)`
+  - `Fs.init(...)`, `Fs.deinit()`, `Asset.ensure(...)`
   - The `*Async` task-starting APIs keep their C semantics: they return immediate status/task handles and are polled/finished through the asset task API.
 - The Haxe JS backend now reuses `bindings/js/*` exclusively. `RLImpl.js.hx` no longer calls the wasm exports directly; all browser-side behavior flows through the JS binding layer.
 - On Haxe JS, scratch refresh is internal to `RL.tick()` (forwards to `bindings/js/rl.js` `refreshScratch()`). `RL.scratchRefresh()` is intentionally not on the Haxe public surface.
@@ -305,8 +309,9 @@ Current state:
 
 Target-neutral direction:
 
-- `rl.RL` should be the stable public façade that authored Haxe code imports on every target.
-- `rl.RL` should own public helpers and forward calls into a backend module; it should not collapse into a `typedef` alias of an hxcpp implementation type.
+- `rl.RL` remains the entry point for lifecycle/version/timing.
+- Subsystem calls use `rl.Fs`, `rl.Asset`, `rl.Window`, etc. Authored code should not import `rl.impl.*`.
+- `rl.RL` and section classes forward into a backend module; they should not collapse into `typedef` aliases of hxcpp implementation types.
 - Target-specific implementation should live under backend files selected by target, for example:
   - `bindings/haxe/rl/impl/RLImpl.cpp.hx`
   - `bindings/haxe/rl/impl/RLImpl.js.hx`
@@ -317,14 +322,14 @@ Target-neutral direction:
 
 Design rules for that split:
 
-- `RL.hx` stays target-neutral:
+- `RL.hx` and section façade classes stay target-neutral:
   - no `cpp.*`
   - no `@:native`
   - no `untyped __cpp__`
 - `RLImpl.*.hx` owns target-specific plumbing.
-- The backend contract is currently structural: each `RLImpl.<target>.hx` must provide the static members called by `RL.hx`.
+- The backend contract is structural: each `RLImpl.<target>.hx` must provide the static members called by section classes and `RL.hx`.
 - Do not use `RLImpl.hx` as an implementation shim; it exists only to fail clearly for unsupported targets.
-- Authored/gameplay code should import only `rl.RL`, not `rl.impl.*`.
+- Authored/gameplay code should import `rl.RL` plus the section classes it needs, not `rl.impl.*`.
 - Public handle types exposed from `rl.*` should be stable across targets; backend-specific representations such as `cpp.UInt64` should stay internal to the backend layer.
 
 Practical implication:
@@ -337,13 +342,13 @@ Used by:
 
 Notes:
 
-- The Haxe binding mirrors the C naming:
-  - `RL.modelCreate`, `RL.sprite3dCreate`, `RL.camera3dCreate`, etc.
-  - Constants like `RL.FLAG_MSAA_4X_HINT`, `RL.CAMERA_PERSPECTIVE`.
-  - Init result constants like `RL.INIT_OK`, `RL.INIT_ERR_ALREADY_INITIALIZED`.
+- Public Haxe API mirrors C sections, with verb-first methods inside each class:
+  - `Model.create`, `Sprite3d.create`, `Camera3d.create`, `Fs.init`, `Asset.ensure`, etc.
+  - Section constants: `Window.FLAG_MSAA_4X_HINT`, `Camera3d.PERSPECTIVE`, `Logger.LEVEL_INFO`, `Asset.ADD_TASK_OK`.
+  - Core constants on `RL`: `RL.INIT_OK`, `RL.TICK_RUNNING`, …
   - `RL.isInitialized()` wraps `rl_is_initialized()`.
   - `RL.getPlatform()` wraps `rl_get_platform()`.
-  - `RL.windowCloseRequested()` wraps `rl_window_close_requested()`.
+  - `Window.closeRequested()` wraps `rl_window_close_requested()`.
 - WASM builds use hxcpp's emscripten toolchain with `MODULARIZE=1` and `EXPORT_ES6=1`:
   - `examples/haxe-simple/build.wasm.hxml`
   - `examples/haxe-simple/build.hxml` dispatches between the desktop and wasm build configs.
@@ -356,22 +361,20 @@ Notes:
 Async fs/asset sugar:
 
 - The binding exposes both init contracts:
-  - `RL.init(...)`
-  - `RL.initAsync(...)`
-  - `RL.fsInit([rootDir])`
-  - `RL.fsInitAsync([rootDir])`
-  - `RL.fsIsInitialized(): Bool`
-- The binding exposes:
-  - `RL.assetSetHost(assetHost: String): Int` / `RL.assetGetHost(): String`
-  - `RL.assetPingHost(assetHost?): Float` → RTT ms, or `< 0` on failure
-  - `RL.assetEnsureAsync(localPath: String, ?src: String): RLHandle`
+  - `RL.init(...)` / `RL.initAsync(...)`
+  - `Fs.init([rootDir])` / `Fs.initAsync([rootDir])`
+  - `Fs.isInitialized(): Bool`
+- Asset helpers:
+  - `Asset.setHost(assetHost: String): Int` / `Asset.getHost(): String`
+  - `Asset.pingHost(assetHost?): Float` → RTT ms, or `< 0` on failure
+  - `Asset.ensureAsync(localPath: String, ?src: String): RLHandle`
   - `RLFileio.assetAddTask(task, onSuccess, onFailure, userData)` with the callback path derived from `RLFileio.assetGetTaskPath(task)` (internal cpp class)
-  - `RL.assetPollTask(task: RLHandle): Bool`
-  - `RL.assetFinishTask(task: RLHandle): Int`
-  - `RL.assetCreateTaskGroup<T>(onComplete?, onError?, ctx?)`
-  - `RLTaskGroup.addImportTask(path, onSuccess?, onError?)`
-  - `RLTaskGroup.process()`, `RLTaskGroup.remainingTasks()`, `RLTaskGroup.failedPaths()`
-  - `RL.assetAddTask(task, onSuccess, onFailure, ctx)`
+  - `Asset.pollTask(task: RLHandle): Bool`
+  - `Asset.finishTask(task: RLHandle): Int`
+  - `TaskGroup.create<T>(onComplete?, onError?, ctx?)` (`rl.helpers.TaskGroup`)
+  - `TaskGroup.addImportTask(path, onSuccess?, onError?)`
+  - `TaskGroup.process()`, `TaskGroup.remainingTasks()`, `TaskGroup.failedPaths()`
+  - `Asset.addTask(task, onSuccess, onFailure, ctx)`
 - `rl_asset_add_task` is wrapped so Haxe asset callbacks use plain `(path, ctx)` handlers:
   - `RL.assetAddTask(task, onAssetReady, onAssetFailed, ctx)`
 - `RL.assetAddTask(...)` consumes the task handle when queueing succeeds; use task groups or callbacks rather than polling the same handle after queueing it.
@@ -392,7 +395,7 @@ Role:
 
 - `bindings/lua/rl_lua*.c` exposes direct C-backed Lua APIs.
 - **`rl.asset_create_task_group`** is implemented in C (`rl_lua_task_group.c`), same role as:
-  - Haxe: `RL.assetCreateTaskGroup` → `RLTaskGroup` (`rl/RL.hx`, `rl/RLTaskGroup.hx`)
+  - Haxe: `TaskGroup.create` → `rl.helpers.TaskGroup` (`bindings/haxe/rl/helpers/TaskGroup.hx`); JS equivalent: `RL.helpers.createTaskGroup()`
   - Nim: `assetCreateTaskGroup` / `RLTaskGroup` in `rl.nim`
 
 Notes:
@@ -432,7 +435,7 @@ Notes:
   - Lua: lower snake case function names.
     - examples: `frame_buffer_submit`, `window_get_screen_size`
   - Nim: snake_case aligned with C names, but all public procs use native Nim types (`int`/`float`/`string`). Internal C bridge procs use `_c` or `_raw` suffix.
-  - Haxe: lowerCamelCase method names, section-first (`text2dSetFont`, `assetEnsure`, …).
+  - Haxe: verb-first methods on section classes (`Fs.init`, `Asset.ensure`, `Text2d.setFont`, …); impl layer is C-aligned.
     - examples: `frameBufferSubmit`, `windowGetScreenSize`
   - JavaScript (`bindings/js/rl.js`): nested namespaces per C header (`RL.fs`, `RL.asset`, …); verb-first for handle-instance methods (`setText2dFont`, `createSprite3d`, `getDefaultTexture`).
 - Avoid inventing alternate verb ordering in Haxe/Lua/Nim if the C API is clear.

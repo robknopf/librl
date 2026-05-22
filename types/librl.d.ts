@@ -190,6 +190,7 @@ export interface RLSprite3d {
   createFromFile(...args: unknown[]): unknown;
   setTexture(...args: unknown[]): unknown;
   setTransform(...args: unknown[]): unknown;
+  getDefaultTexture(...args: unknown[]): unknown;
   getTransform(sprite: RLHandle): RLSprite3dTransform | null;
   setTint(...args: unknown[]): unknown;
   draw(...args: unknown[]): unknown;
@@ -198,6 +199,7 @@ export interface RLSprite3d {
 export interface RLSprite2d {
   create(...args: unknown[]): unknown;
   createFromFile(...args: unknown[]): unknown;
+  getDefaultTexture(...args: unknown[]): unknown;
   setTexture(...args: unknown[]): unknown;
   setTransform(...args: unknown[]): unknown;
   setTint(...args: unknown[]): unknown;

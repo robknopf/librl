@@ -1,11 +1,27 @@
 package;
 
 import rl.RL;
-import rl.RLHandle;
-import rl.Log;
+import rl.Window;
+import rl.Camera3d;
+import rl.Color;
+import rl.Render;
+import rl.Asset;
+import rl.Fs;
+import rl.Logger;
+import rl.Text2d;
+import rl.Font;
+import rl.Model;
+import rl.Sprite3d;
+import rl.Music;
+import rl.Text;
+import rl.Input;
+import rl.Pick;
+
+import rl.Types.RLHandle;
+import rl.helpers.Log;
 import haxe.io.Path;
 import Types.RTResult;
-import rl.RLTypes.RLPickResult;
+import rl.Types.RLPickResult;
 import Script;
 
 /*
@@ -37,7 +53,7 @@ class MainScript extends Script {
 	final SCREEN_WIDTH:Int = 1024;
 	final SCREEN_HEIGHT:Int = 1280;
 	final SCREEN_TITLE:String = "cppia-simple (Haxe runtime)";
-	final SCREEN_FLAGS:Int = RL.FLAG_MSAA_4X_HINT;
+	final SCREEN_FLAGS:Int = Window.FLAG_MSAA_4X_HINT;
 
 	// this doesn't work since we are a script.  emscripten/platform web isn't defined
 	// TODO: figure out how to detect if we are running in a browser or not (ask the host?)
@@ -84,7 +100,7 @@ class MainScript extends Script {
 			spriteYOffset: 3.0,
 			backgroundColor: 0
 		};
-		RL.loggerSetLevel(RL.LOGGER_LEVEL_WARN);
+		Logger.setLevel(Logger.LEVEL_WARN);
 		var err = RL.init({
 			windowWidth: SCREEN_WIDTH,
 			windowHeight: SCREEN_HEIGHT,
@@ -98,69 +114,69 @@ class MainScript extends Script {
 			return RT_FAILED;
 		}
 
-		RL.windowSetMonitor(1);
+		Window.setMonitor(1);
 
-		RL.fsClear();
+		Fs.clear();
 
 		// Setup lighting and camera
-		RL.enableLighting();
-		RL.setLightDirection(-0.6, -1.0, -0.5);
-		RL.setLightAmbient(0.25);
-		ctx.camera = RL.camera3dCreate(12.0, 12.0, 12.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 45.0, RL.CAMERA_PERSPECTIVE);
-		RL.camera3dSetActive(ctx.camera);
-		ctx.greyAlphaColor = RL.colorCreate(0, 0, 0, 128);
-		ctx.backgroundColor = RL.colorCreate(245, 245, 245, 255);
+		Render.enableLighting();
+		Render.setLightDirection(-0.6, -1.0, -0.5);
+		Render.setLightAmbient(0.25);
+		ctx.camera = Camera3d.create(12.0, 12.0, 12.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 45.0, Camera3d.PERSPECTIVE);
+		Camera3d.setActive(ctx.camera);
+		ctx.greyAlphaColor = Color.create(0, 0, 0, 128);
+		ctx.backgroundColor = Color.create(245, 245, 245, 255);
 
-		ctx.labelText2d = RL.text2dCreate(0, KOMIKA_FONT_SIZE);
-		RL.text2dSetContent(ctx.labelText2d, "rl_text2d: retained label");
-		RL.text2dSetPosition(ctx.labelText2d, 10, 136);
-		RL.text2dSetColor(ctx.labelText2d, RL.COLOR_GREEN);
+		ctx.labelText2d = Text2d.create(0, KOMIKA_FONT_SIZE);
+		Text2d.setContent(ctx.labelText2d, "rl_text2d: retained label");
+		Text2d.setPosition(ctx.labelText2d, 10, 136);
+		Text2d.setColor(ctx.labelText2d, Color.GREEN);
 
-		ctx.model = RL.modelCreate(0);
-					RL.modelSetTransform(ctx.model, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
-			RL.modelSetAnimation(ctx.model, 1);
-			RL.modelSetAnimationSpeed(ctx.model, 1.0);
-			RL.modelSetAnimationLoop(ctx.model, true);
+		ctx.model = Model.create(0);
+					Model.setTransform(ctx.model, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+			Model.setAnimation(ctx.model, 1);
+			Model.setAnimationSpeed(ctx.model, 1.0);
+			Model.setAnimationLoop(ctx.model, true);
 
 		loadAssets();
 
 		platformText = getPlatformText();
 
-		RL.renderBegin();
-		RL.renderClearBackground(ctx.backgroundColor);
-		RL.renderEnd();
+		Render.begin();
+		Render.clearBackground(ctx.backgroundColor);
+		Render.end();
 
 		return RT_SUCCESS;
 	}
 
 	function loadAssets():Void {
-		RL.assetAddTask(RL.assetEnsureAsync(DEBUG_FONT_PATH), (path, _) -> {
-			ctx.debugFont = RL.fontCreate(path, DEBUG_FONT_SIZE);
+		Asset.addTask(Asset.ensureAsync(DEBUG_FONT_PATH), (path, _) -> {
+			ctx.debugFont = Font.create(path, DEBUG_FONT_SIZE);
 		}, null, ctx);
-		RL.assetAddTask(RL.assetEnsureAsync(KOMIKA_FONT_PATH), (path, _) -> {
-			ctx.komikaFont = RL.fontCreate(path, KOMIKA_FONT_SIZE);
+		Asset.addTask(Asset.ensureAsync(KOMIKA_FONT_PATH), (path, _) -> {
+			ctx.komikaFont = Font.create(path, KOMIKA_FONT_SIZE);
 			if (ctx.labelText2d != 0) {
-				RL.text2dSetFont(ctx.labelText2d, ctx.komikaFont);
+				Text2d.setFont(ctx.labelText2d, ctx.komikaFont);
 			}
 		}, null, ctx);
-		RL.assetAddTask(RL.assetEnsureAsync(MODEL_PATH), (path, _) -> {
-			var modelAsset = RL.modelLoadAsset(MODEL_PATH);	
-			RL.modelSetAsset(ctx.model, modelAsset);
+		Asset.addTask(Asset.ensureAsync(MODEL_PATH), (path, _) -> {
+			var modelAsset = Model.loadAsset(MODEL_PATH);	
+			Model.setAsset(ctx.model, modelAsset);
 		}, null, ctx);
-		RL.assetAddTask(RL.assetEnsureAsync(SPRITE_PATH), (path, _) -> {
-			ctx.sprite = RL.sprite3dCreateFromFile(path);
-			RL.sprite3dSetTransform(ctx.sprite, 0.0, 0.0, ctx.spriteYOffset, 1.0);
+		Asset.addTask(Asset.ensureAsync(SPRITE_PATH), (path, _) -> {
+			ctx.sprite = Sprite3d.createFromFile(path);
+			Sprite3d.setTransform(ctx.sprite, 0.0, 0.0, ctx.spriteYOffset, 1.0);
 		}, null, ctx);
-		RL.assetAddTask(RL.assetEnsureAsync(BGM_PATH), (path, _) -> {
-			ctx.bgm = RL.musicCreate(path);
-			RL.musicSetLoop(ctx.bgm, true);
-			RL.musicPlay(ctx.bgm);
+		Asset.addTask(Asset.ensureAsync(BGM_PATH), (path, _) -> {
+			ctx.bgm = Music.create(path);
+			Music.setLoop(ctx.bgm, true);
+			Music.play(ctx.bgm);
 		}, null, ctx);
 	}
 
 	public function animateFrame(deltaTimeSec:Float):Void {
 		if (ctx.model != 0) {
-			RL.modelAnimate(ctx.model, deltaTimeSec);
+			Model.animate(ctx.model, deltaTimeSec);
 		}
 
 		var spriteX = 0.0;
@@ -187,7 +203,7 @@ class MainScript extends Script {
 			*/
 
 		if (ctx.sprite != 0) {
-			RL.sprite3dSetTransform(ctx.sprite, spriteX, spriteY, spriteZ, 1.0);
+			Sprite3d.setTransform(ctx.sprite, spriteX, spriteY, spriteZ, 1.0);
 		}
 	}
 
@@ -202,9 +218,9 @@ class MainScript extends Script {
 
 		animateFrame(deltaTimeSec);
 
-		RL.musicUpdateAll();
+		Music.updateAll();
 
-		var mouse = RL.inputGetMouseState();
+		var mouse = Input.getMouseState();
 		var mouseText = 'Mouse: (${mouse.x}, ${mouse.y}) w:${mouse.wheel} b:[${mouse.left}, ${mouse.right}, ${mouse.middle}]';
 		var remainingText = 'Remaining: ${formatFixed(ctx.countdownTimer, 2)}';
 		var elapsedText = 'Elapsed: ${formatFixed(ctx.totalTime, 2)}';
@@ -214,7 +230,7 @@ class MainScript extends Script {
 		var pickResult:RLPickResult;
 
 		if (ctx.model != 0) {
-			pickResult = RL.pickModel(ctx.camera, ctx.model, mouse.x, mouse.y);
+			pickResult = Pick.model(ctx.camera, ctx.model, mouse.x, mouse.y);
 			if (pickResult.hit) {
 				trace('Model pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y);
 				msg = 'Model pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y;
@@ -222,68 +238,68 @@ class MainScript extends Script {
 		}
 
 		if (ctx.sprite != 0) {
-			pickResult = RL.pickSprite3d(ctx.camera, ctx.sprite, mouse.x, mouse.y);
+			pickResult = Pick.sprite3d(ctx.camera, ctx.sprite, mouse.x, mouse.y);
 			if (pickResult.hit) {
 				trace('Sprite pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y);
 				msg = 'Sprite pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y;
 			}
 		}
 
-		RL.renderBegin();
-		RL.renderClearBackground(ctx.backgroundColor);
+		Render.begin();
+		Render.clearBackground(ctx.backgroundColor);
 
 		// 3d render
-		RL.renderBeginMode3d();
+		Render.beginMode3d();
 		if (ctx.model != 0) {
-			RL.modelDraw(ctx.model, RL.COLOR_RAYWHITE);
+			Model.draw(ctx.model, Color.RAYWHITE);
 		}
 		if (ctx.sprite != 0) {
-			RL.sprite3dDraw(ctx.sprite, RL.COLOR_RAYWHITE);
+			Sprite3d.draw(ctx.sprite, Color.RAYWHITE);
 		}
-		RL.renderEndMode3d();
+		Render.endMode3d();
 
 		// 2D UI overlay
-		var screen = RL.windowGetScreenSize();
+		var screen = Window.getScreenSize();
 		if (ctx.komikaFont != 0) {
-			var textSize = RL.textMeasureEx(ctx.komikaFont, msg, KOMIKA_FONT_SIZE, 1.0);
+			var textSize = Text.measureEx(ctx.komikaFont, msg, KOMIKA_FONT_SIZE, 1.0);
 			var textX = Std.int((screen.x - textSize.x) / 2);
 			var textY = Std.int((screen.y - textSize.y) / 2);
-			RL.textDrawEx(ctx.komikaFont, msg, textX, textY, KOMIKA_FONT_SIZE, 1.0, RL.COLOR_BLUE);
+			Text.drawEx(ctx.komikaFont, msg, textX, textY, KOMIKA_FONT_SIZE, 1.0, Color.BLUE);
 		} else {
-			var textWidth = RL.textMeasure(msg, KOMIKA_FONT_SIZE);
+			var textWidth = Text.measure(msg, KOMIKA_FONT_SIZE);
 			var textX = Std.int((screen.x - textWidth) / 2);
 			var textY = Std.int((screen.y - KOMIKA_FONT_SIZE) / 2);
-			RL.textDraw(msg, textX, textY, KOMIKA_FONT_SIZE, RL.COLOR_BLUE);
+			Text.draw(msg, textX, textY, KOMIKA_FONT_SIZE, Color.BLUE);
 		}
 		if (ctx.debugFont != 0) {
-			RL.textDrawEx(ctx.debugFont, remainingText, 10, 36, DEBUG_FONT_SIZE, 1.0, RL.COLOR_BLACK);
-			RL.textDrawEx(ctx.debugFont, elapsedText, 10, 56, DEBUG_FONT_SIZE, 1.0, RL.COLOR_BLACK);
-			RL.textDrawEx(ctx.debugFont, mouseText, 10, 76, DEBUG_FONT_SIZE, 1.0, RL.COLOR_BLACK);
-			RL.textDrawEx(ctx.debugFont, 'Reloads: ${ctx.reloadCount}', 10, 96, DEBUG_FONT_SIZE, 1.0, RL.COLOR_BLACK);
+			Text.drawEx(ctx.debugFont, remainingText, 10, 36, DEBUG_FONT_SIZE, 1.0, Color.BLACK);
+			Text.drawEx(ctx.debugFont, elapsedText, 10, 56, DEBUG_FONT_SIZE, 1.0, Color.BLACK);
+			Text.drawEx(ctx.debugFont, mouseText, 10, 76, DEBUG_FONT_SIZE, 1.0, Color.BLACK);
+			Text.drawEx(ctx.debugFont, 'Reloads: ${ctx.reloadCount}', 10, 96, DEBUG_FONT_SIZE, 1.0, Color.BLACK);
 		} else {
-			RL.textDraw(remainingText, 10, 36, DEBUG_FONT_SIZE, RL.COLOR_BLACK);
-			RL.textDraw(elapsedText, 10, 56, DEBUG_FONT_SIZE, RL.COLOR_BLACK);
-			RL.textDraw(mouseText, 10, 76, DEBUG_FONT_SIZE, RL.COLOR_BLACK);
-			RL.textDraw('Reloads: ${ctx.reloadCount}', 10, 96, DEBUG_FONT_SIZE, RL.COLOR_BLACK);
-		}
-
-		if (ctx.debugFont != 0) {
-			RL.textDrawEx(ctx.debugFont, platformText, 10, 116, DEBUG_FONT_SIZE, 1.0, RL.COLOR_BLACK);
-		} else {
-			RL.textDraw(platformText, 10, 116, DEBUG_FONT_SIZE, RL.COLOR_BLACK);
+			Text.draw(remainingText, 10, 36, DEBUG_FONT_SIZE, Color.BLACK);
+			Text.draw(elapsedText, 10, 56, DEBUG_FONT_SIZE, Color.BLACK);
+			Text.draw(mouseText, 10, 76, DEBUG_FONT_SIZE, Color.BLACK);
+			Text.draw('Reloads: ${ctx.reloadCount}', 10, 96, DEBUG_FONT_SIZE, Color.BLACK);
 		}
 
 		if (ctx.debugFont != 0) {
-			RL.textDrawFpsEx(ctx.debugFont, 10, 10, DEBUG_FONT_SIZE, ctx.greyAlphaColor);
+			Text.drawEx(ctx.debugFont, platformText, 10, 116, DEBUG_FONT_SIZE, 1.0, Color.BLACK);
 		} else {
-			RL.textDrawFps(10, 10);
+			Text.draw(platformText, 10, 116, DEBUG_FONT_SIZE, Color.BLACK);
+		}
+
+		if (ctx.debugFont != 0) {
+			Text.drawFpsEx(ctx.debugFont, 10, 10, DEBUG_FONT_SIZE, ctx.greyAlphaColor);
+		} else {
+			Text.drawFps(10, 10);
 		}
 
 		if (ctx.labelText2d != 0) {
-			RL.text2dDraw(ctx.labelText2d);
+			Text2d.draw(ctx.labelText2d);
 		}
 
-		RL.renderEnd();
+		Render.end();
 
 		return RT_SUCCESS;
 	}
@@ -316,10 +332,10 @@ class MainScript extends Script {
 			modelPath = "assets/models/gumshoe/gumshoe.glb";
 		}
 
-		RL.assetAddTask(RL.assetEnsureAsync(modelPath), (path, _) -> {
-			var modelAsset = RL.modelLoadAsset(path);
+		Asset.addTask(Asset.ensureAsync(modelPath), (path, _) -> {
+			var modelAsset = Model.loadAsset(path);
 			//trace(modelAsset);
-			RL.modelSetAsset(ctx.model, modelAsset);
+			Model.setAsset(ctx.model, modelAsset);
 		}, (path, _) -> {
 			Log.error('Failed to ensure asset: ${path}');
 		}, ctx);

@@ -1,7 +1,23 @@
 import rl.RL;
-import rl.Log;
-import rl.RLHandle;
-import rl.RLTypes.RLPickResult;
+import rl.Window;
+import rl.Camera3d;
+import rl.Color;
+import rl.Render;
+import rl.Asset;
+import rl.Fs;
+import rl.Logger;
+import rl.Text2d;
+import rl.Font;
+import rl.Model;
+import rl.Sprite3d;
+import rl.Music;
+import rl.Text;
+import rl.Input;
+import rl.Pick;
+
+import rl.helpers.Log;
+import rl.Types.RLHandle;
+import rl.Types.RLPickResult;
 import InjectWasmExports;
 import haxe.io.Path;
 
@@ -30,7 +46,7 @@ typedef AppContext = {
 
 class SimpleRuntime implements IRuntime {
 	final SCREEN_TITLE:String = "haxe-simple (Haxe runtime)";
-	final SCREEN_FLAGS:Int = RL.FLAG_MSAA_4X_HINT;
+	final SCREEN_FLAGS:Int = Window.FLAG_MSAA_4X_HINT;
 	final SCREEN_WIDTH:Int = 1024;
 	final SCREEN_HEIGHT:Int = 1280;
 	final DEBUG_FONT_SIZE:Int = 18;
@@ -80,16 +96,16 @@ class SimpleRuntime implements IRuntime {
 		}
 
 		// supress any boot messages unless they are warning+
-		RL.loggerSetLevel(RL.LOGGER_LEVEL_WARN);
+		Logger.setLevel(Logger.LEVEL_WARN);
 
 		/* 
 			// if we need to get an initial boot file (like external boot script)
 			// we can init the loader separate from the rest of librl. 
 			// that will allow us to fetch files required before init
 			// otherwise, use RL.init() for normal flow
-			var rc = @await RL.fsInit();
+			var rc = @await Fs.init();
 			if (rc != 0) {
-				Log.error("RL.fsInit failed: " + rc);
+				Log.error("Fs.init failed: " + rc);
 				return RT_FAILED;
 			}
 		 */
@@ -128,43 +144,43 @@ class SimpleRuntime implements IRuntime {
 			return RT_FAILED;
 		}
 
-		RL.fsClear();
+		Fs.clear();
 
 		// Setup lighting and camera
-		RL.enableLighting();
-		RL.setLightDirection(-0.6, -1.0, -0.5);
-		RL.setLightAmbient(0.25);
-		ctx.camera = RL.camera3dCreate(12.0, 12.0, 12.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 45.0, RL.CAMERA_PERSPECTIVE);
-		RL.camera3dSetActive(ctx.camera);
-		ctx.greyAlphaColor = RL.colorCreate(0, 0, 0, 128);
-		ctx.backgroundColor = RL.colorCreate(245, 245, 245, 255);
+		Render.enableLighting();
+		Render.setLightDirection(-0.6, -1.0, -0.5);
+		Render.setLightAmbient(0.25);
+		ctx.camera = Camera3d.create(12.0, 12.0, 12.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 45.0, Camera3d.PERSPECTIVE);
+		Camera3d.setActive(ctx.camera);
+		ctx.greyAlphaColor = Color.create(0, 0, 0, 128);
+		ctx.backgroundColor = Color.create(245, 245, 245, 255);
 
 		// create a text2d.  Note that it we will update the font when it is available
-		ctx.labelText2d = RL.text2dCreate(0, KOMIKA_FONT_SIZE);
-		RL.text2dSetContent(ctx.labelText2d, "rl_text2d: retained label");
-		RL.text2dSetPosition(ctx.labelText2d, 10, 136);
-		RL.text2dSetColor(ctx.labelText2d, RL.COLOR_GREEN);
+		ctx.labelText2d = Text2d.create(0, KOMIKA_FONT_SIZE);
+		Text2d.setContent(ctx.labelText2d, "rl_text2d: retained label");
+		Text2d.setPosition(ctx.labelText2d, 10, 136);
+		Text2d.setColor(ctx.labelText2d, Color.GREEN);
 
 		// create a model3d.  Note that it we will update the model asset (mesh/skeleton/animation) when it is available
 		// we could pass 0 for the assetHandleId, in which case it won't get rendered ( 0 = noop)
-		ctx.gumshoe = RL.modelCreate(RL.modelGetDefaultAsset());
-		RL.modelSetTint(ctx.gumshoe, RL.COLOR_BLUE);
-		RL.modelSetAnimation(ctx.gumshoe, 1);
-		RL.modelSetAnimationSpeed(ctx.gumshoe, 1.0);
-		RL.modelSetAnimationLoop(ctx.gumshoe, true);
-		RL.modelSetTransform(ctx.gumshoe, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+		ctx.gumshoe = Model.create(Model.getDefaultAsset());
+		Model.setTint(ctx.gumshoe, Color.BLUE);
+		Model.setAnimation(ctx.gumshoe, 1);
+		Model.setAnimationSpeed(ctx.gumshoe, 1.0);
+		Model.setAnimationLoop(ctx.gumshoe, true);
+		Model.setTransform(ctx.gumshoe, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
 		
 		// set the fonts to the default font, they will be replaced when the real fonts come in
-		//var defaultFont = RL.fontGetDefault();
+		//var defaultFont = Font.getDefault();
 
 		queueAssets();
 
 		platformText = getPlatformText();
 
 		// clear the screen
-		RL.renderBegin();
-		RL.renderClearBackground(ctx.backgroundColor);
-		RL.renderEnd();
+		Render.begin();
+		Render.clearBackground(ctx.backgroundColor);
+		Render.end();
 
 		return RT_SUCCESS;
 	}
@@ -179,20 +195,20 @@ class SimpleRuntime implements IRuntime {
 
 		animateFrame(deltaTimeSec);
 
-		RL.musicUpdateAll();
+		Music.updateAll();
 
-		var mouse = RL.inputGetMouseState();
+		var mouse = Input.getMouseState();
 		var mouseText = 'Mouse: (${mouse.x}, ${mouse.y}) w:${mouse.wheel} b:[${mouse.left}, ${mouse.right}, ${mouse.middle}]';
 		var remainingText = 'Remaining: ${formatFixed(ctx.countdownTimer, 2)}';
 		var elapsedText = 'Elapsed: ${formatFixed(ctx.totalTime, 2)}';
 
-		// var pickResult = RL.pickSprite3d(ctx.camera, ctx.sprite, mouse.x, mouse.y);
+		// var pickResult = Pick.sprite3d(ctx.camera, ctx.sprite, mouse.x, mouse.y);
 		msg = "Nothing picked!";
 
 		var pickResult:RLPickResult;
 
 		if (ctx.gumshoe != 0) {
-			pickResult = RL.pickModel(ctx.camera, ctx.gumshoe, mouse.x, mouse.y);
+			pickResult = Pick.model(ctx.camera, ctx.gumshoe, mouse.x, mouse.y);
 			if (pickResult.hit) {
 				trace('Model pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y);
 				msg = 'Model pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y;
@@ -200,64 +216,64 @@ class SimpleRuntime implements IRuntime {
 		}
 
 		if (ctx.sprite != 0) {
-			pickResult = RL.pickSprite3d(ctx.camera, ctx.sprite, mouse.x, mouse.y);
+			pickResult = Pick.sprite3d(ctx.camera, ctx.sprite, mouse.x, mouse.y);
 			if (pickResult.hit) {
 				trace('Sprite pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y);
 				msg = 'Sprite pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y;
 			}
 		}
 
-		RL.renderBegin();
-		RL.renderClearBackground(ctx.backgroundColor);
+		Render.begin();
+		Render.clearBackground(ctx.backgroundColor);
 
 		// 3D render
-		RL.renderBeginMode3d();
-		RL.modelDraw(ctx.gumshoe);
-		RL.sprite3dDraw(ctx.sprite);
-		RL.renderEndMode3d();
+		Render.beginMode3d();
+		Model.draw(ctx.gumshoe);
+		Sprite3d.draw(ctx.sprite);
+		Render.endMode3d();
 
 		// 2D UI overlay
-		var screen = RL.windowGetScreenSize();
+		var screen = Window.getScreenSize();
 		if (ctx.komikaFont != 0) {
-			var textSize = RL.textMeasureEx(ctx.komikaFont, msg, KOMIKA_FONT_SIZE, 1.0);
+			var textSize = Text.measureEx(ctx.komikaFont, msg, KOMIKA_FONT_SIZE, 1.0);
 			var textX = Std.int((screen.x - textSize.x) / 2);
 			var textY = Std.int((screen.y - textSize.y) / 2);
-			RL.textDrawEx(ctx.komikaFont, msg, textX, textY, KOMIKA_FONT_SIZE, 1.0, RL.COLOR_BLUE);
+			Text.drawEx(ctx.komikaFont, msg, textX, textY, KOMIKA_FONT_SIZE, 1.0, Color.BLUE);
 		} else {
-			var textWidth = RL.textMeasure(msg, KOMIKA_FONT_SIZE);
+			var textWidth = Text.measure(msg, KOMIKA_FONT_SIZE);
 			var textX = Std.int((screen.x - textWidth) / 2);
 			var textY = Std.int((screen.y - KOMIKA_FONT_SIZE) / 2);
-			RL.textDraw(msg, textX, textY, KOMIKA_FONT_SIZE, RL.COLOR_BLUE);
+			Text.draw(msg, textX, textY, KOMIKA_FONT_SIZE, Color.BLUE);
 		}
 		if (ctx.debugFont != 0) {
-			RL.textDrawEx(ctx.debugFont, remainingText, 10, 36, DEBUG_FONT_SIZE, 1.0, RL.COLOR_BLACK);
-			RL.textDrawEx(ctx.debugFont, elapsedText, 10, 56, DEBUG_FONT_SIZE, 1.0, RL.COLOR_BLACK);
-			RL.textDrawEx(ctx.debugFont, mouseText, 10, 76, DEBUG_FONT_SIZE, 1.0, RL.COLOR_BLACK);
-			RL.textDrawEx(ctx.debugFont, 'Reloads: ${ctx.reloadCount}', 10, 96, DEBUG_FONT_SIZE, 1.0, RL.COLOR_BLACK);
+			Text.drawEx(ctx.debugFont, remainingText, 10, 36, DEBUG_FONT_SIZE, 1.0, Color.BLACK);
+			Text.drawEx(ctx.debugFont, elapsedText, 10, 56, DEBUG_FONT_SIZE, 1.0, Color.BLACK);
+			Text.drawEx(ctx.debugFont, mouseText, 10, 76, DEBUG_FONT_SIZE, 1.0, Color.BLACK);
+			Text.drawEx(ctx.debugFont, 'Reloads: ${ctx.reloadCount}', 10, 96, DEBUG_FONT_SIZE, 1.0, Color.BLACK);
 		} else {
-			RL.textDraw(remainingText, 10, 36, DEBUG_FONT_SIZE, RL.COLOR_BLACK);
-			RL.textDraw(elapsedText, 10, 56, DEBUG_FONT_SIZE, RL.COLOR_BLACK);
-			RL.textDraw(mouseText, 10, 76, DEBUG_FONT_SIZE, RL.COLOR_BLACK);
-			RL.textDraw('Reloads: ${ctx.reloadCount}', 10, 96, DEBUG_FONT_SIZE, RL.COLOR_BLACK);
-		}
-
-		if (ctx.debugFont != 0) {
-			RL.textDrawEx(ctx.debugFont, platformText, 10, 116, DEBUG_FONT_SIZE, 1.0, RL.COLOR_BLACK);
-		} else {
-			RL.textDraw(platformText, 10, 116, DEBUG_FONT_SIZE, RL.COLOR_BLACK);
+			Text.draw(remainingText, 10, 36, DEBUG_FONT_SIZE, Color.BLACK);
+			Text.draw(elapsedText, 10, 56, DEBUG_FONT_SIZE, Color.BLACK);
+			Text.draw(mouseText, 10, 76, DEBUG_FONT_SIZE, Color.BLACK);
+			Text.draw('Reloads: ${ctx.reloadCount}', 10, 96, DEBUG_FONT_SIZE, Color.BLACK);
 		}
 
 		if (ctx.debugFont != 0) {
-			RL.textDrawFpsEx(ctx.debugFont, 10, 10, DEBUG_FONT_SIZE, ctx.greyAlphaColor);
+			Text.drawEx(ctx.debugFont, platformText, 10, 116, DEBUG_FONT_SIZE, 1.0, Color.BLACK);
 		} else {
-			RL.textDrawFps(10, 10);
+			Text.draw(platformText, 10, 116, DEBUG_FONT_SIZE, Color.BLACK);
+		}
+
+		if (ctx.debugFont != 0) {
+			Text.drawFpsEx(ctx.debugFont, 10, 10, DEBUG_FONT_SIZE, ctx.greyAlphaColor);
+		} else {
+			Text.drawFps(10, 10);
 		}
 
 		if (ctx.labelText2d != 0) {
-			RL.text2dDraw(ctx.labelText2d);
+			Text2d.draw(ctx.labelText2d);
 		}
 
-		RL.renderEnd();
+		Render.end();
 
 		return RT_SUCCESS;
 	}
@@ -299,9 +315,9 @@ class SimpleRuntime implements IRuntime {
 
 	// helper to combine creating an import task and adding it to the loader queue
 	private function importAssetAsync(path:String, ?onSuccess:String->Dynamic->Void, ?onFailure:String->Dynamic->Void, ?userData:Dynamic):Int {
-		var task = RL.assetEnsureAsync(path);
-		if (RL.assetTaskIsValid(task)) {
-			RL.assetAddTask(task, (path, userData) -> {
+		var task = Asset.ensureAsync(path);
+		if (Asset.taskIsValid(task)) {
+			Asset.addTask(task, (path, userData) -> {
 				if (onSuccess != null) {
 					onSuccess(path, userData);
 				}
@@ -321,36 +337,36 @@ class SimpleRuntime implements IRuntime {
 
 	private function queueAssets():Void {
 		importAssetAsync(BGM_PATH, (path, userData) -> {
-			ctx.bgm = RL.musicCreate(path);
-			RL.musicSetLoop(ctx.bgm, true);
-			RL.musicPlay(ctx.bgm);
+			ctx.bgm = Music.create(path);
+			Music.setLoop(ctx.bgm, true);
+			Music.play(ctx.bgm);
 		}, (path, userData) -> {
 			Log.error("Failed to import BGM: " + path);
 		});
 		importAssetAsync(MODEL_PATH, (path, userData) -> {
 			//ctx.gumshoe = RL.modelCreateFromFile(path);
-			var gumshoeAsset = RL.modelLoadAsset(path);
+			var gumshoeAsset = Model.loadAsset(path);
 			if (ctx.gumshoe != 0) {
-			//	RL.modelSetAsset(ctx.gumshoe, gumshoeAsset);
+			//	Model.setAsset(ctx.gumshoe, gumshoeAsset);
 			}
 		}, (path, userData) -> {
 			Log.error("Failed to import MODEL: " + path);
 		});
 		importAssetAsync(SPRITE_PATH, (path, userData) -> {
-			ctx.sprite = RL.sprite3dCreateFromFile(path);
-			RL.sprite3dSetTransform(ctx.sprite, 0, 0, ctx.spriteYOffset, 1.0);
+			ctx.sprite = Sprite3d.createFromFile(path);
+			Sprite3d.setTransform(ctx.sprite, 0, 0, ctx.spriteYOffset, 1.0);
 		}, (path, userData) -> {
 			Log.error("Failed to import SPRITE: " + path);
 		});
 		importAssetAsync(DEBUG_FONT_PATH, (path, userData) -> {
-			ctx.debugFont = RL.fontCreate(path, DEBUG_FONT_SIZE);
+			ctx.debugFont = Font.create(path, DEBUG_FONT_SIZE);
 		}, (path, userData) -> {
 			Log.error("Failed to import DEBUG FONT: " + path);
 		});
 		importAssetAsync(KOMIKA_FONT_PATH, (path, userData) -> {
-			ctx.komikaFont = RL.fontCreate(path, KOMIKA_FONT_SIZE);
+			ctx.komikaFont = Font.create(path, KOMIKA_FONT_SIZE);
 			if (ctx.labelText2d != 0) {
-				RL.text2dSetFont(ctx.labelText2d, ctx.komikaFont);
+				Text2d.setFont(ctx.labelText2d, ctx.komikaFont);
 			}
 		}, (path, userData) -> {
 			Log.error("Failed to import KOMIKA FONT: " + path);
@@ -359,7 +375,7 @@ class SimpleRuntime implements IRuntime {
 
 	private function animateFrame(deltaTimeSec:Float):Void {
 		if (ctx.gumshoe != 0) {
-			RL.modelAnimate(ctx.gumshoe, deltaTimeSec);
+			Model.animate(ctx.gumshoe, deltaTimeSec);
 		}
 
 		//trace("335");
@@ -387,7 +403,7 @@ class SimpleRuntime implements IRuntime {
 		 */
 
 		if (ctx.sprite != 0) {
-			RL.sprite3dSetTransform(ctx.sprite, spriteX, spriteY, spriteZ, 1.0);
+			Sprite3d.setTransform(ctx.sprite, spriteX, spriteY, spriteZ, 1.0);
 		}
 	}
 }
@@ -448,7 +464,7 @@ class Main {
 			if (rc == RL.TICK_WAITING) {
 				return RT_SUCCESS;
 			}
-			if (RL.windowCloseRequested()) {
+			if (Window.closeRequested()) {
 				return RT_STOPPED;
 			}
 			if (_instance != null) {

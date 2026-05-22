@@ -1691,6 +1691,9 @@ RL.sprite3d = {
     setTransform: (sprite, positionX, positionY, positionZ, size) => moduleInstance.ccall(
         "rl_sprite3d_set_transform", "number", ["number", "number", "number", "number", "number"], [sprite, positionX, positionY, positionZ, size]
     ) !== 0,
+    getDefaultTexture: () => moduleInstance.ccall(
+        "rl_sprite3d_get_default_texture", "number", [], []
+    ),
     getTransform: (sprite) => {
         const stackSave = moduleInstance.stackSave;
         const stackRestore = moduleInstance.stackRestore;
@@ -1746,6 +1749,9 @@ RL.sprite2d = {
     ),
     createFromFile: (path) => moduleInstance.ccall(
         "rl_sprite2d_create_from_file", "number", ["string"], [path]
+    ),
+    getDefaultTexture: () => moduleInstance.ccall(
+        "rl_sprite2d_get_default_texture", "number", [], []
     ),
     setTexture: (sprite, texture) => moduleInstance.ccall(
         "rl_sprite2d_set_texture", "number", ["number", "number"], [sprite, texture]

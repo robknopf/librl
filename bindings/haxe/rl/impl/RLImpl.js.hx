@@ -3,15 +3,13 @@ package rl.impl;
 #if js
 import haxe.io.Bytes;
 import js.lib.Promise;
-import rl.RLHandle;
-import rl.RLTaskGroup;
-import rl.RLTaskGroup.RLTaskGroupCallback;
-import rl.RLTypes.RLBootConfig;
-import rl.RLTypes.RLInitConfig;
-import rl.RLTypes.RLKeyboardState;
-import rl.RLTypes.RLMouseState;
-import rl.RLTypes.RLPickResult;
-import rl.RLTypes.RLVec2;
+import rl.Types.RLHandle;
+import rl.Types.RLBootConfig;
+import rl.Types.RLInitConfig;
+import rl.Types.RLKeyboardState;
+import rl.Types.RLMouseState;
+import rl.Types.RLPickResult;
+import rl.Types.RLVec2;
 import rl.gen.RLVersion;
 /**
  * Minimal JS-target backend for the target-neutral `rl.RL` facade.
@@ -624,6 +622,79 @@ class RLImpl {
 			binding.model.destroy(model);
 	}
 
+	public static function modelIsValid(model:RLHandle):Bool
+		return binding == null ? false : cast binding.model.isValid(model);
+
+	public static function modelIsValidStrict(model:RLHandle):Bool
+		return binding == null ? false : cast binding.model.isValidStrict(model);
+
+	public static function modelGetAnimationCount(model:RLHandle):Int
+		return binding == null ? 0 : cast binding.model.getAnimationCount(model);
+
+	public static function modelGetAnimationFrameCount(model:RLHandle, animationIndex:Int):Int
+		return binding == null ? 0 : cast binding.model.getAnimationFrameCount(model, animationIndex);
+
+	public static function modelUpdateAnimation(model:RLHandle, animationIndex:Int, frame:Int):Void {
+		if (binding != null)
+			binding.model.updateAnimation(model, animationIndex, frame);
+	}
+
+	public static function camera3dGetDefault():RLHandle
+		return binding == null ? 0 : cast binding.camera3d.getDefault();
+
+	public static function camera3dGetActive():RLHandle
+		return binding == null ? 0 : cast binding.camera3d.getActive();
+
+	public static function fontGetDefault():RLHandle
+		return binding == null ? 0 : cast binding.font.getDefault();
+
+	public static function textureGetDefault():RLHandle
+		return binding == null ? 0 : cast binding.texture.getDefault();
+
+	public static function sprite3dGetDefaultTexture():RLHandle
+		return binding == null ? 0 : cast binding.sprite3d.getDefaultTexture();
+
+	public static function sprite3dGetTransform(sprite:RLHandle):Dynamic
+		return binding == null ? null : binding.sprite3d.getTransform(sprite);
+
+	public static function shapeDrawRectangle(x:Int, y:Int, width:Int, height:Int, color:RLHandle):Void {
+		if (binding != null)
+			binding.shape.drawRectangle(x, y, width, height, color);
+	}
+
+	public static function shapeDrawCube(positionX:Float, positionY:Float, positionZ:Float, width:Float, height:Float, length:Float, color:RLHandle):Void {
+		if (binding != null)
+			binding.shape.drawCube(positionX, positionY, positionZ, width, height, length, color);
+	}
+
+	public static function debugEnableFps(x:Int, y:Int, fontSize:Int, font:RLHandle):Void {
+		if (binding != null)
+			binding.debug.enableFps(x, y, fontSize, font);
+	}
+
+	public static function debugDisable():Void {
+		if (binding != null)
+			binding.debug.disable();
+	}
+
+	public static function eventOn(eventName:String, callback:Dynamic->Void):Int
+		return binding == null ? -1 : cast binding.event.on(eventName, callback);
+
+	public static function eventOnce(eventName:String, callback:Dynamic->Void):Int
+		return binding == null ? -1 : cast binding.event.once(eventName, callback);
+
+	public static function eventOff(eventName:String, callback:Dynamic->Void):Int
+		return binding == null ? -1 : cast binding.event.off(eventName, callback);
+
+	public static function eventOffAll(eventName:String):Int
+		return binding == null ? -1 : cast binding.event.offAll(eventName);
+
+	public static function eventEmit(eventName:String, ?payload:Int):Int
+		return binding == null ? -1 : cast binding.event.emit(eventName, payload == null ? 0 : payload);
+
+	public static function eventListenerCount(eventName:String):Int
+		return binding == null ? 0 : cast binding.event.listenerCount(eventName);
+
 	public static function sprite3dCreate(texture:RLHandle):RLHandle
 		return binding == null ? 0 : cast binding.sprite3d.create(texture);
 
@@ -673,6 +744,9 @@ class RLImpl {
 		if (binding != null)
 			binding.sprite2d.destroy(sprite);
 	}
+
+	public static function sprite2dGetDefaultTexture():RLHandle
+		return binding == null ? 0 : cast binding.sprite2d.getDefaultTexture();
 
 	public static function text2dCreate(font:RLHandle, size:Float):RLHandle
 		return binding == null ? 0 : cast binding.text2d.create(font, size);
@@ -800,8 +874,20 @@ class RLImpl {
 		return Promise.resolve(null);
 	}
 
+	public static function fsDeinitAsync():RLHandle {
+		return binding == null ? 0 : cast binding.fs.deinitAsync();
+	}
+
 	public static function fsIsInitialized():Bool {
 		return binding != null && cast binding.fs.isInitialized();
+	}
+
+	public static function fsIsReady():Bool {
+		return binding != null && cast binding.fs.isReady();
+	}
+
+	public static function fsFlush():Int {
+		return binding == null ? -1 : cast binding.fs.flush();
 	}
 
 	public static function fsRestoreAsync():RLHandle {
@@ -841,6 +927,20 @@ class RLImpl {
 		return d == null ? null : Bytes.ofData(cast d);
 	}
 
+	public static function fsWrite(path:String, bytes:Bytes):Int {
+		if (binding == null)
+			return -1;
+		return cast binding.fs.write(path, bytes == null ? null : bytes.getData());
+	}
+
+	public static function fsMkdir(path:String):Int {
+		return binding == null ? -1 : cast binding.fs.mkdir(path);
+	}
+
+	public static function fsRmdir(path:String):Int {
+		return binding == null ? -1 : cast binding.fs.rmdir(path);
+	}
+
 	public static function assetFreeTask(task:RLHandle):Void {
 		if (binding != null)
 			binding.asset.freeTask(task);
@@ -859,8 +959,9 @@ class RLImpl {
 		return binding == null ? "" : cast binding.fs.getRootDir();
 	}
 
-	public static function assetCreateTaskGroup<T>(?onComplete:RLTaskGroupCallback<T>, ?onError:RLTaskGroupCallback<T>, ?ctx:T):RLTaskGroup
-		return new RLTaskGroup(cast onComplete, cast onError, ctx);
+	public static function fsNormalizePath(path:String):String {
+		return binding == null ? "" : cast binding.fs.normalizePath(path);
+	}
 
 	public static function assetTaskInvalid():RLHandle
 		return 0;
@@ -889,6 +990,11 @@ class RLImpl {
 			binding.logger.message(level, message);
 		else
 			js.Syntax.code("console.log({0})", message);
+	}
+
+	public static function loggerMessageSource(level:Int, sourceFile:String, sourceLine:Int, message:String):Void {
+		if (binding != null)
+			binding.logger.messageSource(level, sourceFile, sourceLine, message);
 	}
 
 	public static function loggerSetLevel(level:Int):Void {

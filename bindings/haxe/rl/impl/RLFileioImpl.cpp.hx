@@ -6,7 +6,7 @@
 package rl.impl;
 
 #if cpp
-import rl.RLHandle;
+import rl.Types.RLHandle;
 
 typedef RLFileioCallbackFn = cpp.Callable<cpp.ConstCharStar->cpp.RawPointer<cpp.Void>->Void>;
 
@@ -344,6 +344,19 @@ class RLFileio {
 
   public static function fsGetRootDir(): String {
     return getBaseDirNative();
+  }
+
+  @:functionCode('
+    char buf[4096];
+    ::rl_fs_normalize_path(path.utf8_str(), buf, sizeof(buf));
+    return ::String(buf);
+  ')
+  static function normalizePathNative(path: String): String {
+    return "";
+  }
+
+  public static function fsNormalizePath(path: String): String {
+    return normalizePathNative(path == null ? "" : path);
   }
 
   public static function assetTick(): Void {

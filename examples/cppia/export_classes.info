@@ -10,7 +10,6 @@ class sys.thread.NoEventLoopException
 class sys.thread.Lock
 class sys.thread._EventLoop.RegularEvent
 enum sys.thread.NextEventTime
-class sys.thread.Deque
 class sys.thread.Condition
 class sys.ssl.Socket
 class sys.ssl._Socket.SocketOutput
@@ -45,21 +44,100 @@ class rl.impl._RLImpl.RLImpl_Impl_
 class rl.impl._RLImpl.RLBridgeImpl
 class rl.impl._RLImpl.RLKeyboardBridge
 class rl.impl._RLImpl.RLFileioCallbackBridge
+class rl.impl._RLImpl.RLEventBridge
+class rl.impl._RLImpl.RLSprite3dBridge
 class rl.impl._RLImpl.RLLoggerBridge
 class rl.impl.RLFileio
 class rl.gen.RLVersion
+class rl.Window
 class rl.RLKeyboardState
-class rl.RLTaskGroup
-class rl._RLHandle.RLHandle_Impl_
+class rl._Types.RLHandle_Impl_
+class rl.Texture
+class rl.Text2d
+class rl.Text
+class rl.Sprite3d
+class rl.Sprite2d
+class rl.Sound
+class rl.Shape
+class rl.Render
+class rl.helpers.TaskGroup
 class rl.RL
-class rl.Log
+class rl.Pick
+class rl.Music
+class rl.Model
+class rl.Logger
+class rl.helpers.Log
+class rl.Input
 class rl.InjectLibRL
+class rl.Fs
+class rl.Font
+class rl.Event
+class rl.Debug
+class rl.Color
+class rl.Camera3d
+class rl.Asset
+class hxcpp.debug.jsonrpc.eval.Tools
+enum hxcpp.debug.jsonrpc.eval.Token
+class hxcpp.debug.jsonrpc.eval.Interp
+enum hxcpp.debug.jsonrpc.eval._Interp.Stop
+enum hxcpp.debug.jsonrpc.eval.FieldKind
+enum hxcpp.debug.jsonrpc.eval.FieldAccess
+enum hxcpp.debug.jsonrpc.eval.ModuleDecl
+enum hxcpp.debug.jsonrpc.eval.Error
+enum hxcpp.debug.jsonrpc.eval.CType
+enum hxcpp.debug.jsonrpc.eval.Expr
+enum hxcpp.debug.jsonrpc.eval.Const
+class hxcpp.debug.jsonrpc.VariablesPrinter
+enum hxcpp.debug.jsonrpc.Value
+enum hxcpp.debug.jsonrpc.VarType
+class hxcpp.debug.jsonrpc.Server
+class sys.thread.Deque
+class hxcpp.debug.jsonrpc.eval.Parser
+class hxcpp.debug.jsonrpc._Server.References
+class hxcpp.debug.jsonrpc.Protocol
+class hxcpp.debug.jsonrpc._Protocol.NotificationMethod_Impl_
+class hxcpp.debug.jsonrpc._Protocol.RequestMethod_Impl_
+class hxcpp.debug.jsonrpc.Macro
 class haxe.zip.Uncompress
 enum haxe.zip.FlushMode
 class haxe.zip.Compress
 class haxe.xml.Printer
 class haxe.xml.Parser
 class haxe.xml.XmlParserException
+enum haxe.macro.TypedExprDef
+enum haxe.macro.FieldAccess
+enum haxe.macro.ModuleType
+enum haxe.macro.TConstant
+enum haxe.macro.MethodKind
+enum haxe.macro.VarAccess
+enum haxe.macro.FieldKind
+enum haxe.macro.ClassKind
+enum haxe.macro.AnonStatus
+enum haxe.macro.Type
+enum haxe.macro.VarScopingFlags
+enum haxe.macro.VarScope
+enum haxe.macro.CapturePolicy
+enum haxe.macro.ImportMode
+class haxe.macro.Error
+enum haxe.macro.AbstractFlag
+enum haxe.macro.TypeDefKind
+enum haxe.macro.FieldType
+enum haxe.macro.Access
+enum haxe.macro.TypeParam
+enum haxe.macro.ComplexType
+enum haxe.macro.DisplayKind
+enum haxe.macro.ExprDef
+enum haxe.macro.FunctionKind
+enum haxe.macro.QuoteStatus
+enum haxe.macro.EFieldKind
+enum haxe.macro.Unop
+enum haxe.macro.Binop
+enum haxe.macro.Constant
+enum haxe.macro.StringLiteralKind
+class haxe.macro.Context
+enum haxe.macro.Message
+enum haxe.macro.PackageRule
+class haxe.macro.Compiler
 class haxe.iterators.StringKeyValueIterator
 class haxe.iterators.StringIteratorUnicode
 class haxe.iterators.StringIterator
@@ -84,6 +162,7 @@ class haxe.format.JsonPrinter
 class haxe.format.JsonParser
 class haxe.exceptions.NotImplementedException
 class haxe.exceptions.PosException
+class haxe.ds._GenericStack.GenericStackIterator_hxcpp_debug_jsonrpc_eval_Token
 class haxe.ds.WeakMap
 class haxe.ds._Vector.Vector_Impl_
 class haxe.ds.StringMap
@@ -98,13 +177,21 @@ class haxe.ds.List
 class haxe.ds.IntMap
 class haxe.ds._HashMap.HashMapData
 class haxe.ds._HashMap.HashMap_Impl_
+class haxe.ds.GenericStack_hxcpp_debug_jsonrpc_eval_Token
 class haxe.ds.GenericStack
 class haxe.ds._GenericStack.GenericStackIterator
 class haxe.ds.GenericCell
+class haxe.ds.GenericCell_hxcpp_debug_jsonrpc_eval_Token
 class haxe.ds.EnumValueMap
 class haxe.ds.TreeNode
 class haxe.ds.BalancedTree
 class haxe.ds.ArraySort
+enum haxe.display.NoData
+class haxe.display._Protocol.HaxeNotificationMethod_Impl_
+class haxe.display._Protocol.HaxeRequestMethod_Impl_
+class haxe.display.Methods
+class haxe.display._FsPath.FsPath_Impl_
+class haxe.display.DisplayMethods
 class haxe.crypto.Sha256
 class haxe.crypto.Sha1
 class haxe.crypto.Md5
@@ -257,6 +344,9 @@ file /home/rknopf/toolchains/haxe/current/std/haxe/crypto/Hmac.hx /home/rknopf/t
 file /home/rknopf/toolchains/haxe/current/std/haxe/crypto/Md5.hx /home/rknopf/toolchains/haxe/current/std/haxe/crypto/Md5.hx
 file /home/rknopf/toolchains/haxe/current/std/haxe/crypto/Sha1.hx /home/rknopf/toolchains/haxe/current/std/haxe/crypto/Sha1.hx
 file /home/rknopf/toolchains/haxe/current/std/haxe/crypto/Sha256.hx /home/rknopf/toolchains/haxe/current/std/haxe/crypto/Sha256.hx
+file /home/rknopf/toolchains/haxe/current/std/haxe/display/Display.hx /home/rknopf/toolchains/haxe/current/std/haxe/display/Display.hx
+file /home/rknopf/toolchains/haxe/current/std/haxe/display/FsPath.hx /home/rknopf/toolchains/haxe/current/std/haxe/display/FsPath.hx
+file /home/rknopf/toolchains/haxe/current/std/haxe/display/Protocol.hx /home/rknopf/toolchains/haxe/current/std/haxe/display/Protocol.hx
 file /home/rknopf/toolchains/haxe/current/std/haxe/ds/ArraySort.hx /home/rknopf/toolchains/haxe/current/std/haxe/ds/ArraySort.hx
 file /home/rknopf/toolchains/haxe/current/std/haxe/ds/BalancedTree.hx /home/rknopf/toolchains/haxe/current/std/haxe/ds/BalancedTree.hx
 file /home/rknopf/toolchains/haxe/current/std/haxe/ds/EnumValueMap.hx /home/rknopf/toolchains/haxe/current/std/haxe/ds/EnumValueMap.hx
@@ -289,6 +379,7 @@ file /home/rknopf/toolchains/haxe/current/std/haxe/iterators/RestKeyValueIterato
 file /home/rknopf/toolchains/haxe/current/std/haxe/iterators/StringIterator.hx /home/rknopf/toolchains/haxe/current/std/haxe/iterators/StringIterator.hx
 file /home/rknopf/toolchains/haxe/current/std/haxe/iterators/StringIteratorUnicode.hx /home/rknopf/toolchains/haxe/current/std/haxe/iterators/StringIteratorUnicode.hx
 file /home/rknopf/toolchains/haxe/current/std/haxe/iterators/StringKeyValueIterator.hx /home/rknopf/toolchains/haxe/current/std/haxe/iterators/StringKeyValueIterator.hx
+file /home/rknopf/toolchains/haxe/current/std/haxe/macro/Expr.hx /home/rknopf/toolchains/haxe/current/std/haxe/macro/Expr.hx
 file /home/rknopf/toolchains/haxe/current/std/haxe/xml/Parser.hx /home/rknopf/toolchains/haxe/current/std/haxe/xml/Parser.hx
 file /home/rknopf/toolchains/haxe/current/std/haxe/xml/Printer.hx /home/rknopf/toolchains/haxe/current/std/haxe/xml/Printer.hx
 file /home/rknopf/toolchains/haxe/current/std/sys/net/Address.hx /home/rknopf/toolchains/haxe/current/std/sys/net/Address.hx
@@ -296,11 +387,37 @@ file /home/rknopf/toolchains/haxe/current/std/sys/thread/EventLoop.hx /home/rkno
 file /home/rknopf/toolchains/haxe/current/std/sys/thread/NoEventLoopException.hx /home/rknopf/toolchains/haxe/current/std/sys/thread/NoEventLoopException.hx
 file Script.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/cppia/src/Script.hx
 file ScriptableMain.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/cppia/src/ScriptableMain.hx
-file rl/Log.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Log.hx
+file hxcpp/debug/jsonrpc/Protocol.hx /home/rknopf/projects/haxe/hxcpp-debugger/hxcpp-debug-server/hxcpp/debug/jsonrpc/Protocol.hx
+file hxcpp/debug/jsonrpc/Server.hx /home/rknopf/projects/haxe/hxcpp-debugger/hxcpp-debug-server/hxcpp/debug/jsonrpc/Server.hx
+file hxcpp/debug/jsonrpc/VariablesPrinter.hx /home/rknopf/projects/haxe/hxcpp-debugger/hxcpp-debug-server/hxcpp/debug/jsonrpc/VariablesPrinter.hx
+file hxcpp/debug/jsonrpc/eval/Interp.hx /home/rknopf/projects/haxe/hxcpp-debugger/hxcpp-debug-server/hxcpp/debug/jsonrpc/eval/Interp.hx
+file hxcpp/debug/jsonrpc/eval/Parser.hx /home/rknopf/projects/haxe/hxcpp-debugger/hxcpp-debug-server/hxcpp/debug/jsonrpc/eval/Parser.hx
+file hxcpp/debug/jsonrpc/eval/Tools.hx /home/rknopf/projects/haxe/hxcpp-debugger/hxcpp-debug-server/hxcpp/debug/jsonrpc/eval/Tools.hx
+file rl/Asset.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Asset.hx
+file rl/Camera3d.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Camera3d.hx
+file rl/Color.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Color.hx
+file rl/Debug.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Debug.hx
+file rl/Event.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Event.hx
+file rl/Font.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Font.hx
+file rl/Fs.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Fs.hx
+file rl/Input.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Input.hx
+file rl/helpers/Log.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/helpers/Log.hx
+file rl/Logger.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Logger.hx
+file rl/Model.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Model.hx
+file rl/Music.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Music.hx
+file rl/Pick.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Pick.hx
 file rl/RL.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/RL.hx
-file rl/RLHandle.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/RLHandle.hx
-file rl/RLTaskGroup.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/RLTaskGroup.hx
-file rl/RLTypes.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/RLTypes.hx
+file rl/helpers/TaskGroup.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/helpers/TaskGroup.hx
+file rl/Render.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Render.hx
+file rl/Shape.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Shape.hx
+file rl/Sound.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Sound.hx
+file rl/Sprite2d.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Sprite2d.hx
+file rl/Sprite3d.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Sprite3d.hx
+file rl/Text.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Text.hx
+file rl/Text2d.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Text2d.hx
+file rl/Texture.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Texture.hx
+file rl/Types.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Types.hx
+file rl/Window.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Window.hx
 file rl/gen/RLVersion.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/gen/RLVersion.hx
 file rl/impl/RLFileioImpl.cpp.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/cppia/rl/impl/RLFileioImpl.cpp.hx
 file rl/impl/RLImpl.cpp.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/cppia/rl/impl/RLImpl.cpp.hx

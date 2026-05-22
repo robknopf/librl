@@ -8,17 +8,16 @@ package rl.impl;
 #if cpp
 import haxe.ds.StringMap;
 import rl.InjectLibRL;
-import rl.RLHandle;
+import rl.Types.RLHandle;
 import rl.impl.RLFileioImpl.RLFileio;
-import rl.RLTypes.RLBootConfig;
-import rl.RLTypes.RLInitConfig;
-import rl.RLTypes.RLVec2;
-import rl.RLTypes.RLVec3;
-import rl.RLTypes.RLPickResult;
-import rl.RLTypes.RLMouseState;
-import rl.RLTypes.RLKeyboardState;
-import rl.RLTaskGroup.RLTaskGroupCallback;
-import rl.RLTaskGroup.RLTaskGroupTaskCallback;
+import rl.Types.RLBootConfig;
+import rl.Types.RLInitConfig;
+import rl.Types.RLVec2;
+import rl.Types.RLVec3;
+import rl.Types.RLPickResult;
+import rl.Types.RLMouseState;
+import rl.Types.RLKeyboardState;
+import rl.Types.RLSprite3dTransform;
 import rl.gen.RLVersion;
 
 @:keep
@@ -458,6 +457,82 @@ private extern class RLExterns {
   @:native("rl_sprite3d_destroy")
   static function sprite3dDestroy(sprite: RLHandle): Void;
 
+  @:native("rl_sprite3d_get_default_texture")
+  static function sprite3dGetDefaultTexture(): RLHandle;
+
+  @:native("rl_model_is_valid")
+  static function modelIsValid(model: RLHandle): Bool;
+
+  @:native("rl_model_is_valid_strict")
+  static function modelIsValidStrict(model: RLHandle): Bool;
+
+  @:native("rl_model_get_animation_count")
+  static function modelGetAnimationCount(model: RLHandle): Int;
+
+  @:native("rl_model_get_animation_frame_count")
+  static function modelGetAnimationFrameCount(model: RLHandle, animationIndex: Int): Int;
+
+  @:native("rl_model_update_animation")
+  static function modelUpdateAnimation(model: RLHandle, animationIndex: Int, frame: Int): Void;
+
+  @:native("rl_camera3d_get_default")
+  static function camera3dGetDefault(): RLHandle;
+
+  @:native("rl_camera3d_get_active")
+  static function camera3dGetActive(): RLHandle;
+
+  @:native("rl_font_get_default")
+  static function fontGetDefault(): RLHandle;
+
+  @:native("rl_texture_get_default")
+  static function textureGetDefault(): RLHandle;
+
+  @:native("rl_shape_draw_rectangle")
+  static function shapeDrawRectangle(x: Int, y: Int, width: Int, height: Int, color: RLHandle): Void;
+
+  @:native("rl_shape_draw_cube")
+  static function shapeDrawCube(
+    positionX: Float, positionY: Float, positionZ: Float,
+    width: Float, height: Float, length: Float,
+    color: RLHandle
+  ): Void;
+
+  @:native("rl_debug_enable_fps")
+  static function debugEnableFps(x: Int, y: Int, fontSize: Int, font: RLHandle): Void;
+
+  @:native("rl_debug_disable")
+  static function debugDisable(): Void;
+
+  @:native("rl_event_on")
+  static function eventOnNative(
+    eventName: String,
+    listener: cpp.Callable<cpp.RawPointer<cpp.Void>->cpp.RawPointer<cpp.Void>->Void>,
+    userData: cpp.RawPointer<cpp.Void>
+  ): Int;
+
+  @:native("rl_event_once")
+  static function eventOnceNative(
+    eventName: String,
+    listener: cpp.Callable<cpp.RawPointer<cpp.Void>->cpp.RawPointer<cpp.Void>->Void>,
+    userData: cpp.RawPointer<cpp.Void>
+  ): Int;
+
+  @:native("rl_event_off")
+  static function eventOffNative(
+    eventName: String,
+    listener: cpp.Callable<cpp.RawPointer<cpp.Void>->cpp.RawPointer<cpp.Void>->Void>,
+    userData: cpp.RawPointer<cpp.Void>
+  ): Int;
+
+  @:native("rl_event_off_all")
+  static function eventOffAll(eventName: String): Int;
+
+  @:native("rl_event_emit")
+  static function eventEmit(eventName: String, payload: cpp.RawPointer<cpp.Void>): Int;
+
+  @:native("rl_event_listener_count")
+  static function eventListenerCount(eventName: String): Int;
+
   @:native("rl_sprite2d_create")
   static function sprite2dCreate(texture: RLHandle): RLHandle;
 
@@ -482,6 +557,9 @@ private extern class RLExterns {
 
   @:native("rl_sprite2d_destroy")
   static function sprite2dDestroy(sprite: RLHandle): Void;
+
+  @:native("rl_sprite2d_get_default_texture")
+  static function sprite2dGetDefaultTexture(): RLHandle;
 
   @:native("rl_text2d_create")
   static function text2dCreate(font: RLHandle, size: Float): RLHandle;
@@ -622,6 +700,94 @@ private class RLLoggerBridge {
     );
   ')
   public static function messageSource(level: Int, sourceFile: String, sourceLine: Int, message: String): Void {}
+}
+
+@:headerInclude("rl_sprite3d.h")
+private class RLSprite3dBridge {
+  public static var lastPositionX: Float = 0;
+  public static var lastPositionY: Float = 0;
+  public static var lastPositionZ: Float = 0;
+  public static var lastSize: Float = 0;
+
+  @:functionCode('
+    float px = 0.0f, py = 0.0f, pz = 0.0f, sz = 0.0f;
+    ::rl_sprite3d_get_transform(sprite, &px, &py, &pz, &sz);
+    lastPositionX = px;
+    lastPositionY = py;
+    lastPositionZ = pz;
+    lastSize = sz;
+  ')
+  public static function fetchNative(sprite: RLHandle): Void {}
+}
+
+private typedef RLEventListenerEntry = {
+  var id: Int;
+  var eventName: String;
+  var callback: Dynamic->Void;
+}
+
+@:headerInclude("rl_event.h")
+private class RLEventBridge {
+  static var nextId: Int = 1;
+  static var entries: Array<RLEventListenerEntry> = [];
+  static var trampolineInitialized = false;
+  static var trampoline: cpp.Callable<cpp.RawPointer<cpp.Void>->cpp.RawPointer<cpp.Void>->Void>;
+
+  public static function ensureTrampoline(): cpp.Callable<cpp.RawPointer<cpp.Void>->cpp.RawPointer<cpp.Void>->Void> {
+    if (!trampolineInitialized) {
+      trampoline = cpp.Function.fromStaticFunction(dispatchTrampoline);
+      trampolineInitialized = true;
+    }
+    return trampoline;
+  }
+
+  @:keep
+  public static function dispatchTrampoline(payload: cpp.RawPointer<cpp.Void>, userData: cpp.RawPointer<cpp.Void>): Void {
+    var id: Int = untyped __cpp__('(int)(intptr_t)userData');
+    for (entry in entries) {
+      if (entry.id == id) {
+        entry.callback(cast payload);
+        return;
+      }
+    }
+  }
+
+  public static function register(eventName: String, callback: Dynamic->Void): Int {
+    var id = nextId++;
+    entries.push({id: id, eventName: eventName, callback: callback});
+    return id;
+  }
+
+  public static function findId(eventName: String, callback: Dynamic->Void): Null<Int> {
+    for (entry in entries) {
+      if (entry.eventName == eventName && Reflect.compareMethods(entry.callback, callback)) {
+        return entry.id;
+      }
+    }
+    return null;
+  }
+
+  public static function unregister(id: Int): Void {
+    var i = 0;
+    while (i < entries.length) {
+      if (entries[i].id == id) {
+        entries.splice(i, 1);
+      } else {
+        i++;
+      }
+    }
+  }
+
+  public static function unregisterAllForEvent(eventName: String): Void {
+    var i = 0;
+    while (i < entries.length) {
+      if (entries[i].eventName == eventName) {
+        entries.splice(i, 1);
+      } else {
+        i++;
+      }
+    }
+  }
 }
 
 @:headerCode('
@@ -817,6 +983,7 @@ abstract RLImpl(RLExterns) {
   public static function colorDestroy(color: RLHandle): Void { RLExterns.colorDestroy(color); }
   public static function fontCreate(filename: String, fontSize: Int): RLHandle { return RLExterns.fontCreate(filename, fontSize); }
   public static function fontDestroy(font: RLHandle): Void { RLExterns.fontDestroy(font); }
+  public static function fontGetDefault(): RLHandle { return RLExterns.fontGetDefault(); }
   public static function textDraw(text: String, x: Int, y: Int, fontSize: Int, color: RLHandle): Void { RLExterns.textDraw(text, x, y, fontSize, color); }
   public static function textMeasure(text: String, fontSize: Int): Int { return RLExterns.textMeasure(text, fontSize); }
   public static function textDrawFps(x: Int, y: Int): Void { RLExterns.textDrawFps(x, y); }
@@ -883,6 +1050,8 @@ abstract RLImpl(RLExterns) {
   public static function camera3dSet(camera: RLHandle, positionX: Float, positionY: Float, positionZ: Float, targetX: Float, targetY: Float, targetZ: Float, upX: Float, upY: Float, upZ: Float, fovy: Float, projection: Int): Bool { return RLExterns.camera3dSet(camera, positionX, positionY, positionZ, targetX, targetY, targetZ, upX, upY, upZ, fovy, projection); }
   public static function camera3dSetActive(camera: RLHandle): Bool { return RLExterns.camera3dSetActive(camera); }
   public static function camera3dDestroy(camera: RLHandle): Void { RLExterns.camera3dDestroy(camera); }
+  public static function camera3dGetDefault(): RLHandle { return RLExterns.camera3dGetDefault(); }
+  public static function camera3dGetActive(): RLHandle { return RLExterns.camera3dGetActive(); }
   public static function modelGetDefaultAsset(): RLHandle { return RLExterns.modelGetDefaultAsset(); }
   public static function modelLoadAsset(filename: String): RLHandle { return RLExterns.modelLoadAsset(filename); }
   public static function modelDestroyAsset(asset: RLHandle): Void { RLExterns.modelDestroyAsset(asset); }
@@ -897,6 +1066,11 @@ abstract RLImpl(RLExterns) {
   public static function modelSetTint(model: RLHandle, color: RLHandle = 0): Bool { return RLExterns.modelSetTint(model, color); }
   public static function modelAnimate(model: RLHandle, deltaSeconds: Float): Bool { return RLExterns.modelAnimate(model, deltaSeconds); }
   public static function modelDestroy(model: RLHandle): Void { RLExterns.modelDestroy(model); }
+  public static function modelIsValid(model: RLHandle): Bool { return RLExterns.modelIsValid(model); }
+  public static function modelIsValidStrict(model: RLHandle): Bool { return RLExterns.modelIsValidStrict(model); }
+  public static function modelGetAnimationCount(model: RLHandle): Int { return RLExterns.modelGetAnimationCount(model); }
+  public static function modelGetAnimationFrameCount(model: RLHandle, animationIndex: Int): Int { return RLExterns.modelGetAnimationFrameCount(model, animationIndex); }
+  public static function modelUpdateAnimation(model: RLHandle, animationIndex: Int, frame: Int): Void { RLExterns.modelUpdateAnimation(model, animationIndex, frame); }
   public static function sprite3dCreate(texture: RLHandle): RLHandle { return RLExterns.sprite3dCreate(texture); }
   public static function sprite3dCreateFromFile(filename: String): RLHandle { return RLExterns.sprite3dCreateFromFile(filename); }
   public static function sprite3dSetTexture(sprite: RLHandle, texture: RLHandle): Bool { return RLExterns.sprite3dSetTexture(sprite, texture); }
@@ -904,6 +1078,16 @@ abstract RLImpl(RLExterns) {
   public static function sprite3dSetTint(sprite: RLHandle, color: RLHandle = 0): Bool { return RLExterns.sprite3dSetTint(sprite, color); }
   public static function sprite3dDraw(sprite: RLHandle, tint: RLHandle = 0): Void { RLExterns.sprite3dDraw(sprite, tint); }
   public static function sprite3dDestroy(sprite: RLHandle): Void { RLExterns.sprite3dDestroy(sprite); }
+  public static function sprite3dGetDefaultTexture(): RLHandle { return RLExterns.sprite3dGetDefaultTexture(); }
+  public static function sprite3dGetTransform(sprite: RLHandle): RLSprite3dTransform {
+    RLSprite3dBridge.fetchNative(sprite);
+    return {
+      positionX: RLSprite3dBridge.lastPositionX,
+      positionY: RLSprite3dBridge.lastPositionY,
+      positionZ: RLSprite3dBridge.lastPositionZ,
+      size: RLSprite3dBridge.lastSize
+    };
+  }
   public static function sprite2dCreate(texture: RLHandle): RLHandle { return RLExterns.sprite2dCreate(texture); }
   public static function sprite2dCreateFromFile(filename: String): RLHandle { return RLExterns.sprite2dCreateFromFile(filename); }
   public static function sprite2dSetTexture(sprite: RLHandle, texture: RLHandle): Bool { return RLExterns.sprite2dSetTexture(sprite, texture); }
@@ -911,6 +1095,7 @@ abstract RLImpl(RLExterns) {
   public static function sprite2dSetTint(sprite: RLHandle, color: RLHandle = 0): Bool { return RLExterns.sprite2dSetTint(sprite, color); }
   public static function sprite2dDraw(sprite: RLHandle, tint: RLHandle = 0): Void { RLExterns.sprite2dDraw(sprite, tint); }
   public static function sprite2dDestroy(sprite: RLHandle): Void { RLExterns.sprite2dDestroy(sprite); }
+  public static function sprite2dGetDefaultTexture(): RLHandle { return RLExterns.sprite2dGetDefaultTexture(); }
   public static function text2dCreate(font: RLHandle, size: Float): RLHandle { return RLExterns.text2dCreate(font, size); }
   public static function text2dSetFont(handle: RLHandle, font: RLHandle): Void { RLExterns.text2dSetFont(handle, font); }
   public static function text2dSetSize(handle: RLHandle, size: Float): Void { RLExterns.text2dSetSize(handle, size); }
@@ -921,6 +1106,44 @@ abstract RLImpl(RLExterns) {
   public static function text2dDestroy(handle: RLHandle): Void { RLExterns.text2dDestroy(handle); }
   public static function textureCreate(filename: String): RLHandle { return RLExterns.textureCreate(filename); }
   public static function textureDestroy(texture: RLHandle): Void { RLExterns.textureDestroy(texture); }
+  public static function textureGetDefault(): RLHandle { return RLExterns.textureGetDefault(); }
+  public static function shapeDrawRectangle(x: Int, y: Int, width: Int, height: Int, color: RLHandle): Void { RLExterns.shapeDrawRectangle(x, y, width, height, color); }
+  public static function shapeDrawCube(positionX: Float, positionY: Float, positionZ: Float, width: Float, height: Float, length: Float, color: RLHandle): Void { RLExterns.shapeDrawCube(positionX, positionY, positionZ, width, height, length, color); }
+  public static function debugEnableFps(x: Int, y: Int, fontSize: Int, font: RLHandle): Void { RLExterns.debugEnableFps(x, y, fontSize, font); }
+  public static function debugDisable(): Void { RLExterns.debugDisable(); }
+  public static function eventOn(eventName: String, callback: Dynamic->Void): Int {
+    var id = RLEventBridge.register(eventName, callback);
+    return RLExterns.eventOnNative(eventName, RLEventBridge.ensureTrampoline(), untyped __cpp__('(void*)(intptr_t)id'));
+  }
+  public static function eventOnce(eventName: String, callback: Dynamic->Void): Int {
+    var id = RLEventBridge.register(eventName, callback);
+    return RLExterns.eventOnceNative(eventName, RLEventBridge.ensureTrampoline(), untyped __cpp__('(void*)(intptr_t)id'));
+  }
+  public static function eventOff(eventName: String, callback: Dynamic->Void): Int {
+    var id = RLEventBridge.findId(eventName, callback);
+    if (id == null) {
+      return -1;
+    }
+    var rc = RLExterns.eventOffNative(eventName, RLEventBridge.ensureTrampoline(), untyped __cpp__('(void*)(intptr_t)id'));
+    if (rc == 0) {
+      RLEventBridge.unregister(id);
+    }
+    return rc;
+  }
+  public static function eventOffAll(eventName: String): Int {
+    var rc = RLExterns.eventOffAll(eventName);
+    if (rc == 0) {
+      RLEventBridge.unregisterAllForEvent(eventName);
+    }
+    return rc;
+  }
+  public static function eventEmit(eventName: String, ?payload: Int): Int {
+    var p = payload == null ? 0 : payload;
+    return RLExterns.eventEmit(eventName, untyped __cpp__('(void*)(intptr_t)p'));
+  }
+  public static function eventListenerCount(eventName: String): Int {
+    return RLExterns.eventListenerCount(eventName);
+  }
   public static function textureDrawEx(texture: RLHandle, x: Float, y: Float, scale: Float, rotation: Float, tint: RLHandle): Void { RLExterns.textureDrawEx(texture, x, y, scale, rotation, tint); }
   public static function textureDrawGround(texture: RLHandle, positionX: Float, positionY: Float, positionZ: Float, width: Float, length: Float, tint: RLHandle): Void { RLExterns.textureDrawGround(texture, positionX, positionY, positionZ, width, length, tint); }
   public static function inputPollEvents(): Void { RLExterns.inputPollEvents(); }
@@ -1132,10 +1355,6 @@ abstract RLImpl(RLExterns) {
     return RLFileio.assetFinishTask(task);
   }
 
-  public static function assetCreateTaskGroup<T>(?onComplete:RLTaskGroupCallback<T>, ?onError:RLTaskGroupCallback<T>, ?ctx:T): RLTaskGroup {
-    return new RLTaskGroup(cast onComplete, cast onError, ctx);
-  }
-
   public static function assetTaskInvalid(): RLHandle {
     return RLHandle.invalid();
   }
@@ -1186,6 +1405,10 @@ abstract RLImpl(RLExterns) {
 
   public static function fsGetRootDir(): String {
     return RLFileio.fsGetRootDir();
+  }
+
+  public static function fsNormalizePath(path: String): String {
+    return RLFileio.fsNormalizePath(path);
   }
 
   static function assetAddTaskNative(task: RLHandle,

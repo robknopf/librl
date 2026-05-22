@@ -1,0 +1,85 @@
+package rl;
+
+abstract RLHandle(Int) from Int to Int {
+	public static inline function invalid():RLHandle {
+		return 0;
+	}
+
+	public inline function isValid():Bool {
+		return this != 0;
+	}
+}
+
+#if js
+typedef RLAsyncVoid = js.lib.Promise<Null<Dynamic>>;
+#else
+typedef RLAsyncVoid = Void;
+#end
+
+typedef RLSprite3dTransform = {
+	var positionX:Float;
+	var positionY:Float;
+	var positionZ:Float;
+	var size:Float;
+}
+
+typedef RLInitConfig = {
+	?windowWidth:Int,
+	?windowHeight:Int,
+	?windowTitle:String,
+	?windowFlags:Int,
+	?assetHost:String,
+	?fsRootDir:String,
+};
+
+typedef RLBootConfig = {
+	?bindingsPath:String,
+	?canvasId:String,
+	?modulePath:String,
+	?wasmPath:String,
+	?idealWidth:Int,
+	?idealHeight:Int,
+	?print:String->Void,
+	?printErr:String->Void,
+	?locateFile:String->String->String,
+};
+
+typedef RLVec2 = {
+	var x:Float;
+	var y:Float;
+}
+
+typedef RLVec3 = {
+	var x:Float;
+	var y:Float;
+	var z:Float;
+}
+
+typedef RLPickResult = {
+	var hit:Bool;
+	var distance:Float;
+	var point:RLVec3;
+	var normal:RLVec3;
+}
+
+typedef RLMouseState = {
+	var x:Int;
+	var y:Int;
+	var wheel:Int;
+	var left:Int;
+	var right:Int;
+	var middle:Int;
+}
+
+class RLKeyboardState {
+	public var max_num_keys:Int = 0;
+	public var keys:Array<Int> = [];
+	public var pressed_key:Int = 0;
+	public var pressed_char:Int = 0;
+	public var num_pressed_keys:Int = 0;
+	public var pressed_keys:Array<Int> = [];
+	public var num_pressed_chars:Int = 0;
+	public var pressed_chars:Array<Int> = [];
+
+	public function new() {}
+}

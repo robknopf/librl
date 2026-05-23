@@ -193,7 +193,18 @@ Web testbed keys (query `?example=`): `remote`, `js`, `c-lua`, `c-simple`, `nim-
 
 ## Binary size (reference)
 
-Approximate sizes for the example builds (release/optimized, no debug symbols). Use for relative comparison only; exact numbers depend on toolchain and options.
+Regenerate the full comparison tables with:
+
+```bash
+make wasm
+make -C examples wasm js cppia
+npm run build:cppia:script
+python3 tools/measure_web_sizes.py
+```
+
+Output: [`docs/WEB_SIZES.md`](WEB_SIZES.md) — web offerings, per-file breakdowns, JS app-layer sizes, desktop reference, gzip/brotli columns.
+
+Approximate ballpark (release/optimized, no debug symbols; see generated doc for current numbers):
 
 | Build | Desktop | WASM |
 |-------|---------|------|
@@ -397,6 +408,7 @@ Python helpers under `tools/` — use these instead of hand-editing generated bi
 | `npm run build --prefix bindings/js` | `make binding-types` | esbuild bundle of `src/rl.ts` → `dist/rl.js`; `tsc` emits `dist/rl.d.ts` from `src/types.ts`. |
 | `tools/gen_haxe_public_sections.py` | — | Regenerate Haxe section façade files (`bindings/haxe/rl/Fs.hx`, `Asset.hx`, …) from the `SECTIONS` map. Run after adding RLImpl methods; then review/commit generated output. |
 | `tools/find_node_jspi.py` | — | Locate Node ≥25 with JSPI for wasm tests; used by `tests/Makefile` when `NODE` is unset. |
+| `tools/measure_web_sizes.py` | — | Measure example web/desktop artifact sizes (raw/gzip/brotli); writes `docs/WEB_SIZES.md`. |
 
 **Agent workflow:** see [AGENTS.md](../AGENTS.md). Short form: C header change → update `docs/API.md` + all four bindings → `make binding-types` (if JS changed) → `python3 tools/audit_binding_parity.py` → fix gaps or document intentional omissions in `docs/BINDINGS.md`.
 

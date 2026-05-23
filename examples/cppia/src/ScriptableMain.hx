@@ -36,7 +36,8 @@ import haxe.io.Path;
 
 class ScriptableRuntime implements IRuntime {
 	#if (emscripten || PLATFORM_WEB || js)
-	final ASSET_HOST:String = "./";
+	final ASSET_HOST:String = "https://192.168.1.100:4444"; // get the assets from your local web server
+	//final ASSET_HOST:String = "./"; // use "./" for relative to the page's location"./";
 	#else
 	final ASSET_HOST:String = "https://192.168.1.100:4444";
 	#end
@@ -276,6 +277,16 @@ class ScriptableRuntime implements IRuntime {
 			}
 			return rc;
 		}
+
+		// call the script's onLoad callback
+		if (scriptInstance != null && scriptOnLoad != null) {
+			var rc = scriptOnLoad(null);
+			if (rc != RT_SUCCESS) {
+				Log.error("[script] Main.onLoad returned non-success");
+			}
+			return rc;
+		}
+
 		return RT_SUCCESS;
 	}
 
@@ -418,15 +429,14 @@ class ScriptableMain {
 			var dt = now - lastFrameTime;
 			lastFrameTime = now;
 			var rc = rt_tick(dt);
-			if (rc > cast RT_SUCCESS) {
-				trace("ScriptableMain: startLocalHost: rt_tick returned RT_STOPPED");
+			if (rc != cast RT_SUCCESS) {
+				if (rc > cast RT_SUCCESS)
+					trace("ScriptableMain: startLocalHost: rt_tick returned RT_STOPPED");
+				else
+					trace("ScriptableMain: startLocalHost: rt_tick failed with error: " + rc);
 				frameTimer.stop();
 				rt_shutdown();
-			}
-			if (rc < cast RT_SUCCESS) {
-				trace("ScriptableMain: startLocalHost: rt_tick failed with error: " + rc);
-				frameTimer.stop();
-				rt_shutdown();
+				Sys.exit(rc == RT_FAILED ? 1 : 0);
 			}
 		}
 		return RT_SUCCESS;

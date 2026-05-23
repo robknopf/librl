@@ -16,13 +16,13 @@ import rl.Music;
 import rl.Text;
 import rl.Input;
 import rl.Pick;
-
 import rl.Types.RLHandle;
 import rl.helpers.Log;
 import haxe.io.Path;
 import Types.RTResult;
 import rl.Types.RLPickResult;
 import Script;
+import test.TestImport;
 
 /*
 	enum abstract RTResult(Int) from Int to Int {
@@ -71,7 +71,8 @@ class MainScript extends Script {
 
 	final MODEL_PATH:String = "assets/models/gumshoe/gumshoe.glb";
 	final SPRITE_PATH:String = "assets/sprites/logo/wg-logo-bw-alpha.png";
-	final BGM_PATH:String = "assets/music/ethernight_club.mp3";
+	final BGM_1_PATH:String = "assets/music/ethernight_club.mp3";
+	final BGM_2_PATH:String = "assets/music/dancing_on_the_edge.mp3";
 
 	static var ctx:AppContext = null;
 
@@ -113,35 +114,15 @@ class MainScript extends Script {
 			trace("Main: onInit failed with error: " + err);
 			return RT_FAILED;
 		}
+		Logger.setLevel(Logger.LEVEL_INFO);
 
 		Window.setMonitor(1);
 
 		Fs.clear();
 
-		// Setup lighting and camera
-		Render.enableLighting();
-		Render.setLightDirection(-0.6, -1.0, -0.5);
-		Render.setLightAmbient(0.25);
-		ctx.camera = Camera3d.create(12.0, 12.0, 12.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 45.0, Camera3d.PERSPECTIVE);
-		Camera3d.setActive(ctx.camera);
-		ctx.greyAlphaColor = Color.create(0, 0, 0, 128);
-		ctx.backgroundColor = Color.create(245, 245, 245, 255);
+		setupScene();
 
-		ctx.labelText2d = Text2d.create(0, KOMIKA_FONT_SIZE);
-		Text2d.setContent(ctx.labelText2d, "rl_text2d: retained label");
-		Text2d.setPosition(ctx.labelText2d, 10, 136);
-		Text2d.setColor(ctx.labelText2d, Color.GREEN);
-
-		ctx.model = Model.create(0);
-					Model.setTransform(ctx.model, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
-			Model.setAnimation(ctx.model, 1);
-			Model.setAnimationSpeed(ctx.model, 1.0);
-			Model.setAnimationLoop(ctx.model, true);
-
-		loadAssets();
-
-		platformText = getPlatformText();
-
+		// draw a blank frame while assets load
 		Render.begin();
 		Render.clearBackground(ctx.backgroundColor);
 		Render.end();
@@ -149,7 +130,48 @@ class MainScript extends Script {
 		return RT_SUCCESS;
 	}
 
+
+	private function setupScene():Void {
+		Render.enableLighting();
+		Render.setLightDirection(-0.6, -1.0, -0.5);
+		Render.setLightAmbient(0.25);
+		ctx.camera = Camera3d.create(12.0, 12.0, 12.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 45.0, Camera3d.PERSPECTIVE);
+		Camera3d.setActive(ctx.camera);
+		ctx.greyAlphaColor = Color.create(0, 0, 0, 128);
+		ctx.backgroundColor = Color.create(245, 245, 245, 255);
+	}
+
+	private function teardownScene():Void {
+		Render.disableLighting();
+		Camera3d.setActive(0);
+		Camera3d.destroy(ctx.camera);
+		ctx.camera = 0;
+		Color.destroy(ctx.greyAlphaColor);
+		ctx.greyAlphaColor = 0;
+		Color.destroy(ctx.backgroundColor);
+		ctx.backgroundColor = 0;
+	}
+
 	function loadAssets():Void {
+		
+		ctx.model = Model.create(0);
+		Model.setTransform(ctx.model, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+		Model.setAnimation(ctx.model, 1);
+		Model.setAnimationSpeed(ctx.model, 1.0);
+		Model.setAnimationLoop(ctx.model, true);
+		Asset.addTask(Asset.ensureAsync(MODEL_PATH), (path, _) -> {
+			var modelAsset = Model.loadAsset(MODEL_PATH);
+			Model.setAsset(ctx.model, modelAsset);
+		}, null, ctx);
+
+		ctx.sprite = Sprite3d.create(0);
+		Sprite3d.setTransform(ctx.sprite, 0.0, 0.0, ctx.spriteYOffset, 1.0);
+		Asset.addTask(Asset.ensureAsync(SPRITE_PATH), (path, _) -> {
+			ctx.sprite = Sprite3d.createFromFile(path);
+			Sprite3d.setTransform(ctx.sprite, 0.0, 0.0, ctx.spriteYOffset, 1.0);
+		}, null, ctx);
+
+
 		Asset.addTask(Asset.ensureAsync(DEBUG_FONT_PATH), (path, _) -> {
 			ctx.debugFont = Font.create(path, DEBUG_FONT_SIZE);
 		}, null, ctx);
@@ -159,19 +181,31 @@ class MainScript extends Script {
 				Text2d.setFont(ctx.labelText2d, ctx.komikaFont);
 			}
 		}, null, ctx);
-		Asset.addTask(Asset.ensureAsync(MODEL_PATH), (path, _) -> {
-			var modelAsset = Model.loadAsset(MODEL_PATH);	
-			Model.setAsset(ctx.model, modelAsset);
-		}, null, ctx);
-		Asset.addTask(Asset.ensureAsync(SPRITE_PATH), (path, _) -> {
-			ctx.sprite = Sprite3d.createFromFile(path);
-			Sprite3d.setTransform(ctx.sprite, 0.0, 0.0, ctx.spriteYOffset, 1.0);
-		}, null, ctx);
-		Asset.addTask(Asset.ensureAsync(BGM_PATH), (path, _) -> {
+
+		Asset.addTask(Asset.ensureAsync(BGM_2_PATH), (path, _) -> {
 			ctx.bgm = Music.create(path);
 			Music.setLoop(ctx.bgm, true);
 			Music.play(ctx.bgm);
 		}, null, ctx);
+	}
+
+	private function unloadAssets():Void {
+		if (ctx.model != 0) {
+			Model.destroy(ctx.model);
+			ctx.model = 0;
+		}
+		if (ctx.sprite != 0) {
+			Sprite3d.destroy(ctx.sprite);
+			ctx.sprite = 0;
+	}
+		if (ctx.bgm != 0) {
+			Music.destroy(ctx.bgm);
+			ctx.bgm = 0;
+		}
+		if (ctx.debugFont != 0) {
+			Font.destroy(ctx.debugFont);
+			ctx.debugFont = 0;
+		}
 	}
 
 	public function animateFrame(deltaTimeSec:Float):Void {
@@ -194,13 +228,13 @@ class MainScript extends Script {
 
 		// move the sprite in a circle
 		/*
-		var rotationSpeed = 1.0;
-		var rotationRadius = 2.0;
-		if (ctx.sprite != 0) {
-			spriteX = Math.cos(ctx.elapsed * rotationSpeed) * rotationRadius;
-			spriteZ = Math.sin(ctx.elapsed * rotationSpeed) * rotationRadius;
-		}
-			*/
+			var rotationSpeed = 1.0;
+			var rotationRadius = 2.0;
+			if (ctx.sprite != 0) {
+				spriteX = Math.cos(ctx.elapsed * rotationSpeed) * rotationRadius;
+				spriteZ = Math.sin(ctx.elapsed * rotationSpeed) * rotationRadius;
+			}
+		 */
 
 		if (ctx.sprite != 0) {
 			Sprite3d.setTransform(ctx.sprite, spriteX, spriteY, spriteZ, 1.0);
@@ -216,6 +250,8 @@ class MainScript extends Script {
 			// return RT_STOPPED;
 		}
 
+		TestImport.test();
+
 		animateFrame(deltaTimeSec);
 
 		Music.updateAll();
@@ -225,24 +261,20 @@ class MainScript extends Script {
 		var remainingText = 'Remaining: ${formatFixed(ctx.countdownTimer, 2)}';
 		var elapsedText = 'Elapsed: ${formatFixed(ctx.totalTime, 2)}';
 
-		msg = "Nothing picked!";
+		msg = "Nothing picked.";
 
 		var pickResult:RLPickResult;
 
-		if (ctx.model != 0) {
-			pickResult = Pick.model(ctx.camera, ctx.model, mouse.x, mouse.y);
-			if (pickResult.hit) {
-				trace('Model pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y);
-				msg = 'Model pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y;
-			}
+		pickResult = Pick.model(ctx.camera, ctx.model, mouse.x, mouse.y);
+		if (pickResult.hit) {
+			trace('Model pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y);
+			msg = 'Model pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y;
 		}
 
-		if (ctx.sprite != 0) {
-			pickResult = Pick.sprite3d(ctx.camera, ctx.sprite, mouse.x, mouse.y);
-			if (pickResult.hit) {
-				trace('Sprite pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y);
-				msg = 'Sprite pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y;
-			}
+		pickResult = Pick.sprite3d(ctx.camera, ctx.sprite, mouse.x, mouse.y);
+		if (pickResult.hit) {
+			trace('Sprite pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y);
+			msg = 'Sprite pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y;
 		}
 
 		Render.begin();
@@ -250,83 +282,60 @@ class MainScript extends Script {
 
 		// 3d render
 		Render.beginMode3d();
-		if (ctx.model != 0) {
-			Model.draw(ctx.model, Color.RAYWHITE);
-		}
-		if (ctx.sprite != 0) {
-			Sprite3d.draw(ctx.sprite, Color.RAYWHITE);
-		}
+
+		Model.draw(ctx.model, Color.WHITE);
+		Sprite3d.draw(ctx.sprite, Color.WHITE);
+
 		Render.endMode3d();
 
 		// 2D UI overlay
 		var screen = Window.getScreenSize();
-		if (ctx.komikaFont != 0) {
-			var textSize = Text.measureEx(ctx.komikaFont, msg, KOMIKA_FONT_SIZE, 1.0);
-			var textX = Std.int((screen.x - textSize.x) / 2);
-			var textY = Std.int((screen.y - textSize.y) / 2);
-			Text.drawEx(ctx.komikaFont, msg, textX, textY, KOMIKA_FONT_SIZE, 1.0, Color.BLUE);
-		} else {
-			var textWidth = Text.measure(msg, KOMIKA_FONT_SIZE);
-			var textX = Std.int((screen.x - textWidth) / 2);
-			var textY = Std.int((screen.y - KOMIKA_FONT_SIZE) / 2);
-			Text.draw(msg, textX, textY, KOMIKA_FONT_SIZE, Color.BLUE);
-		}
-		if (ctx.debugFont != 0) {
-			Text.drawEx(ctx.debugFont, remainingText, 10, 36, DEBUG_FONT_SIZE, 1.0, Color.BLACK);
-			Text.drawEx(ctx.debugFont, elapsedText, 10, 56, DEBUG_FONT_SIZE, 1.0, Color.BLACK);
-			Text.drawEx(ctx.debugFont, mouseText, 10, 76, DEBUG_FONT_SIZE, 1.0, Color.BLACK);
-			Text.drawEx(ctx.debugFont, 'Reloads: ${ctx.reloadCount}', 10, 96, DEBUG_FONT_SIZE, 1.0, Color.BLACK);
-		} else {
-			Text.draw(remainingText, 10, 36, DEBUG_FONT_SIZE, Color.BLACK);
-			Text.draw(elapsedText, 10, 56, DEBUG_FONT_SIZE, Color.BLACK);
-			Text.draw(mouseText, 10, 76, DEBUG_FONT_SIZE, Color.BLACK);
-			Text.draw('Reloads: ${ctx.reloadCount}', 10, 96, DEBUG_FONT_SIZE, Color.BLACK);
-		}
+		var textSize = Text.measureEx(ctx.komikaFont, msg, KOMIKA_FONT_SIZE, 1.0);
+		var textX = Std.int((screen.x - textSize.x) / 2);
+		var textY = Std.int((screen.y - textSize.y) / 2);
+		Text.drawEx(ctx.komikaFont, msg, textX, textY, KOMIKA_FONT_SIZE, 1.0, Color.BLUE);
+		Text.drawEx(ctx.debugFont, remainingText, 10, 36, DEBUG_FONT_SIZE, 1.0, Color.BLACK);
+		Text.drawEx(ctx.debugFont, elapsedText, 10, 56, DEBUG_FONT_SIZE, 1.0, Color.BLACK);
+		Text.drawEx(ctx.debugFont, mouseText, 10, 76, DEBUG_FONT_SIZE, 1.0, Color.BLACK);
+		Text.drawEx(ctx.debugFont, 'Reloads: ${ctx.reloadCount}', 10, 96, DEBUG_FONT_SIZE, 1.0, Color.BLACK);
+		Text.drawEx(ctx.debugFont, platformText, 10, 116, DEBUG_FONT_SIZE, 1.0, Color.BLACK);
 
-		if (ctx.debugFont != 0) {
-			Text.drawEx(ctx.debugFont, platformText, 10, 116, DEBUG_FONT_SIZE, 1.0, Color.BLACK);
-		} else {
-			Text.draw(platformText, 10, 116, DEBUG_FONT_SIZE, Color.BLACK);
-		}
+		Text.drawFpsEx(ctx.debugFont, 10, 10, DEBUG_FONT_SIZE, ctx.greyAlphaColor);
 
-		if (ctx.debugFont != 0) {
-			Text.drawFpsEx(ctx.debugFont, 10, 10, DEBUG_FONT_SIZE, ctx.greyAlphaColor);
-		} else {
-			Text.drawFps(10, 10);
-		}
-
-		if (ctx.labelText2d != 0) {
-			Text2d.draw(ctx.labelText2d);
-		}
+		Text2d.draw(ctx.labelText2d);
 
 		Render.end();
 
 		return RT_SUCCESS;
 	}
 
-	override public function onUnload():Dynamic {
-		trace("Main: onUnload");
-		return ctx;
-	}
 
 	public function getPlatformText():String {
 		#if sys
-		return "Platform: " + Sys.systemName();
+		return 'Platform: ${RL.getPlatform()} (${Sys.systemName()})';
 		#else
-		return "Platform: " + RL.getPlatform();
+		return 'Platform: ${RL.getPlatform()} (Unknown)';
 		#end
 	}
-
+	
 	override public function onLoad(stashedData:Dynamic):RTResult {
 		trace("Main: onLoad");
-		ctx = stashedData;
+		if (stashedData != null) {
+			ctx = stashedData;
+		}
 		ctx.reloadCount++;
+
+		Logger.setLevel(Logger.LEVEL_TRACE);
+
+		setupScene();
+		loadAssets();
 
 		platformText = getPlatformText();
 
-		// if we wanted to swap models on load (for giggles) 
+		/*
+		// if we wanted to swap models on load (for giggles)
 		var modelPath:String = "";
-		if (ctx.reloadCount %2 == 0) {
+		if (ctx.reloadCount % 2 == 0) {
 			modelPath = "assets/models/cultist/cultist.glb";
 		} else {
 			modelPath = "assets/models/gumshoe/gumshoe.glb";
@@ -334,21 +343,55 @@ class MainScript extends Script {
 
 		Asset.addTask(Asset.ensureAsync(modelPath), (path, _) -> {
 			var modelAsset = Model.loadAsset(path);
-			//trace(modelAsset);
+			// trace(modelAsset);
 			Model.setAsset(ctx.model, modelAsset);
 		}, (path, _) -> {
 			Log.error('Failed to ensure asset: ${path}');
 		}, ctx);
-		
-		
 
+		// and swap the bgm on load
+		if (ctx.bgm != 0) {
+			// stop the bgm
+			Music.stop(ctx.bgm);
+			// release the asset
+			Music.destroy(ctx.bgm);
+			ctx.bgm = 0;
+		}
 
+		var bgmPath:String = "";
+		switch (ctx.reloadCount % 3) {
+			case 0:
+				bgmPath = BGM_1_PATH;
+			case 1:
+				bgmPath = BGM_2_PATH;
+			case 2:
+				bgmPath = ""; // no bgm
+		}
+
+		if (bgmPath != "") {
+			// load the new bgm
+			ctx.bgm = Music.create(bgmPath);
+			Music.setLoop(ctx.bgm, true);
+			Music.play(ctx.bgm);
+			Asset.addTask(Asset.ensureAsync(bgmPath), (path, _) -> {
+				ctx.bgm = Music.create(path);
+				Music.setLoop(ctx.bgm, true);
+				Music.play(ctx.bgm);
+			}, null, ctx);
+		}
+		*/
 		return RT_SUCCESS;
+	}
+
+	override public function onUnload():Dynamic {
+		trace("Main: onUnload");
+		unloadAssets();
+		return ctx;
 	}
 
 	override public function onShutdown():Void {
 		trace("Main: onShutdown");
-
+		teardownScene();
 		RL.deinit();
 	}
 

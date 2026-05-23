@@ -55,11 +55,21 @@ class CompileScript {
 	];
 
 	static function info(msg:String):Void {
-		Sys.print("\x1b[90m" + "> " + msg + "\x1b[0m\n");
+		if (verbosity == Verbosity.Verbose || verbosity == Verbosity.Quiet) {
+			Sys.print("\x1b[90m" + "> " + msg + "\x1b[0m\n");
+		}
+	}
+
+	static function debug(msg:String):Void {
+		if (verbosity == Verbosity.Verbose) {
+			Sys.print("\x1b[90m" + "> " + msg + "\x1b[0m\n");
+		}
 	}
 
 	static function warn(msg:String):Void {
-		Sys.print("\x1b[33m" + "> " + msg + "\x1b[0m\n");
+		if (verbosity == Verbosity.Verbose || verbosity == Verbosity.Quiet) {
+			Sys.print("\x1b[33m" + "> " + msg + "\x1b[0m\n");
+		}
 	}
 
 	static function error(msg:String):Void {
@@ -67,7 +77,9 @@ class CompileScript {
 	}
 
 	static function success(msg:String):Void {
-		Sys.print("\x1b[32m" + "> " + msg + "\x1b[0m\n");
+		if (verbosity == Verbosity.Verbose || verbosity == Verbosity.Quiet) {
+			Sys.print("\x1b[32m" + "> " + msg + "\x1b[0m\n");
+		}
 	}
 
 	static function runHaxe(args:Array<String>):Int {
@@ -123,18 +135,18 @@ class CompileScript {
 	static function main() {
 		/*
 		// debugging, show the paths
-		trace("thisDir: " + thisDir);
-		trace("projectRoot: " + projectRoot);
-		trace("librlRoot: " + librlRoot);
-		trace("wgutilsRoot: " + wgutilsRoot);
-		trace("srcDir: " + srcDir);
-		trace("bindingsDir: " + bindingsDir);
-		trace("scriptsDir: " + scriptsDir);
-		trace("exportClassesInfo: " + exportClassesInfo);
-		trace("commonArgs: " + commonArgs);
+		debug("thisDir: " + thisDir);
+		debug("projectRoot: " + projectRoot);
+		debug("librlRoot: " + librlRoot);
+		debug("wgutilsRoot: " + wgutilsRoot);
+		debug("srcDir: " + srcDir);
+		debug("bindingsDir: " + bindingsDir);
+		debug("scriptsDir: " + scriptsDir);
+		debug("exportClassesInfo: " + exportClassesInfo);
+		debug("commonArgs: " + commonArgs);
 		*/
 
-		trace(sysArgs);
+		debug(sysArgs.join(" "));
 		var errorCode = 0;
 		var buildStartTime:Float = 0;
 		var buildEndTime:Float = 0;

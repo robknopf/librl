@@ -15,7 +15,7 @@
 #-D no-traces
 #--dce full
 
---dce no
+#--dce no
 
 --macro macros.RuntimeCAbiMacro.registerGlobal()
 # ensure that rl.RL is available to scripts, in case the host didn't import them

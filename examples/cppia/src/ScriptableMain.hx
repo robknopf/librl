@@ -274,8 +274,8 @@ class ScriptableRuntime implements IRuntime {
 			var rc = scriptOnInit();
 			if (rc != RT_SUCCESS) {
 				Log.error("[script] Main.onInit returned non-success");
+				return rc;
 			}
-			return rc;
 		}
 
 		// call the script's onLoad callback
@@ -283,8 +283,8 @@ class ScriptableRuntime implements IRuntime {
 			var rc = scriptOnLoad(null);
 			if (rc != RT_SUCCESS) {
 				Log.error("[script] Main.onLoad returned non-success");
+				return rc;
 			}
-			return rc;
 		}
 
 		return RT_SUCCESS;

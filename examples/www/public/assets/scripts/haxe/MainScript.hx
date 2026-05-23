@@ -1,5 +1,6 @@
 package;
 
+import rl.Texture;
 import rl.RL;
 import rl.Window;
 import rl.Camera3d;
@@ -167,14 +168,19 @@ class MainScript extends Script {
 		ctx.sprite = Sprite3d.create(0);
 		Sprite3d.setTransform(ctx.sprite, 0.0, 0.0, ctx.spriteYOffset, 1.0);
 		Asset.addTask(Asset.ensureAsync(SPRITE_PATH), (path, _) -> {
-			ctx.sprite = Sprite3d.createFromFile(path);
-			Sprite3d.setTransform(ctx.sprite, 0.0, 0.0, ctx.spriteYOffset, 1.0);
+			var textureAsset = Texture.create(path);
+			Sprite3d.setTexture(ctx.sprite, textureAsset);
 		}, null, ctx);
 
-
+		ctx.labelText2d = Text2d.create(0, KOMIKA_FONT_SIZE);
+		Text2d.setContent(ctx.labelText2d, "rl_text2d: retained label");
+		Text2d.setPosition(ctx.labelText2d, 10, 136);
+		Text2d.setColor(ctx.labelText2d, Color.GREEN);
+		
 		Asset.addTask(Asset.ensureAsync(DEBUG_FONT_PATH), (path, _) -> {
 			ctx.debugFont = Font.create(path, DEBUG_FONT_SIZE);
 		}, null, ctx);
+
 		Asset.addTask(Asset.ensureAsync(KOMIKA_FONT_PATH), (path, _) -> {
 			ctx.komikaFont = Font.create(path, KOMIKA_FONT_SIZE);
 			if (ctx.labelText2d != 0) {
@@ -322,8 +328,8 @@ class MainScript extends Script {
 		trace("Main: onLoad");
 		if (stashedData != null) {
 			ctx = stashedData;
+			ctx.reloadCount++;
 		}
-		ctx.reloadCount++;
 
 		Logger.setLevel(Logger.LEVEL_TRACE);
 

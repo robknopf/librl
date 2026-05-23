@@ -128,9 +128,9 @@ static int rl_lua_compare_version()
     const int runtime_minor = rl_version_minor();
     const int runtime_patch = rl_version_patch();
 
-    fprintf(stderr, "[librl] bindings version: %d, %d, %d\n", RL_BINDING_BUILT_MAJOR, RL_BINDING_BUILT_MINOR, RL_BINDING_BUILT_PATCH);
-    fprintf(stderr, "[librl] librl version: %d, %d, %d\n", runtime_major, runtime_minor, runtime_patch);
-    (void)fflush(stderr);
+    fprintf(stdout, "[librl] bindings version: %d, %d, %d\n", RL_BINDING_BUILT_MAJOR, RL_BINDING_BUILT_MINOR, RL_BINDING_BUILT_PATCH);
+    fprintf(stdout, "[librl] librl version: %d, %d, %d\n", runtime_major, runtime_minor, runtime_patch);
+    (void)fflush(stdout);
 
     if (runtime_major != RL_BINDING_BUILT_MAJOR) {
         return -1;

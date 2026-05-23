@@ -100,9 +100,9 @@ on_tick():
 
 ## Possible Module Direction
 
-- `remote` may eventually become a real module type, similar in spirit to the old `lua` module.
+- `remote` may eventually become a real module type, similar in spirit to the Lua scripting hosts (`c-lua`, `examples/lua`).
 - The difference is backend, not architecture:
-  - `lua` hosted gameplay in a local VM
+  - Lua hosts run gameplay in-process via `bindings/lua`
   - `remote` would host gameplay over a transport such as WebSocket
 - If that happens, the game/runtime-facing API should feel the same whether it is:
   - local and in-process
@@ -173,10 +173,10 @@ on_tick():
 2. Add command struct to `rl_frame_command_data_t` union
 3. Add executor case in `src/rl_frame_command.c` (in appropriate 2D/3D/clear handler)
 
-**Lua module:**
-1. Add bindings in `modules/lua/src/rl_module_lua.c`
-2. Create Lua wrapper in `examples/www/public/assets/scripts/lua/<name>.lua`
-3. Follow pattern: `load()` caches handle, `set_transform()` tracks dirty state, `draw()` emits command
+**Lua binding (`bindings/lua`):**
+1. Add C bindings in `bindings/lua/rl_lua_<name>.c` (+ `rl_lua_<name>.h`) and register exports in `bindings/lua/rl_lua.c`
+2. Gameplay scripts call the flat `rl.*` API directly (see `examples/www/public/assets/scripts/lua/main.lua`)
+3. Optional Lua-side helper files under `examples/www/public/assets/scripts/lua/` are experiments only — not required for new resource types
 
 **Remote server:**
 1. Add enum to `ResourceRequestType` in `resource_protocol.ts`
@@ -191,7 +191,7 @@ on_tick():
 
 **Documentation:**
 - Add section to `docs/API.md`
-- Update `README.md` Lua module list if adding wrapper
+- Update bindings parity (`python3 tools/audit_binding_parity.py`) and `docs/BINDINGS.md` if the Lua surface changes
 
 ## Adding a New Command Type
 

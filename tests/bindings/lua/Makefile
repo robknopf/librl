@@ -27,7 +27,7 @@ test_version_mismatch:
 build:
 	@if [ ! -f "$(LIBLUA_ARCHIVE)" ]; then \
 		echo "Error: liblua not found at $(LIBLUA_ARCHIVE)"; \
-		echo "Run 'make -C $(ROOT_DIR)/modules/lua deps' first."; \
+		echo "Run 'make deps' first (builds deps/liblua)."; \
 		exit 1; \
 	fi
 	@$(MAKE) -C $(ROOT_DIR) desktop

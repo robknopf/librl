@@ -4,6 +4,8 @@ Internal reference for building, navigating, and changing librl.
 
 **Work tracking:** [ROADMAP.md](ROADMAP.md) is the single source for tasks (now / next / backlog / research / parked / done). This file is reference only — do not add task lists here.
 
+**Related docs:** [API.md](API.md) (C API), [BINDINGS.md](BINDINGS.md) (binding conventions), [docs/README.md](README.md) (doc index), [AGENTS.md](../AGENTS.md) (agent/editor contract).
+
 ## Fast Start
 
 From repo root:
@@ -16,6 +18,15 @@ make -C examples/c-lua desktop
 make test
 ```
 
+Web dev (Vite testbed + rebuild watchers + cppia script compile + script watcher):
+
+```bash
+npm install
+npm run dev
+```
+
+Vite serves `examples/www/` on port **4444** (HTTPS by default when certs are found under `~/keys/$HOSTNAME/`; set `ENABLE_SSL=0` to disable). Example URLs: `https://127.0.0.1:4444/?example=haxe-wasm-simple`.
+
 Useful variants:
 
 ```bash
@@ -23,8 +34,11 @@ make DEV=1 desktop
 make DEV=1 wasm
 make -C tests test_desktop
 make -C tests test_wasm
+make -C examples desktop    # all desktop examples
+make -C examples wasm       # wasm examples (see Examples matrix — cppia wasm is npm-only today)
 make clean
 cd examples/nim-simple && nim clean
+python3 tools/find_node_jspi.py   # Node with JSPI for wasm tests
 ```
 
 ## Build and Flag Conventions
@@ -47,17 +61,31 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
   - `make shared` -> `lib/librl.so` (core C API shared library; no Lua module entrypoint)
   - `make wasm_archive` -> `lib/librl.wasm.a`
   - `make wasm` -> `lib/librl.wasm` + JS loader
-- Stock Lua module (desktop `require("rl")`):
-  - `make rl_lua` -> `lib/rl.so`
+- Stock Lua binding (desktop `require("rl")`):
+  - `make rl_lua` -> `lib/rl.so` (links against `lib/librl.so`)
   - default lua headers path: `deps/liblua/include` (override with `LIBLUA_INC=/path/to/lua/include`)
-  - `lib/rl.so` is linked against `lib/librl.so`
-- Embedded Lua VM module (`modules/lua`):
-  - `make librl_lua_desktop` -> `modules/lua/lib/librl_lua.a`
-  - `make librl_lua_wasm` -> `modules/lua/lib/librl_lua.wasm.a`
-  - `make librl_lua` -> builds both
+  - sources: `bindings/lua/*.c`
+- Lua in examples:
+  - `examples/c-lua/` — statically links `deps/liblua` + `bindings/lua/*.c` into the host binary (desktop and wasm)
+  - `examples/lua/` — stock Lua/LuaJIT loads `lib/rl.so` at runtime
 - WASM note:
-  - Desktop-style Lua dynamic module loading (`rl.so`) does not apply to wasm.
-  - For wasm Lua scripting, use the embedded Lua VM module path (`modules/lua`) and its require/searcher + fetch/fs/asset flow.
+  - Desktop-style dynamic `rl.so` loading does not apply to wasm; use the `c-lua` wasm host instead.
+
+### Examples Matrix
+
+Aggregate from `examples/Makefile`:
+
+| Example | Desktop | WASM | JS | Notes |
+|---------|---------|------|-----|-------|
+| `c-simple` | yes | yes | — | Minimal C host, no Lua VM |
+| `c-lua` | yes | yes | — | Thin C host (static liblua + bindings); shared scripts under `examples/www/public/assets/scripts/lua/` |
+| `lua` | yes | — | — | Stock desktop Lua via `boot.lua`; needs Vite/asset host on `:4444` for script fetch |
+| `remote` | yes | yes | — | Isolated server/client experiment; not core API |
+| `haxe-simple` | — | yes | yes | Direct Haxe binding usage |
+| `nim-simple` | yes | yes | yes | Direct Nim binding usage |
+| `cppia` | yes | npm | — | Scriptable Haxe host; wasm via `npm run build:cppia:wasm` (included in deploy, not `make -C examples wasm`) |
+
+Web testbed keys (query `?example=`): `remote`, `js`, `c-lua`, `c-simple`, `nim-wasm-simple`, `nim-js-simple`, `haxe-wasm-simple`, `haxe-js-simple`, `cppia`.
 
 ## Nested Repo Note (`deps/libraylib`)
 
@@ -68,9 +96,10 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
 
 ## Logging and Output Notes
 
-- raylib logs are rerouted via `SetTraceLogCallback(...)` in `examples/c-lua/main.c`.
-- We map raylib levels into wgutils logger levels and currently emit via:
+- Raylib logs are rerouted centrally in `src/rl_logger.c` via `rl_logger_init()` (called from `rl_init()`).
+- `SetTraceLogCallback(rl_logger_reroute_raylib_log)` maps raylib levels into wgutils logger levels and emits via:
   - `log_message(level, "raylib", 0, "%s", msg);`
+- App/bindings code should use the public logger API (`rl_logger_message`, `rl_logger_message_source`, `rl_logger_set_level`) rather than wiring raylib callbacks in examples.
 - `log_message` supports optional source metadata:
   - file present + line > 0: emits file and line
   - file present + line <= 0: emits file only
@@ -92,8 +121,8 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
 - Prefer subsystem-first public API names:
   - `rl_window_init`
   - `rl_text_draw`
-  - `rl_frame_runner_run`
-  - `rl_module_lua_get_api`
+  - `rl_asset_ensure`
+  - `rl_fs_init`
 - For async starters that return a pollable task, make that explicit with `_async`:
   - `rl_asset_ensure_async`
   - `rl_fs_restore_async`
@@ -110,10 +139,7 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
   - `handle_boot_restore`
   - `handle_boot_prepare`
 - Avoid `<name>_handler` naming unless there is a strong reason.
-- Module implementation naming should follow `rl_module_<backend>_*`:
-  - file/header: `rl_module_lua.c`, `rl_module_lua.h`
-  - getter: `rl_module_lua_get_api()`
-- Module identity strings like `"lua"` are runtime identifiers, not a reason to use older `rl_lua_*` symbol naming.
+- Binding implementation files use the `rl_lua_*` prefix (e.g. `bindings/lua/rl_lua_model.c`); there is no separate embedded Lua VM module tree anymore.
 - Scratch helpers should be explicitly suffixed:
   - `*_to_scratch` when C writes into the shared scratch area for JS/host to read.
   - `*_from_scratch` when C reads data provided by the host through scratch.
@@ -134,11 +160,11 @@ make -C deps/libraylib wasm_release RAYLIB_WASM_GRAPHICS=GRAPHICS_API_OPENGL_ES2
 
 ## Audio API State
 
-- `rl_music` and `rl_sound` subsystems are available in C/JS/Nim bindings.
-- C example currently uses:
-  - background music stream: `assets/music/ethernight_club.mp3`
-  - click SFX on left mouse press: `assets/sounds/click_004.ogg`
-- Cleanup order in example is explicit: destroy handles, then `rl_deinit()`, then `CloseWindow()`.
+- `rl_music` and `rl_sound` subsystems are available in C/JS/Nim/Haxe/Lua bindings.
+- Examples commonly use:
+  - background music: `assets/music/ethernight_club.mp3` (Haxe/cppia also reference `dancing_on_the_edge.mp3`)
+  - click SFX: `assets/sounds/click_004.ogg`
+- Cleanup order in native examples is explicit: destroy handles, then `rl_deinit()`, then `CloseWindow()` where applicable.
 
 ## Raylib Loader Split
 
@@ -174,28 +200,45 @@ Approximate sizes for the example builds (release/optimized, no debug symbols). 
 | C (no Lua VM) | ~2.8 MB | ~0.58 MB |
 | Nim example | ~2.1 MB | ~0.59 MB |
 | Haxe example | ~3.6 MB | ~1.8 MB |
-| Haxe cppia host | ~13 MB | not built |
+| Haxe cppia host | ~13 MB | ~2 MB+ (built; larger than plain Haxe wasm) |
 
-- C without Lua: desktop `make -C examples/c-lua desktop USES_MODULE_LUA=0`, WASM `make -C examples/c-lua wasm USES_MODULE_LUA=0`.
+- C without Lua: use `examples/c-simple` (`make -C examples/c-simple desktop` / `wasm`).
 - C and Nim WASM are comparable (~0.58–0.59 MB); Haxe WASM is ~3× larger for similar example scope.
-- Haxe cppia adds ~3.5× over the plain Haxe host on desktop; a hypothetical cppia WASM would be proportionally larger and not suited to tight size budgets.
+- Haxe cppia adds ~3.5× over the plain Haxe host on desktop; wasm cppia is built for the testbed but is not a tight-size target.
 
 ## Web/Vite Workflow Notes
 
-- Web examples resolve `bindings/js/dist/rl.js` relative to `document.baseURI` (works under subpath deploys like `/testbed/librl/`). Override via `bindingsPath` in boot config if needed. The wrapper instantiates the raw `lib/librl.js` runtime. If `make clean` removes generated outputs while Vite is running, browser requests can fail until rebuild completes.
+### Dev server (`npm run dev`)
+
+Runs in parallel (see root `package.json`):
+
+- `vite` — serves `examples/www/` on port 4444; mounts `/examples/` and `/bindings/` for out-of-root artifacts
+- `onchange` watchers — rebuild C/Nim/Haxe/cppia wasm or js outputs when sources change
+- `examples/script_watcher` — Bun WebSocket server (default port **9001**) for cppia hot reload; watches `examples/www/public/` for `.cppia` (and related) changes and notifies connected clients
+
+Cppia host (`examples/cppia/src/ScriptableMain.hx`) loads `assets/scripts/haxe/MainScript.cppia` and connects to the script watcher when `SCRIPT_WATCHER_URL` is set. Recompile gameplay with `npm run build:cppia:script` (or the `watch:cppia:script` watcher). **Asset host URLs** in example sources are often hardcoded to a LAN IP — adjust `ASSET_HOST` / `SCRIPT_WATCHER_URL` for your machine or use relative `./` where supported.
+
+`npm install` runs `tools/generate_devtools_workspace.py` (Chrome DevTools workspace mapping).
+
+### Runtime resolution and recovery
+
+- Web examples resolve `bindings/js/dist/rl.js` relative to `document.baseURI` (works under subpath deploys like `/testbed/librl/`). Override via `bindingsPath` in boot config if needed. The wrapper instantiates the raw `lib/librl.js` runtime.
+- If `make clean` removes generated outputs while Vite is running, browser requests can fail until rebuild completes.
 - Vite may not always recover automatically from a missing generated entry file (`main.js`/bundled artifacts) without a new file-change trigger.
 - Practical flow:
-  1. Rebuild wasm/js outputs (`make wasm` or target-specific make).
-  2. Touch or re-save relevant entry file if HMR does not recover.
+  1. Rebuild wasm/js outputs (`make wasm`, `npm run build:*`, or let `npm run dev` watchers rebuild).
+  2. Touch or re-save relevant entry file if HMR does not recover (`vite-plugin-restart` handles many `out/` artifacts).
   3. Restart Vite only if file watching still does not pick up rebuilt outputs.
+
+### Tests and deploy
+
 - **Manual wasm smoke (optional):** with Vite running on port 4444, `node tests/smoke/haxe_wasm_smoke.mjs` loads the Haxe wasm example in headless Chromium and prints console/page errors. Not wired into `make test` yet. See `tests/README.md`.
 - **Testbed deploy:** `npm run deploy` runs `build:all:release` then rsyncs `examples/www/dist/` to the remote testbed host.
   - `build:librl:release` — `make wasm` + `npm run build:js-binding` (`lib/` + `bindings/js/dist/`)
   - `build:librl` — debug build (`make DEV=1 wasm` + JS binding)
-  - `build:examples:release` — all listed www examples (wasm + js targets, including cppia)
+  - `build:examples:release` — all listed www examples (wasm + js targets, including cppia host + script)
   - `vite build` — static shell from `examples/www/`
   - `npm run stage:www:dist` — copies built example artifacts into `examples/www/dist/`
-  - Example keys in `examples/www/index.html`: remote, js, c-lua, c-simple, nim-wasm-simple, nim-js-simple, haxe-wasm-simple, haxe-js-simple, cppia
 
 ## Scripting Runtime Direction
 
@@ -230,11 +273,12 @@ Approximate sizes for the example builds (release/optimized, no debug symbols). 
   - keyboard snapshot
   - mouse snapshot
   - window/screen info as needed
-- Host calls script `update(...)` once per tick.
+- Host calls script tick/update once per frame (`rt_tick`, cppia `onTick`, or direct `RL.tick()` in compiled examples).
 - Script calls `rl_*` directly (via bindings) for draw, audio, and resource work — immediate-mode; **no frame-command buffer in core librl** (see `docs/BINDINGS.md`).
 - Current status:
-  - `examples/c-lua/` — Lua lifecycle host; scripts use wrapper modules that call the flat C API
-  - `examples/cppia/` — Haxe cppia scripting host
+  - `examples/c-lua/` — thin C host; pumps `runtime_wrapper` (`rt_boot` / `rt_init` / `rt_tick` / `rt_shutdown`)
+  - `examples/lua/` — stock desktop Lua host via `boot.lua`; same shared scripts as c-lua/web
+  - `examples/cppia/` — Haxe scriptable host; loads `MainScript.cppia`; script watcher for hot reload
   - `examples/haxe-simple/`, `examples/nim-simple/` — direct binding usage from game code
   - `examples/remote/` — **isolated experiment**: server streams a private command protocol to a thin client (`examples/remote/include/rl_frame_command.h`); not part of core `include/` or binding parity
 
@@ -250,69 +294,66 @@ Approximate sizes for the example builds (release/optimized, no debug symbols). 
 
 ### Practical Goal
 
-- In the ideal workflow, the existing C example should be usable as a thin host shell where gameplay can be authored in scripts with a basic text editor.
-- To make that real, the script layer still needs a coherent contract for:
-  - `init/update`-style lifecycle (or equivalent)
-  - input access
+- In the ideal workflow, a thin native or wasm host runs once while gameplay is authored in plain-text scripts with a basic editor.
+- Current script layers share these needs:
+  - init/tick/shutdown lifecycle (or equivalent)
+  - `rl.init({...})` (Lua/Haxe) or host-side init (C) for window and asset host
+  - input access via bindings
   - resource creation returning handles
   - handle-based draw/audio via direct bindings
-  - predictable hot reload behavior
+  - predictable hot reload (cppia script watcher today; Lua HCR sketched in `lua_demo.lua` only)
   - good source-aware logging/errors
 
 ## Current Lua Runtime Shape
 
-- Current Lua entrypoints:
-  - `get_config()`
-  - `init()`
-  - `load()`
-  - `update(frame)`
-  - `unload()`
-  - `serialize()`
-  - `unserialize(state)`
-  - `shutdown()`
-- Ordering in the C example:
-  1. host initializes librl and Lua module
-  2. host emits `lua.add_path("assets/scripts/lua")`
-  3. host emits `lua.do_file("boot.lua")`
-  4. host asks the module for config through `api->get_config`
-  5. host creates window / sets target FPS
-  6. host calls module `start`
-  7. Lua runs one-time `init()` if present
-  8. Lua runs `load()` if present
-  9. host calls Lua `update(frame)` every tick
-  10. on reload, Lua runs `serialize()` -> `unload()` -> new chunk -> `load()` -> `unserialize(state)`
-  11. on module teardown, Lua runs `unload()` and then `shutdown()`
-- `get_config()` currently supports:
-  - `width`
-  - `height`
-  - `title`
-  - `target_fps`
-  - `flags`
-- Lua module currently exposes common window flag constants for `get_config()`.
-- Lifecycle intent:
-  - `init()` is one-time constructor-style runtime setup
-  - `load()` / `unload()` are reloadable code-lifetime hooks
-  - `serialize()` / `unserialize(state)` are optional state transfer hooks for HCR
-  - `shutdown()` is one-time destructor-style teardown
+Shared gameplay scripts live under `examples/www/public/assets/scripts/lua/`. Hosts differ only in how they bootstrap Lua and pump the frame loop.
 
-## Current Lua Support Modules
+### Runtime wrapper contract
 
-- Lua modules now exist under `examples/www/public/assets/scripts/lua/`:
-  - `color.lua`
-  - `model.lua`
-  - `texture.lua`
-  - `sprite3d.lua`
-  - `sound.lua`
-  - `music.lua`
-  - `camera3d.lua`
-  - `font.lua`
-- These are intended to be the first layer of a Lua-side standard library:
-  - C stays flat and handle-based
-  - Lua gets object-like helpers with state and methods
-- Current pattern:
-  - `Color.create(r, g, b, a)` returns a wrapper around a runtime-created color handle with `:destroy()`
-  - `Model.load(path)` returns a table with transform/animation fields and `:draw()`, `:pick()`, `:destroy()`
-  - similar shape for texture/sprite/sound/music/font/camera wrappers
+`runtime_wrapper.lua` is the stable host↔script boundary:
+
+| Host calls | Lua module provides |
+|------------|---------------------|
+| `rt_boot(module_name?)` | loads app module (default `main`); validates callbacks |
+| `rt_init(host_context?)` | forwards to app `on_init()` |
+| `rt_tick(delta_time)` | forwards to app `on_tick(delta_time)` |
+| `rt_shutdown()` | forwards to app `on_shutdown()` |
+
+App modules (e.g. `main.lua`) return a table with required callbacks:
+
+- `on_init()` — calls `rl.init({ window_width, window_height, window_title, window_flags, asset_host, ... })`, sets up scene
+- `on_tick(delta_time)` — input, update, draw; returns `ResultCode` (`OK`, `ERROR`, `QUIT`)
+- `on_shutdown()` — destroy handles, `rl.deinit()`
+
+Window/config is owned by the script via `rl.init(...)`, not by a separate `get_config()` host hook.
+
+### Host flows
+
+**`examples/c-lua/` (desktop + wasm thin C host)**
+
+1. C host creates Lua VM and temporary `rl_fs_init` to fetch `runtime_wrapper.lua` from the asset host
+2. C caches `rt_*` refs and calls `rt_boot("main")` (module name from `LUA_RUNTIME_MODULE`)
+3. C calls `rl_fs_deinit()` so the script owns full librl lifecycle via `rl.init` / `rl.deinit`
+4. C pumps `rt_init` → loop `rt_tick(dt)` → `rt_shutdown`
+
+**`examples/lua/` (stock desktop Lua)**
+
+1. `boot.lua` prepends `libs/` to `package.cpath`, `require("rl")`, `rl.fs_init()` + `rl.asset_set_host("https://localhost:4444")`
+2. Adds `assets/scripts/lua` to `package.path`, `require("assets/scripts/lua/runtime_wrapper")`
+3. Simulates the same `rt_*` pump as the C host (see `examples/lua/README.md`)
+
+Run: `make -C examples/lua run` (builds `rl.so` + `librl.so`, copies into `examples/lua/libs/`). **Requires Vite** (or another asset server) on `:4444` so scripts and assets resolve.
+
+**Wasm c-lua** uses the same script tree; assets load through the configured `asset_host`.
+
+### HCR / reload (experimental)
+
+- `lua_demo.lua` sketches optional `serialize` / `unserialize` / `load` / `unload` hooks for hot code reload.
+- Standard `runtime_wrapper` + `main.lua` do **not** wire HCR yet; see [ROADMAP.md](ROADMAP.md) for follow-up.
+
+### Lua scripts
+
+Gameplay scripts call the flat `rl.*` binding API directly (see `main.lua`). `runtime_wrapper.lua` is the only shared lifecycle shim. Other files under `examples/www/public/assets/scripts/lua/` (e.g. `lua_demo.lua` and its helper requires) are experiments — not part of the default runtime path.
 
 ## Assets and Credits
 
@@ -326,11 +367,13 @@ Approximate sizes for the example builds (release/optimized, no debug symbols). 
 - Seeing `GLSL ES 1.00` at startup means you are effectively on WebGL1 path.
 - Seeing NPOT warning (`limited NPOT support`) usually indicates WebGL1 constraints or non-mipmap/non-repeat constraints for NPOT textures.
 - Duplicate/buried wasm flags can happen between root, examples, tests, and deps makefiles; prefer a single shared variable per makefile where possible.
-- Binding changes should be reflected in:
-  - `bindings/js/dist/rl.js`
-  - `bindings/nim/rl.nim`
+- **Tests:** root `make test` delegates to `tests/Makefile` (same as `make -C tests test`). Wasm tests require Node **≥25 with JSPI**; Makefiles resolve via `python3 tools/find_node_jspi.py` when `NODE` is unset or lacks JSPI.
+- **Web dev:** example `asset_host` / script-watcher URLs are often LAN-specific; mismatch with your Vite host causes fetch/reload failures.
+- Binding changes should be reflected in all four bindings plus:
+  - `bindings/js/dist/rl.js` and `bindings/js/dist/rl.d.ts` (via `make binding-types`, not by hand)
+  - `bindings/nim/rl.nim`, `bindings/haxe/rl/`, `bindings/lua/`
   - `docs/API.md`
-- After C API or binding surface changes, run `python3 tools/audit_binding_parity.py` and update `docs/ROADMAP.md` gap table if needed.
+- After C API or binding surface changes, run `python3 tools/audit_binding_parity.py` and update `docs/ROADMAP.md` gap table if needed. See also [AGENTS.md](../AGENTS.md) for the full agent contract.
 
 ## Tools
 
@@ -355,7 +398,7 @@ Python helpers under `tools/` — use these instead of hand-editing generated bi
 | `tools/gen_haxe_public_sections.py` | — | Regenerate Haxe section façade files (`bindings/haxe/rl/Fs.hx`, `Asset.hx`, …) from the `SECTIONS` map. Run after adding RLImpl methods; then review/commit generated output. |
 | `tools/find_node_jspi.py` | — | Locate Node ≥25 with JSPI for wasm tests; used by `tests/Makefile` when `NODE` is unset. |
 
-**Agent workflow:** C header change → update `docs/API.md` + all four bindings → `make binding-types` (if JS changed) → `python3 tools/audit_binding_parity.py` → fix gaps or document intentional omissions in `docs/BINDINGS.md`.
+**Agent workflow:** see [AGENTS.md](../AGENTS.md). Short form: C header change → update `docs/API.md` + all four bindings → `make binding-types` (if JS changed) → `python3 tools/audit_binding_parity.py` → fix gaps or document intentional omissions in `docs/BINDINGS.md`.
 
 One-off migration scripts (`migrate_fileio_to_fs_asset.py`, `rename_fileio_public_api.py`) are historical; do not run unless explicitly reviving a migration.
 

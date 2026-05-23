@@ -1,14 +1,18 @@
-# Lua Example
+# Lua Example (stock desktop Lua)
 
-This example runs on stock desktop Lua/LuaJIT, but it still uses the same
-shared runtime scripts as the embedded `c-lua` example under
-`examples/www/public/assets/scripts/lua/`.
-
-Only the bootstrap is local:
+Runs gameplay on a system Lua/LuaJIT interpreter using the same scripts as the
+`c-lua` web/desktop hosts. Only the bootstrap and native libs are local:
 
 - `boot.lua`
-- `libs/rl.so`
-- `libs/librl.so`
+- `libs/rl.so` — Lua binding (`bindings/lua`, built by `make rl_lua`)
+- `libs/librl.so` — core shared library
+
+## Prerequisites
+
+- Lua or LuaJIT on `PATH` (`luajit`, `lua5.1`, or `lua`)
+- Vite (or another static server) serving `examples/www/` on **port 4444**
+  - from repo root: `npm run serve` or `npm run dev`
+  - scripts and assets are fetched from the configured asset host, not copied into this directory
 
 ## Run
 
@@ -16,55 +20,53 @@ Only the bootstrap is local:
 make -C examples/lua run
 ```
 
-What this does:
+This builds `lib/librl.so` and `lib/rl.so`, copies them into `examples/lua/libs/`,
+then runs `boot.lua`.
 
-- builds `lib/librl.so` and `lib/rl.so` via `make rl_lua`
-- copies `rl.so` and `librl.so` into `examples/lua/libs/`
-- runs local `boot.lua`
+## Bootstrap flow
 
-## Bootstrap Flow
+`boot.lua`:
 
-`boot.lua` does the following:
+1. Prepends `examples/lua/libs/` to `package.cpath`
+2. `require("rl")` — loads the native binding; installs the asset-backed `require` searcher
+3. `rl.fs_init()` — temporary loader cache for bootstrapping
+4. `rl.asset_set_host("https://localhost:4444")` — must match your Vite host (scheme/host/port)
+5. Prepends `assets/scripts/lua` to `package.path`
+6. `require("assets/scripts/lua/runtime_wrapper")`
+7. Pumps the same lifecycle as the C host: `rt_boot` → `rt_init` → `rt_tick` loop → `rt_shutdown`
+8. Calls `rl.fs_deinit()` after boot so the script owns full librl lifecycle via `rl.init` / `rl.deinit`
 
-1. prepends `examples/lua/libs/` to `package.cpath`
-2. `require("rl")` loads the local native Lua binding module
-3. initializes the loader with `rl.fs_init()`
-4. points the loader at the desktop asset host with `rl.loader_set_asset_host("https://localhost:4444")`
-5. prepends `assets/scripts/lua` to `package.path`
-6. `require(...)`s the shared `runtime_wrapper` module
-7. `runtime_wrapper` then `require(...)`s the requested runtime module, which defaults to `main`
+## Script loading
 
-The important detail is that the app runtime is not loaded from the local
-filesystem. The `rl` Lua module installs a custom loader-backed `require`
-searcher, so missing Lua modules are:
+Gameplay files live under `examples/www/public/assets/scripts/lua/` and are served
+by Vite. The `rl` binding's custom `require` searcher resolves module names through
+`package.path`, fetches missing files from the asset host into the fs cache, then
+loads from cache.
 
-- resolved through `package.path`
-- fetched from the configured asset host
-- written into the loader/fileio cache
-- loaded from that cached local copy
+Default app module: `main` (see `runtime_wrapper.lua`).
 
-That is why this desktop Lua example can run the same files that `c-lua` and
-the web-served Lua examples use:
+## Alternate runtime module
+
+Pass the module name as the first argument after `boot.lua`:
+
+```bash
+cd examples/lua
+lua boot.lua lua_demo
+```
+
+Use `--root` / `-r` to change the script root (default: `assets/scripts/lua`):
+
+```bash
+lua boot.lua --root assets/scripts/lua main
+```
+
+## Relation to `c-lua`
+
+`examples/lua/boot.lua` is the stock-Lua equivalent of the thin C host in
+`examples/c-lua/main.c`. Both pump `runtime_wrapper` and share:
 
 - `examples/www/public/assets/scripts/lua/runtime_wrapper.lua`
 - `examples/www/public/assets/scripts/lua/main.lua`
 
-In other words, `examples/lua/boot.lua` is the stock-Lua equivalent of the
-thin host in `examples/c-lua/main.c`.
-
-## Alternate Runtime Module
-
-`boot.lua` accepts an alternate runtime module name as its final positional
-argument. For example:
-
-```bash
-cd examples/lua
-lua boot.lua main
-```
-
-or with a different script root:
-
-```bash
-cd examples/lua
-lua boot.lua --root assets/scripts/lua main
-```
+The C host statically links liblua and the binding; this example loads `rl.so`
+dynamically for faster binding iteration on desktop.

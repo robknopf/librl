@@ -337,7 +337,6 @@ OUT_DESKTOP ?= $(OUT_LIB_DIR)/$(LIBRL_BASENAME)$(DEV_SUFFIX).a
 # Default target
 all: ensure_deps wasm wasm_archive desktop shared
 
-LUA_VM_MODULE_DIR := $(LIBRL_ROOT)/modules/lua
 LIBLUA_REPO ?= git@github.com:robknopf/liblua-builder.git
 LIBLUA_ROOT ?= $(LIBRL_ROOT)/deps/liblua
 LIBLUA_INC ?= $(LIBLUA_ROOT)/include
@@ -370,10 +369,20 @@ deps:
 		exit 1; \
 	fi
 	@$(MAKE) -C $(WGUTILS_ROOT) desktop
-	@$(MAKE) -C $(LUA_VM_MODULE_DIR) deps \
-		ROOT_DIR="$(abspath .)" \
-		LIBLUA_ROOT="$(abspath $(LIBLUA_ROOT))" \
-		LIBLUA_REPO="$(LIBLUA_REPO)"
+	@if [ ! -d "$(LIBLUA_ROOT)" ]; then \
+		echo "Cloning liblua from $(LIBLUA_REPO) into $(LIBLUA_ROOT)"; \
+		mkdir -p "$$(dirname "$(LIBLUA_ROOT)")"; \
+		git clone $(LIBLUA_REPO) $(LIBLUA_ROOT); \
+	else \
+		echo "Updating existing liblua directory: $(LIBLUA_ROOT)"; \
+		git -C "$(LIBLUA_ROOT)" pull --ff-only; \
+	fi
+	@if [ ! -f "$(LIBLUA_ROOT)/Makefile" ]; then \
+		echo "Error: $(LIBLUA_ROOT) exists but does not look like liblua-builder output."; \
+		exit 1; \
+	fi
+	@echo "Running make in $(LIBLUA_ROOT)"
+	@$(MAKE) -C "$(LIBLUA_ROOT)" desktop wasm
 
 ensure_deps:
 	@if [ ! -f "$(LIBRAYLIB_ROOT)/Makefile" ]; then \
@@ -509,25 +518,6 @@ rl_lua: binding-version shared ensure_out_dir
 		-lm -lpthread -ldl
 	@echo "Built: $(RL_LUA_MODULE_SO)"
 
-# Embedded librl+lua VM module artifacts (modules/lua)
-# These are separate from bindings/lua/rl.so:
-# - desktop: modules/lua/lib/librl_lua.a
-# - wasm:    modules/lua/lib/librl_lua.wasm.a
-librl_lua_desktop: ensure_deps
-	$(info [librl_lua_desktop] Building embedded librl+lua desktop module archive)
-	$(Q)$(MAKE) -C $(LUA_VM_MODULE_DIR) desktop \
-		ROOT_DIR="$(abspath .)" \
-		CC="$(CC_DESKTOP)"
-
-librl_lua_wasm: ensure_deps
-	$(info [librl_lua_wasm] Building embedded librl+lua wasm module archive)
-	$(Q)$(MAKE) -C $(LUA_VM_MODULE_DIR) wasm \
-		ROOT_DIR="$(abspath .)" \
-		CC_WASM="$(CC_WASM)"
-
-librl_lua: librl_lua_desktop librl_lua_wasm
-	@echo "Built embedded librl+lua module archives (desktop + wasm)."
-
 uri_test test_desktop test_wasm test test_haxe_bindings test_nim_bindings test_lua_bindings unit_test_desktop unit_test_wasm probe_idbfs_build probe_idbfs check_node check_chrome check_probe_python:
 	@$(MAKE) -C tests $@ \
 		ROOT_DIR="$(abspath .)" \
@@ -565,7 +555,7 @@ clean:
 #	@$(MAKE) -C $(LIBRAYLIB_ROOT) clean
 
 
-.PHONY: all deps ensure_deps clean ensure_out_dir ensure_obj_dir libraylib libraylib_wasm libraylib_desktop wgutils wgutils_desktop wgutils_wasm wasm wasm_archive desktop shared rl_lua librl_lua librl_lua_desktop librl_lua_wasm test test_desktop test_wasm test_haxe_bindings test_nim_bindings test_lua_bindings unit_test_desktop unit_test_wasm check_node check_chrome check_probe_python probe_idbfs_build probe_idbfs uri_test binding-types
+.PHONY: all deps ensure_deps clean ensure_out_dir ensure_obj_dir libraylib libraylib_wasm libraylib_desktop wgutils wgutils_desktop wgutils_wasm wasm wasm_archive desktop shared rl_lua test test_desktop test_wasm test_haxe_bindings test_nim_bindings test_lua_bindings unit_test_desktop unit_test_wasm check_node check_chrome check_probe_python probe_idbfs_build probe_idbfs uri_test binding-types binding-version
 # 	"_RL_COLOR_BLACK", \
 # 	"_RL_COLOR_BLANK", \
 # 	"_RL_COLOR_MAGENTA", \

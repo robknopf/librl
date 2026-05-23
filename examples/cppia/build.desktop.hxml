@@ -10,8 +10,8 @@ common.hxml
 #--debug # we will let the user provide the --debug flag on the command line when they want debug builds
 
 # Colon-separated source roots for CPPIA source resolution in hxcpp 4.x debugger.
-# Paths are relative to the launch cwd (out/desktop). Used by a patched hxcpp-debug-server
-# to map short CPPIA filenames back to absolute source paths.
+# Relative paths are resolved from the executable directory ($ORIGIN). Optional
+# runtime env HXCPP_CPPIA_SOURCE_ROOTS is merged additively (same syntax).
 -D HXCPP_CPPIA_SOURCE_ROOTS=../../../../examples/www/public/assets/scripts/haxe:../../src:../../../../bindings/haxe
 
 -cpp out/desktop

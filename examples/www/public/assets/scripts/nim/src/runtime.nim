@@ -2,7 +2,8 @@
 ##
 ## Define before include:
 ##   `onBoot`, `onInit`, `onTick`, `onShutdown` — same as nim-simple (`runtime_host.js` ABI)
-##   `onLoad`, `onUnload` — scriptable reload hooks (called by `scriptable_runtime.js`)
+##   `onLoad`, `onUnload` — reloadable content hooks (host calls `_rt_load` / `_rt_unload`)
+##   `onLoad(stashed: ref YourContext)` / `onUnload(): ref YourContext`
 ##
 ## Async procs should use `{.rlAsync.}` so they are async on JS and sync on native.
 
@@ -13,14 +14,13 @@ when not declared(rlAsync):
 when not declared(onBoot):
   import rl
   import rl_log
+  
   when not declared(ResultOk):  
     const ResultOk = 0
     const ResultError = -1
     const ResultQuit = 1
+
   proc onBoot(): int {.rlAsync.} =
-    #echo "onBoot not declared"
-    #return -1
-    # provide a rl centric default boot implementation
     let rc = rlAwait rl_boot(RLBootConfig(
       canvasId: "renderCanvas",
     ))
@@ -34,6 +34,15 @@ when not declared(onInit):
   proc onInit(): int {.rlAsync.} =
     echo "onInit not declared"
     return ResultError
+
+when not declared(onLoad):
+  proc onLoad*(stashed: RootRef): int {.rlAsync.} =
+    discard stashed
+    return ResultOk
+
+when not declared(onUnload):
+  proc onUnload*(): RootRef =
+    nil
 
 when not declared(onTick):
   proc onTick(dt: float): int =
@@ -52,6 +61,14 @@ when defined(js):
   proc rt_init*(userData: pointer): Future[cint] {.rlAsync, exportjs("_rt_init").} =
     return (await onInit()).cint
 
+  # ref params are one JS arg (the stash object from onUnload). exportjs uses RootRef
+  # so the host ABI stays untyped; emit forwards to the app's typed onLoad.
+  proc rt_load*(stashed: RootRef) {.rlAsync, exportjs("_rt_load").} =
+    {.emit: "return (await `onLoad`(`stashed`)) | 0;".}
+
+  proc rt_unload*(): auto {.exportjs("_rt_unload").} =
+    onUnload()
+
   proc rt_tick*(hostDt: cfloat): cint {.exportjs("_rt_tick").} =
     onTick(hostDt.float).cint
 
@@ -63,6 +80,22 @@ else:
 
   proc rt_init*(userData: pointer): cint {.rlAsync, exportc: "rt_init", cdecl, dynlib.} =
     onInit().cint
+
+  proc rt_load*(stashed: pointer): cint {.rlAsync, exportc: "rt_load", cdecl, dynlib.} =
+    # use the onUnload() return type so we can cast the onLoad() argument to the same type
+    # e.g. onUnload() returns ref AppContext, so onLoad() argument should be ref AppContext
+    type StashRef = typeof(onUnload())
+    let stash: StashRef =
+      if stashed.isNil: nil
+      else: cast[StashRef](stashed)
+    rlAwait onLoad(stash).cint
+
+  proc rt_unload*(): pointer {.exportc: "rt_unload", cdecl, dynlib.} =
+    let stash = onUnload()
+    if stash.isNil:
+      nil
+    else:
+      cast[pointer](stash)
 
   proc rt_tick*(hostDt: cfloat): cint {.exportc: "rt_tick", cdecl, dynlib.} =
     onTick(hostDt.float).cint
@@ -79,6 +112,7 @@ when isMainModule and not defined(emscripten) and not defined(js):
   if initResult != ResultOk:
     rlAwait rt_shutdown()
     quit(initResult)
+  discard rlAwait rt_load(nil)
 
   var lastTime = epochTime()
   while true:

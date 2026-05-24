@@ -261,7 +261,7 @@ proc onTick(hostDt: float): int =
   let remainingText = fmt"Remaining: {ctx.countdownTimer:.2f}"
   let elapsedText = fmt"Elapsed: {ctx.totalTime:.2f}"
 
-  msg = "Nothing picked!!!"
+  msg = "Nothing picked..."
 
   let pickResultModel = rl_pick_model(ctx.camera, ctx.gumshoe, mouse.x.float, mouse.y.float)
   if pickResultModel.hit:
@@ -295,7 +295,7 @@ proc onTick(hostDt: float): int =
   rl_render_end()
   return ResultOk
 
-proc onLoad(stashed: ref AppContext): Future[int] {.rlAsync, exportjs("onLoad").} =
+proc onLoad(stashed: ref AppContext): Future[int] {.rlAsync.} =
   echo "Main: onLoad"
   if stashed != nil:
     ctx = stashed
@@ -305,11 +305,10 @@ proc onLoad(stashed: ref AppContext): Future[int] {.rlAsync, exportjs("onLoad").
   platformText = getPlatformText()
   return ResultOk
 
-proc onUnload(): ref AppContext {.exportjs("onUnload").} =
+proc onUnload(): ref AppContext =
   echo "Main: onUnload"
   unloadAssets()
   return ctx
-
 
 proc onShutdown() {.rlAsync.} =
   echo "Main: onShutdown"

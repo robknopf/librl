@@ -268,7 +268,7 @@ class MainScript extends Script {
 		var remainingText = 'Remaining: ${formatFixed(ctx.countdownTimer, 2)}';
 		var elapsedText = 'Elapsed: ${formatFixed(ctx.totalTime, 2)}';
 
-		msg = "Nothing picked.";
+		msg = "Nothing picked!";
 
 		var pickResult:RLPickResult;
 

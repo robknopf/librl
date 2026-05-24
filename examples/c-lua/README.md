@@ -46,7 +46,7 @@ Desktop and web share the same runtime module. The difference is only who drives
 - desktop: `main.c` calls `rt_boot()`, `rt_init()`, then loops on `rt_tick()`
 - web: JS calls `rt_boot()`, `rt_init()`, then pumps `rt_tick()` with `requestAnimationFrame`
 
-On web, [c-lua_example.js](/home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/www/public/js/c-lua_example.js) calls `rt_boot`, `rt_init`, and `rt_tick` through JSPI-aware exports so Lua module loading and runtime init can suspend when needed.
+On web, `runtime_host.js` (via `?example=c-lua`) calls `rt_boot`, `rt_init`, and `rt_tick` through JSPI-aware exports so Lua module loading and runtime init can suspend when needed.
 
 ## Build
 

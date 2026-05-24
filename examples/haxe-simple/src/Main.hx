@@ -22,6 +22,7 @@ import rl.helpers.Log;
 import haxe.io.Path;
 import rl.Types.RLPickResult;
 import rl.Types.RLAsyncVoid;
+import InjectWasmExports;
 //import test.TestImport;
 
 /*
@@ -266,7 +267,7 @@ class MainScript extends Script {
 		var remainingText = 'Remaining: ${formatFixed(ctx.countdownTimer, 2)}';
 		var elapsedText = 'Elapsed: ${formatFixed(ctx.totalTime, 2)}';
 
-		msg = "Nothing picked.";
+		msg = "Nothing picked!";
 
 		var pickResult:RLPickResult;
 
@@ -445,7 +446,7 @@ class Script {
 	public function onLoad(stashedData:Dynamic):RTResult { return RT_SUCCESS; }
 	public function onUnload():Dynamic { return null; }
 	public function onTick(deltaTimeSec:Float):RTResult { return RT_SUCCESS; }
-	@async public function onShutdown() :RLAsyncVoid { return cast RLAsyncVoid; }
+	@async public function onShutdown() :RLAsyncVoid {  }
 }
 
 @:expose
@@ -471,16 +472,21 @@ class Main {
 		return RT_FAILED;
 	}
 
-	@:expose("onLoad")
+	@:expose("_rt_load")
 	@:exportc
 	static function rt_load(stashedData:Dynamic):RTResult {
-		if (_scriptInstance == null) {
-			_scriptInstance = new MainScript();
+		try {
+			if (_scriptInstance == null) {
+				_scriptInstance = new MainScript();
+			}
+			return _scriptInstance.onLoad(stashedData);
+		} catch (e:Dynamic) {
+			Log.error("Main: rt_load failed with exception: " + e);
+			return RT_FAILED;
 		}
-		return _scriptInstance.onLoad(stashedData);
 	}
 
-	@:expose("onUnload")
+	@:expose("_rt_unload")
 	@:exportc
 	static function rt_unload():Dynamic {
 		if (_scriptInstance != null) {
@@ -516,13 +522,13 @@ class Main {
 
 	@:expose("_rt_shutdown")
 	@:exportc.exit
-	@async static function rt_shutdown() :RLAsyncVoid {
+	@async static function rt_shutdown() {
 		if (_scriptInstance != null) {
 			cast @await _scriptInstance.onShutdown();
 			_scriptInstance = null;
 		}
 
-		return cast RLAsyncVoid;
+		return;
 	}
 
 	public static function main() {

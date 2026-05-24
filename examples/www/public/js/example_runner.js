@@ -23,7 +23,7 @@ async function loadModuleFactory(moduleUrl, maxAttempts = 120, delayMs = 500) {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       const mod = await import(/* @vite-ignore */ `${moduleUrl}?t=${Date.now()}`);
-      return mod.default;
+      return mod.default ?? mod;
     } catch (err) {
       if (attempt === maxAttempts) throw err;
       await new Promise((resolve) => setTimeout(resolve, delayMs));
@@ -170,12 +170,21 @@ export async function runExample(displayName, modulePath, options = {}) {
 
     console.log(`${displayName} module initialized:`, mod);
     if (onModuleReady) {
-      cleanup = await onModuleReady(mod);
+      cleanup = await onModuleReady(mod, { modulePath, moduleUrl, moduleDir });
     }
     applyLetterboxCanvasStyle(canvas, IDEAL_WIDTH, IDEAL_HEIGHT);
   } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-    console.error(`[runner] module startup failed: ${message}`);
+    console.error(`[runner] module startup failed: ${formatStartupError(e)}`);
     await teardown();
   }
+}
+
+function formatStartupError(e) {
+  if (e instanceof Error && e.message) {
+    return e.message;
+  }
+  if (typeof WebAssembly !== "undefined" && e instanceof WebAssembly.Exception) {
+    return "WebAssembly.Exception (uncaught wasm throw — check console output above)";
+  }
+  return String(e);
 }

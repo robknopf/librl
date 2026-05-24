@@ -150,7 +150,7 @@ async function __rlEnsureBindings(bindingsPath) {
       : new URL('bindings/js/dist/rl.js', document.baseURI).href;
 """.}
     # Do not cache-bust rl.js here — hot reload targets the Nim script bundle
-    # (see scriptable_runtime.js / example_runner.js ?t= on the script URL).
+    # (see runtime_host.js / example_runner.js ?t= on the script URL).
     # Busting rl.js creates a second wasm instance and breaks scriptable hosts.
     {.emit: """
     var lib = await import(/* @vite-ignore */ url);

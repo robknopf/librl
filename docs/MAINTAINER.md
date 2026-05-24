@@ -81,20 +81,20 @@ Aggregate from `examples/Makefile`:
 | `c-lua` | yes | yes | — | Thin C host (static liblua + bindings); shared scripts under `examples/www/public/assets/scripts/lua/` |
 | `lua` | yes | — | — | Stock desktop Lua via `boot.lua`; needs Vite/asset host on `:4444` for script fetch |
 | `remote` | yes | yes | — | Isolated server/client experiment; not core API |
-| `haxe-simple` | — | yes | yes | Direct Haxe binding usage |
-| `nim-simple` | yes | yes | yes | Direct Nim binding usage |
+| `haxe-simple` | — | yes | yes | Direct Haxe binding usage; JS output under `public/assets/scripts/haxe/js/` |
+| `nim-simple` | yes | yes | yes | Direct Nim binding usage; JS scriptable output under `public/assets/scripts/nim/js/` |
 | `cppia` | yes | npm | — | Scriptable Haxe host; wasm via `npm run build:cppia:wasm` (included in deploy, not `make -C examples wasm`) |
-| `scriptable` | — | — | yes | JS springboard (`scriptable_runtime.js`) + reloadable ESM under `public/assets/scripts/`; uses `script_watcher` |
 
-Web testbed keys (query `?example=`): `remote`, `js`, `c-lua`, `c-simple`, `nim-wasm-simple`, `nim-js-simple`, `haxe-wasm-simple`, `haxe-js-simple`, `scriptable`, `cppia`.
+Web testbed: `examples/www/index.html` with `?example=<key>`. Registry: `examples/www/public/js/example_catalog.js`; launcher: `run_example.js` → `example_runner.js` → `runtime_host.js`.
 
-Scriptable web dev (`?example=scriptable`):
+Registry keys: `remote`, `js`, `c-lua`, `c-simple`, `nim-wasm-simple`, `nim-js-simple`, `haxe-wasm-simple`, `haxe-js-simple`, `cppia`.
 
-- Springboard: `examples/www/public/js/scriptable_runtime.js` (speaks `_rt_*` to `runtime_host.js`; dynamically imports a reloadable script ESM).
-- Default scripts (`lang` query param): both under `public/assets/scripts/` — `nim` → `assets/scripts/nim/js/main.js` (`cd examples/www/public/assets/scripts/nim && nim build script`); `haxe` → `assets/scripts/haxe/js/main.js` (`npm run build:haxe:js` from repo root). Override with `&script=…`.
-- Reload: `script_watcher` WebSocket (`npm run script-watcher`, default port **9001**). Override with `&watcher=ws://127.0.0.1:9001/ws`.
-- Watch protocol: `{ dir, ext, recursive? }` — directory relative to `public/` (e.g. `assets/scripts/haxe/js`), extension filter, optional recursive tree watch (cppia uses `recursive: true`). Scriptable sends `recursive: false`; client filters `file_changed` by full file path.
-- Script contract: `_rt_boot` / `_rt_init` / `_rt_tick` / `_rt_shutdown` plus `onLoad` / `onUnload` for hot reload. Sources: `examples/haxe-simple/src/Main.hx` (Haxe), `assets/scripts/nim/src/` (Nim); build outputs land under `assets/scripts/*/js/`.
+Reloadable JS examples (`nim-js-simple`, `haxe-js-simple`):
+
+- Module path: `assets/scripts/{nim|haxe}/js/main.js` (build: `npm run build:haxe:js`; nim: `cd examples/www/public/assets/scripts/nim && nim build script`).
+- `runtime_host.js` connects to `script_watcher` when the catalog entry has `reloadable: true`. Optional override: `&watcher=ws://127.0.0.1:9001/ws`.
+- Watch protocol: `{ dir, ext, recursive? }` — directory relative to `public/` (e.g. `assets/scripts/haxe/js`), extension filter. Host filters `file_changed` by full file path.
+- Runtime ABI: `_rt_boot` / `_rt_init` / `_rt_load` / `_rt_tick` / `_rt_unload` / `_rt_shutdown`. Author hooks: `onLoad` / `onUnload` on `Script` (Haxe) or `onLoad` / `onUnload` procs (Nim) — default no-ops when not reloadable.
 
 ## Nested Repo Note (`deps/libraylib`)
 
@@ -248,7 +248,7 @@ Cppia host (`examples/cppia/src/ScriptableMain.hx`) loads `assets/scripts/haxe/M
 - Practical flow:
   1. Rebuild wasm/js outputs (`make wasm`, `npm run build:*`, or let `npm run dev` watchers rebuild).
   2. Touch or re-save relevant entry file if HMR does not recover (`vite-plugin-restart` handles many `out/` wasm artifacts).
-  3. **Scriptable** (`?example=scriptable`): script bundles under `assets/scripts/*/js/` are ignored by Vite; `script_watcher` reloads the script in-page.
+  3. **Reloadable JS** (`haxe-js-simple`, `nim-js-simple`): bundles under `assets/scripts/*/js/` are ignored by Vite; `runtime_host.js` swaps modules in-page via `script_watcher`.
 
 ### Tests and deploy
 

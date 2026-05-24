@@ -77,7 +77,7 @@ export default defineConfig({
 
         '../haxe-simple/out/wasm/**/*.wasm',
         '../haxe-simple/out/wasm/**/*.js',
-        // out/js/main.js — script_watcher hot-reloads scriptable (?example=scriptable)
+        // assets/scripts/*/js — runtime_host hot-reloads reloadable examples in-page
       ],
       "contentCheck": true,
       "delay": 500  // may need to be longer if compiling haxe, since the macro will edit the generated .js and resave it (two loads triggered)

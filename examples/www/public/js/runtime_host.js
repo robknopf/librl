@@ -1,15 +1,26 @@
 /**
- * Call a runtime entrypoint that may live on either:
- * - a **plain JS / ESM exports object** (`mod._rt_boot` etc.), or
- * - an **Emscripten `Module`** (`ccall` only, or both).
+ * Generic runtime host: drives any module that exports `_rt_*`.
  *
- * Resolution order: **`mod[name]` if it is a function**, else **`mod.ccall(...)`**.
+ * Lifecycle:
+ *   _rt_boot → _rt_init → _rt_load(null) → _rt_tick…
+ *   reloadable: _rt_unload → re-import → _rt_boot → _rt_load(stash)  (skip _rt_init)
+ *   teardown: _rt_shutdown
  *
- * **Emscripten / JSPI:** the 5th `ccall` argument is `{ async: true }` when `ccallOpts` is
- * **`undefined`** (default). Use **`ccallOpts: null`** for a **sync** `ccall` (no 5th arg).
- * Any other object is passed through as the 5th argument.
- *
- * **Return value:** thenables are awaited (async JS or Promising `ccall`).
+ * Callable via plain ESM exports or Emscripten `ccall` (JSPI when `ccallOpts` is undefined).
+ */
+
+const RT_SUCCESS = 0;
+
+/** Coalesce double-writes from Haxe MakeESM before swapping reloadable modules. */
+const RELOAD_DEBOUNCE_MS = 450;
+
+/**
+ * @param {unknown} module
+ * @param {string} name
+ * @param {string | null} returnType
+ * @param {string[]} argTypes
+ * @param {unknown[]} args
+ * @param {object | null | undefined} ccallOpts
  */
 export async function callRuntime(module, name, returnType, argTypes, args, ccallOpts) {
   let result;
@@ -34,10 +45,193 @@ export async function callRuntime(module, name, returnType, argTypes, args, ccal
   return result;
 }
 
-export async function startRuntime(mod, label = "runtime") {
+/**
+ * @param {unknown} module
+ * @param {string} name
+ * @param {unknown} fallback
+ */
+async function callRuntimeOptional(module, name, fallback, returnType, argTypes, args, ccallOpts) {
+  if (module != null && typeof module[name] === "function") {
+    return await callRuntime(module, name, returnType, argTypes, args, ccallOpts);
+  }
+  if (typeof module?.ccall === "function") {
+    try {
+      return await callRuntime(module, name, returnType, argTypes, args, ccallOpts);
+    } catch {
+      return fallback;
+    }
+  }
+  return fallback;
+}
+
+/** `{ dir, ext, recursive }` for script_watcher from a loader-relative file path. */
+function watchSpecForScript(scriptAsset) {
+  const slash = scriptAsset.lastIndexOf("/");
+  const dot = scriptAsset.lastIndexOf(".");
+  const dir = slash >= 0 ? scriptAsset.slice(0, slash) : "";
+  const ext = dot > slash ? scriptAsset.slice(dot) : "";
+  return { dir, ext, recursive: false };
+}
+
+/**
+ * @param {unknown} initialMod
+ * @param {string} label
+ * @param {{
+ *   reloadable?: boolean,
+ *   scriptAsset?: string,
+ *   scriptModuleUrl?: string,
+ *   watcherUrl?: string,
+ * }} [options]
+ */
+export async function startRuntime(initialMod, label = "runtime", options = {}) {
+  let mod = initialMod;
   let stopped = false;
   let runtimeTickerId = 0;
   let lastFrameTimeMs = 0;
+  let sessionInitialized = false;
+  let stashed = null;
+
+  const reloadable = options.reloadable === true;
+  const scriptAsset = options.scriptAsset;
+  const scriptModuleUrl = options.scriptModuleUrl;
+  const watcherUrl =
+    options.watcherUrl ?? `ws://${window.location.hostname}:9001/ws`;
+
+  let scriptWatcher = null;
+  let reloadScheduled = false;
+  let reloadInProgress = false;
+  /** @type {ReturnType<typeof setTimeout> | null} */
+  let reloadDebounceTimer = null;
+  let reloadQueued = false;
+
+  async function importRuntimeModule() {
+    if (!scriptModuleUrl) {
+      throw new Error(`[${label}] reloadable example missing scriptModuleUrl`);
+    }
+    const imported = await import(/* @vite-ignore */ `${scriptModuleUrl}?t=${Date.now()}`);
+    const exp = imported.default ?? imported;
+    if (typeof exp?._rt_boot !== "function") {
+      throw new Error(`[${label}] ${scriptAsset} must export _rt_boot`);
+    }
+    return exp;
+  }
+
+  async function swapRuntimeModule() {
+    if (reloadInProgress) {
+      return;
+    }
+    reloadInProgress = true;
+    try {
+      console.log(`[${label}] reloading ${scriptAsset}`);
+      if (mod != null) {
+        const unloadResult = await callRuntime(mod, "_rt_unload", null, [], [], null);
+        stashed = unloadResult ?? null;
+      }
+      mod = await importRuntimeModule();
+      const bootRc = await callRuntime(mod, "_rt_boot", "number", [], [], undefined);
+      if (bootRc !== RT_SUCCESS) {
+        throw new Error(`_rt_boot failed (${bootRc})`);
+      }
+      const loadRc = await callRuntime(
+        mod,
+        "_rt_load",
+        "number",
+        ["number"],
+        [stashed ?? null],
+        null,
+      );
+      if (loadRc !== RT_SUCCESS) {
+        throw new Error(`_rt_load failed (${loadRc})`);
+      }
+      stashed = null;
+      console.log(`[${label}] reload complete (${scriptAsset})`);
+    } catch (err) {
+      console.error(`[${label}] reload failed:`, err);
+    } finally {
+      reloadInProgress = false;
+      reloadScheduled = false;
+      if (reloadQueued) {
+        reloadQueued = false;
+        scheduleSwap();
+      }
+    }
+  }
+
+  function scheduleSwap() {
+    if (!sessionInitialized || !reloadable) {
+      return;
+    }
+    if (reloadInProgress) {
+      reloadQueued = true;
+      return;
+    }
+    if (reloadDebounceTimer) {
+      clearTimeout(reloadDebounceTimer);
+    }
+    reloadDebounceTimer = setTimeout(() => {
+      reloadDebounceTimer = null;
+      if (reloadScheduled || reloadInProgress) {
+        reloadQueued = true;
+        return;
+      }
+      reloadScheduled = true;
+    }, RELOAD_DEBOUNCE_MS);
+  }
+
+  function connectScriptWatcher() {
+    if (!reloadable || !scriptAsset) {
+      return;
+    }
+
+    console.log(`[script_watcher] connecting to ${watcherUrl}`);
+    scriptWatcher = new WebSocket(watcherUrl);
+
+    scriptWatcher.addEventListener("open", () => {
+      console.log(`[script_watcher] connected; watching ${scriptAsset}`);
+      scriptWatcher.send(
+        JSON.stringify({
+          type: "watch",
+          data: { watch: [watchSpecForScript(scriptAsset)] },
+        }),
+      );
+    });
+
+    scriptWatcher.addEventListener("message", (event) => {
+      try {
+        const msg = JSON.parse(String(event.data));
+        if (msg.type !== "file_changed") {
+          return;
+        }
+        const path = msg.data?.path;
+        if (path !== scriptAsset) {
+          console.debug(`[script_watcher] ignoring ${path} (watching ${scriptAsset})`);
+          return;
+        }
+        console.log(`[script_watcher] file_changed: ${path}`);
+        scheduleSwap();
+      } catch (err) {
+        console.debug("[script_watcher] message ignored:", err);
+      }
+    });
+
+    scriptWatcher.addEventListener("error", () => {
+      console.error(
+        "[script_watcher] WebSocket error (mixed content, host, or port — check DevTools → Network → WS)",
+      );
+    });
+
+    scriptWatcher.addEventListener("close", (event) => {
+      console.debug(`[script_watcher] closed code=${event.code} reason=${event.reason}`);
+      scriptWatcher = null;
+    });
+  }
+
+  function disconnectScriptWatcher() {
+    if (scriptWatcher) {
+      scriptWatcher.close();
+      scriptWatcher = null;
+    }
+  }
 
   async function stopRuntime() {
     if (stopped) {
@@ -45,6 +239,11 @@ export async function startRuntime(mod, label = "runtime") {
     }
 
     stopped = true;
+    disconnectScriptWatcher();
+    if (reloadDebounceTimer) {
+      clearTimeout(reloadDebounceTimer);
+      reloadDebounceTimer = null;
+    }
     if (runtimeTickerId) {
       window.cancelAnimationFrame(runtimeTickerId);
       runtimeTickerId = 0;
@@ -66,6 +265,10 @@ export async function startRuntime(mod, label = "runtime") {
 
     if (stopped) {
       return;
+    }
+
+    if (reloadScheduled) {
+      await swapRuntimeModule();
     }
 
     try {
@@ -91,17 +294,29 @@ export async function startRuntime(mod, label = "runtime") {
     }
   }
 
-  if ((await callRuntime(mod, "_rt_boot", "number", [], [], undefined)) !== 0) {
+  if (reloadable) {
+    connectScriptWatcher();
+  }
+
+  if ((await callRuntime(mod, "_rt_boot", "number", [], [], undefined)) !== RT_SUCCESS) {
     throw new Error(`${label}: rt_boot failed`);
   }
-  if ((await callRuntime(mod, "_rt_init", "number", ["number"], [0], undefined)) !== 0) {
+  if ((await callRuntime(mod, "_rt_init", "number", ["number"], [0], undefined)) !== RT_SUCCESS) {
     throw new Error(`${label}: rt_init failed`);
   }
-  if (typeof mod.onLoad === "function") {
-    const loadRc = await callRuntime(mod, "onLoad", "number", [], [null], undefined);
-    if (loadRc !== 0) {
-      throw new Error(`${label}: onLoad failed (${loadRc})`);
-    }
+  sessionInitialized = true;
+
+  const loadRc = await callRuntimeOptional(
+    mod,
+    "_rt_load",
+    RT_SUCCESS,
+    "number",
+    ["number"],
+    [null],
+    null,
+  );
+  if (loadRc !== RT_SUCCESS) {
+    throw new Error(`${label}: rt_load failed (${loadRc})`);
   }
 
   runtimeTickerId = window.requestAnimationFrame(tickRuntime);

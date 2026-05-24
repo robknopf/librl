@@ -24,29 +24,13 @@
      <script type="module">
        const pageRelative = (relativePath) => new URL(relativePath, window.location.href).href;
 
-       const examples = {
-         "remote":   pageRelative("./js/remote_example.js"),
-         "js":       pageRelative("./examples/js/js_example.js"),
-        // "pick":     pageRelative("./examples/js/pick_example.js"),
-         "c-lua":    pageRelative("./js/c-lua_example.js"),
-         "c-simple": pageRelative("./js/c-simple_example.js"),
-         "nim-wasm-simple": pageRelative("./js/nim_wasm_simple_example.js"),
-         "nim-js-simple":   pageRelative("./js/nim_js_simple_example.js"),
-         "haxe-wasm-simple":     pageRelative("./js/haxe_wasm_simple_example.js"),
-         "haxe-js-simple":     pageRelative("./js/haxe_js_simple_example.js"),
-         "scriptable":         pageRelative("./js/scriptable_example.js"),
-         "cppia":     pageRelative("./js/cppia_example.js")
-       };
-
        const params = new URLSearchParams(window.location.search);
        const name = params.get("example");
-       const src = name ? examples[name] : null;
 
-       if (src) {
-         // When an example is explicitly requested (?example=...), load it.
-         import(/* @vite-ignore */ src);
+       if (name) {
+         import(/* @vite-ignore */ pageRelative("./js/run_example.js"));
        } else {
-         // No example selected: show a list of example links instead of loading one by default.
+         const { exampleKeys } = await import(/* @vite-ignore */ pageRelative("./js/example_catalog.js"));
          const canvas = document.getElementById("renderCanvas");
          if (canvas) {
            canvas.style.display = "none";
@@ -67,7 +51,7 @@
          const base = new URL(window.location.href);
          base.search = "";
 
-         for (const key of Object.keys(examples)) {
+         for (const key of exampleKeys()) {
            const li = document.createElement("li");
            li.style.cssText = "margin:0.25em 0; pointer-events:auto;";
 
@@ -78,6 +62,10 @@
            link.textContent = key;
            link.style.cssText = "color:#1565c0;text-decoration:underline;cursor:pointer;display:inline-block;pointer-events:auto;";
 
+           // hide the underlines on initial load
+           link.style.textDecoration = "none";
+
+           // show the underlines on mouseover
            link.addEventListener("mouseover", () => {
              link.style.textDecoration = "underline";
            });

@@ -2,14 +2,14 @@ package;
 
 #if emscripten
 /**
-	Inject wasm exports as the runtime ABI for hosts.
+	Inject wasm link flags (JSPI, EXPORTED_FUNCTIONS) for `runtime_host.js`.
 
-	The `rt_*` symbols are a host/runtime contract for this example, not librl (although they are common to the runtime contract)
+	Must be imported from the wasm entry module (e.g. `Main.hx`) so `@:buildXml` is applied.
 **/
 @:buildXml('
   <target id="haxe" if="emscripten">
     <flag value="-s" />
-    <flag value="EXPORTED_FUNCTIONS=[\'_main\',\'_rt_boot\',\'_rt_init\',\'_rt_tick\',\'_rt_shutdown\']" />
+    <flag value="EXPORTED_FUNCTIONS=[\'_main\',\'_rt_boot\',\'_rt_init\',\'_rt_load\',\'_rt_unload\',\'_rt_tick\',\'_rt_shutdown\']" />
     <flag value="-s" />
     <flag value="JSPI=1" />
     <flag value="-s" />

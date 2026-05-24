@@ -1,5 +1,5 @@
 import std/os except getCurrentDir, paramCount, paramStr, dirExists
-
+ 
 when declared(switch):
   import std/[strutils, unicode]
   import os except paramCount, paramStr, getCurrentDir
@@ -89,14 +89,17 @@ when declared(switch):
 
 const
   thisDir = currentSourcePath().parentDir()
-  librlRoot = absolutePath("../..", thisDir)
+  librlRoot = absolutePath("../../../../../..", thisDir)
   includeDir = librlRoot / "include"
   bindingsDir = librlRoot / "bindings" / "nim"
   libDir = librlRoot / "lib"
-  outDir = getCurrentDir() / "out"
   mainEntry = "src/main.nim"
   outFile = "main"
   nimCacheDir = ".nimcache"
+
+var
+  outDir = thisDir / "out"
+
 
 switch("path", "src")
 switch("path", bindingsDir)
@@ -179,26 +182,43 @@ proc getOptimizationFlags(): string =
 
 
 proc patchJSSourceMap(jsFilePath: string) =
-    # Fix source map URL and paths
-    let jsContent = readFile(jsFilePath)
+  if buildType == BuildType.release:
+    return
 
-    let fixedJsContent = jsContent.replace(
-      "//# sourceMappingURL=" & jsFilePath & ".map",
-      "//# sourceMappingURL=" & jsFilePath & ".js.map")
+  info "Patching sourceMappingURL for JS file: " & jsFilePath & "..."
+  # Fix source map URL and paths
+  let jsContent = readFile(jsFilePath)
+
+  # check if this js file has a sourceMappingURL footer
+  if not jsContent.contains("//# sourceMappingURL="):
+    info "No sourceMappingURL found in JS file: " & jsFilePath
+    return
+
+  let relativeMapPath = jsFilePath.splitFile().name & ".js.map"
+  let fixedJsContent = jsContent.replace(
+    "//# sourceMappingURL=" & jsFilePath & ".map",
+    "//# sourceMappingURL=" & relativeMapPath)
+
+  if fixedJsContent != jsContent:
     writeFile(jsFilePath, fixedJsContent)
-    
-    # Fix source map sources paths to be relative from JS file location
-
-    let mapPath = jsFilePath & ".map"
-    try:
-      let mapContent = readFile(mapPath)
-      let patchedMapContent = mapContent.replace(
-        thisDir & "/src/",
-        "../../../src/")
-      writeFile(mapPath, patchedMapContent)
-    except:
-      echo "Error patching source map file: " & mapPath
-      return
+    info "SourceMappingURL patched: " & relativeMapPath
+  else:
+    info "No sourceMappingURL changes needed for JS file: " & jsFilePath
+  
+  # Fix source map sources paths to be relative from JS file location
+  
+  #[
+  let mapPath = jsFilePath.splitFile().name & ".js.map"
+  try:
+    let mapContent = readFile(mapPath)
+    let patchedMapContent = mapContent.replace(
+      thisDir & "/src/",
+      "../../../src/")
+    writeFile(mapPath, patchedMapContent)
+  except:
+    echo "Error patching source map file: " & mapPath
+    return
+  ]#
 
 proc buildDesktop() =
   let outBin = outDir / "desktop" / outFile
@@ -254,15 +274,17 @@ proc buildJs() =
     " " & entry
 
 proc buildScript() =
-  let outBin = outDir / "script" / (mainEntry.splitFile().name & ".js")
+  outDir = getCurrentDir() / "js"
+  let outBin = outDir / (mainEntry.splitFile().name & ".js")
   echo "Building Script Nim binary: '" & outBin & "'..."
-  mkDir(outDir / "script")
+  mkDir(outDir)
   let entry = getCurrentDir() / mainEntry
   exec "nim js" &
     " --out:" & outBin &
     " " & getOptimizationFlags() &
     " " & getBuildModeFlags() &
     " " & entry
+  patchJSSourceMap(outBin)
 
 proc selectedBuildTarget(): string =
   if paramCount() >= 2:
@@ -271,6 +293,7 @@ proc selectedBuildTarget(): string =
     result = "all"
 
 task build, "Build Nim targets: desktop, wasm, or all (default)":
+  setBuildType()
   case selectedBuildTarget()
   of "desktop":
     buildDesktop()
@@ -286,7 +309,7 @@ task build, "Build Nim targets: desktop, wasm, or all (default)":
     buildJs()
   else:
     quit "Invalid build target '" & selectedBuildTarget() &
-      "'. Expected: desktop, wasm, js, or all.", 1
+      "'. Expected: desktop, wasm, js, script, or all.", 1
   
   echo "Build complete."
 

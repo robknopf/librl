@@ -84,8 +84,16 @@ Aggregate from `examples/Makefile`:
 | `haxe-simple` | — | yes | yes | Direct Haxe binding usage |
 | `nim-simple` | yes | yes | yes | Direct Nim binding usage |
 | `cppia` | yes | npm | — | Scriptable Haxe host; wasm via `npm run build:cppia:wasm` (included in deploy, not `make -C examples wasm`) |
+| `scriptable` | — | — | yes | JS springboard (`scriptable_runtime.js`) + reloadable ESM under `public/assets/scripts/`; uses `script_watcher` |
 
-Web testbed keys (query `?example=`): `remote`, `js`, `c-lua`, `c-simple`, `nim-wasm-simple`, `nim-js-simple`, `haxe-wasm-simple`, `haxe-js-simple`, `cppia`.
+Web testbed keys (query `?example=`): `remote`, `js`, `c-lua`, `c-simple`, `nim-wasm-simple`, `nim-js-simple`, `haxe-wasm-simple`, `haxe-js-simple`, `scriptable`, `cppia`.
+
+Scriptable web dev (`?example=scriptable`):
+
+- Springboard: `examples/www/public/js/scriptable_runtime.js` (analog of `ScriptableMain.hx`; speaks `_rt_*` to `runtime_host.js`).
+- Default script: `assets/scripts/js/MainScript.js` (hand-written). Haxe script: `npm run build:script:js` → `assets/scripts/haxe/MainScript.js`; load with `?example=scriptable&script=assets/scripts/haxe/MainScript.js`.
+- Reload: `script_watcher` WebSocket (`npm run script-watcher`, default port **9001**). Override with `&watcher=ws://127.0.0.1:9001/ws`.
+- Script compile: `npm run build:script:js` / `watch:script:js` (same sources as cppia script, JS target via `examples/cppia/compile.script.js.hxml`).
 
 ## Nested Repo Note (`deps/libraylib`)
 

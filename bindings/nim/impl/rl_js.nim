@@ -83,6 +83,10 @@ when defined(js):
     RL_INIT_ERR_LOADER* = -3
     RL_INIT_ERR_ASSET_HOST* = -4
     RL_INIT_ERR_WINDOW* = -5
+    RL_BOOT_OK* = 0
+    RL_BOOT_ERR_UNKNOWN* = -10
+    RL_BOOT_ERR_LOADER* = -11
+    RL_BOOT_ERR_VERSION_MISMATCH* = -12
     RL_TICK_RUNNING* = 0
     RL_TICK_WAITING* = 1
     RL_TICK_FAILED* = -1
@@ -134,6 +138,67 @@ when defined(js):
     RL_COLOR_MAGENTA* = 0.RLHandle
     RL_COLOR_RAYWHITE* = 0.RLHandle
 
+  template rlJsEmitEnsureBindings(): untyped =
+    {.emit: """
+var __gRlBindingsPromise = null;
+async function __rlEnsureBindings(bindingsPath) {
+  if (__gRl != null) return 0;
+  if (__gRlBindingsPromise) return await __gRlBindingsPromise;
+  __gRlBindingsPromise = (async function() {
+    var url = (bindingsPath && bindingsPath.length > 0)
+      ? bindingsPath
+      : new URL('bindings/js/dist/rl.js', document.baseURI).href;
+""".}
+    # Do not cache-bust rl.js here — hot reload targets the Nim script bundle
+    # (see scriptable_runtime.js / example_runner.js ?t= on the script URL).
+    # Busting rl.js creates a second wasm instance and breaks scriptable hosts.
+    {.emit: """
+    var lib = await import(/* @vite-ignore */ url);
+    __gRl = lib.rl || lib.default;
+    if (!__gRl) return -1;
+    return 0;
+  })();
+  var rc = await __gRlBindingsPromise;
+  if (rc !== 0) __gRlBindingsPromise = null;
+  return rc;
+}
+""".}
+
+  rlJsEmitEnsureBindings()
+
+  template rlJsEmitPatchColors(): untyped =
+    {.emit: """
+  if (__gRl && __gRl.color) {
+    `RL_COLOR_DEFAULT` = __gRl.color.DEFAULT >>> 0;
+    `RL_COLOR_LIGHTGRAY` = __gRl.color.LIGHTGRAY >>> 0;
+    `RL_COLOR_GRAY` = __gRl.color.GRAY >>> 0;
+    `RL_COLOR_DARKGRAY` = __gRl.color.DARKGRAY >>> 0;
+    `RL_COLOR_YELLOW` = __gRl.color.YELLOW >>> 0;
+    `RL_COLOR_GOLD` = __gRl.color.GOLD >>> 0;
+    `RL_COLOR_ORANGE` = __gRl.color.ORANGE >>> 0;
+    `RL_COLOR_PINK` = __gRl.color.PINK >>> 0;
+    `RL_COLOR_RED` = __gRl.color.RED >>> 0;
+    `RL_COLOR_MAROON` = __gRl.color.MAROON >>> 0;
+    `RL_COLOR_GREEN` = __gRl.color.GREEN >>> 0;
+    `RL_COLOR_LIME` = __gRl.color.LIME >>> 0;
+    `RL_COLOR_DARKGREEN` = __gRl.color.DARKGREEN >>> 0;
+    `RL_COLOR_SKYBLUE` = __gRl.color.SKYBLUE >>> 0;
+    `RL_COLOR_BLUE` = __gRl.color.BLUE >>> 0;
+    `RL_COLOR_DARKBLUE` = __gRl.color.DARKBLUE >>> 0;
+    `RL_COLOR_PURPLE` = __gRl.color.PURPLE >>> 0;
+    `RL_COLOR_VIOLET` = __gRl.color.VIOLET >>> 0;
+    `RL_COLOR_DARKPURPLE` = __gRl.color.DARKPURPLE >>> 0;
+    `RL_COLOR_BEIGE` = __gRl.color.BEIGE >>> 0;
+    `RL_COLOR_BROWN` = __gRl.color.BROWN >>> 0;
+    `RL_COLOR_DARKBROWN` = __gRl.color.DARKBROWN >>> 0;
+    `RL_COLOR_WHITE` = __gRl.color.WHITE >>> 0;
+    `RL_COLOR_BLACK` = __gRl.color.BLACK >>> 0;
+    `RL_COLOR_BLANK` = __gRl.color.BLANK >>> 0;
+    `RL_COLOR_MAGENTA` = __gRl.color.MAGENTA >>> 0;
+    `RL_COLOR_RAYWHITE` = __gRl.color.RAYWHITE >>> 0;
+  }
+""".}
+
   # ---------------------------------------------------------------------------
   # Boot / init / deinit  (async)
   # ---------------------------------------------------------------------------
@@ -149,11 +214,6 @@ when defined(js):
     let printFn = config.print
     let printErrFn = config.printErr
     let hasLocateFile = not config.locateFile.isNil
-    {.emit: """
-var __rl_boot_url = (`bindingsPath`.length > 0)
-  ? `bindingsPath`
-  : new URL('bindings/js/dist/rl.js', document.baseURI).href;
-""".}
     {.emit: """var __rl_boot_opts = { env: {} };
   if (`canvasId`.length > 0) __rl_boot_opts.canvasId = `canvasId`;
   if (`modulePath`.length > 0) __rl_boot_opts.modulePath = `modulePath`;
@@ -164,54 +224,28 @@ var __rl_boot_url = (`bindingsPath`.length > 0)
   if (`printErrFn` !== null) __rl_boot_opts.env.printErr = `printErrFn`;
   if (`hasLocateFile`) console.warn("rl_boot: RLBootConfig.locateFile is not supported on Nim JS yet; ignoring");
   if (Object.keys(__rl_boot_opts.env).length === 0) delete __rl_boot_opts.env;""".}
-    when defined(debug):
-      {.emit: """__rl_boot_url = __rl_boot_url + (__rl_boot_url.indexOf("?") >= 0 ? "&" : "?") + "t=" + Date.now();""".}
     {.emit: """return (async function() {
-      var lib = await import(/* @vite-ignore */ __rl_boot_url);
-      __gRl = lib.rl || lib.default;
+      var bindingsRc = await __rlEnsureBindings(`bindingsPath`);
+      if (bindingsRc !== 0) return bindingsRc;
       var rc = await __gRl.boot(__rl_boot_opts);
       if (!rc) {
-        `RL_COLOR_DEFAULT` = __gRl.color.DEFAULT >>> 0;
-        `RL_COLOR_LIGHTGRAY` = __gRl.color.LIGHTGRAY >>> 0;
-        `RL_COLOR_GRAY` = __gRl.color.GRAY >>> 0;
-        `RL_COLOR_DARKGRAY` = __gRl.color.DARKGRAY >>> 0;
-        `RL_COLOR_YELLOW` = __gRl.color.YELLOW >>> 0;
-        `RL_COLOR_GOLD` = __gRl.color.GOLD >>> 0;
-        `RL_COLOR_ORANGE` = __gRl.color.ORANGE >>> 0;
-        `RL_COLOR_PINK` = __gRl.color.PINK >>> 0;
-        `RL_COLOR_RED` = __gRl.color.RED >>> 0;
-        `RL_COLOR_MAROON` = __gRl.color.MAROON >>> 0;
-        `RL_COLOR_GREEN` = __gRl.color.GREEN >>> 0;
-        `RL_COLOR_LIME` = __gRl.color.LIME >>> 0;
-        `RL_COLOR_DARKGREEN` = __gRl.color.DARKGREEN >>> 0;
-        `RL_COLOR_SKYBLUE` = __gRl.color.SKYBLUE >>> 0;
-        `RL_COLOR_BLUE` = __gRl.color.BLUE >>> 0;
-        `RL_COLOR_DARKBLUE` = __gRl.color.DARKBLUE >>> 0;
-        `RL_COLOR_PURPLE` = __gRl.color.PURPLE >>> 0;
-        `RL_COLOR_VIOLET` = __gRl.color.VIOLET >>> 0;
-        `RL_COLOR_DARKPURPLE` = __gRl.color.DARKPURPLE >>> 0;
-        `RL_COLOR_BEIGE` = __gRl.color.BEIGE >>> 0;
-        `RL_COLOR_BROWN` = __gRl.color.BROWN >>> 0;
-        `RL_COLOR_DARKBROWN` = __gRl.color.DARKBROWN >>> 0;
-        `RL_COLOR_WHITE` = __gRl.color.WHITE >>> 0;
-        `RL_COLOR_BLACK` = __gRl.color.BLACK >>> 0;
-        `RL_COLOR_BLANK` = __gRl.color.BLANK >>> 0;
-        `RL_COLOR_MAGENTA` = __gRl.color.MAGENTA >>> 0;
-        `RL_COLOR_RAYWHITE` = __gRl.color.RAYWHITE >>> 0;
+""".}
+    rlJsEmitPatchColors()
+    {.emit: """
       }
       return rc | 0;
     })();""".}
 
   proc rl_boot*(config = RLBootConfig()): Future[int] {.async.} =
-    ## Load JS runtime, then compare binding stamp to librl version.
-    let rc = await rl_boot_js_load(config)
-    if rc != RL_INIT_OK:
-      return rc
-    return RL_INIT_OK
+    ## Load bindings/js/rl.js and boot wasm. Returns `RL_BOOT_*` codes.
+    return await rl_boot_js_load(config)
 
   proc rl_init_impl(windowWidth, windowHeight: int, windowTitle, assetHost, fsRootDir: cstring,
                     windowFlags: RLWindowFlags): Future[int] =
     {.emit: """return (async function() {
+""".}
+    rlJsEmitPatchColors()
+    {.emit: """
       return await __gRl.init({
         windowWidth: `windowWidth`,
         windowHeight: `windowHeight`,
@@ -245,7 +279,8 @@ var __rl_boot_url = (`bindingsPath`.length > 0)
   # Synchronous API
   # ---------------------------------------------------------------------------
 
-  proc rl_tick*(): int {.importjs: "__gRl.tick()".}
+  proc rl_tick*(): int =
+    {.emit: "return __gRl.tick();".}
   proc rl_set_target_fps*(fps: int) {.importjs: "__gRl.setTargetFPS(#)".}
   proc rl_get_time*(): float {.importjs: "__gRl.getTime()".}
   proc rl_get_delta_time*(): float {.importjs: "__gRl.getDeltaTime()".}

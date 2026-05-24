@@ -12,6 +12,11 @@ enum BuildMode {
 	Release;
 }
 
+enum BuildTarget {
+	Cppia;
+	Js;
+}
+
 enum abstract Verbosity(String) to String {
 	var Silent = "HXCPP_SILENT";
 	var Verbose = "HXCPP_VERBOSE";
@@ -28,7 +33,9 @@ class CompileScript {
 	static var scriptClassName = (sysArgs.length > 0) ? sysArgs[sysArgs.length - 1] : "";
 	static var verbosity:Verbosity = Verbosity.Silent; // HXCPP_SILENT, HXCPP_VERBOSE, HXCPP_QUIET
 	static var buildMode:BuildMode = Release; // this will change if "--debug" is provided in the sys args
+	static var buildTarget:BuildTarget = Cppia;
 	static var scriptsDir = joinPath(librlRoot, "examples", "www", "public", "assets", "scripts", "haxe");
+	static var haxeSimpleDir = joinPath(librlRoot, "examples", "haxe-simple");
 	static var srcDir = joinPath(projectRoot, "src");
 	static var bindingsDir = joinPath(librlRoot, "bindings", "haxe");
 
@@ -98,19 +105,83 @@ class CompileScript {
 	}
 
 	static function showUsage() {
-		Sys.println("usage: haxe [-cp tools]--run CompileScript [--debug] <class-name>");
+		Sys.println("usage: haxe [-cp tools] --run CompileScript [--debug] [--js] <class-name>");
+	}
+
+	static function resolveBuildTarget():BuildTarget {
+		if (Sys.getEnv("COMPILE_SCRIPT_JS") == "1") {
+			return Js;
+		}
+		return sysArgs.contains("--js") ? Js : Cppia;
+	}
+
+	static function stripJsFlag(args:Array<String>):Void {
+		var index = args.indexOf("--js");
+		if (index >= 0) {
+			args.splice(index, 1);
+		}
 	}
 
 	static function hasDebugFlag(args:Array<String>):Bool {
 		return args.contains("--debug") || args.contains("-D") && args.contains("debug");
 	}
 
+	static function classNameToBasePath(className:String):String {
+		var normalized = StringTools.replace(className, ".", "/");
+		return joinPath(scriptsDir, normalized);
+	}
+
 	static function classNameToPath(className:String):String {
-		// replace dots with slashes
-		className = StringTools.replace(className, ".", "/");
-		// add .cppia extension
-		className = className + ".cppia";
-		return joinPath(scriptsDir, className);
+		return classNameToBasePath(className) + ".cppia";
+	}
+
+	static function classNameToJsPath(className:String):String {
+		return classNameToBasePath(className) + ".js";
+	}
+
+	static function jsBuildArgs():Array<String> {
+		return [
+			"-cp", haxeSimpleDir,
+			"-D", "js-es=6",
+			"-D", "source-map",
+			"-D", "source-map-content",
+			"-lib", "hxasync",
+			"--macro", "macros.MakeESM.capturePreAsyncOutput()",
+			"--macro", 'hxasync.AsyncMacro.makeAsyncable("")',
+			"--macro", "macros.MakeESM.apply()",
+		];
+	}
+
+	static function finalizeJsOutput(jsPath:String):Void {
+		var content = sys.io.File.getContent(jsPath);
+		// hxasync leaves bare placeholders for Void async bodies; fixJSOutput only strips `return` forms.
+		content = StringTools.replace(content, "%noReturnPlaceholder%;", "");
+		content = StringTools.replace(content, "return %noReturnPlaceholder%;", "");
+		content = StringTools.replace(content, "%asyncPlaceholder%", "async ");
+		sys.io.File.saveContent(jsPath, content);
+	}
+
+	static function buildJs(?additionalArgs:Array<String>):Int {
+		var jsPath = classNameToJsPath(scriptClassName);
+		info("Building script JS "
+			+ (buildMode == Debug ? "debug" : "release")
+			+ " '"
+			+ jsPath
+			+ "'...");
+		var args = [];
+		if (additionalArgs != null)
+			args = args.concat(additionalArgs);
+		if (commonArgs != null)
+			args = args.concat(commonArgs);
+		args = args.concat(buildModeArgs());
+		args = args.concat(jsBuildArgs());
+		args = args.concat(["--macro", 'macros.ClassValidator.validateExtends("${scriptClassName}", "Script")']);
+		args = args.concat(["-js", jsPath]);
+		args.push(scriptClassName);
+		var code = runHaxe(args);
+		//if (code == 0)
+		//	finalizeJsOutput(jsPath);
+		return code;
 	}
 
 	static function buildCppia(?additionalArgs:Array<String>):Int {
@@ -164,14 +235,23 @@ class CompileScript {
 				+ "(debug server or reverse tunnel must be reachable there).");
 		}
 
-		if (scriptClassName == null) {
+		buildTarget = resolveBuildTarget();
+		if (buildTarget == Js) {
+			stripJsFlag(sysArgs);
+		}
+
+		if (scriptClassName == null || scriptClassName == "--js") {
 			error("No script class name provided");
+			showUsage();
 			Sys.exit(1);
 		}
 
         sysArgs.pop();
         buildStartTime = Timer.stamp();
-        errorCode = buildCppia(sysArgs);
+		errorCode = switch buildTarget {
+			case Js: buildJs(sysArgs);
+			case Cppia: buildCppia(sysArgs);
+		};
         buildEndTime = Timer.stamp();
         if (errorCode != 0) {
             error('Failed: ${errorCode}');

@@ -84,6 +84,7 @@ class MainScript extends Script {
 		return Path.normalize(Path.join(pathComponents.toArray()));
 	}
 
+	@async
 	override public function onInit():RTResult {
 		trace("Main: onInit");
 		ctx = {
@@ -103,7 +104,7 @@ class MainScript extends Script {
 			backgroundColor: 0
 		};
 		Logger.setLevel(Logger.LEVEL_WARN);
-		var err = RL.init({
+		var err = @await RL.init({
 			windowWidth: SCREEN_WIDTH,
 			windowHeight: SCREEN_HEIGHT,
 			windowTitle: SCREEN_TITLE,

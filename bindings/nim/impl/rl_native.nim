@@ -110,6 +110,10 @@ const
   RL_INIT_ERR_LOADER* = -3
   RL_INIT_ERR_ASSET_HOST* = -4
   RL_INIT_ERR_WINDOW* = -5
+  RL_BOOT_OK* = 0
+  RL_BOOT_ERR_UNKNOWN* = -10
+  RL_BOOT_ERR_LOADER* = -11
+  RL_BOOT_ERR_VERSION_MISMATCH* = -12
   RL_TICK_RUNNING* = 0
   RL_TICK_WAITING* = 1
   RL_TICK_FAILED* = -1
@@ -477,7 +481,7 @@ proc rl_boot*(config = RLBootConfig()): int =
     raise newException(ValueError, "librl minor version mismatch")
   if runtimePatch != rlBindingPatch:
     echo "[librl] warning: librl patch ", runtimePatch, " differs from binding patch ", rlBindingPatch
-  return RL_INIT_OK
+  return RL_BOOT_OK
 proc rl_render_begin_mode_2d*(camera: RLHandle) {.importc, cdecl, header: "rl_render.h".}
 proc rl_render_end_mode_2d*() {.importc, cdecl, header: "rl_render.h".}
 proc rl_render_begin_mode_3d*() {.importc, cdecl, header: "rl.h".}

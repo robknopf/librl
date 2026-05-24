@@ -3,7 +3,7 @@ import rl
 
 suite "rl bindings":
   test "version":
-    check rl_boot() == RL_INIT_OK
+    check rl_boot() == RL_BOOT_OK
     check rl_version_major() == 0
     check rl_version_minor() == 0
     check rl_version_patch() == 1
@@ -20,6 +20,10 @@ suite "rl bindings":
     check RL_INIT_ERR_LOADER == (-3).cint
     check RL_INIT_ERR_ASSET_HOST == (-4).cint
     check RL_INIT_ERR_WINDOW == (-5).cint
+    check RL_BOOT_OK == 0.cint
+    check RL_BOOT_ERR_UNKNOWN == (-10).cint
+    check RL_BOOT_ERR_LOADER == (-11).cint
+    check RL_BOOT_ERR_VERSION_MISMATCH == (-12).cint
     check RL_TICK_RUNNING == 0.cint
     check RL_TICK_WAITING == 1.cint
     check RL_TICK_FAILED == (-1).cint
@@ -31,7 +35,7 @@ suite "rl bindings":
     check rl_tick() == RL_TICK_FAILED
 
   test "init and deinit":
-    check rl_boot() == RL_INIT_OK
+    check rl_boot() == RL_BOOT_OK
     check rl_is_initialized() == false
     check $rl_get_platform() in ["desktop", "web"]
     check rl_init() == RL_INIT_OK
@@ -40,7 +44,7 @@ suite "rl bindings":
     check rl_is_initialized() == false
 
   test "double init fails but runtime setters still work":
-    check rl_boot() == RL_INIT_OK
+    check rl_boot() == RL_BOOT_OK
     check rl_is_initialized() == false
     check rl_init() == RL_INIT_OK
     check rl_is_initialized() == true
@@ -57,7 +61,7 @@ suite "rl bindings":
     rl_deinit()
 
   test "time functions":
-    check rl_boot() == RL_INIT_OK
+    check rl_boot() == RL_BOOT_OK
     check rl_init() == RL_INIT_OK
     let t = rl_get_time()
     check t >= 0.0
@@ -67,7 +71,7 @@ suite "rl bindings":
     rl_deinit()
 
   test "asset host":
-    check rl_boot() == RL_INIT_OK
+    check rl_boot() == RL_BOOT_OK
     check rl_init() == RL_INIT_OK
     let host = rl_asset_get_host()
     check host.len > 0
@@ -78,7 +82,7 @@ suite "rl bindings":
     rl_deinit()
 
   test "lighting":
-    check rl_boot() == RL_INIT_OK
+    check rl_boot() == RL_BOOT_OK
     check rl_init() == RL_INIT_OK
     rl_enable_lighting()
     check rl_is_lighting_enabled() == 1.cint
@@ -89,7 +93,7 @@ suite "rl bindings":
     rl_deinit()
 
   test "window get screen size":
-    check rl_boot() == RL_INIT_OK
+    check rl_boot() == RL_BOOT_OK
     check rl_init() == RL_INIT_OK
     let size = rl_window_get_screen_size()
     check size.x >= 0.0
@@ -97,14 +101,14 @@ suite "rl bindings":
     rl_deinit()
 
   test "window get monitor count":
-    check rl_boot() == RL_INIT_OK
+    check rl_boot() == RL_BOOT_OK
     check rl_init() == RL_INIT_OK
     let count = rl_window_get_monitor_count()
     check count >= 0.cint
     rl_deinit()
 
   test "text2d lifecycle":
-    check rl_boot() == RL_INIT_OK
+    check rl_boot() == RL_BOOT_OK
     check rl_init() == RL_INIT_OK
     let label = rl_text2d_create(0, 16.0)
     check label != 0.RLHandle

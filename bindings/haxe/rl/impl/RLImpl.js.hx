@@ -137,7 +137,7 @@ class RLImpl {
           return {4};
         }
       })()", bindingsPath, binding, bootOptions, bootPromise, BOOT_ERR_UNKNOWN);
-		var rc:Int = cast js.Syntax.code("await {0}", bootPromise);
+		var rc:Int = cast @await bootPromise;//cast js.Syntax.code("await {0}", bootPromise);
 		if (rc != BOOT_OK) {
 			return Promise.resolve(rc);
 		}

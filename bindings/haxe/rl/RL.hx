@@ -78,6 +78,7 @@ class RL {
 	static inline function get_TICK_FAILED():Int
 		return rl.impl.RLImpl.TICK_FAILED;
 
+	@:async
 	public static function boot(?config:RLBootConfig):Int {
 		return cast rl.impl.RLImpl.boot(config);
 	}

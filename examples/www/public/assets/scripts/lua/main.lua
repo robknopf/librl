@@ -62,12 +62,17 @@ end
 
 ---@return ResultCode
 local function on_init()
+  -- if the host hasn't set the asset host, use a default
+  local asset_host = rl.asset_get_host()
+  if asset_host == nil or asset_host == "" then
+    asset_host = "https://localhost:4444"
+  end
   local rc = rl.init({
     window_width  = 1024,
     window_height = 1280,
     window_title  = "Hello, World! (Lua)",
     window_flags  = rl.WINDOW_FLAG_MSAA_4X_HINT,
-    asset_host    = "https://localhost:4444",
+    asset_host    = asset_host,
   })
   if rc ~= rl.INIT_OK then
     error("rl.init failed: " .. tostring(rc))

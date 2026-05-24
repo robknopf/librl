@@ -95,7 +95,7 @@ export async function startRuntime(initialMod, label = "runtime", options = {}) 
   const scriptAsset = options.scriptAsset;
   const scriptModuleUrl = options.scriptModuleUrl;
   const watcherUrl =
-    options.watcherUrl ?? `ws://${window.location.hostname}:9001/ws`;
+    options.watcherUrl ?? `wss://${window.location.hostname}:9001/ws`;
 
   let scriptWatcher = null;
   let reloadScheduled = false;

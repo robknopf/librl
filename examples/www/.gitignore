@@ -1,2 +1,5 @@
-public/assets/scripts/nim/js/
-public/assets/scripts/haxe/js/
+public/assets/scripts/nim/main.js
+public/assets/scripts/nim/main.js.map
+public/assets/scripts/haxe/main.js
+public/assets/scripts/haxe/main.js.map
+public/assets/scripts/cppia/MainScript.cppia

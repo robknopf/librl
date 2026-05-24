@@ -81,8 +81,8 @@ Aggregate from `examples/Makefile`:
 | `c-lua` | yes | yes | — | Thin C host (static liblua + bindings); shared scripts under `examples/www/public/assets/scripts/lua/` |
 | `lua` | yes | — | — | Stock desktop Lua via `boot.lua`; needs Vite/asset host on `:4444` for script fetch |
 | `remote` | yes | yes | — | Isolated server/client experiment; not core API |
-| `haxe-simple` | — | yes | yes | Direct Haxe binding usage; JS output under `public/assets/scripts/haxe/js/` |
-| `nim-simple` | yes | yes | yes | Direct Nim binding usage; JS scriptable output under `public/assets/scripts/nim/js/` |
+| `haxe-simple` | — | yes | yes | Source in `examples/haxe-simple/src/`; reloadable JS artifact at `public/assets/scripts/haxe/main.js` |
+| `nim-simple` | yes | yes | yes | Source in `examples/nim-simple/src/`; reloadable JS artifact at `public/assets/scripts/nim/main.js` (`nim build script`) |
 | `cppia` | yes | npm | — | Scriptable Haxe host; wasm via `npm run build:cppia:wasm` (included in deploy, not `make -C examples wasm`) |
 
 Web testbed: `examples/www/index.html` with `?example=<key>`. Registry: `examples/www/public/js/example_catalog.js`; launcher: `run_example.js` → `example_runner.js` → `runtime_host.js`.
@@ -91,9 +91,9 @@ Registry keys: `remote`, `js`, `c-lua`, `c-simple`, `nim-wasm-simple`, `nim-js-s
 
 Reloadable JS examples (`nim-js-simple`, `haxe-js-simple`):
 
-- Module path: `assets/scripts/{nim|haxe}/js/main.js` (build: `npm run build:haxe:js`; nim: `cd examples/www/public/assets/scripts/nim && nim build script`).
-- `runtime_host.js` connects to `script_watcher` when the catalog entry has `reloadable: true`. Optional override: `&watcher=ws://127.0.0.1:9001/ws`.
-- Watch protocol: `{ dir, ext, recursive? }` — directory relative to `public/` (e.g. `assets/scripts/haxe/js`), extension filter. Host filters `file_changed` by full file path.
+- Module paths: `assets/scripts/nim/main.js` (nim: `npm run build:nim-simple:js`); `assets/scripts/haxe/main.js` (haxe: `npm run build:haxe-simple:js`).
+- `runtime_host.js` connects to `script_watcher` when the catalog entry has `reloadable: true` (default `wss://<host>:9001/ws`). Optional override: `&watcher=wss://127.0.0.1:9001/ws`.
+- Watch protocol: `{ dir, ext, recursive? }` — directory relative to `public/` (e.g. `assets/scripts/haxe`), extension filter. Host filters `file_changed` by full file path.
 - Runtime ABI: `_rt_boot` / `_rt_init` / `_rt_load` / `_rt_tick` / `_rt_unload` / `_rt_shutdown`. Author hooks: `onLoad` / `onUnload` on `Script` (Haxe) or `onLoad` / `onUnload` procs (Nim) — default no-ops when not reloadable.
 
 ## Nested Repo Note (`deps/libraylib`)
@@ -234,9 +234,9 @@ Runs in parallel (see root `package.json`):
 
 - `vite` — serves `examples/www/` on port 4444; mounts `/examples/` and `/bindings/` for out-of-root artifacts
 - `onchange` watchers — rebuild C/Nim/Haxe/cppia wasm or js outputs when sources change
-- `examples/script_watcher` — Bun WebSocket server (default port **9001**) for cppia hot reload; watches `examples/www/public/` for `.cppia` (and related) changes and notifies connected clients
+- `examples/script_watcher` — Bun WebSocket server (default port **9001**, TLS via `RL_REMOTE_WS_PROTOCOL=wss` and `KEYS_DIR` in `examples/script_watcher/.env`; copy from `.env.example`); watches `examples/www/public/` per client `watch` messages and notifies connected clients
 
-Cppia host (`examples/cppia/src/ScriptableMain.hx`) loads `assets/scripts/haxe/MainScript.cppia` and connects to the script watcher when `SCRIPT_WATCHER_URL` is set. Recompile gameplay with `npm run build:cppia:script` (or the `watch:cppia:script` watcher). **Asset host URLs** in example sources are often hardcoded to a LAN IP — adjust `ASSET_HOST` / `SCRIPT_WATCHER_URL` for your machine or use relative `./` where supported.
+Cppia host (`examples/cppia/src/ScriptableMain.hx`) loads `assets/scripts/cppia/MainScript.cppia` and connects to the script watcher when `SCRIPT_WATCHER_URL` is set. Recompile gameplay with `npm run build:cppia:script` (or the `watch:cppia:script` watcher). **Asset host URLs** in example sources are often hardcoded to a LAN IP — adjust `ASSET_HOST` / `SCRIPT_WATCHER_URL` for your machine or use relative `./` where supported.
 
 `npm install` runs `tools/generate_devtools_workspace.py` (Chrome DevTools workspace mapping).
 
@@ -248,7 +248,7 @@ Cppia host (`examples/cppia/src/ScriptableMain.hx`) loads `assets/scripts/haxe/M
 - Practical flow:
   1. Rebuild wasm/js outputs (`make wasm`, `npm run build:*`, or let `npm run dev` watchers rebuild).
   2. Touch or re-save relevant entry file if HMR does not recover (`vite-plugin-restart` handles many `out/` wasm artifacts).
-  3. **Reloadable JS** (`haxe-js-simple`, `nim-js-simple`): bundles under `assets/scripts/*/js/` are ignored by Vite; `runtime_host.js` swaps modules in-page via `script_watcher`.
+  3. **Reloadable JS** (`haxe-js-simple`, `nim-js-simple`): bundles under `assets/scripts/{haxe,nim}/` are ignored by Vite; `runtime_host.js` swaps modules in-page via `script_watcher`.
 
 ### Tests and deploy
 
@@ -298,7 +298,7 @@ Cppia host (`examples/cppia/src/ScriptableMain.hx`) loads `assets/scripts/haxe/M
 - Current status:
   - `examples/c-lua/` — thin C host; pumps `runtime_wrapper` (`rt_boot` / `rt_init` / `rt_tick` / `rt_shutdown`)
   - `examples/lua/` — stock desktop Lua host via `boot.lua`; same shared scripts as c-lua/web
-  - `examples/cppia/` — Haxe scriptable host; loads `MainScript.cppia`; script watcher for hot reload
+  - `examples/cppia/` — Haxe scriptable host; loads `assets/scripts/cppia/MainScript.cppia`; script watcher for hot reload
   - `examples/haxe-simple/`, `examples/nim-simple/` — direct binding usage from game code
   - `examples/remote/` — **isolated experiment**: server streams a private command protocol to a thin client (`examples/remote/include/rl_frame_command.h`); not part of core `include/` or binding parity
 

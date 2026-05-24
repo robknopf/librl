@@ -1,4 +1,4 @@
-package;
+package scripts;
 
 import rl.Texture;
 import rl.RL;
@@ -23,7 +23,7 @@ import haxe.io.Path;
 import Types.RTResult;
 import rl.Types.RLPickResult;
 import Script;
-import test.TestImport;
+import scripts.test.TestImport;
 
 /*
 	enum abstract RTResult(Int) from Int to Int {

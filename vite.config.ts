@@ -45,8 +45,8 @@ console.log(`Will use ${sslKeysPaths ? "SSL" : "non-SSL"} connection`);
 
 /** Script bundles reloaded in-page by script_watcher (under public/assets/scripts/). */
 const scriptableBundleDirs = [
-  path.resolve(__dirname, "examples/www/public/assets/scripts/nim/js"),
-  path.resolve(__dirname, "examples/www/public/assets/scripts/haxe/js"),
+  path.resolve(__dirname, "examples/www/public/assets/scripts/nim"),
+  path.resolve(__dirname, "examples/www/public/assets/scripts/haxe"),
 ];
 
 export default defineConfig({

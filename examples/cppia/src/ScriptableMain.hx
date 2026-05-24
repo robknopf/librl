@@ -16,20 +16,20 @@ import rl.Music;
 import rl.Text;
 import rl.Input;
 import rl.Pick;
-
 import rl.Types.RLHandle;
-import InjectWasmExports;
 import rl.InjectLibRL;
 import rl.helpers.Log;
-import ws.WebSocket;
+
+import InjectWasmExports;
 import Types.RTResult;
 import Script;
-import tools.PathUtil;
-import haxe.io.Path;
+import PathUtil;
+
+import ws.WebSocket;
 
 /**
  * WASM/scriptable entry: performs {@link RL.init} once, connects script watcher WebSocket reload,
- * loads {@link #MAIN_CPPIA_FILE}, then forwards {@link IRuntime} to the cppia `MainScript` class.
+ * loads {@link #MAIN_CPPIA_FILE}, then forwards {@link IRuntime} to the cppia `${MAIN_SCRIPT_CLASS_NAME}` class.
  */
 
 
@@ -45,7 +45,8 @@ class ScriptableRuntime implements IRuntime {
 	// final LOADER_CACHE_DIR:String = "/haxetest";
 
 	/** Cppia module shipped under `public/`; server file watcher sends reload for this path. */
-	static inline final MAIN_CPPIA_FILE:String = "assets/scripts/haxe/MainScript.cppia";
+	static inline final MAIN_CPPIA_FILE:String = "assets/scripts/cppia/MainScript.cppia";
+	static inline final MAIN_SCRIPT_CLASS_NAME:String = "scripts.MainScript";
 
 	var scriptOnInit:InitCallback = null;
 	var scriptOnTick:TickCallback = null;
@@ -57,7 +58,8 @@ class ScriptableRuntime implements IRuntime {
 	 * Script watcher helper: set to your reload/signaling server (e.g. `ws://127.0.0.1:9001/ws`).
 	 * Leave empty to disable; {@link ws.WebSocket#poll} is required every frame while enabled (noop on wasm Emscripten).
 	 */
-	static inline final SCRIPT_WATCHER_URL:String = "ws://192.168.1.100:9001/ws";
+	 //static inline final SCRIPT_WATCHER_URL:String = "ws://192.168.1.100:9001/ws";
+	 static inline final SCRIPT_WATCHER_URL:String = "wss://192.168.1.100:9001/ws";
 
 	var scriptWatcher:Null<WebSocket> = null;
 
@@ -85,9 +87,9 @@ class ScriptableRuntime implements IRuntime {
 
 			cppiaModule.boot();
 
-			var mainClass = cppiaModule.resolveClass("MainScript");
+			var mainClass = cppiaModule.resolveClass(MAIN_SCRIPT_CLASS_NAME);
 			if (mainClass == null) {
-				Log.error("[script] cppia has no class MainScript");
+				Log.error('[script] cppia has no class ${MAIN_SCRIPT_CLASS_NAME}');
 				return false;
 			}
 
@@ -177,7 +179,7 @@ class ScriptableRuntime implements IRuntime {
 		//trace("ScriptableMain: onBoot (host)");
 
 		trace("Using script: " + PathUtil.joinPath("./", MAIN_CPPIA_FILE));
-		trace("Edit " + PathUtil.joinPath("./", Path.withoutExtension(MAIN_CPPIA_FILE)) + ".hx to change the script");
+		trace("Edit " + PathUtil.joinPath("./", PathUtil.withoutExtension(MAIN_CPPIA_FILE)) + ".hx to change the script");
 
 		var rc = RL.boot();
 		if (rc != RL.BOOT_OK) {
@@ -243,7 +245,7 @@ class ScriptableRuntime implements IRuntime {
 						type: "watch",
 						data: {
 							watch: [
-								{dir: "assets/scripts/haxe", ext: ".cppia", recursive: true}
+								{dir: "assets/scripts/cppia", ext: ".cppia", recursive: true}
 							]
 						}
 					});

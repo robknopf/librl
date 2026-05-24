@@ -30,7 +30,7 @@ export interface FileWatchOptions {
  * and optional `recursive` tree watch.
  */
 export interface WatchEntry {
-  /** Directory relative to `public/` (e.g. `assets/scripts/haxe/js`). */
+  /** Directory relative to `public/` (e.g. `assets/scripts/haxe`). */
   dir: string;
   /** File extension filter including leading dot (e.g. `.js`). */
   ext: string;

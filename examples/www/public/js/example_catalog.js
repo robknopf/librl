@@ -51,7 +51,7 @@ export const EXAMPLES = {
   },
   "nim-js-simple": {
     label: "Nim Simple (js)",
-    module: "assets/scripts/nim/js/main.js",
+    module: "assets/scripts/nim/main.js",
     reloadable: true,
   },
   "haxe-wasm-simple": {
@@ -60,7 +60,7 @@ export const EXAMPLES = {
   },
   "haxe-js-simple": {
     label: "Haxe Simple (js)",
-    module: "assets/scripts/haxe/js/main.js",
+    module: "assets/scripts/haxe/main.js",
     reloadable: true,
   },
   cppia: {

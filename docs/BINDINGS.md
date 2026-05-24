@@ -464,5 +464,5 @@ When public C headers change:
    - web (JS binding): `examples/www/?example=simple`
    - desktop Nim: `examples/nim-simple/src/main.nim`
    - desktop Haxe: `examples/haxe-simple/src/Main.hx`
-   - wasm Nim: `npm run build:nim:wasm` + `?example=nim-wasm-simple`
-   - wasm Haxe: `npm run build:haxe:wasm` + `?example=haxe-wasm-simple`
+   - wasm Nim: `npm run build:nim-simple:wasm` + `?example=nim-wasm-simple`
+   - wasm Haxe: `npm run build:haxe-simple:wasm` + `?example=haxe-wasm-simple`

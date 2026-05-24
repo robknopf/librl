@@ -85,29 +85,30 @@ when declared(switch):
     else:
       buildType = BuildType.release  
 
-
-
 const
   thisDir = currentSourcePath().parentDir()
   librlRoot = absolutePath("../..", thisDir)
   includeDir = librlRoot / "include"
   bindingsDir = librlRoot / "bindings" / "nim"
   libDir = librlRoot / "lib"
-  outDir = getCurrentDir() / "out"
-  mainEntry = "src/main.nim"
+  outDir = thisDir / "out"
   outFile = "main"
-  nimCacheDir = ".nimcache"
+  srcDir = thisDir / "src"
+  mainEntry = srcDir / "main.nim"
+  nimCacheBaseDir = ".nimcache"
+  ## Reloadable web bundle (script_watcher watches this tree only).
+  scriptOutDir = absolutePath("../www/public/assets/scripts/nim", thisDir)
 
-switch("path", "src")
+switch("path", srcDir)
 switch("path", bindingsDir)
 switch("hints", "off")
 
 when defined(emscripten):
-  switch("nimcache", nimCacheDir / "wasm")
+  switch("nimcache", nimCacheBaseDir / "wasm")
 when defined(js):
-  switch("nimcache", nimCacheDir / "js")
+  switch("nimcache", nimCacheBaseDir / "js")
 else:
-  switch("nimcache", nimCacheDir / "desktop")
+  switch("nimcache", nimCacheBaseDir / "desktop")
 
 
 when defined(emscripten):
@@ -179,26 +180,34 @@ proc getOptimizationFlags(): string =
 
 
 proc patchJSSourceMap(jsFilePath: string) =
-    # Fix source map URL and paths
-    let jsContent = readFile(jsFilePath)
+  if buildType == BuildType.release:
+    return
 
-    let fixedJsContent = jsContent.replace(
-      "//# sourceMappingURL=" & jsFilePath & ".map",
-      "//# sourceMappingURL=" & jsFilePath & ".js.map")
+  info "Patching source map for: " & jsFilePath
+  let jsContent = readFile(jsFilePath)
+  if not jsContent.contains("//# sourceMappingURL="):
+    info "No sourceMappingURL in JS file: " & jsFilePath
+    return
+
+  let jsName = jsFilePath.splitFile().name
+  let relativeMapPath = jsName & ".js.map"
+  let fixedJsContent = jsContent.replace(
+    "//# sourceMappingURL=" & jsFilePath & ".map",
+    "//# sourceMappingURL=" & relativeMapPath)
+  if fixedJsContent != jsContent:
     writeFile(jsFilePath, fixedJsContent)
-    
-    # Fix source map sources paths to be relative from JS file location
 
-    let mapPath = jsFilePath & ".map"
-    try:
-      let mapContent = readFile(mapPath)
-      let patchedMapContent = mapContent.replace(
-        thisDir & "/src/",
-        "../../../src/")
+  let mapPath = jsFilePath.splitFile().dir / relativeMapPath
+  try:
+    let mapContent = readFile(mapPath)
+    let srcPrefix = thisDir & "/src/"
+    let relSrc = relativePath(srcDir, jsFilePath.splitFile().dir)
+    let relSrcPrefix = (if relSrc.len > 0: relSrc else: ".") & "/"
+    let patchedMapContent = mapContent.replace(srcPrefix, relSrcPrefix)
+    if patchedMapContent != mapContent:
       writeFile(mapPath, patchedMapContent)
-    except:
-      echo "Error patching source map file: " & mapPath
-      return
+  except:
+    warn "Could not patch source map: " & mapPath
 
 proc buildDesktop() =
   let outBin = outDir / "desktop" / outFile
@@ -206,7 +215,6 @@ proc buildDesktop() =
   mkDir(outDir / "desktop")
   echo "Building dependency: librl (desktop)"
   exec "make -C " & librlRoot & " desktop -j4"
-  let entry = getCurrentDir() / mainEntry
   exec "nim c " &  
     " --out:" & outBin &
     " --passC:-I" & includeDir &
@@ -225,7 +233,7 @@ proc buildDesktop() =
     #" -d:nimDebugDlOpen" &
     " --mm:refc" & 
     " --threads:off" &
-    " " & entry
+    " " & mainEntry
 
 
 
@@ -235,43 +243,54 @@ proc buildWasm() =
   mkDir(outDir / "wasm")
   echo "Building dependency: librl (wasm)"
   exec "make -C " & librlRoot & " wasm_archive -j4"
-  let entry = getCurrentDir() / mainEntry
   exec "nim c -d:emscripten " & 
         " --out:" & outBin &
         " " & getOptimizationFlags() &
         " " & getBuildModeFlags() &
-        " " & entry
+        " " & mainEntry
 
 proc buildJs() =
   let outBin = outDir / "js" / (mainEntry.splitFile().name & ".js")
   echo "Building JS Nim binary: '" & outBin & "'..."
   mkDir(outDir / "js")
-  let entry = getCurrentDir() / mainEntry
   exec "nim js" &
     " --out:" & outBin &
     " " & getOptimizationFlags() &
     " " & getBuildModeFlags() &
-    " " & entry
+    " " & mainEntry
 
 proc buildScript() =
-  let outBin = outDir / "script" / (mainEntry.splitFile().name & ".js")
-  echo "Building Script Nim binary: '" & outBin & "'..."
-  mkDir(outDir / "script")
-  let entry = getCurrentDir() / mainEntry
+  let outBin = scriptOutDir / (outFile & ".js")
+  echo "Building reloadable JS bundle: '" & outBin & "'..."
+  mkDir(scriptOutDir)
+  let entry = mainEntry
   exec "nim js" &
     " --out:" & outBin &
     " " & getOptimizationFlags() &
     " " & getBuildModeFlags() &
     " " & entry
+  patchJSSourceMap(outBin)
 
 proc selectedBuildTarget(): string =
   if paramCount() >= 2:
-    result = paramStr(2)
+    # build target should be the last argument
+    result = paramStr(paramCount())
   else:
-    result = "all"
+    result = "help"
+    
 
-task build, "Build Nim targets: desktop, wasm, or all (default)":
+proc showHelp() =
+  echo "Usage: nim build [flags] target"
+  echo "Targets: desktop, wasm, js, script, help, or all"
+
+task build, "Build Nim targets: desktop, wasm, js, script, help, or all":
+  setBuildType()
+  echo "Provided arguments: " & commandLineParams().join(", ")
+  echo "Build target: " & selectedBuildTarget()
   case selectedBuildTarget()
+  of "help":
+    showHelp()
+    quit "", 0
   of "desktop":
     buildDesktop()
   of "wasm":
@@ -284,18 +303,20 @@ task build, "Build Nim targets: desktop, wasm, or all (default)":
     buildDesktop()
     buildWasm()
     buildJs()
+    buildScript()
   else:
+    showHelp()
     quit "Invalid build target '" & selectedBuildTarget() &
-      "'. Expected: desktop, wasm, js, or all.", 1
+      "'. Expected: desktop, wasm, js, script, help, or all.", 1
   
   echo "Build complete."
 
 
 task clean, "Clean Nim build outputs":
-  let cacheDir = getCurrentDir() / "cache"
   if dirExists(outDir):
     rmDir(outDir)
-  if dirExists(cacheDir):
-    rmDir(cacheDir)
-  if dirExists(nimCacheDir):
-    rmDir(nimCacheDir)
+  let localFSRootDir = thisDir / "cache"
+  if dirExists(localFSRootDir):
+    rmDir(localFSRootDir)
+  if dirExists(nimCacheBaseDir):
+    rmDir(nimCacheBaseDir)

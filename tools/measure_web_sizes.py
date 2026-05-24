@@ -138,7 +138,7 @@ WEB_BUNDLES = [
             "lib/librl.js",
             "lib/librl.wasm",
             "bindings/js/dist/rl.js",
-            "examples/www/public/assets/scripts/haxe/js/main.js",
+            "examples/www/public/assets/scripts/haxe/main.js",
         ),
     ),
     Bundle(
@@ -147,7 +147,7 @@ WEB_BUNDLES = [
             "lib/librl.js",
             "lib/librl.wasm",
             "bindings/js/dist/rl.js",
-            "examples/nim-simple/out/js/main.js",
+            "examples/www/public/assets/scripts/nim/main.js",
         ),
     ),
     Bundle(
@@ -159,19 +159,19 @@ WEB_BUNDLES = [
         (
             "examples/cppia/out/wasm/ScriptableMain.js",
             "examples/cppia/out/wasm/ScriptableMain.wasm",
-            "examples/www/public/assets/scripts/haxe/MainScript.cppia",
+            "examples/www/public/assets/scripts/cppia/MainScript.cppia",
         ),
     ),
     Bundle(
         "Cppia script only (HCR)",
-        ("examples/www/public/assets/scripts/haxe/MainScript.cppia",),
+        ("examples/www/public/assets/scripts/cppia/MainScript.cppia",),
         note="Hot-reload payload after host is cached",
     ),
 ]
 
 APP_LAYER_BUNDLES = [
-    Bundle("Haxe JS app", ("examples/www/public/assets/scripts/haxe/js/main.js",), note="Excludes shared core"),
-    Bundle("Nim JS app", ("examples/nim-simple/out/js/main.js",), note="Excludes shared core"),
+    Bundle("Haxe JS app", ("examples/www/public/assets/scripts/haxe/main.js",), note="Excludes shared core"),
+    Bundle("Nim JS app", ("examples/www/public/assets/scripts/nim/main.js",), note="Excludes shared core"),
     Bundle("Pure JS app", ("examples/js/js_example.js",), note="Excludes shared core"),
 ]
 

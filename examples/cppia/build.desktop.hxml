@@ -12,6 +12,6 @@ common.hxml
 # Colon-separated source roots for CPPIA source resolution in hxcpp 4.x debugger.
 # Relative paths are resolved from the executable directory ($ORIGIN). Optional
 # runtime env HXCPP_CPPIA_SOURCE_ROOTS is merged additively (same syntax).
--D HXCPP_CPPIA_SOURCE_ROOTS=../../../../examples/www/public/assets/scripts/haxe:../../src:../../../../bindings/haxe
+-D HXCPP_CPPIA_SOURCE_ROOTS=../../../../examples/www/public/assets/scripts/cppia:../../src:../../../../bindings/haxe
 
 -cpp out/desktop

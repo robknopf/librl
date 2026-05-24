@@ -100,7 +100,7 @@ Used by all *+JS paths.
 | `lib/librl.js` | 279.1 KB | 59.6 KB | 50.7 KB |
 | `lib/librl.wasm` | 605.2 KB | 260.0 KB | 220.2 KB |
 | `bindings/js/dist/rl.js` | 56.2 KB | 10.8 KB | 9.4 KB |
-| `examples/haxe-simple/out/js/main.js` | 77.9 KB | 13.3 KB | 11.3 KB |
+| `examples/www/public/assets/scripts/haxe/main.js` | 77.9 KB | 13.3 KB | 11.3 KB |
 
 ### Nim+JS
 
@@ -109,7 +109,7 @@ Used by all *+JS paths.
 | `lib/librl.js` | 279.1 KB | 59.6 KB | 50.7 KB |
 | `lib/librl.wasm` | 605.2 KB | 260.0 KB | 220.2 KB |
 | `bindings/js/dist/rl.js` | 56.2 KB | 10.8 KB | 9.4 KB |
-| `examples/nim-simple/out/js/main.js` | 70.5 KB | 12.9 KB | 11.2 KB |
+| `examples/www/public/assets/scripts/nim/main.js` | 70.5 KB | 12.9 KB | 11.2 KB |
 
 ### Pure JS example
 
@@ -126,7 +126,7 @@ Used by all *+JS paths.
 | --- | --- | --- | --- |
 | `examples/cppia/out/wasm/ScriptableMain.js` | 322.8 KB | 70.3 KB | 59.2 KB |
 | `examples/cppia/out/wasm/ScriptableMain.wasm` | 7.54 MB | 2.05 MB | 1.46 MB |
-| `examples/www/public/assets/scripts/haxe/MainScript.cppia` | 5.9 KB | 3.2 KB | 2.8 KB |
+| `examples/www/public/assets/scripts/cppia/MainScript.cppia` | 5.9 KB | 3.2 KB | 2.8 KB |
 
 ### Cppia script only (HCR)
 
@@ -134,7 +134,7 @@ Hot-reload payload after host is cached.
 
 | File | Raw | gzip | brotli |
 | --- | --- | --- | --- |
-| `examples/www/public/assets/scripts/haxe/MainScript.cppia` | 5.9 KB | 3.2 KB | 2.8 KB |
+| `examples/www/public/assets/scripts/cppia/MainScript.cppia` | 5.9 KB | 3.2 KB | 2.8 KB |
 
 ## JS app layer only
 

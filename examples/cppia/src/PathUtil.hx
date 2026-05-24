@@ -1,4 +1,4 @@
-package tools;
+package;
 
 import sys.FileSystem;
 import sys.io.File;
@@ -49,6 +49,10 @@ class PathUtil {
 			case "Mac": ".a";
 			case _: ".a";
 		}
+	}
+
+	public static function withoutExtension(path:String):String {
+		return haxe.io.Path.withoutExtension(path);
 	}
 
 	public static function findStaticLibFromPath(libPath:String):String {

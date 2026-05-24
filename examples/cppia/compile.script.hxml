@@ -1,10 +1,28 @@
-#-cp .
-#-cp /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe
-#-D dll_import=../../../../export_classes.info
+# for Types, Script
+-cp src
 
-# usage:  haxe compile.script.hxml <script class>
-# example: haxe compile.script.hxml MainScript
-# Release by default. Pass --debug to embed hxcpp-debug-server (127.0.0.1:6972 from the browser tab).
+-cp ../../bindings/haxe
+#-cp ../../..
 
---run tools.CompileScript
+-D scriptable
+-D dll_import=export_classes.info
 
+# Set the LIBRL_ROOT environment variable to the path to the librl root directory
+# Note that this is a relative path to the output directory.
+-D LIBRL_ROOT=../../../..
+-D WGUTILS_ROOT=../../../../deps/wgutils
+
+# debug
+#--debug
+#--dce no
+#-lib hxcpp-debug-server
+
+# release
+#--dce full
+#-D analyzer-optimize
+
+--cppia ../www/public/assets/scripts/cppia/MainScript.cppia
+
+# for now, always use the same entry point for the script
+# note that we treat it like a lib, not a main class (no --main)
+scripts.MainScript

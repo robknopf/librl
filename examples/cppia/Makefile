@@ -9,7 +9,7 @@ build:
 	haxe build.hxml
 
 main_script:
-	haxe compile.script.hxml MainScript
+	haxe compile.script.hxml scripts.MainScript
 
 clean:
 	rm -rf out

@@ -10,8 +10,11 @@ examples/c-lua/deps/*
 .emcache
 .well-known/
 examples/**/cache/
-examples/www/public/assets/scripts/haxe/MainScript.js
-examples/www/public/assets/scripts/haxe/MainScript.js.map
+examples/www/public/assets/scripts/haxe/main.js
+examples/www/public/assets/scripts/haxe/main.js.map
+examples/www/public/assets/scripts/nim/main.js
+examples/www/public/assets/scripts/nim/main.js.map
+examples/www/public/assets/scripts/cppia/MainScript.cppia
 node_modules/
 bindings/js/dist/*
 !bindings/js/dist/rl.d.ts

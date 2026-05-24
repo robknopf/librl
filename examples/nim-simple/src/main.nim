@@ -223,7 +223,7 @@ proc onTick(hostDt: float): int =
   let remainingText = fmt"Remaining: {ctx.countdownTimer:.2f}"
   let elapsedText = fmt"Elapsed: {ctx.totalTime:.2f}"
 
-  msg = "Nothing picked!!"
+  msg = "Nothing picked!!!!!"
 
   if ctx.gumshoe != 0:
     let pickResult = rl_pick_model(ctx.camera, ctx.gumshoe, mouse.x.float, mouse.y.float)

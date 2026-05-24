@@ -90,10 +90,11 @@ Web testbed keys (query `?example=`): `remote`, `js`, `c-lua`, `c-simple`, `nim-
 
 Scriptable web dev (`?example=scriptable`):
 
-- Springboard: `examples/www/public/js/scriptable_runtime.js` (analog of `ScriptableMain.hx`; speaks `_rt_*` to `runtime_host.js`).
-- Default script: `assets/scripts/js/MainScript.js` (hand-written). Haxe script: `npm run build:script:js` → `assets/scripts/haxe/MainScript.js`; load with `?example=scriptable&script=assets/scripts/haxe/MainScript.js`.
+- Springboard: `examples/www/public/js/scriptable_runtime.js` (speaks `_rt_*` to `runtime_host.js`; dynamically imports a reloadable script ESM).
+- Default scripts (`lang` query param): both under `public/assets/scripts/` — `nim` → `assets/scripts/nim/js/main.js` (`cd examples/www/public/assets/scripts/nim && nim build script`); `haxe` → `assets/scripts/haxe/js/main.js` (`npm run build:haxe:js` from repo root). Override with `&script=…`.
 - Reload: `script_watcher` WebSocket (`npm run script-watcher`, default port **9001**). Override with `&watcher=ws://127.0.0.1:9001/ws`.
-- Script compile: `npm run build:script:js` / `watch:script:js` (same sources as cppia script, JS target via `examples/cppia/compile.script.js.hxml`).
+- Watch protocol: `{ dir, ext, recursive? }` — directory relative to `public/` (e.g. `assets/scripts/haxe/js`), extension filter, optional recursive tree watch (cppia uses `recursive: true`). Scriptable sends `recursive: false`; client filters `file_changed` by full file path.
+- Script contract: `_rt_boot` / `_rt_init` / `_rt_tick` / `_rt_shutdown` plus `onLoad` / `onUnload` for hot reload. Sources: `examples/haxe-simple/src/Main.hx` (Haxe), `assets/scripts/nim/src/` (Nim); build outputs land under `assets/scripts/*/js/`.
 
 ## Nested Repo Note (`deps/libraylib`)
 
@@ -246,8 +247,8 @@ Cppia host (`examples/cppia/src/ScriptableMain.hx`) loads `assets/scripts/haxe/M
 - Vite may not always recover automatically from a missing generated entry file (`main.js`/bundled artifacts) without a new file-change trigger.
 - Practical flow:
   1. Rebuild wasm/js outputs (`make wasm`, `npm run build:*`, or let `npm run dev` watchers rebuild).
-  2. Touch or re-save relevant entry file if HMR does not recover (`vite-plugin-restart` handles many `out/` artifacts).
-  3. Restart Vite only if file watching still does not pick up rebuilt outputs.
+  2. Touch or re-save relevant entry file if HMR does not recover (`vite-plugin-restart` handles many `out/` wasm artifacts).
+  3. **Scriptable** (`?example=scriptable`): script bundles under `assets/scripts/*/js/` are ignored by Vite; `script_watcher` reloads the script in-page.
 
 ### Tests and deploy
 

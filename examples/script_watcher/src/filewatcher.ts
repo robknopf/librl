@@ -25,18 +25,34 @@ export interface FileWatchOptions {
   onFileChanged: (assetPath: string, ext: string) => void;
 }
 
+/**
+ * Per-client watch request: directory `dir` relative to `public/`, file `ext`,
+ * and optional `recursive` tree watch.
+ */
 export interface WatchEntry {
+  /** Directory relative to `public/` (e.g. `assets/scripts/haxe/js`). */
   dir: string;
+  /** File extension filter including leading dot (e.g. `.js`). */
   ext: string;
-  recursive: boolean;
+  recursive?: boolean;
 }
 
 export interface PerClientWatchOptions {
-  /** Project `public/` folder; asset paths are posix paths relative to this. */
   publicRoot: string;
   entries: WatchEntry[];
   debounceMs?: number;
   onFileChanged: (assetPath: string, ext: string) => void;
+}
+
+interface ResolvedWatch {
+  watchDir: string;
+  ext: string;
+  recursive: boolean;
+}
+
+function normalizeExt(ext: string): string {
+  const trimmed = ext.trim().toLowerCase();
+  return trimmed.startsWith(".") ? trimmed : `.${trimmed}`;
 }
 
 function normalizeExtensions(exts: string[]): string[] {
@@ -66,6 +82,31 @@ function toAssetPath(publicRoot: string, absoluteFile: string): string | null {
     return null;
   }
   return rel.split(path.sep).join("/");
+}
+
+function resolveWatchDir(entry: WatchEntry, publicRoot: string): string {
+  return path.isAbsolute(entry.dir)
+    ? entry.dir
+    : path.resolve(publicRoot, entry.dir);
+}
+
+function resolveWatchEntry(
+  entry: WatchEntry,
+  publicRoot: string,
+): ResolvedWatch | null {
+  if (!entry.dir) {
+    console.warn("[watch] watch entry missing dir");
+    return null;
+  }
+  if (!entry.ext) {
+    console.warn("[watch] watch entry missing ext");
+    return null;
+  }
+  return {
+    watchDir: resolveWatchDir(entry, publicRoot),
+    ext: normalizeExt(entry.ext),
+    recursive: entry.recursive ?? false,
+  };
 }
 
 export function startFileWatcher(options: FileWatchOptions): () => void {
@@ -138,61 +179,57 @@ export function startFileWatcher(options: FileWatchOptions): () => void {
 
 export function startPerClientWatcher(options: PerClientWatchOptions): () => void {
   const debounceMs = options.debounceMs ?? 150;
-  const pending = new Set<string>();
+  const pending = new Set<{ abs: string; spec: ResolvedWatch }>();
   let timer: ReturnType<typeof setTimeout> | null = null;
+
+  const specs = options.entries
+    .map((entry) => resolveWatchEntry(entry, options.publicRoot))
+    .filter((spec): spec is ResolvedWatch => spec != null);
 
   function flush() {
     timer = null;
-    for (const abs of pending) {
-      const lower = abs.toLowerCase();
-      // find the first matching entry ext
-      for (const entry of options.entries) {
-        const ext = entry.ext.startsWith(".") ? entry.ext.toLowerCase() : `.${entry.ext.toLowerCase()}`;
-        if (lower.endsWith(ext)) {
-          const assetPath = toAssetPath(options.publicRoot, abs);
-          if (assetPath != null) {
-            options.onFileChanged(assetPath, ext);
-          }
-          break;
-        }
+    for (const item of pending) {
+      if (!item.abs.toLowerCase().endsWith(item.spec.ext)) {
+        continue;
+      }
+      const assetPath = toAssetPath(options.publicRoot, item.abs);
+      if (assetPath != null) {
+        options.onFileChanged(assetPath, item.spec.ext);
       }
     }
     pending.clear();
   }
 
-  function schedule(absPath: string) {
-    pending.add(absPath);
+  function schedule(absPath: string, spec: ResolvedWatch) {
+    pending.add({ abs: absPath, spec });
     if (timer != null) clearTimeout(timer);
     timer = setTimeout(flush, debounceMs);
   }
 
   const stoppers: Array<() => void> = [];
 
-  for (const entry of options.entries) {
-    const ext = entry.ext.startsWith(".") ? entry.ext.toLowerCase() : `.${entry.ext.toLowerCase()}`;
-    const watchDir = path.isAbsolute(entry.dir)
-      ? entry.dir
-      : path.resolve(options.publicRoot, entry.dir);
-
+  for (const spec of specs) {
     try {
       const watcher = watch(
-        watchDir,
-        { recursive: entry.recursive },
+        spec.watchDir,
+        { recursive: spec.recursive },
         (event, filename) => {
           if (!filename) return;
-          const full = path.resolve(watchDir, String(filename));
-          if (!full.toLowerCase().endsWith(ext)) return;
+          const full = path.resolve(spec.watchDir, String(filename));
+          if (!full.toLowerCase().endsWith(spec.ext)) return;
           if (event !== "change" && event !== "rename") return;
-          schedule(full);
+          schedule(full, spec);
         },
       );
       watcher.on("error", (err: Error) => {
-        console.error(`[watch] fs.watch error on ${watchDir}:`, err);
+        console.error(`[watch] fs.watch error on ${spec.watchDir}:`, err);
       });
       stoppers.push(() => watcher.close());
-      console.log(`[watch] client watching [${ext}] under ${watchDir} (recursive=${entry.recursive})`);
+      console.log(
+        `[watch] client watching ${spec.watchDir} [${spec.ext}] (recursive=${spec.recursive})`,
+      );
     } catch (err) {
-      console.error(`[watch] failed to watch ${watchDir}:`, err);
+      console.error(`[watch] failed to watch ${spec.watchDir}:`, err);
     }
   }
 
@@ -202,9 +239,8 @@ export function startPerClientWatcher(options: PerClientWatchOptions): () => voi
   };
 }
 
-/** Default `nimrltest/public` when running from `reload_server/src`. */
+/** Default `examples/www/public` when running from `script_watcher/src`. */
 export function defaultPublicRoot(): string {
-  // import.meta.dir = .../nimrltest/reload_server/src → up 2 → nimrltest/, then public/
   return path.resolve(import.meta.dir, "../../www/public");
 }
 

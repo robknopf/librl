@@ -97,6 +97,12 @@ export async function startRuntime(mod, label = "runtime") {
   if ((await callRuntime(mod, "_rt_init", "number", ["number"], [0], undefined)) !== 0) {
     throw new Error(`${label}: rt_init failed`);
   }
+  if (typeof mod.onLoad === "function") {
+    const loadRc = await callRuntime(mod, "onLoad", "number", [], [null], undefined);
+    if (loadRc !== 0) {
+      throw new Error(`${label}: onLoad failed (${loadRc})`);
+    }
+  }
 
   runtimeTickerId = window.requestAnimationFrame(tickRuntime);
   return stopRuntime;

@@ -1,7 +1,8 @@
 common.hxml
 
+--cmd mkdir -p ../www/public/assets/scripts/haxe/js
 
--js out/js/main.js
+-js ../www/public/assets/scripts/haxe/js/main.js
 
 #-D source-map-content
 -D source-map
@@ -16,6 +17,6 @@ common.hxml
 #--times
 
 #--next
-#--macro macros.SuppressViteImportWarning.apply("out/js/main.js")
+#--macro macros.SuppressViteImportWarning.apply("../www/public/assets/scripts/haxe/js/main.js")
 
 --cmd echo "Build (js) complete."

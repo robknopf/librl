@@ -1,3 +1,6 @@
+package;
+
+import rl.Texture;
 import rl.RL;
 import rl.Window;
 import rl.Camera3d;
@@ -14,20 +17,20 @@ import rl.Music;
 import rl.Text;
 import rl.Input;
 import rl.Pick;
-
-import rl.helpers.Log;
 import rl.Types.RLHandle;
+import rl.helpers.Log;
+import haxe.io.Path;
 import rl.Types.RLPickResult;
 import rl.Types.RLAsyncVoid;
-import InjectWasmExports;
-import haxe.io.Path;
+//import test.TestImport;
 
-#if (emscripten || PLATFORM_WEB || js)
-final ASSET_HOST:String = "./";
-#else
-final ASSET_HOST:String = "https://localhost:4444";
-#end
-
+/*
+	enum abstract RTResult(Int) from Int to Int {
+	var RT_SUCCESS = 0;
+	var RT_FAILED = -1;
+	var RT_STOPPED = 1;
+	}
+ */
 typedef AppContext = {
 	var elapsed:Float;
 	var countdownTimer:Float;
@@ -39,77 +42,50 @@ typedef AppContext = {
 	var camera:RLHandle;
 	var bgm:RLHandle;
 	var greyAlphaColor:RLHandle;
-	var gumshoe:RLHandle;
+	var model:RLHandle;
 	var reloadCount:Int;
 	var spriteYOffset:Float;
 	var backgroundColor:RLHandle;
 }
 
-class SimpleRuntime implements IRuntime {
-	final SCREEN_TITLE:String = "haxe-simple (Haxe runtime)";
-	final SCREEN_FLAGS:Int = Window.FLAG_MSAA_4X_HINT;
+@:keep
+class MainScript extends Script {
 	final SCREEN_WIDTH:Int = 1024;
 	final SCREEN_HEIGHT:Int = 1280;
+	final SCREEN_TITLE:String = "simple (Haxe runtime)";
+	final SCREEN_FLAGS:Int = Window.FLAG_MSAA_4X_HINT;
+
+	// this doesn't work since we are a script.  emscripten/platform web isn't defined
+	// TODO: figure out how to detect if we are running in a browser or not (ask the host?)
+	#if (emscripten || PLATFORM_WEB || js)
+	final ASSET_HOST:String = "./";
+	#else
+	final ASSET_HOST:String = "https://192.168.1.100:4444";
+	#end
+
+	// final LOADER_CACHE_DIR:String = "/haxetest";
 	final DEBUG_FONT_SIZE:Int = 18;
 	final DEBUG_FONT_PATH:String = "assets/fonts/JetBrainsMono/JetBrainsMono-Regular.ttf";
 	final KOMIKA_FONT_SIZE:Int = 24;
 	final KOMIKA_FONT_PATH:String = "assets/fonts/Komika/KOMIKAH_.ttf";
-	final BGM_PATH:String = "assets/music/ethernight_club.mp3";
+
 	final MODEL_PATH:String = "assets/models/gumshoe/gumshoe.glb";
 	final SPRITE_PATH:String = "assets/sprites/logo/wg-logo-bw-alpha.png";
+	final BGM_1_PATH:String = "assets/music/ethernight_club.mp3";
+	final BGM_2_PATH:String = "assets/music/dancing_on_the_edge.mp3";
 
-	var ctx:AppContext;
+	static var ctx:AppContext = null;
+
 	var msg:String = "Hello from Haxe Simple Main !";
 	var platformText:String = "Platform: <unknown>";
 
-	public function new() {
-		trace("SimpleRuntime::new()");
+	public static function joinPath(pathComponents:haxe.Rest<String>):String {
+		return Path.normalize(Path.join(pathComponents.toArray()));
 	}
 
-	@async public function onBoot() {
-		// trace("onBoot");
-		var rc = @await RL.boot({
-			canvasId: "renderCanvas",
-			/*
-			print: (msg) -> {
-				trace(msg);
-			},
-			printErr: (msg) -> {
-				trace(msg);
-			},
-			*/
-
-			// bindingsPath defaults to page-relative bindings/js/dist/rl.js (see RLImpl.js.hx).
-
-			// optional override for the raw emscripten runtime module that the
-			// js binding boots internally. Defaults to ../../lib/librl.js relative
-			// to bindings/js/rl.js.
-			// modulePath: "/lib/librl.js"
-		});
-		if (rc != RL.BOOT_OK) {
-			Log.error("RL.boot failed: " + rc);
-			return RT_FAILED;
-		}
-
-		// supress any boot messages unless they are warning+
-		Logger.setLevel(Logger.LEVEL_WARN);
-
-		/* 
-			// if we need to get an initial boot file (like external boot script)
-			// we can init the loader separate from the rest of librl. 
-			// that will allow us to fetch files required before init
-			// otherwise, use RL.init() for normal flow
-			var rc = @await Fs.init();
-			if (rc != 0) {
-				Log.error("Fs.init failed: " + rc);
-				return RT_FAILED;
-			}
-		 */
-		return RT_SUCCESS;
-	}
-
-	@async public function onInit():Int {
-		// trace("onInit");
+	@async
+	override public function onInit():RTResult {
+		trace("Main: onInit");
 		ctx = {
 			elapsed: 0.0,
 			countdownTimer: 30.0,
@@ -120,14 +96,14 @@ class SimpleRuntime implements IRuntime {
 			sprite: 0,
 			camera: 0,
 			bgm: 0,
-			gumshoe: 0,
+			greyAlphaColor: 0,
+			model: 0,
 			reloadCount: 0,
 			spriteYOffset: 3.0,
-			backgroundColor: 0,
-			greyAlphaColor: 0,
+			backgroundColor: 0
 		};
-
-		var rc = @await RL.init({
+		Logger.setLevel(Logger.LEVEL_WARN);
+		var err = @await RL.init({
 			windowWidth: SCREEN_WIDTH,
 			windowHeight: SCREEN_HEIGHT,
 			windowTitle: SCREEN_TITLE,
@@ -135,14 +111,28 @@ class SimpleRuntime implements IRuntime {
 			assetHost: ASSET_HOST,
 			// fsRootDir: LOADER_CACHE_DIR
 		});
-		if (rc != RL.INIT_OK) {
-			Log.error("Main: onInit failed with error: " + rc);
+		if (err != RL.INIT_OK) {
+			trace("Main: onInit failed with error: " + err);
 			return RT_FAILED;
 		}
+		Logger.setLevel(Logger.LEVEL_INFO);
+
+		Window.setMonitor(1);
 
 		Fs.clear();
 
-		// Setup lighting and camera
+		setupScene();
+
+		// draw a blank frame while assets load
+		Render.begin();
+		Render.clearBackground(ctx.backgroundColor);
+		Render.end();
+
+		return RT_SUCCESS;
+	}
+
+
+	private function setupScene():Void {
 		Render.enableLighting();
 		Render.setLightDirection(-0.6, -1.0, -0.5);
 		Render.setLightAmbient(0.25);
@@ -150,231 +140,83 @@ class SimpleRuntime implements IRuntime {
 		Camera3d.setActive(ctx.camera);
 		ctx.greyAlphaColor = Color.create(0, 0, 0, 128);
 		ctx.backgroundColor = Color.create(245, 245, 245, 255);
+	}
 
-		// create a text2d.  Note that it we will update the font when it is available
+	private function teardownScene():Void {
+		Render.disableLighting();
+		Camera3d.setActive(0);
+		Camera3d.destroy(ctx.camera);
+		ctx.camera = 0;
+		Color.destroy(ctx.greyAlphaColor);
+		ctx.greyAlphaColor = 0;
+		Color.destroy(ctx.backgroundColor);
+		ctx.backgroundColor = 0;
+	}
+
+	function loadAssets():Void {	
+		ctx.model = Model.create(0);
+		Model.setTransform(ctx.model, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+		Model.setAnimation(ctx.model, 1);
+		Model.setAnimationSpeed(ctx.model, 1.0);
+		Model.setAnimationLoop(ctx.model, true);
+		Asset.addTask(Asset.ensureAsync(MODEL_PATH), (path, _) -> {
+			var modelAsset = Model.loadAsset(MODEL_PATH);
+			Model.setAsset(ctx.model, modelAsset);
+		}, null, ctx);
+
+		ctx.sprite = Sprite3d.create(0);
+		Sprite3d.setTransform(ctx.sprite, 0.0, 0.0, ctx.spriteYOffset, 1.0);
+		Asset.addTask(Asset.ensureAsync(SPRITE_PATH), (path, _) -> {
+			var textureAsset = Texture.create(path);
+			Sprite3d.setTexture(ctx.sprite, textureAsset);
+		}, null, ctx);
+
 		ctx.labelText2d = Text2d.create(0, KOMIKA_FONT_SIZE);
 		Text2d.setContent(ctx.labelText2d, "rl_text2d: retained label");
 		Text2d.setPosition(ctx.labelText2d, 10, 136);
 		Text2d.setColor(ctx.labelText2d, Color.GREEN);
-
-		// create a model3d.  Note that it we will update the model asset (mesh/skeleton/animation) when it is available
-		// we could pass 0 for the assetHandleId, in which case it won't get rendered ( 0 = noop)
-		ctx.gumshoe = Model.create(Model.getDefaultAsset());
-		Model.setTint(ctx.gumshoe, Color.BLUE);
-		Model.setAnimation(ctx.gumshoe, 1);
-		Model.setAnimationSpeed(ctx.gumshoe, 1.0);
-		Model.setAnimationLoop(ctx.gumshoe, true);
-		Model.setTransform(ctx.gumshoe, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
 		
-		// set the fonts to the default font, they will be replaced when the real fonts come in
-		//var defaultFont = Font.getDefault();
-
-		queueAssets();
-
-		platformText = getPlatformText();
-
-		// clear the screen
-		Render.begin();
-		Render.clearBackground(ctx.backgroundColor);
-		Render.end();
-
-		return RT_SUCCESS;
-	}
-
-	public function onTick(deltaTimeSec:Float):Int {
-		// trace("Main: onTick called with deltaTimeMS: " + deltaTimeMS);
-		ctx.elapsed = ctx.elapsed + deltaTimeSec;
-		ctx.countdownTimer -= deltaTimeSec;
-		if (ctx.countdownTimer <= 0) {
-			// return RT_STOPPED;
-		}
-
-		animateFrame(deltaTimeSec);
-
-		Music.updateAll();
-
-		var mouse = Input.getMouseState();
-		var mouseText = 'Mouse: (${mouse.x}, ${mouse.y}) w:${mouse.wheel} b:[${mouse.left}, ${mouse.right}, ${mouse.middle}]';
-		var remainingText = 'Remaining: ${formatFixed(ctx.countdownTimer, 2)}';
-		var elapsedText = 'Elapsed: ${formatFixed(ctx.totalTime, 2)}';
-
-		// var pickResult = Pick.sprite3d(ctx.camera, ctx.sprite, mouse.x, mouse.y);
-		msg = "Nothing picked!";
-
-		var pickResult:RLPickResult;
-
-		if (ctx.gumshoe != 0) {
-			pickResult = Pick.model(ctx.camera, ctx.gumshoe, mouse.x, mouse.y);
-			if (pickResult.hit) {
-				trace('Model pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y);
-				msg = 'Model pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y;
-			}
-		}
-
-		if (ctx.sprite != 0) {
-			pickResult = Pick.sprite3d(ctx.camera, ctx.sprite, mouse.x, mouse.y);
-			if (pickResult.hit) {
-				trace('Sprite pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y);
-				msg = 'Sprite pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y;
-			}
-		}
-
-		Render.begin();
-		Render.clearBackground(ctx.backgroundColor);
-
-		// 3D render
-		Render.beginMode3d();
-		Model.draw(ctx.gumshoe);
-		Sprite3d.draw(ctx.sprite);
-		Render.endMode3d();
-
-		// 2D UI overlay
-		var screen = Window.getScreenSize();
-		if (ctx.komikaFont != 0) {
-			var textSize = Text.measureEx(ctx.komikaFont, msg, KOMIKA_FONT_SIZE, 1.0);
-			var textX = Std.int((screen.x - textSize.x) / 2);
-			var textY = Std.int((screen.y - textSize.y) / 2);
-			Text.drawEx(ctx.komikaFont, msg, textX, textY, KOMIKA_FONT_SIZE, 1.0, Color.BLUE);
-		} else {
-			var textWidth = Text.measure(msg, KOMIKA_FONT_SIZE);
-			var textX = Std.int((screen.x - textWidth) / 2);
-			var textY = Std.int((screen.y - KOMIKA_FONT_SIZE) / 2);
-			Text.draw(msg, textX, textY, KOMIKA_FONT_SIZE, Color.BLUE);
-		}
-		if (ctx.debugFont != 0) {
-			Text.drawEx(ctx.debugFont, remainingText, 10, 36, DEBUG_FONT_SIZE, 1.0, Color.BLACK);
-			Text.drawEx(ctx.debugFont, elapsedText, 10, 56, DEBUG_FONT_SIZE, 1.0, Color.BLACK);
-			Text.drawEx(ctx.debugFont, mouseText, 10, 76, DEBUG_FONT_SIZE, 1.0, Color.BLACK);
-			Text.drawEx(ctx.debugFont, 'Reloads: ${ctx.reloadCount}', 10, 96, DEBUG_FONT_SIZE, 1.0, Color.BLACK);
-		} else {
-			Text.draw(remainingText, 10, 36, DEBUG_FONT_SIZE, Color.BLACK);
-			Text.draw(elapsedText, 10, 56, DEBUG_FONT_SIZE, Color.BLACK);
-			Text.draw(mouseText, 10, 76, DEBUG_FONT_SIZE, Color.BLACK);
-			Text.draw('Reloads: ${ctx.reloadCount}', 10, 96, DEBUG_FONT_SIZE, Color.BLACK);
-		}
-
-		if (ctx.debugFont != 0) {
-			Text.drawEx(ctx.debugFont, platformText, 10, 116, DEBUG_FONT_SIZE, 1.0, Color.BLACK);
-		} else {
-			Text.draw(platformText, 10, 116, DEBUG_FONT_SIZE, Color.BLACK);
-		}
-
-		if (ctx.debugFont != 0) {
-			Text.drawFpsEx(ctx.debugFont, 10, 10, DEBUG_FONT_SIZE, ctx.greyAlphaColor);
-		} else {
-			Text.drawFps(10, 10);
-		}
-
-		if (ctx.labelText2d != 0) {
-			Text2d.draw(ctx.labelText2d);
-		}
-
-		Render.end();
-
-		return RT_SUCCESS;
-	}
-
-	@async
-	public function onShutdown():RLAsyncVoid {
-		return @await RL.deinit();
-	}
-
-	private function joinPath(pathComponents:haxe.Rest<String>):String {
-		return Path.normalize(Path.join(pathComponents.toArray()));
-	}
-
-	private function getPlatformText():String {
-		#if sys
-		return "Platform: " + Sys.systemName();
-		#else
-		return "Platform: " + RL.getPlatform();
-		#end
-	}
-
-	private function formatFixed(value:Float, digits:Int):String {
-		var scale = Math.pow(10, digits);
-		var rounded = Math.round(value * scale) / scale;
-		var text = Std.string(rounded);
-		var dot = text.indexOf(".");
-		if (digits <= 0) {
-			return dot >= 0 ? text.substr(0, dot) : text;
-		}
-		if (dot < 0) {
-			return text + "." + StringTools.rpad("", "0", digits);
-		}
-		var decimals = text.length - dot - 1;
-		if (decimals < digits) {
-			return text + StringTools.rpad("", "0", digits - decimals);
-		}
-		return text;
-	}
-
-	// helper to combine creating an import task and adding it to the loader queue
-	private function importAssetAsync(path:String, ?onSuccess:String->Dynamic->Void, ?onFailure:String->Dynamic->Void, ?userData:Dynamic):Int {
-		var task = Asset.ensureAsync(path);
-		if (Asset.taskIsValid(task)) {
-			Asset.addTask(task, (path, userData) -> {
-				if (onSuccess != null) {
-					onSuccess(path, userData);
-				}
-			}, (path, userData) -> {
-				if (onFailure != null) {
-					onFailure(path, userData);
-				}
-			}, userData);
-			return 0;
-		} else {
-			if (onFailure != null) {
-				onFailure(path, userData);
-			}
-			return -1;
-		}
-	}
-
-	private function queueAssets():Void {
-		importAssetAsync(BGM_PATH, (path, userData) -> {
-			ctx.bgm = Music.create(path);
-			Music.setLoop(ctx.bgm, true);
-			Music.play(ctx.bgm);
-		}, (path, userData) -> {
-			Log.error("Failed to import BGM: " + path);
-		});
-		importAssetAsync(MODEL_PATH, (path, userData) -> {
-			//ctx.gumshoe = RL.modelCreateFromFile(path);
-			var gumshoeAsset = Model.loadAsset(path);
-			if (ctx.gumshoe != 0) {
-			//	Model.setAsset(ctx.gumshoe, gumshoeAsset);
-			}
-		}, (path, userData) -> {
-			Log.error("Failed to import MODEL: " + path);
-		});
-		importAssetAsync(SPRITE_PATH, (path, userData) -> {
-			ctx.sprite = Sprite3d.createFromFile(path);
-			Sprite3d.setTransform(ctx.sprite, 0, 0, ctx.spriteYOffset, 1.0);
-		}, (path, userData) -> {
-			Log.error("Failed to import SPRITE: " + path);
-		});
-		importAssetAsync(DEBUG_FONT_PATH, (path, userData) -> {
+		Asset.addTask(Asset.ensureAsync(DEBUG_FONT_PATH), (path, _) -> {
 			ctx.debugFont = Font.create(path, DEBUG_FONT_SIZE);
-		}, (path, userData) -> {
-			Log.error("Failed to import DEBUG FONT: " + path);
-		});
-		importAssetAsync(KOMIKA_FONT_PATH, (path, userData) -> {
+		}, null, ctx);
+
+		Asset.addTask(Asset.ensureAsync(KOMIKA_FONT_PATH), (path, _) -> {
 			ctx.komikaFont = Font.create(path, KOMIKA_FONT_SIZE);
 			if (ctx.labelText2d != 0) {
 				Text2d.setFont(ctx.labelText2d, ctx.komikaFont);
 			}
-		}, (path, userData) -> {
-			Log.error("Failed to import KOMIKA FONT: " + path);
-		});
+		}, null, ctx);
+
+		Asset.addTask(Asset.ensureAsync(BGM_2_PATH), (path, _) -> {
+			ctx.bgm = Music.create(path);
+			Music.setLoop(ctx.bgm, true);
+			Music.play(ctx.bgm);
+		}, null, ctx);
 	}
 
-	private function animateFrame(deltaTimeSec:Float):Void {
-		if (ctx.gumshoe != 0) {
-			Model.animate(ctx.gumshoe, deltaTimeSec);
+	private function unloadAssets():Void {
+		if (ctx.model != 0) {
+			Model.destroy(ctx.model);
+			ctx.model = 0;
 		}
+		if (ctx.sprite != 0) {
+			Sprite3d.destroy(ctx.sprite);
+			ctx.sprite = 0;
+	}
+		if (ctx.bgm != 0) {
+			Music.destroy(ctx.bgm);
+			ctx.bgm = 0;
+		}
+		if (ctx.debugFont != 0) {
+			Font.destroy(ctx.debugFont);
+			ctx.debugFont = 0;
+		}
+	}
 
-		//trace("335");
+	public function animateFrame(deltaTimeSec:Float):Void {
+		if (ctx.model != 0) {
+			Model.animate(ctx.model, deltaTimeSec);
+		}
 
 		var spriteX = 0.0;
 		var spriteY = 0.0;
@@ -383,6 +225,7 @@ class SimpleRuntime implements IRuntime {
 		// bob the sprite up and down
 		var bobSpeed = 1.0;
 		var bobHeight = 1.5;
+		bobHeight = bobHeight * 2;
 		if (ctx.sprite != 0) {
 			var y = Math.sin(ctx.elapsed * bobSpeed) * bobHeight;
 			spriteY = y + ctx.spriteYOffset;
@@ -402,50 +245,248 @@ class SimpleRuntime implements IRuntime {
 			Sprite3d.setTransform(ctx.sprite, spriteX, spriteY, spriteZ, 1.0);
 		}
 	}
+
+	override public function onTick(deltaTimeSec:Float):RTResult {
+		// trace("Main: onTick called with deltaTimeMS: " + deltaTimeMS);
+		ctx.elapsed = ctx.elapsed + deltaTimeSec;
+		ctx.totalTime += deltaTimeSec;
+		ctx.countdownTimer -= deltaTimeSec;
+		if (ctx.countdownTimer <= 0) {
+			// return RT_STOPPED;
+		}
+
+		//TestImport.test();
+
+		animateFrame(deltaTimeSec);
+
+		Music.updateAll();
+
+		var mouse = Input.getMouseState();
+		var mouseText = 'Mouse: (${mouse.x}, ${mouse.y}) w:${mouse.wheel} b:[${mouse.left}, ${mouse.right}, ${mouse.middle}]';
+		var remainingText = 'Remaining: ${formatFixed(ctx.countdownTimer, 2)}';
+		var elapsedText = 'Elapsed: ${formatFixed(ctx.totalTime, 2)}';
+
+		msg = "Nothing picked.";
+
+		var pickResult:RLPickResult;
+
+		pickResult = Pick.model(ctx.camera, ctx.model, mouse.x, mouse.y);
+		if (pickResult.hit) {
+			trace('Model pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y);
+			msg = 'Model pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y;
+		}
+
+		pickResult = Pick.sprite3d(ctx.camera, ctx.sprite, mouse.x, mouse.y);
+		if (pickResult.hit) {
+			trace('Sprite pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y);
+			msg = 'Sprite pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y;
+		}
+
+		Render.begin();
+		Render.clearBackground(ctx.backgroundColor);
+
+		// 3d render
+		Render.beginMode3d();
+
+		Model.draw(ctx.model, Color.WHITE);
+		Sprite3d.draw(ctx.sprite, Color.WHITE);
+
+		Render.endMode3d();
+
+		// 2D UI overlay
+		var screen = Window.getScreenSize();
+		var textSize = Text.measureEx(ctx.komikaFont, msg, KOMIKA_FONT_SIZE, 1.0);
+		var textX = Std.int((screen.x - textSize.x) / 2);
+		var textY = Std.int((screen.y - textSize.y) / 2);
+		Text.drawEx(ctx.komikaFont, msg, textX, textY, KOMIKA_FONT_SIZE, 1.0, Color.BLUE);
+		Text.drawEx(ctx.debugFont, remainingText, 10, 36, DEBUG_FONT_SIZE, 1.0, Color.BLACK);
+		Text.drawEx(ctx.debugFont, elapsedText, 10, 56, DEBUG_FONT_SIZE, 1.0, Color.BLACK);
+		Text.drawEx(ctx.debugFont, mouseText, 10, 76, DEBUG_FONT_SIZE, 1.0, Color.BLACK);
+		Text.drawEx(ctx.debugFont, 'Reloads: ${ctx.reloadCount}', 10, 96, DEBUG_FONT_SIZE, 1.0, Color.BLACK);
+		Text.drawEx(ctx.debugFont, platformText, 10, 116, DEBUG_FONT_SIZE, 1.0, Color.BLACK);
+
+		Text.drawFpsEx(ctx.debugFont, 10, 10, DEBUG_FONT_SIZE, ctx.greyAlphaColor);
+
+		Text2d.draw(ctx.labelText2d);
+
+		Render.end();
+
+		return RT_SUCCESS;
+	}
+
+
+	public function getPlatformText():String {
+		#if sys
+		return 'Platform: ${RL.getPlatform()} (${Sys.systemName()})';
+		#else
+		return 'Platform: ${RL.getPlatform()} (Unknown)';
+		#end
+	}
+	
+	override public function onLoad(stashedData:Dynamic):RTResult {
+		trace("Main: onLoad");
+		if (stashedData != null) {
+			ctx = stashedData;
+			ctx.reloadCount++;
+		}
+
+		//Logger.setLevel(Logger.LEVEL_DEBUG);
+
+		loadAssets();
+
+		platformText = getPlatformText();
+
+		/*
+		// if we wanted to swap models on load (for giggles)
+		var modelPath:String = "";
+		if (ctx.reloadCount % 2 == 0) {
+			modelPath = "assets/models/cultist/cultist.glb";
+		} else {
+			modelPath = "assets/models/gumshoe/gumshoe.glb";
+		}
+
+		Asset.addTask(Asset.ensureAsync(modelPath), (path, _) -> {
+			var modelAsset = Model.loadAsset(path);
+			// trace(modelAsset);
+			Model.setAsset(ctx.model, modelAsset);
+		}, (path, _) -> {
+			Log.error('Failed to ensure asset: ${path}');
+		}, ctx);
+
+		// and swap the bgm on load
+		if (ctx.bgm != 0) {
+			// stop the bgm
+			Music.stop(ctx.bgm);
+			// release the asset
+			Music.destroy(ctx.bgm);
+			ctx.bgm = 0;
+		}
+
+		var bgmPath:String = "";
+		switch (ctx.reloadCount % 3) {
+			case 0:
+				bgmPath = BGM_1_PATH;
+			case 1:
+				bgmPath = BGM_2_PATH;
+			case 2:
+				bgmPath = ""; // no bgm
+		}
+
+		if (bgmPath != "") {
+			// load the new bgm
+			ctx.bgm = Music.create(bgmPath);
+			Music.setLoop(ctx.bgm, true);
+			Music.play(ctx.bgm);
+			Asset.addTask(Asset.ensureAsync(bgmPath), (path, _) -> {
+				ctx.bgm = Music.create(path);
+				Music.setLoop(ctx.bgm, true);
+				Music.play(ctx.bgm);
+			}, null, ctx);
+		}
+		*/
+		return RT_SUCCESS;
+	}
+
+	override public function onUnload():Dynamic {
+		trace("Main: onUnload");
+		unloadAssets();
+		return ctx;
+	}
+
+	@async
+	override public function onShutdown() :RLAsyncVoid {
+		trace("Main: onShutdown");
+		teardownScene();
+		@await RL.deinit();
+	}
+
+	static function formatFixed(value:Float, digits:Int):String {
+		var scale = Math.pow(10, digits);
+		var rounded = Math.round(value * scale) / scale;
+		var text = Std.string(rounded);
+		var dot = text.indexOf(".");
+		if (digits <= 0) {
+			return dot >= 0 ? text.substr(0, dot) : text;
+		}
+		if (dot < 0) {
+			return text + "." + StringTools.rpad("", "0", digits);
+		}
+		var decimals = text.length - dot - 1;
+		if (decimals < digits) {
+			return text + StringTools.rpad("", "0", digits - decimals);
+		}
+		return text;
+	}
 }
 
 ///////////  Runtime ABI, called by host  ///////////
 
-typedef Runtime = SimpleRuntime;
-/*
-	enum abstract RTResult(Int) from Int to Int {
-	var RT_SUCCESS = 0;
-	var RT_FAILED = -1;
-	var RT_STOPPED = 1;
-	}
- */
-final RT_SUCCESS = 0;
-final RT_FAILED = -1;
-final RT_STOPPED = 1;
+//typedef MainScript = MyMainScript;
 
-interface IRuntime {
-	function onBoot():Int;
-	function onInit():Int;
-	function onTick(deltaTimeSec:Float):Int;
-	function onShutdown():RLAsyncVoid;
+typedef RTResult = Int;
+final RT_SUCCESS:RTResult = 0;
+final RT_FAILED:RTResult = -1;
+final RT_STOPPED:RTResult = 1;
+
+class Script {
+	public function new() {}
+	// provide a default implementation of onBoot that can be overridden
+	@async public function onBoot():RTResult {
+		var rc = @await RL.boot({
+			canvasId: "renderCanvas",
+		});
+		if (rc != RL.BOOT_OK) {
+			Log.error("RL.boot failed: " + rc);
+			return RT_FAILED;
+		}
+		return RT_SUCCESS;
+	}
+	@async public function onInit():RTResult { return RT_SUCCESS; }
+	public function onLoad(stashedData:Dynamic):RTResult { return RT_SUCCESS; }
+	public function onUnload():Dynamic { return null; }
+	public function onTick(deltaTimeSec:Float):RTResult { return RT_SUCCESS; }
+	@async public function onShutdown() :RLAsyncVoid { return cast RLAsyncVoid; }
 }
 
 @:expose
 @async
 class Main {
-	private static var _instance:IRuntime = null;
+	private static var _scriptInstance:Script = null;
 
 	@:expose("_rt_boot")
 	@:exportc.entry
 	@async static function rt_boot():Int {
-		if (_instance == null) {
-			_instance = new Runtime();
+		if (_scriptInstance == null) {
+			_scriptInstance = new MainScript();
 		}
-		return @await _instance.onBoot();
+		return @await _scriptInstance.onBoot();
 	}
 
 	@:expose("_rt_init")
 	@:exportc
-	@async static function rt_init(_hostData:Dynamic):Int {
-		if (_instance != null) {
-			return @await _instance.onInit();
+	@async static function rt_init(_hostData:Dynamic):RTResult {
+		if (_scriptInstance != null) {
+			return @await _scriptInstance.onInit();
 		}
 		return RT_FAILED;
+	}
+
+	@:expose("onLoad")
+	@:exportc
+	static function rt_load(stashedData:Dynamic):RTResult {
+		if (_scriptInstance == null) {
+			_scriptInstance = new MainScript();
+		}
+		return _scriptInstance.onLoad(stashedData);
+	}
+
+	@:expose("onUnload")
+	@:exportc
+	static function rt_unload():Dynamic {
+		if (_scriptInstance != null) {
+			return _scriptInstance.onUnload();
+		}
+		return null;
 	}
 
 	@:expose("_rt_tick")
@@ -463,8 +504,8 @@ class Main {
 			if (Window.closeRequested()) {
 				return RT_STOPPED;
 			}
-			if (_instance != null) {
-				return _instance.onTick(dt);
+			if (_scriptInstance != null) {
+				return _scriptInstance.onTick(dt);
 			}
 			return RT_SUCCESS;
 		} catch (e:Dynamic) {
@@ -475,18 +516,18 @@ class Main {
 
 	@:expose("_rt_shutdown")
 	@:exportc.exit
-	@async static function rt_shutdown():Void {
-		if (_instance != null) {
-			@await _instance.onShutdown();
-			_instance = null;
+	@async static function rt_shutdown() :RLAsyncVoid {
+		if (_scriptInstance != null) {
+			cast @await _scriptInstance.onShutdown();
+			_scriptInstance = null;
 		}
 
-		return;
+		return cast RLAsyncVoid;
 	}
 
 	public static function main() {
-		if (_instance == null) {
-			_instance = new Runtime();
+		if (_scriptInstance == null) {
+			_scriptInstance = new MainScript();
 		}
 
 		// fake a host for debugging locally
@@ -508,6 +549,12 @@ class Main {
 		rc = @await rt_init(null);
 		if (rc != RT_SUCCESS) {
 			trace("Main: rt_init failed with error: " + rc);
+			return rc;
+		}
+
+		rc = rt_load(null);
+		if (rc != RT_SUCCESS) {
+			trace("Main: onLoad failed with error: " + rc);
 			return rc;
 		}
 

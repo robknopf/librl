@@ -43,6 +43,12 @@ function getSSLKeysPath(): { certPath: string; privKeyPath: string } | null {
 const sslKeysPaths = enableSSL ? getSSLKeysPath() : null;
 console.log(`Will use ${sslKeysPaths ? "SSL" : "non-SSL"} connection`);
 
+/** Script bundles reloaded in-page by script_watcher (under public/assets/scripts/). */
+const scriptableBundleDirs = [
+  path.resolve(__dirname, "examples/www/public/assets/scripts/nim/js"),
+  path.resolve(__dirname, "examples/www/public/assets/scripts/haxe/js"),
+];
+
 export default defineConfig({
   publicDir: "public",
   root: "./examples/www",
@@ -67,11 +73,11 @@ export default defineConfig({
       reload: [
         '../nim-simple/out/wasm/**/*.wasm',
         '../nim-simple/out/wasm/**/*.js',
-        '../nim-simple/out/js/main.js',
+        // out/js/* — script_watcher hot-reloads scriptable; do not full-reload here
 
         '../haxe-simple/out/wasm/**/*.wasm',
         '../haxe-simple/out/wasm/**/*.js',
-        '../haxe-simple/out/js/main.js',
+        // out/js/main.js — script_watcher hot-reloads scriptable (?example=scriptable)
       ],
       "contentCheck": true,
       "delay": 500  // may need to be longer if compiling haxe, since the macro will edit the generated .js and resave it (two loads triggered)
@@ -79,8 +85,8 @@ export default defineConfig({
     {
       name: "suppress-output-hmr",
       handleHotUpdate({ file }) {
-        if (file.includes("/out/")) {
-          // vite-plugin-restart handles these with debounce; suppress Vite's default HMR
+        // Belt-and-suspenders if a watched out/ artifact slips through.
+        if (file.includes("/out/") || scriptableBundleDirs.some((dir) => file.startsWith(dir))) {
           return [];
         }
       },
@@ -140,6 +146,9 @@ export default defineConfig({
       "access-control-allow-origin": "*",
     },
     open: false,
+    watch: {
+      ignored: scriptableBundleDirs,
+    },
     https: sslKeysPaths
       ? {
           key: fs.readFileSync(sslKeysPaths.privKeyPath),

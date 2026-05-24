@@ -138,7 +138,7 @@ WEB_BUNDLES = [
             "lib/librl.js",
             "lib/librl.wasm",
             "bindings/js/dist/rl.js",
-            "examples/haxe-simple/out/js/main.js",
+            "examples/www/public/assets/scripts/haxe/js/main.js",
         ),
     ),
     Bundle(
@@ -170,7 +170,7 @@ WEB_BUNDLES = [
 ]
 
 APP_LAYER_BUNDLES = [
-    Bundle("Haxe JS app", ("examples/haxe-simple/out/js/main.js",), note="Excludes shared core"),
+    Bundle("Haxe JS app", ("examples/www/public/assets/scripts/haxe/js/main.js",), note="Excludes shared core"),
     Bundle("Nim JS app", ("examples/nim-simple/out/js/main.js",), note="Excludes shared core"),
     Bundle("Pure JS app", ("examples/js/js_example.js",), note="Excludes shared core"),
 ]

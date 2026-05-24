@@ -1,6 +1,6 @@
 /**
  * Scriptable springboard: presents `_rt_*` to `runtime_host.js` while loading reloadable
- * compiled script ESMs (Nim + `include runtime`, future Haxe with same ABI).
+ * compiled script ESMs (Nim `include runtime`, haxe-simple, or any module with the same ABI).
  *
  * Script module contract:
  *   `_rt_boot`, `_rt_init`, `_rt_tick`, `_rt_shutdown` — runtime ABI (script owns RL)
@@ -10,7 +10,8 @@
  * Reload: `onUnload` → import new module → `_rt_boot` (re-bind; wasm stays up) → `onLoad`.
  *
  * Query params (optional):
- *   script   — asset path under public/ (default: assets/scripts/nim/js/main.js)
+ *   lang     — default script bundle: `nim` (default) or `haxe`
+ *   script   — explicit asset path under public/ (overrides `lang`)
  *   watcher  — script_watcher WebSocket URL (default: ws://<host>:9001/ws)
  */
 
@@ -18,32 +19,43 @@ const RT_SUCCESS = 0;
 const RT_FAILED = -1;
 const RT_STOPPED = 1;
 
-const DEFAULT_SCRIPT_ASSET = "assets/scripts/nim/js/main.js";
+const DEFAULT_SCRIPT_BY_LANG = {
+  nim: "assets/scripts/nim/js/main.js",
+  haxe: "assets/scripts/haxe/js/main.js",
+};
 
 function getPageBase() {
   return new URL(".", window.location.href);
 }
 
+/** `{ dir, ext, recursive }` for script_watcher from a loader file path. */
+function watchSpecForScript(scriptAsset) {
+  const slash = scriptAsset.lastIndexOf("/");
+  const dot = scriptAsset.lastIndexOf(".");
+  const dir = slash >= 0 ? scriptAsset.slice(0, slash) : "";
+  const ext = dot > slash ? scriptAsset.slice(dot) : "";
+  return { dir, ext, recursive: false };
+}
+
 function parseConfig() {
   const params = new URLSearchParams(window.location.search);
-  const scriptAsset = params.get("script") ?? DEFAULT_SCRIPT_ASSET;
+  const lang = params.get("lang") ?? "nim";
+  const scriptAsset =
+    params.get("script") ?? DEFAULT_SCRIPT_BY_LANG[lang] ?? DEFAULT_SCRIPT_BY_LANG.nim;
   const pageBase = getPageBase();
   const scriptModuleUrl = new URL(scriptAsset, pageBase).href;
+  const scriptWatch = watchSpecForScript(scriptAsset);
 
   let watcherUrl = params.get("watcher");
   if (!watcherUrl) {
     watcherUrl = `ws://${window.location.hostname}:9001/ws`;
   }
 
-  const watchDir = scriptAsset.includes("/")
-    ? scriptAsset.slice(0, scriptAsset.lastIndexOf("/"))
-    : "assets/scripts";
-
   return {
     scriptAsset,
     scriptModuleUrl,
+    scriptWatch,
     watcherUrl,
-    watchDir,
   };
 }
 
@@ -61,6 +73,21 @@ let scriptWatcher = null;
 let reloadScheduled = false;
 /** @type {boolean} */
 let reloadInProgress = false;
+/** @type {ReturnType<typeof setTimeout> | null} */
+let reloadDebounceTimer = null;
+/** @type {boolean} */
+let reloadQueued = false;
+
+/** Coalesce MakeESM's double-write (haxe emit + macro rewrite) before reloading. */
+const RELOAD_DEBOUNCE_MS = 450;
+
+async function loadScriptModule() {
+  const url = `${config.scriptModuleUrl}?t=${Date.now()}`;
+  const mod = await import(/* @vite-ignore */ url);
+  const exp = mod.default ?? mod;
+  assertRuntimeModule(exp);
+  return exp;
+}
 
 async function awaitResult(value) {
   if (value != null && typeof value.then === "function") {
@@ -83,14 +110,6 @@ function assertRuntimeModule(mod) {
       `[scriptable] ${config.scriptAsset} must export _rt_boot (compiled script with include runtime)`,
     );
   }
-}
-
-async function loadScriptModule() {
-  const url = `${config.scriptModuleUrl}?t=${Date.now()}`;
-  const mod = await import(/* @vite-ignore */ url);
-  const exp = mod.default ?? mod;
-  assertRuntimeModule(exp);
-  return exp;
 }
 
 async function bindScriptModule(mod) {
@@ -134,14 +153,32 @@ async function reloadScript() {
   } finally {
     reloadInProgress = false;
     reloadScheduled = false;
+    if (reloadQueued) {
+      reloadQueued = false;
+      scheduleReload();
+    }
   }
 }
 
 function scheduleReload() {
-  if (reloadScheduled || reloadInProgress || !sessionInitialized) {
+  if (!sessionInitialized) {
     return;
   }
-  reloadScheduled = true;
+  if (reloadInProgress) {
+    reloadQueued = true;
+    return;
+  }
+  if (reloadDebounceTimer) {
+    clearTimeout(reloadDebounceTimer);
+  }
+  reloadDebounceTimer = setTimeout(() => {
+    reloadDebounceTimer = null;
+    if (reloadScheduled || reloadInProgress) {
+      reloadQueued = true;
+      return;
+    }
+    reloadScheduled = true;
+  }, RELOAD_DEBOUNCE_MS);
 }
 
 function connectScriptWatcher() {
@@ -154,13 +191,13 @@ function connectScriptWatcher() {
 
   scriptWatcher.addEventListener("open", () => {
     console.log(
-      `[script_watcher] connected; watching ${config.watchDir} (*.js) for ${config.scriptAsset}`,
+      `[script_watcher] connected; watching ${config.scriptAsset}`,
     );
     scriptWatcher.send(
       JSON.stringify({
         type: "watch",
         data: {
-          watch: [{ dir: config.watchDir, ext: ".js", recursive: true }],
+          watch: [config.scriptWatch],
         },
       }),
     );

@@ -200,10 +200,12 @@ proc patchJSSourceMap(jsFilePath: string) =
   let mapPath = jsFilePath.splitFile().dir / relativeMapPath
   try:
     let mapContent = readFile(mapPath)
-    let srcPrefix = thisDir & "/src/"
-    let relSrc = relativePath(srcDir, jsFilePath.splitFile().dir)
-    let relSrcPrefix = (if relSrc.len > 0: relSrc else: ".") & "/"
-    let patchedMapContent = mapContent.replace(srcPrefix, relSrcPrefix)
+    ## Nim emits absolute paths under the repo root. Rewrite them to URL paths so
+    ## browser debuggers resolve sources through the testbed HTTP mounts (same
+    ## relative layout as projectRoot: /examples/..., /bindings/..., etc.).
+    ## Paths outside projectRoot (e.g. ~/.choosenim/...) are left unchanged.
+    let projectRoot = librlRoot
+    let patchedMapContent = mapContent.replace(projectRoot & "/", "/")
     if patchedMapContent != mapContent:
       writeFile(mapPath, patchedMapContent)
   except:

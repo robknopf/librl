@@ -24,7 +24,7 @@ const
   SpritePath = "assets/sprites/logo/wg-logo-bw-alpha.png"
 
 type
-  AppContext = object
+  AppContext = ref object of RootObj
     elapsed: float
     countdownTimer: float
     totalTime: float
@@ -42,7 +42,7 @@ type
     loadingGroup: RLTaskGroup[AppContext]
 
 var
-  ctx: AppContext
+  ctx: AppContext = nil
   msg = "Hello from Nim Simple Main !"
   platformText = "Platform: <unknown>"
 
@@ -50,6 +50,8 @@ proc getPlatformText(): string =
   "Platform: " & $rl_get_platform()
 
 proc queueAssets() =
+  if ctx.isNil:
+    return
   echo "queuing assets..."
   ctx.loadingGroup = assetCreateTaskGroup(
     addr ctx,
@@ -125,6 +127,36 @@ proc animateFrame(deltaTimeSec: float) =
   if ctx.sprite != 0:
     discard rl_sprite3d_set_transform(ctx.sprite, spriteX, spriteY, spriteZ, 1.0)
 
+proc unloadAssets() =
+  if ctx.isNil:
+    return
+  if not ctx.loadingGroup.isNil:
+    ctx.loadingGroup = nil
+  if ctx.gumshoe != 0:
+    rl_model_destroy(ctx.gumshoe)
+    ctx.gumshoe = 0
+  if ctx.sprite != 0:
+    rl_sprite3d_destroy(ctx.sprite)
+    ctx.sprite = 0
+  if ctx.bgm != 0:
+    rl_music_destroy(ctx.bgm)
+    ctx.bgm = 0
+  if ctx.debugFont != 0:
+    rl_font_destroy(ctx.debugFont)
+    ctx.debugFont = 0
+
+proc onLoad*(stashed: RootRef): int {.rlAsync.} =
+  if stashed != nil:
+    ctx = cast[AppContext](stashed)
+    inc ctx.reloadCount
+    queueAssets()
+    platformText = getPlatformText()
+  return ResultOk
+
+proc onUnload*(): RootRef =
+  unloadAssets()
+  ctx
+
 proc onBoot(): int {.rlAsync.} =
   let rc = rlAwait rl_boot(RLBootConfig(
     canvasId: "renderCanvas",
@@ -198,6 +230,8 @@ proc onInit(): int {.rlAsync.} =
   return ResultOk
 
 proc onTick(hostDt: float): int =
+  if ctx.isNil:
+    return ResultOk
   let tickRc = rl_tick()
   if tickRc == RL_TICK_FAILED:
     log.error("Main: RL.tick failed with error: " & $tickRc)
@@ -223,7 +257,7 @@ proc onTick(hostDt: float): int =
   let remainingText = fmt"Remaining: {ctx.countdownTimer:.2f}"
   let elapsedText = fmt"Elapsed: {ctx.totalTime:.2f}"
 
-  msg = "Nothing picked!!!!!"
+  msg = "Nothing picked!!!"
 
   if ctx.gumshoe != 0:
     let pickResult = rl_pick_model(ctx.camera, ctx.gumshoe, mouse.x.float, mouse.y.float)

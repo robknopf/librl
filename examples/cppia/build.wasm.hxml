@@ -8,6 +8,8 @@ common.hxml
 -D HXCPP_LINK_EMSCRIPTEN_EXT=.js
 -D analyzer-optimize
 
+# use the internal script watcher, vs the runtime_host.js file
+-D ENABLE_SCRIPT_WATCHER
 
 #-D no-traces
 #--dce full

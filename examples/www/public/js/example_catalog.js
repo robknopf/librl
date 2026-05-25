@@ -25,7 +25,12 @@ function buildRemoteEnv({ moduleDir, createDefaultEnv }) {
   return env;
 }
 
-/** Web testbed examples — `?example=<key>` selects one row. */
+/** Web testbed examples — `?example=<key>` selects one row.
+ *
+ * `watchedPaths`: optional script_watcher `watch` entries (`{ dir, ext, recursive? }` under
+ * `public/`). When present, `runtime_host.js` connects to script_watcher and hot-reloads on
+ * `file_changed`. Omit for non-watched examples.
+ */
 export const EXAMPLES = {
   remote: {
     label: "Remote",
@@ -52,7 +57,7 @@ export const EXAMPLES = {
   "nim-js-simple": {
     label: "Nim Simple (js)",
     module: "assets/scripts/nim/main.js",
-    reloadable: true,
+    watchedPaths: [{ dir: "assets/scripts/nim", ext: ".js", recursive: false }],
   },
   "haxe-wasm-simple": {
     label: "Haxe Simple (wasm)",
@@ -61,11 +66,12 @@ export const EXAMPLES = {
   "haxe-js-simple": {
     label: "Haxe Simple (js)",
     module: "assets/scripts/haxe/main.js",
-    reloadable: true,
+    watchedPaths: [{ dir: "assets/scripts/haxe", ext: ".js", recursive: false }],
   },
   cppia: {
     label: "Cppia",
     module: "examples/cppia/out/wasm/ScriptableMain.js",
+    //watchedPaths: [{ dir: "assets/scripts/cppia", ext: ".cppia", recursive: true }],
   },
 };
 

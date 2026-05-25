@@ -48,6 +48,54 @@ extern "C" void hxcpp_set_top_of_stack();
 
 ';
 
+	/** Haxe Dynamic (and other non-string void* ABI types) need explicit marshalling at the C trampoline. */
+	private static function usesVoidPtrAbi(t:Type):Bool {
+		return typeToC(t) == "void*";
+	}
+
+	private static function buildCallExpr(fullCppClass:String, fieldName:String, args:Array<{name:String, t:Type}>):String {
+		var callArgs = args.map(arg -> usesVoidPtrAbi(arg.t) ? cppDynamicFromVoidPtr(arg.name) : arg.name);
+		return '${fullCppClass}::${fieldName}(${callArgs.join(", ")})';
+	}
+
+	private static function wrapReturn(callExpr:String, ret:Type, cReturnType:String, kind:ExportWrapKind):String {
+		var voidPtrRet = usesVoidPtrAbi(ret);
+		if (cReturnType == "void") {
+			return switch (kind) {
+				case Exit: '${callExpr};\n    ::hx::finalizer();\n    return;';
+				default: '${callExpr};\n    return;';
+			};
+		}
+		if (voidPtrRet) {
+			return switch (kind) {
+				case Exit:
+					'::Dynamic _hx_exportc_dyn_ret = ${callExpr};\n'
+					+ '    ::hx::finalizer();\n'
+					+ '    return ${cppVoidPtrFromDynamic("_hx_exportc_dyn_ret")};';
+				default:
+					'::Dynamic _hx_exportc_dyn_ret = ${callExpr};\n'
+					+ '    return ${cppVoidPtrFromDynamic("_hx_exportc_dyn_ret")};';
+			};
+		}
+		return switch (kind) {
+			case Exit:
+				'${cReturnType} _hx_exportc_ret = ${callExpr};\n'
+				+ '    ::hx::finalizer();\n'
+				+ '    return _hx_exportc_ret;';
+			default:
+				'return ${callExpr};';
+		};
+	}
+
+	/** void* null becomes Dynamic(false) if passed straight through — marshal explicitly. */
+	private static function cppDynamicFromVoidPtr(name:String):String {
+		return '(${name} ? ::Dynamic((::hx::Object*)(${name})) : null())';
+	}
+
+	private static function cppVoidPtrFromDynamic(expr:String):String {
+		return '((void*)((${expr}).mPtr))';
+	}
+
 	private static function typeToC(t:Type):String {
 		return switch (Context.follow(t)) {
 			case TAbstract(_.toString() => n, params):
@@ -228,7 +276,6 @@ extern "C" void hxcpp_set_top_of_stack();
 					params.push('${typeToC(arg.t)} ${arg.name}');
 				}
 				var paramStr = params.join(", ");
-				var argNames = args.map(arg -> arg.name).join(", ");
 
 				var returnType = typeToC(ret);
 
@@ -236,18 +283,14 @@ extern "C" void hxcpp_set_top_of_stack();
 				var cppClassName = cls.name + "_obj";
 				var fullCppClass = cppNamespace != "" ? '${cppNamespace}::${cppClassName}' : cppClassName;
 
-				var callExpr = '${fullCppClass}::${field.name}(${argNames})';
+				var callExpr = buildCallExpr(fullCppClass, field.name, args);
 
 				var inner:String = switch (kind) {
 					case Thin:
-						returnType == "void"
-							? '${callExpr};\n    return;'
-							: 'return ${callExpr};';
+						wrapReturn(callExpr, ret, returnType, Thin);
 					case Entry:
 						hadInit.had = true;
-						var tail = returnType == "void"
-							? '${callExpr};\n    return;'
-							: 'return ${callExpr};';
+						var tail = wrapReturn(callExpr, ret, returnType, Thin);
 						var afterBoot = 'hxcpp_set_top_of_stack();\n'
 							+ '    HX_TOP_OF_STACK\n'
 							+ '    ::hx::Boot();\n'
@@ -257,15 +300,7 @@ extern "C" void hxcpp_set_top_of_stack();
 							afterBoot += '    __hxcpp_main();\n';
 						afterBoot + "    " + tail;
 					case Exit:
-						if (returnType == "void") {
-							'${callExpr};\n'
-							+ '    ::hx::finalizer();\n'
-							+ '    return;';
-						} else {
-							'${returnType} _hx_exportc_ret = ${callExpr};\n'
-							+ '    ::hx::finalizer();\n'
-							+ '    return _hx_exportc_ret;';
-						}
+						wrapReturn(callExpr, ret, returnType, Exit);
 				};
 
 				var cppCode = 'extern "C" {

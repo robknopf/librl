@@ -130,7 +130,6 @@ class haxe.NativeStackTrace
 class haxe.MainLoop
 class haxe.MainEvent
 class haxe.Log
-class haxe.Json
 class haxe.Exception
 class haxe.EntryPoint
 class sys.thread._Thread.HaxeThread
@@ -160,8 +159,9 @@ class haxe.SysTools
 class StringBuf
 class Std
 class ScriptableMain
-class ScriptableRuntime
-interface IRuntime
+class ScriptableHost
+class ScriptWatcherClient
+interface IScriptWatcherClient
 class Script
 class Reflect
 class PathUtil
@@ -220,7 +220,6 @@ file /home/rknopf/toolchains/haxe/current/std/cpp/vm/Unsafe.hx /home/rknopf/tool
 file /home/rknopf/toolchains/haxe/current/std/cpp/vm/WeakRef.hx /home/rknopf/toolchains/haxe/current/std/cpp/vm/WeakRef.hx
 file /home/rknopf/toolchains/haxe/current/std/haxe/CallStack.hx /home/rknopf/toolchains/haxe/current/std/haxe/CallStack.hx
 file /home/rknopf/toolchains/haxe/current/std/haxe/EntryPoint.hx /home/rknopf/toolchains/haxe/current/std/haxe/EntryPoint.hx
-file /home/rknopf/toolchains/haxe/current/std/haxe/Json.hx /home/rknopf/toolchains/haxe/current/std/haxe/Json.hx
 file /home/rknopf/toolchains/haxe/current/std/haxe/MainLoop.hx /home/rknopf/toolchains/haxe/current/std/haxe/MainLoop.hx
 file /home/rknopf/toolchains/haxe/current/std/haxe/Serializer.hx /home/rknopf/toolchains/haxe/current/std/haxe/Serializer.hx
 file /home/rknopf/toolchains/haxe/current/std/haxe/SysTools.hx /home/rknopf/toolchains/haxe/current/std/haxe/SysTools.hx
@@ -262,6 +261,7 @@ file /home/rknopf/toolchains/haxe/current/std/sys/thread/EventLoop.hx /home/rkno
 file /home/rknopf/toolchains/haxe/current/std/sys/thread/NoEventLoopException.hx /home/rknopf/toolchains/haxe/current/std/sys/thread/NoEventLoopException.hx
 file PathUtil.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/cppia/src/PathUtil.hx
 file Script.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/cppia/src/Script.hx
+file ScriptWatcherClient.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/cppia/src/ScriptWatcherClient.hx
 file ScriptableMain.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/cppia/src/ScriptableMain.hx
 file rl/Asset.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Asset.hx
 file rl/Camera3d.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Camera3d.hx

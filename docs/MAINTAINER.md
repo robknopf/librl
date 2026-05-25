@@ -92,7 +92,7 @@ Registry keys: `remote`, `js`, `c-lua`, `c-simple`, `nim-wasm-simple`, `nim-js-s
 Reloadable JS examples (`nim-js-simple`, `haxe-js-simple`):
 
 - Module paths: `assets/scripts/nim/main.js` (nim: `npm run build:nim-simple:js`); `assets/scripts/haxe/main.js` (haxe: `npm run build:haxe-simple:js`).
-- `runtime_host.js` connects to `script_watcher` when the catalog entry has `reloadable: true` (default `wss://<host>:9001/ws`). Optional override: `&watcher=wss://127.0.0.1:9001/ws`.
+- `runtime_host.js` connects to `script_watcher` when the catalog entry defines `watchedPaths` (same `{ dir, ext, recursive? }` objects as the watcher's `watch` message). Any matching `file_changed` triggers reload of the catalog **`module`** (`_rt_unload` → re-import via `example_runner.instantiateRuntimeModule` → `_rt_boot` → `_rt_load(stash)`; Emscripten modules need factory reinstantiation, plain ESM modules do not). Cppia forwards `_rt_load`/`_rt_unload` to the script internally. Optional `&watcher=wss://127.0.0.1:9001/ws`.
 - Watch protocol: `{ dir, ext, recursive? }` — directory relative to `public/` (e.g. `assets/scripts/haxe`), extension filter. Host filters `file_changed` by full file path.
 - Runtime ABI: `_rt_boot` / `_rt_init` / `_rt_load` / `_rt_tick` / `_rt_unload` / `_rt_shutdown`. Author hooks: `onLoad` / `onUnload` on `Script` (Haxe) or `onLoad` / `onUnload` procs (Nim) — default no-ops when not reloadable.
 
@@ -236,7 +236,7 @@ Runs in parallel (see root `package.json`):
 - `onchange` watchers — rebuild C/Nim/Haxe/cppia wasm or js outputs when sources change
 - `examples/script_watcher` — Bun WebSocket server (default port **9001**, TLS via `RL_REMOTE_WS_PROTOCOL=wss` and `KEYS_DIR` in `examples/script_watcher/.env`; copy from `.env.example`); watches `examples/www/public/` per client `watch` messages and notifies connected clients
 
-Cppia host (`examples/cppia/src/ScriptableMain.hx`) loads `assets/scripts/cppia/MainScript.cppia` and connects to the script watcher when `SCRIPT_WATCHER_URL` is set. Recompile gameplay with `npm run build:cppia:script` (or the `watch:cppia:script` watcher). **Asset host URLs** in example sources are often hardcoded to a LAN IP — adjust `ASSET_HOST` / `SCRIPT_WATCHER_URL` for your machine or use relative `./` where supported.
+Cppia host (`examples/cppia/src/ScriptableMain.hx`) loads `assets/scripts/cppia/MainScript.cppia`. With `ENABLE_SCRIPT_WATCHER` (desktop + wasm builds), the host connects an internal script_watcher WebSocket and reloads `.cppia` in-process (`onUnload` → fetch → `onLoad`); the catalog entry does not use `runtime_host` `watchedPaths`. Recompile gameplay with `npm run build:cppia:script` (or `watch:cppia:script`). Adjust `ASSET_HOST` / `SCRIPT_WATCHER_URL` for your LAN.
 
 `npm install` runs `tools/generate_devtools_workspace.py` (Chrome DevTools workspace mapping).
 

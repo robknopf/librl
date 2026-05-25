@@ -3,7 +3,7 @@
  *
  * Lifecycle:
  *   _rt_boot → _rt_init → _rt_load(null) → _rt_tick…
- *   reloadable: _rt_unload → re-import → _rt_boot → _rt_load(stash)  (skip _rt_init)
+ *   watched: _rt_unload → re-import module → _rt_boot → _rt_load(stash)  (skip _rt_init)
  *   teardown: _rt_shutdown
  *
  * Callable via plain ESM exports or Emscripten `ccall` (JSPI when `ccallOpts` is undefined).
@@ -11,7 +11,7 @@
 
 const RT_SUCCESS = 0;
 
-/** Coalesce double-writes from Haxe MakeESM before swapping reloadable modules. */
+/** Coalesce double-writes from Haxe MakeESM before swapping watched modules. */
 const RELOAD_DEBOUNCE_MS = 450;
 
 /**
@@ -64,22 +64,13 @@ async function callRuntimeOptional(module, name, fallback, returnType, argTypes,
   return fallback;
 }
 
-/** `{ dir, ext, recursive }` for script_watcher from a loader-relative file path. */
-function watchSpecForScript(scriptAsset) {
-  const slash = scriptAsset.lastIndexOf("/");
-  const dot = scriptAsset.lastIndexOf(".");
-  const dir = slash >= 0 ? scriptAsset.slice(0, slash) : "";
-  const ext = dot > slash ? scriptAsset.slice(dot) : "";
-  return { dir, ext, recursive: false };
-}
-
 /**
  * @param {unknown} initialMod
  * @param {string} label
  * @param {{
- *   reloadable?: boolean,
- *   scriptAsset?: string,
+ *   watchedPaths?: Array<{ dir: string, ext: string, recursive?: boolean }>,
  *   scriptModuleUrl?: string,
+ *   reloadModule?: () => Promise<unknown>,
  *   watcherUrl?: string,
  * }} [options]
  */
@@ -91,9 +82,10 @@ export async function startRuntime(initialMod, label = "runtime", options = {}) 
   let sessionInitialized = false;
   let stashed = null;
 
-  const reloadable = options.reloadable === true;
-  const scriptAsset = options.scriptAsset;
+  const watchedPaths = Array.isArray(options.watchedPaths) ? options.watchedPaths : [];
+  const hotReload = watchedPaths.length > 0;
   const scriptModuleUrl = options.scriptModuleUrl;
+  const reloadModule = options.reloadModule;
   const watcherUrl =
     options.watcherUrl ?? `wss://${window.location.hostname}:9001/ws`;
 
@@ -105,13 +97,16 @@ export async function startRuntime(initialMod, label = "runtime", options = {}) 
   let reloadQueued = false;
 
   async function importRuntimeModule() {
+    if (reloadModule) {
+      return await reloadModule();
+    }
     if (!scriptModuleUrl) {
-      throw new Error(`[${label}] reloadable example missing scriptModuleUrl`);
+      throw new Error(`[${label}] watched example missing scriptModuleUrl`);
     }
     const imported = await import(/* @vite-ignore */ `${scriptModuleUrl}?t=${Date.now()}`);
     const exp = imported.default ?? imported;
     if (typeof exp?._rt_boot !== "function") {
-      throw new Error(`[${label}] ${scriptAsset} must export _rt_boot`);
+      throw new Error(`[${label}] runtime module must export _rt_boot`);
     }
     return exp;
   }
@@ -122,7 +117,7 @@ export async function startRuntime(initialMod, label = "runtime", options = {}) 
     }
     reloadInProgress = true;
     try {
-      console.log(`[${label}] reloading ${scriptAsset}`);
+      console.log(`[${label}] reloading module ${scriptModuleUrl}`);
       if (mod != null) {
         const unloadResult = await callRuntime(mod, "_rt_unload", null, [], [], null);
         stashed = unloadResult ?? null;
@@ -136,7 +131,7 @@ export async function startRuntime(initialMod, label = "runtime", options = {}) 
         mod,
         "_rt_load",
         "number",
-        ["number"],
+        [],
         [stashed ?? null],
         null,
       );
@@ -144,7 +139,7 @@ export async function startRuntime(initialMod, label = "runtime", options = {}) 
         throw new Error(`_rt_load failed (${loadRc})`);
       }
       stashed = null;
-      console.log(`[${label}] reload complete (${scriptAsset})`);
+      console.log(`[${label}] reload complete`);
     } catch (err) {
       console.error(`[${label}] reload failed:`, err);
     } finally {
@@ -158,7 +153,7 @@ export async function startRuntime(initialMod, label = "runtime", options = {}) 
   }
 
   function scheduleSwap() {
-    if (!sessionInitialized || !reloadable) {
+    if (!sessionInitialized || !hotReload) {
       return;
     }
     if (reloadInProgress) {
@@ -179,7 +174,7 @@ export async function startRuntime(initialMod, label = "runtime", options = {}) 
   }
 
   function connectScriptWatcher() {
-    if (!reloadable || !scriptAsset) {
+    if (!hotReload) {
       return;
     }
 
@@ -187,11 +182,11 @@ export async function startRuntime(initialMod, label = "runtime", options = {}) 
     scriptWatcher = new WebSocket(watcherUrl);
 
     scriptWatcher.addEventListener("open", () => {
-      console.log(`[script_watcher] connected; watching ${scriptAsset}`);
+      console.log(`[script_watcher] connected; watching`, watchedPaths);
       scriptWatcher.send(
         JSON.stringify({
           type: "watch",
-          data: { watch: [watchSpecForScript(scriptAsset)] },
+          data: { watch: watchedPaths },
         }),
       );
     });
@@ -203,10 +198,6 @@ export async function startRuntime(initialMod, label = "runtime", options = {}) 
           return;
         }
         const path = msg.data?.path;
-        if (path !== scriptAsset) {
-          console.debug(`[script_watcher] ignoring ${path} (watching ${scriptAsset})`);
-          return;
-        }
         console.log(`[script_watcher] file_changed: ${path}`);
         scheduleSwap();
       } catch (err) {
@@ -294,7 +285,7 @@ export async function startRuntime(initialMod, label = "runtime", options = {}) 
     }
   }
 
-  if (reloadable) {
+  if (hotReload) {
     connectScriptWatcher();
   }
 
@@ -311,7 +302,7 @@ export async function startRuntime(initialMod, label = "runtime", options = {}) 
     "_rt_load",
     RT_SUCCESS,
     "number",
-    ["number"],
+    [],
     [null],
     null,
   );

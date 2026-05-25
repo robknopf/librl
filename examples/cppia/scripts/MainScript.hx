@@ -132,7 +132,6 @@ class MainScript extends Script {
 		return RT_SUCCESS;
 	}
 
-
 	private function setupScene():Void {
 		Render.enableLighting();
 		Render.setLightDirection(-0.6, -1.0, -0.5);
@@ -155,7 +154,6 @@ class MainScript extends Script {
 	}
 
 	function loadAssets():Void {
-		
 		ctx.model = Model.create(0);
 		Model.setTransform(ctx.model, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
 		Model.setAnimation(ctx.model, 1);
@@ -177,7 +175,7 @@ class MainScript extends Script {
 		Text2d.setContent(ctx.labelText2d, "rl_text2d: retained label");
 		Text2d.setPosition(ctx.labelText2d, 10, 136);
 		Text2d.setColor(ctx.labelText2d, Color.GREEN);
-		
+
 		Asset.addTask(Asset.ensureAsync(DEBUG_FONT_PATH), (path, _) -> {
 			ctx.debugFont = Font.create(path, DEBUG_FONT_SIZE);
 		}, null, ctx);
@@ -204,7 +202,7 @@ class MainScript extends Script {
 		if (ctx.sprite != 0) {
 			Sprite3d.destroy(ctx.sprite);
 			ctx.sprite = 0;
-	}
+		}
 		if (ctx.bgm != 0) {
 			Music.destroy(ctx.bgm);
 			ctx.bgm = 0;
@@ -316,7 +314,6 @@ class MainScript extends Script {
 		return RT_SUCCESS;
 	}
 
-
 	public function getPlatformText():String {
 		#if sys
 		return 'Platform: ${RL.getPlatform()} (${Sys.systemName()})';
@@ -324,8 +321,8 @@ class MainScript extends Script {
 		return 'Platform: ${RL.getPlatform()} (Unknown)';
 		#end
 	}
-	
-	override public function onLoad(stashedData:Dynamic):RTResult {
+
+	override public function onLoad(stashedData:AppContext):RTResult {
 		trace("Main: onLoad");
 		if (stashedData != null) {
 			ctx = stashedData;
@@ -334,63 +331,63 @@ class MainScript extends Script {
 
 		Logger.setLevel(Logger.LEVEL_TRACE);
 
-		setupScene();
+		//	setupScene();
 		loadAssets();
 
 		platformText = getPlatformText();
 
 		/*
-		// if we wanted to swap models on load (for giggles)
-		var modelPath:String = "";
-		if (ctx.reloadCount % 2 == 0) {
-			modelPath = "assets/models/cultist/cultist.glb";
-		} else {
-			modelPath = "assets/models/gumshoe/gumshoe.glb";
-		}
+			// if we wanted to swap models on load (for giggles)
+			var modelPath:String = "";
+			if (ctx.reloadCount % 2 == 0) {
+				modelPath = "assets/models/cultist/cultist.glb";
+			} else {
+				modelPath = "assets/models/gumshoe/gumshoe.glb";
+			}
 
-		Asset.addTask(Asset.ensureAsync(modelPath), (path, _) -> {
-			var modelAsset = Model.loadAsset(path);
-			// trace(modelAsset);
-			Model.setAsset(ctx.model, modelAsset);
-		}, (path, _) -> {
-			Log.error('Failed to ensure asset: ${path}');
-		}, ctx);
+			Asset.addTask(Asset.ensureAsync(modelPath), (path, _) -> {
+				var modelAsset = Model.loadAsset(path);
+				// trace(modelAsset);
+				Model.setAsset(ctx.model, modelAsset);
+			}, (path, _) -> {
+				Log.error('Failed to ensure asset: ${path}');
+			}, ctx);
 
-		// and swap the bgm on load
-		if (ctx.bgm != 0) {
-			// stop the bgm
-			Music.stop(ctx.bgm);
-			// release the asset
-			Music.destroy(ctx.bgm);
-			ctx.bgm = 0;
-		}
+			// and swap the bgm on load
+			if (ctx.bgm != 0) {
+				// stop the bgm
+				Music.stop(ctx.bgm);
+				// release the asset
+				Music.destroy(ctx.bgm);
+				ctx.bgm = 0;
+			}
 
-		var bgmPath:String = "";
-		switch (ctx.reloadCount % 3) {
-			case 0:
-				bgmPath = BGM_1_PATH;
-			case 1:
-				bgmPath = BGM_2_PATH;
-			case 2:
-				bgmPath = ""; // no bgm
-		}
+			var bgmPath:String = "";
+			switch (ctx.reloadCount % 3) {
+				case 0:
+					bgmPath = BGM_1_PATH;
+				case 1:
+					bgmPath = BGM_2_PATH;
+				case 2:
+					bgmPath = ""; // no bgm
+			}
 
-		if (bgmPath != "") {
-			// load the new bgm
-			ctx.bgm = Music.create(bgmPath);
-			Music.setLoop(ctx.bgm, true);
-			Music.play(ctx.bgm);
-			Asset.addTask(Asset.ensureAsync(bgmPath), (path, _) -> {
-				ctx.bgm = Music.create(path);
+			if (bgmPath != "") {
+				// load the new bgm
+				ctx.bgm = Music.create(bgmPath);
 				Music.setLoop(ctx.bgm, true);
 				Music.play(ctx.bgm);
-			}, null, ctx);
-		}
-		*/
+				Asset.addTask(Asset.ensureAsync(bgmPath), (path, _) -> {
+					ctx.bgm = Music.create(path);
+					Music.setLoop(ctx.bgm, true);
+					Music.play(ctx.bgm);
+				}, null, ctx);
+			}
+		 */
 		return RT_SUCCESS;
 	}
 
-	override public function onUnload():Dynamic {
+	override public function onUnload():AppContext {
 		trace("Main: onUnload");
 		unloadAssets();
 		return ctx;

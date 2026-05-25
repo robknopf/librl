@@ -18,27 +18,26 @@ import rl.Input;
 import rl.Pick;
 import rl.Types.RLHandle;
 import rl.InjectLibRL;
+import rl.Types.RLAsyncVoid;
 import rl.helpers.Log;
-
 import InjectWasmExports;
 import Types.RTResult;
 import Script;
 import PathUtil;
-
-import ws.WebSocket;
+import ScriptWatcherClient;
 
 /**
- * WASM/scriptable entry: performs {@link RL.init} once, connects script watcher WebSocket reload,
- * loads {@link #MAIN_CPPIA_FILE}, then forwards {@link IRuntime} to the cppia `${MAIN_SCRIPT_CLASS_NAME}` class.
+ * Scriptable host: loads {@link #MAIN_CPPIA_FILE}, forwards {@link IRuntime} to the cppia
+ * `${MAIN_SCRIPT_CLASS_NAME}` class. With {@code ENABLE_SCRIPT_WATCHER}, connects an internal
+ * script_watcher WebSocket; reload work is deferred to {@link #onTick} so async asset loads
+ * run under the {@code rt_tick} JSPI export (not from the browser WS callback).
  */
-
-
-
-class ScriptableRuntime implements IRuntime {
+class ScriptableHost {
 	#if (emscripten || PLATFORM_WEB || js)
-	final ASSET_HOST:String = "https://192.168.1.100:4444"; // get the assets from your local web server
-	//final ASSET_HOST:String = "./"; // use "./" for relative to the page's location"./";
+	final ASSET_HOST:String = "./";
 	#else
+
+	/** Vite dev server; adjust for your LAN when running desktop cppia host. */
 	final ASSET_HOST:String = "https://192.168.1.100:4444";
 	#end
 
@@ -46,6 +45,7 @@ class ScriptableRuntime implements IRuntime {
 
 	/** Cppia module shipped under `public/`; server file watcher sends reload for this path. */
 	static inline final MAIN_CPPIA_FILE:String = "assets/scripts/cppia/MainScript.cppia";
+
 	static inline final MAIN_SCRIPT_CLASS_NAME:String = "scripts.MainScript";
 
 	var scriptOnInit:InitCallback = null;
@@ -55,23 +55,27 @@ class ScriptableRuntime implements IRuntime {
 	var scriptOnLoad:LoadCallback = null;
 
 	/**
-	 * Script watcher helper: set to your reload/signaling server (e.g. `ws://127.0.0.1:9001/ws`).
-	 * Leave empty to disable; {@link ws.WebSocket#poll} is required every frame while enabled (noop on wasm Emscripten).
+	 * Desktop script watcher (Bun {@code script_watcher}). Leave empty to disable.
+	 * {@link ws.WebSocket#poll} is required every frame while enabled.
 	 */
-	 //static inline final SCRIPT_WATCHER_URL:String = "ws://192.168.1.100:9001/ws";
-	 static inline final SCRIPT_WATCHER_URL:String = "wss://192.168.1.100:9001/ws";
+	static inline final SCRIPT_WATCHER_URL:String = "wss://192.168.1.100:9001/ws";
 
-	var scriptWatcher:Null<WebSocket> = null;
+	var scriptWatcherClient:Null<ScriptWatcherClient> = null;
+
+	/** Set from script_watcher {@code file_changed}; handled on next {@link #onTick} (JSPI-safe). */
+	var pendingScriptReload:Bool = false;
 
 	/** Resolved cppia `Main` instance; receives {@link #onTick} / {@link #onShutdown}. */
-	var scriptInstance:Script = null;
+	public var scriptInstance:Script = null;
 
 	public function new() {}
 
 	/**
-	 * Returns true if this is a reload (a previous script was live), false on first load.
+	 * Load cppia bytes into a script instance.
+	 * @param bytes The cppia bytes to load.
+	 * @return true on success, false on failure.
 	 */
-	function loadMainCppia(bytes:haxe.io.Bytes):Bool {
+	public function createMainScriptFromBytes(bytes:haxe.io.Bytes):Bool {
 		Log.info('[script] loading cppia from bytes (${bytes.length} bytes)');
 		try {
 			if (bytes == null) {
@@ -93,14 +97,6 @@ class ScriptableRuntime implements IRuntime {
 				return false;
 			}
 
-			var isReload = scriptInstance != null;
-
-			// stash data from previous instance BEFORE overwriting the callbacks
-			var stashedData:Dynamic = null;
-			if (isReload && scriptOnUnload != null) {
-				stashedData = scriptOnUnload();
-			}
-
 			// create the new script instance and wire up callbacks
 			scriptInstance = Type.createInstance(mainClass, []);
 			scriptOnInit = Reflect.field(scriptInstance, "onInit");
@@ -108,34 +104,43 @@ class ScriptableRuntime implements IRuntime {
 			scriptOnShutdown = Reflect.field(scriptInstance, "onShutdown");
 			scriptOnUnload = Reflect.field(scriptInstance, "onUnload");
 			scriptOnLoad = Reflect.field(scriptInstance, "onLoad");
-
-			if (isReload && scriptOnLoad != null) {
-				var rc:RTResult = scriptOnLoad(stashedData);
-				if (rc != RT_SUCCESS) {
-					Log.warn('[script] Main.onLoad returned non-success: $rc');
-				}
-			}
-
-			return isReload;
+			return true;
 		} catch (e:Dynamic) {
 			Log.error('[script] loadMainCppia failed: $e');
 			return false;
 		}
 	}
 
-	function fetchAndReload(assetPath:String):Void {
-		var borrowed = !Fs.isInitialized();
-		if (borrowed) {
+	function destroyMainScript():Void {
+		scriptInstance = null;
+		scriptOnInit = null;
+		scriptOnTick = null;
+		scriptOnShutdown = null;
+		scriptOnUnload = null;
+		scriptOnLoad = null;
+	}
+
+
+	public function createMainScript():Void {
+		var fsAlreadyInitialized = Fs.isInitialized();
+
+		// if fs was not already initialized, initialize it
+		if (!fsAlreadyInitialized) {
 			var initRc = Fs.init();
 			if (initRc != 0) {
-				Log.error('[reload] loader init failed ($initRc)');
+				Log.error('[reload] loader init failed ($initRc), fs failed to initialize');
 				return;
 			}
 		}
-		Fs.remove(assetPath);
+
+		// remove the old cppia file
+		Fs.remove(MAIN_CPPIA_FILE);
+
+		/*
+		// begin async version
 		Asset.addTask(Asset.ensureAsync(assetPath), (localPath, _) -> {
 			var bytes = Fs.read(localPath);
-			if (borrowed)
+			if (!fsAlreadyInitialized)
 				Fs.deinit();
 			if (bytes == null) {
 				Log.error('[reload] failed to read $localPath');
@@ -143,41 +148,45 @@ class ScriptableRuntime implements IRuntime {
 			}
 			loadMainCppia(bytes);
 		}, (localPath, _) -> {
-			if (borrowed)
+			if (!fsAlreadyInitialized)
 				Fs.deinit();
 			Log.error('[reload] failed to fetch $localPath');
 		}, null);
+		// end of async version
+		*/
+
+		// begin sync version
+		// synchronously ensure the new cppia file
+		var impRc = Asset.ensure(MAIN_CPPIA_FILE);
+		if (impRc != 0) {
+			Log.error('[reload] sync import failed for $MAIN_CPPIA_FILE (code $impRc)');
+			if (!fsAlreadyInitialized)
+				Fs.deinit();
+			return;
+		}
+		// read the new cppia file
+		var bytes = Fs.read(MAIN_CPPIA_FILE);
+		// if we were the ones that initialized fs, deinit it
+		if (!fsAlreadyInitialized)
+			Fs.deinit();
+		if (bytes == null) {
+			Log.error('[reload] failed to read $MAIN_CPPIA_FILE');
+			return;
+		}
+
+		createMainScriptFromBytes(bytes);
+
+		// end of sync version
 	}
 
-	function handleScriptWatcherMessage(payload:haxe.io.Bytes, isText:Bool):Void {
-		if (!isText)
-			return;
-		try {
-			var s = payload.toString();
-			var obj:Dynamic = haxe.Json.parse(s);
-			if (Reflect.field(obj, "type") != "file_changed")
-				return;
-			var data = Reflect.field(obj, "data");
-			if (data == null)
-				return;
-			var pathStr = Reflect.field(data, "path");
-			if (pathStr == null)
-				return;
-			var assetPath = Std.string(pathStr);
-			if (assetPath != MAIN_CPPIA_FILE) {
-				Log.debug('[script_watcher] ignoring reload for $assetPath (springboard watches $MAIN_CPPIA_FILE)');
-				return;
-			}
-			Log.info('[script_watcher] file_changed: $assetPath');
-			fetchAndReload(assetPath);
-		} catch (e:Dynamic) {
-			Log.debug('[script_watcher] message ignored: $e');
-		}
+	public function reloadMainScript():Void {
+		var ctx = onUnload();
+		createMainScript();
+		onLoad(ctx);
 	}
 
 	public function onBoot():RTResult {
-		//trace("ScriptableMain: onBoot (host)");
-
+		// trace("ScriptableMain: onBoot (host)");
 		trace("Using script: " + PathUtil.joinPath("./", MAIN_CPPIA_FILE));
 		trace("Edit " + PathUtil.joinPath("./", PathUtil.withoutExtension(MAIN_CPPIA_FILE)) + ".hx to change the script");
 
@@ -188,11 +197,16 @@ class ScriptableRuntime implements IRuntime {
 		}
 
 		// start the loader so we can cache the main script
-		rc = Fs.init();
-		if (rc != RL.INIT_OK) {
-			Log.error("[script] Loader init failed (code $rc)");
-			return RT_FAILED;
+		/*
+		var fsAlreadyInitialized = Fs.isInitialized();
+		if (!fsAlreadyInitialized) {
+			var initRc = Fs.init();
+			if (initRc != 0) {
+				Log.error('[reload] loader init failed ($initRc), fs failed to initialize');
+				return RT_FAILED;
+			}
 		}
+		*/
 
 		rc = Asset.setHost(ASSET_HOST);
 		if (rc != RL.INIT_OK) {
@@ -210,14 +224,15 @@ class ScriptableRuntime implements IRuntime {
 		}
 		#end
 
+		/*
 		Fs.remove(MAIN_CPPIA_FILE);
 
-		// Synchronously fetch the main cppia into the loader cache. On wasm
-		// this suspends through JSPI; on desktop it's a normal blocking fetch.
+		// synchronously ensure the main cppia file
 		var impRc = Asset.ensure(MAIN_CPPIA_FILE);
-		if (impRc != RL.INIT_OK) {
-			Log.error('[script] sync import failed for $MAIN_CPPIA_FILE (code $impRc)');
-			Fs.deinit();
+		if (impRc != 0) {
+			Log.error('[reload] sync import failed for $MAIN_CPPIA_FILE (code $impRc)');
+			if (!fsAlreadyInitialized)
+				Fs.deinit();
 			return RT_FAILED;
 		}
 
@@ -225,47 +240,35 @@ class ScriptableRuntime implements IRuntime {
 		var cppiaBytes = Fs.read(MAIN_CPPIA_FILE);
 		if (cppiaBytes == null) {
 			Log.error("[script] Main.cppia bytes empty after sync import");
-			Fs.deinit();
+			if (!fsAlreadyInitialized)
+				Fs.deinit();
 			return RT_FAILED;
 		}
 		loadMainCppia(cppiaBytes);
 		if (scriptInstance == null) {
 			Log.error("[script] Main.cppia failed to load");
+			if (!fsAlreadyInitialized)
+				Fs.deinit();
 			return RT_FAILED;
 		}
-		// loader was only needed to bootstrap the cppia; Main.hx owns its own loader lifecycle
-		Fs.deinit();
-
-		if (SCRIPT_WATCHER_URL.length > 0) {
-			Log.info('[script_watcher] client constructing for ${SCRIPT_WATCHER_URL}');
-			scriptWatcher = new WebSocket(SCRIPT_WATCHER_URL, {
-				onOpen: function(ws) {
-					Log.debug("[script_watcher] connected (handshake complete)");
-					var watchMsg = haxe.Json.stringify({
-						type: "watch",
-						data: {
-							watch: [
-								{dir: "assets/scripts/cppia", ext: ".cppia", recursive: true}
-							]
-						}
-					});
-					ws.sendText(watchMsg);
-				},
-				onClose: function(_, code, reason) {
-					Log.debug('[script_watcher] closed code=$code reason=$reason');
-				},
-				onError: function(_) {
-					Log.error("[script_watcher] browser/emscripten WebSocket error (TLS/mixed-content/host/port — check DevTools→Network→WS)");
-				},
-				onMessage: function(_, payload, isText) {
-					Log.info('[script_watcher] message bytes=${payload.length} isText=$isText');
-					handleScriptWatcherMessage(payload, isText);
-				},
-			});
-			Log.debug('[script_watcher] client constructed for ${SCRIPT_WATCHER_URL}; connection is opened asynchronously (poll is noop on wasm)');
-		} else {
-			Log.debug('[script_watcher] disabled (SCRIPT_WATCHER_URL is empty)');
+		*/
+		createMainScript();
+		if (scriptInstance == null) {
+			Log.error("[script] Main.cppia failed to load");
+			return RT_FAILED;
 		}
+		/*
+		// loader was only needed to bootstrap the cppia; Main.hx owns its own loader lifecycle
+		if (!fsAlreadyInitialized)
+			Fs.deinit();
+		*/
+		#if ENABLE_SCRIPT_WATCHER
+		scriptWatcherClient = new ScriptWatcherClient();
+		scriptWatcherClient.onFileChanged = (_assetPath: String) -> {
+			pendingScriptReload = true;
+		};
+		scriptWatcherClient.connect(SCRIPT_WATCHER_URL);
+		#end
 
 		return RT_SUCCESS;
 	}
@@ -280,28 +283,46 @@ class ScriptableRuntime implements IRuntime {
 			}
 		}
 
-		// call the script's onLoad callback
-		if (scriptInstance != null && scriptOnLoad != null) {
-			var rc = scriptOnLoad(null);
+		return RT_SUCCESS;
+	}
+
+	public function onUnload():Dynamic {
+		var stashedData:Dynamic = null;
+		if (scriptInstance != null && scriptOnUnload != null) {
+			stashedData = scriptOnUnload();
+			destroyMainScript();
+		}
+		return stashedData;
+	}
+
+	public function onLoad(stashedData:Dynamic):RTResult {
+		if (scriptOnLoad != null) {
+			var rc = scriptOnLoad(stashedData);
 			if (rc != RT_SUCCESS) {
 				Log.error("[script] Main.onLoad returned non-success");
-				return rc;
 			}
+			return rc;
 		}
-
 		return RT_SUCCESS;
 	}
 
 	public function onTick(deltaTimeSec:Float):RTResult {
-		if (scriptWatcher != null) {
-			scriptWatcher.poll();
+		if (scriptWatcherClient != null) {
+			scriptWatcherClient.tick();
+		}
+
+		// handle the deferred script reload
+		if (pendingScriptReload) {
+			pendingScriptReload = false;
+			reloadMainScript();
+			return RT_SUCCESS;
 		}
 
 		if (scriptInstance != null && scriptOnTick != null) {
-            var rc = scriptOnTick(deltaTimeSec);
-            if (rc != RT_SUCCESS) {
-                Log.error("[script] Main.onTick returned non-success");
-            }
+			var rc = scriptOnTick(deltaTimeSec);
+			if (rc != RT_SUCCESS) {
+				Log.error("[script] Main.onTick returned non-success");
+			}
 			return rc;
 		}
 		return RT_SUCCESS;
@@ -313,18 +334,13 @@ class ScriptableRuntime implements IRuntime {
 		if (scriptInstance != null && scriptOnShutdown != null) {
 			scriptOnShutdown();
 		}
-		scriptInstance = null;
-		scriptOnInit = null;
-		scriptOnTick = null;
-		scriptOnShutdown = null;
-		scriptOnUnload = null;
-		scriptOnLoad = null;
+		
+		destroyMainScript();
 
-		if (scriptWatcher != null) {
-			scriptWatcher.destroy();
-			scriptWatcher = null;
+		if (scriptWatcherClient != null) {
+			scriptWatcherClient.disconnect();
+			scriptWatcherClient = null;
 		}
-
 	}
 }
 
@@ -332,48 +348,30 @@ class ScriptableRuntime implements IRuntime {
 // Runtime ABI hooks / trampoline functions
 //
 
-typedef Runtime = ScriptableRuntime;
-
-/* defined in Types.hx so it can be shared with Script.hx
-enum abstract RTResult(Int) from Int to Int {
-	var RT_SUCCESS = 0;
-	var RT_FAILED = -1;
-	var RT_STOPPED = 1;
-}
-*/
-
-interface IRuntime {
-	function onBoot():RTResult;
-	function onInit():RTResult;
-	function onTick(deltaTimeSec:Float):RTResult;
-	function onShutdown():Void;
-}
-
-
 class ScriptableMain {
-	private static var _instance:IRuntime = null;
+	private static var _hostInstance:ScriptableHost = null;
 
 	@:exportc.entry
-	static function rt_boot():Int {
+	@async static function rt_boot():Int {
 		trace("ScriptableMain: rt_boot (host)");
-		if (_instance == null) {
-			_instance = new Runtime();
+		if (_hostInstance == null) {
+			_hostInstance = new ScriptableHost();
 		}
-		return _instance.onBoot();
+		return @await _hostInstance.onBoot();
 	}
 
 	@:exportc
-	static function rt_init(_hostData:cpp.RawPointer<cpp.Void>):Int {
+	@async static function rt_init(_hostData:cpp.RawPointer<cpp.Void>):Int {
 		trace("ScriptableMain: rt_init (host)");
-		if (_instance != null) {
-			return _instance.onInit();
+		if (_hostInstance != null) {
+			return @await _hostInstance.onInit();
 		}
 		return RT_FAILED;
 	}
 
 	@:exportc
 	static function rt_tick(dt:Float):Int {
-		//trace("ScriptableMain: rt_tick (host)");
+		// trace("ScriptableMain: rt_tick (host)");
 		var rc = RL.tick();
 		if (rc == RL.TICK_FAILED)
 			return RT_FAILED;
@@ -381,8 +379,8 @@ class ScriptableMain {
 			return RT_SUCCESS;
 		if (Window.closeRequested())
 			return RT_STOPPED;
-		if (_instance != null) {
-			return _instance.onTick(dt);
+		if (_hostInstance != null) {
+			return _hostInstance.onTick(dt);
 		}
 		return RT_SUCCESS;
 	}
@@ -390,36 +388,66 @@ class ScriptableMain {
 	@:exportc.exit
 	static function rt_shutdown():Void {
 		trace("ScriptableMain: rt_shutdown (host)");
-		if (_instance != null) {
-			_instance.onShutdown();
-			_instance = null;
+		if (_hostInstance != null) {
+			_hostInstance.onShutdown();
+			_hostInstance = null;
 		}
 	}
 
-	static function main():Void {
+	@:exportc
+	static function rt_load(stashedData:Dynamic):Int {
+		try {
+			if (_hostInstance == null) {
+				_hostInstance = new ScriptableHost();
+			}
+			if (_hostInstance.scriptInstance == null) {
+				_hostInstance.createMainScript();
+			}
+			return _hostInstance.onLoad(stashedData);
+		} catch (e:Dynamic) {
+			Log.error("ScriptableMain: rt_load failed with exception: " + e);
+			return RT_FAILED;
+		}
+	}
+
+	@:exportc
+	static function rt_unload():Dynamic {
+		trace("ScriptableMain: rt_unload (host)");
+		if (_hostInstance != null) {
+			return _hostInstance.onUnload();
+		}
+		return null;
+	}
+
+	@async
+	static function main():RLAsyncVoid {
 		trace("ScriptableMain: main (host)");
-		if (_instance == null) {
-			_instance = new Runtime();
+		if (_hostInstance == null) {
+			_hostInstance = new ScriptableHost();
 		}
 
 		#if !(emscripten || PLATFORM_WEB || js)
-		startLocalHost();
+		@await startLocalRuntimeHost();
 		#end
 	}
 
-	// local host for when we are debugging without an actual host
-	static function startLocalHost() {
-		// fake a local host
-		var rc = rt_boot();
+	@async static function startLocalRuntimeHost():RLAsyncVoid {
+		var rc = @await rt_boot();
 		if (rc != RT_SUCCESS) {
-			trace("ScriptableMain: startLocalHost: rt_boot failed with error: " + rc);
-			return rc;
+			trace("ScriptableMain: local runtime host: rt_boot failed with error: " + rc);
+			return;
 		}
 
-		rc = rt_init(null);
+		rc = @await rt_init(null);
 		if (rc != RT_SUCCESS) {
-			trace("ScriptableMain: startLocalHost: rt_init failed with error: " + rc);
-			return rc;
+			trace("ScriptableMain: local runtime host: rt_init failed with error: " + rc);
+			return;
+		}
+
+		rc = rt_load(null);
+		if (rc != RT_SUCCESS) {
+			trace("ScriptableMain: local runtime host: rt_load failed with error: " + rc);
+			return;
 		}
 
 		final targetFrameRate = 60;
@@ -430,17 +458,16 @@ class ScriptableMain {
 			var now = haxe.Timer.stamp();
 			var dt = now - lastFrameTime;
 			lastFrameTime = now;
-			var rc = rt_tick(dt);
-			if (rc != cast RT_SUCCESS) {
-				if (rc > cast RT_SUCCESS)
+			var tickRc = rt_tick(dt);
+			if (tickRc != cast RT_SUCCESS) {
+				if (tickRc > cast RT_SUCCESS)
 					trace("ScriptableMain: startLocalHost: rt_tick returned RT_STOPPED");
 				else
-					trace("ScriptableMain: startLocalHost: rt_tick failed with error: " + rc);
+					trace("ScriptableMain: startLocalHost: rt_tick failed with error: " + tickRc);
 				frameTimer.stop();
 				rt_shutdown();
-				Sys.exit(rc == RT_FAILED ? 1 : 0);
+				Sys.exit(tickRc == RT_FAILED ? 1 : 0);
 			}
-		}
-		return RT_SUCCESS;
+		};
 	}
 }

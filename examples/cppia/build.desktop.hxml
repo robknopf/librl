@@ -13,5 +13,5 @@ common.hxml
 # Relative paths are resolved from the executable directory ($ORIGIN). Optional
 # runtime env HXCPP_CPPIA_SOURCE_ROOTS is merged additively (same syntax).
 -D HXCPP_CPPIA_SOURCE_ROOTS=../../../../examples/www/public/assets/scripts/cppia:../../src:../../../../bindings/haxe
-
+-D ENABLE_SCRIPT_WATCHER
 -cpp out/desktop

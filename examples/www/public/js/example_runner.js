@@ -122,6 +122,20 @@ async function waitForModuleWithTimeout(factory, env, timeoutMs = STARTUP_TIMEOU
   }
 }
 
+/**
+ * Import and instantiate a runtime module (Emscripten factory or plain ESM exports).
+ * Used for hot reload after the initial example_runner startup.
+ *
+ * @param {string} moduleUrl absolute module URL
+ * @param {(ctx: { moduleDir: URL, createDefaultEnv: typeof createDefaultEnv }) => object} [buildEnv]
+ */
+export async function instantiateRuntimeModule(moduleUrl, buildEnv) {
+  const moduleDir = new URL("./", moduleUrl);
+  const factory = await loadModuleFactory(moduleUrl);
+  const env = buildEnv ? buildEnv({ moduleDir, createDefaultEnv }) : createDefaultEnv(moduleDir);
+  return await waitForModuleWithTimeout(factory, env);
+}
+
 function applyLetterboxCanvasStyle(canvas, idealWidth, idealHeight) {
   const gameContainer = document.getElementById("gameContainer");
   const wrapper = document.getElementById("wrapper");

@@ -1,4 +1,4 @@
-import { runExample } from "./example_runner.js";
+import { runExample, instantiateRuntimeModule } from "./example_runner.js";
 import { startRuntime } from "./runtime_host.js";
 import { getExample } from "./example_catalog.js";
 
@@ -20,9 +20,9 @@ if (entry.standalone) {
     buildEnv: entry.buildEnv,
     onModuleReady: (mod, ctx) =>
       startRuntime(mod, key, {
-        reloadable: entry.reloadable === true,
-        scriptAsset: entry.module,
+        watchedPaths: entry.watchedPaths,
         scriptModuleUrl: ctx.moduleUrl,
+        reloadModule: () => instantiateRuntimeModule(ctx.moduleUrl, entry.buildEnv),
         watcherUrl: watcherOverride ?? undefined,
       }),
   });

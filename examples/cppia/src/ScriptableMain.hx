@@ -1,6 +1,10 @@
 package;
 
 import rl.RL;
+import rl.*;
+import rl.helpers.Log;
+import rl.Types.RLAsyncVoid;
+/*
 import rl.Window;
 import rl.Camera3d;
 import rl.Color;
@@ -17,13 +21,13 @@ import rl.Text;
 import rl.Input;
 import rl.Pick;
 import rl.Types.RLHandle;
-import rl.InjectLibRL;
 import rl.Types.RLAsyncVoid;
 import rl.helpers.Log;
-import InjectWasmExports;
+*/
+import InjectWasmExports;	
 import Types.RTResult;
 import Script;
-import PathUtil;
+import utils.*;
 import ScriptWatcherClient;
 
 /**

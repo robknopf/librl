@@ -20,10 +20,16 @@
 --macro macros.RuntimeCAbiMacro.registerGlobal()
 # ensure that rl.RL is available to scripts, in case the host didn't import them
 --macro include('rl', true)
+
+# hxcpp-debugger needs these for cppia script debugging
 --macro include('haxe.NativeStackTrace', true)
 --macro include('haxe.CallStack', true)
 
-# dce will strip unused code from the host, making scripts unable to use them
+# list of classes that may not be in the ScriptableMain class, but we want to make available to scripts
+# otherwise, they will load them into the scripts themselves
+--macro include('utils', true)
+
+# dce strips unused code from the host, making scripts unable to use them
 # keep will ensure that dce doesn't strip them
 # see https://api.haxe.org/haxe/macro/Compiler.html#include
 
@@ -31,5 +37,7 @@
 --macro keep('rl')
 --macro keep('haxe.NativeStackTrace')
 --macro keep('haxe.CallStack')
+--macro keep('utils')
+
 
 --main ScriptableMain

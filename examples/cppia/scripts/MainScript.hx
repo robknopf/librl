@@ -1,28 +1,14 @@
 package scripts;
 
-import rl.Texture;
 import rl.RL;
-import rl.Window;
-import rl.Camera3d;
-import rl.Color;
-import rl.Render;
-import rl.Asset;
-import rl.Fs;
-import rl.Logger;
-import rl.Text2d;
-import rl.Font;
-import rl.Model;
-import rl.Sprite3d;
-import rl.Music;
-import rl.Text;
-import rl.Input;
-import rl.Pick;
-import rl.Types.RLHandle;
+import rl.*;
 import rl.helpers.Log;
-import haxe.io.Path;
-import Types.RTResult;
+import rl.Types.RLHandle;
 import rl.Types.RLPickResult;
+import Types.RTResult;
 import Script;
+import haxe.io.Path;
+import utils.StringUtil.formatFixed;
 import scripts.test.TestImport;
 
 /*
@@ -322,7 +308,7 @@ class MainScript extends Script {
 		#end
 	}
 
-	override public function onLoad(stashedData:AppContext):RTResult {
+	override public function onLoad(stashedData:Dynamic):RTResult {
 		trace("Main: onLoad");
 		if (stashedData != null) {
 			ctx = stashedData;
@@ -387,7 +373,7 @@ class MainScript extends Script {
 		return RT_SUCCESS;
 	}
 
-	override public function onUnload():AppContext {
+	override public function onUnload():Dynamic {
 		trace("Main: onUnload");
 		unloadAssets();
 		return ctx;
@@ -399,21 +385,4 @@ class MainScript extends Script {
 		RL.deinit();
 	}
 
-	static function formatFixed(value:Float, digits:Int):String {
-		var scale = Math.pow(10, digits);
-		var rounded = Math.round(value * scale) / scale;
-		var text = Std.string(rounded);
-		var dot = text.indexOf(".");
-		if (digits <= 0) {
-			return dot >= 0 ? text.substr(0, dot) : text;
-		}
-		if (dot < 0) {
-			return text + "." + StringTools.rpad("", "0", digits);
-		}
-		var decimals = text.length - dot - 1;
-		if (decimals < digits) {
-			return text + StringTools.rpad("", "0", digits - decimals);
-		}
-		return text;
-	}
 }

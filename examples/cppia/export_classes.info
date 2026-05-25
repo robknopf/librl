@@ -2,6 +2,8 @@ class ws.WebSocket
 class ws.WebSocketBridge
 class ws.WebSocketNative
 class ws.WebSocketBuildInject
+class utils.StringUtil
+class utils.PathUtil
 class sys.thread.Tls
 class sys.thread._Thread.Thread_Impl_
 class sys.thread.Semaphore
@@ -164,7 +166,6 @@ class ScriptWatcherClient
 interface IScriptWatcherClient
 class Script
 class Reflect
-class PathUtil
 class Lambda
 class WasmExports
 class EReg
@@ -259,7 +260,6 @@ file /home/rknopf/toolchains/haxe/current/std/haxe/xml/Parser.hx /home/rknopf/to
 file /home/rknopf/toolchains/haxe/current/std/haxe/xml/Printer.hx /home/rknopf/toolchains/haxe/current/std/haxe/xml/Printer.hx
 file /home/rknopf/toolchains/haxe/current/std/sys/thread/EventLoop.hx /home/rknopf/toolchains/haxe/current/std/sys/thread/EventLoop.hx
 file /home/rknopf/toolchains/haxe/current/std/sys/thread/NoEventLoopException.hx /home/rknopf/toolchains/haxe/current/std/sys/thread/NoEventLoopException.hx
-file PathUtil.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/cppia/src/PathUtil.hx
 file Script.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/cppia/src/Script.hx
 file ScriptWatcherClient.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/cppia/src/ScriptWatcherClient.hx
 file ScriptableMain.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/cppia/src/ScriptableMain.hx
@@ -292,4 +292,6 @@ file rl/helpers/TaskGroup.hx /home/rknopf/projects/whirlinggizmo/experiments/ray
 file rl/helpers/Wait.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/helpers/Wait.hx
 file rl/impl/RLFileioImpl.cpp.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/cppia/rl/impl/RLFileioImpl.cpp.hx
 file rl/impl/RLImpl.cpp.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/cppia/rl/impl/RLImpl.cpp.hx
+file utils/PathUtil.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/cppia/src/utils/PathUtil.hx
+file utils/StringUtil.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/cppia/src/utils/StringUtil.hx
 file ws/WebSocket.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/examples/cppia/src/ws/WebSocket.hx

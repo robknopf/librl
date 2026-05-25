@@ -1,5 +1,8 @@
 package;
 
+// base imports for librl
+import rl.InjectLibRL;
+
 /**
 	local wasm exports for the browser launcher.
 **/

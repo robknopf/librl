@@ -17,7 +17,7 @@
 
 #--dce no
 
---macro macros.RuntimeCAbiMacro.registerGlobal()
+--macro macros.ExportCABI.apply()
 # ensure that rl.RL is available to scripts, in case the host didn't import them
 --macro include('rl', true)
 

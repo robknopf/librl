@@ -29,9 +29,9 @@ private enum ExportWrapKind {
  *
  * Do not combine **`@:exportc.entry`** with **`@:exportc.exit`**. You may use **`@:exportc("sym")`** together with **entry/exit** only to supply the C symbol (no thin **`@:exportc`** wrapper). Instance methods are skipped with a warning.
  *
- * Wire: `--macro RuntimeCAbiMacro.registerGlobal()`
+ * Wire: `--macro ExportCABI.apply()`
  */
-class RuntimeCAbiMacro {
+class ExportCABI {
 	static final PREAMBLE_BASE = '
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
@@ -222,7 +222,7 @@ extern "C" void hxcpp_set_top_of_stack();
 		return Reflect.field(cfg, "mainClass") != null;
 	}
 
-	public static function registerGlobal():Void {
+	public static function apply():Void {
 		Context.onGenerate(function(types) {
 			var id = collectEntryExit(types);
 			validateSingleEntryExit(id.entries, id.exits);

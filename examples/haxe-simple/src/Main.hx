@@ -420,6 +420,8 @@ class MainScript extends Script {
 	}
 }
 
+// #region Runtime ABI, called by host
+
 ///////////  Runtime ABI, called by host  ///////////
 
 //typedef MainScript = MyMainScript;
@@ -531,6 +533,10 @@ class Main {
 		return;
 	}
 
+// #endregion Runtime ABI, called by host
+
+// #region Main entry point
+
 	public static function main() {
 		if (_scriptInstance == null) {
 			_scriptInstance = new MainScript();
@@ -587,3 +593,5 @@ class Main {
 		return RT_SUCCESS;
 	}
 }
+
+// #endregion Main entry point

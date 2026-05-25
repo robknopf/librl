@@ -10,6 +10,24 @@
  */
 
 const RT_SUCCESS = 0;
+const DEFAULT_WATCHER_PORT = "9001";
+
+/** Same-origin `/ws` when the page is already served from the watcher port. */
+function resolveDefaultWatcherUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const portFromQuery = params.get("port");
+  const watcherPort =
+    portFromQuery && portFromQuery.length > 0 ? portFromQuery : DEFAULT_WATCHER_PORT;
+  const wsProto = window.location.protocol === "https:" ? "wss" : "ws";
+  const pagePort =
+    window.location.port ||
+    (window.location.protocol === "https:" ? "443" : "80");
+  if (pagePort === watcherPort) {
+    return `${wsProto}://${window.location.host}/ws`;
+  }
+  const host = window.location.hostname || "localhost";
+  return `${wsProto}://${host}:${watcherPort}/ws`;
+}
 
 /** Coalesce double-writes from Haxe MakeESM before swapping watched modules. */
 const RELOAD_DEBOUNCE_MS = 450;
@@ -87,7 +105,7 @@ export async function startRuntime(initialMod, label = "runtime", options = {}) 
   const scriptModuleUrl = options.scriptModuleUrl;
   const reloadModule = options.reloadModule;
   const watcherUrl =
-    options.watcherUrl ?? `wss://${window.location.hostname}:9001/ws`;
+    options.watcherUrl ?? resolveDefaultWatcherUrl();
 
   let scriptWatcher = null;
   let reloadScheduled = false;

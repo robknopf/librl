@@ -92,7 +92,7 @@ Registry keys: `remote`, `js`, `c-lua`, `c-simple`, `nim-wasm-simple`, `nim-js-s
 Reloadable JS examples (`nim-js-simple`, `haxe-js-simple`):
 
 - Module paths: `assets/scripts/nim/main.js` (nim: `npm run build:nim-simple:js`); `assets/scripts/haxe/main.js` (haxe: `npm run build:haxe-simple:js`).
-- `runtime_host.js` connects to `script_watcher` when the catalog entry defines `watchedPaths` (same `{ dir, ext, recursive? }` objects as the watcher's `watch` message). Any matching `file_changed` triggers reload of the catalog **`module`** (`_rt_unload` → re-import via `example_runner.instantiateRuntimeModule` → `_rt_boot` → `_rt_load(stash)`; Emscripten modules need factory reinstantiation, plain ESM modules do not). Cppia forwards `_rt_load`/`_rt_unload` to the script internally. Optional `&watcher=wss://127.0.0.1:9001/ws`.
+- `runtime_host.js` connects to `script_watcher` when the catalog entry defines `watchedPaths` (same `{ dir, ext, recursive? }` objects as the watcher's `watch` message). Any matching `file_changed` triggers reload of the catalog **`module`** (`_rt_unload` → re-import via `example_runner.instantiateRuntimeModule` → `_rt_boot` → `_rt_load(stash)`; Emscripten modules need factory reinstantiation, plain ESM modules do not). Cppia forwards `_rt_load`/`_rt_unload` to the script internally. Optional `&watcher=wss://127.0.0.1:9001/ws`. When the page is served from script_watcher on port 9001, the default watcher URL is same-origin `/ws`; Vite on 4444 still targets `:9001`.
 - Watch protocol: `{ dir, ext, recursive? }` — directory relative to `public/` (e.g. `assets/scripts/haxe`), extension filter. Host filters `file_changed` by full file path.
 - Runtime ABI: `_rt_boot` / `_rt_init` / `_rt_load` / `_rt_tick` / `_rt_unload` / `_rt_shutdown`. Author hooks: `onLoad` / `onUnload` on `Script` (Haxe) or `onLoad` / `onUnload` procs (Nim) — default no-ops when not reloadable.
 
@@ -232,9 +232,9 @@ Approximate ballpark (release/optimized, no debug symbols; see generated doc for
 
 Runs in parallel (see root `package.json`):
 
-- `vite` — serves `examples/www/` on port 4444; mounts `/examples/` and `/bindings/` for out-of-root artifacts
+- `vite` — dev helper on port **4444** (`vite-plugin-restart` when wasm **host** artifacts change; `vite build` for deploy). Serves the testbed shell; proxies `/examples`, `/bindings`, and `/lib` to **script_watcher** (must be running — see `examples/script_watcher/.env`). Or browse **script_watcher** directly on **9001**.
 - `onchange` watchers — rebuild C/Nim/Haxe/cppia wasm or js outputs when sources change
-- `examples/script_watcher` — Bun WebSocket server (default port **9001**, TLS via `RL_REMOTE_WS_PROTOCOL=wss` and `KEYS_DIR` in `examples/script_watcher/.env`; copy from `.env.example`); watches `examples/www/public/` per client `watch` messages and notifies connected clients
+- `examples/script_watcher` — Bun server (default port **9001**, TLS via `RL_REMOTE_ENABLE_TLS=1` and `KEYS_DIR` in `examples/script_watcher/.env`; copy from `.env.example`): WebSocket at `/ws` for file-watch notifications, static HTTP(S) on the same port for the testbed shell (`RL_REMOTE_HTTP_ROOT`, default `examples/www/`), public assets (`RL_REMOTE_PUBLIC_ROOT`), and optional path mounts (`RL_REMOTE_HTTP_MOUNTS`, semicolon-separated `/prefix=path` entries — see `.env.example` for the librl testbed). Server listen env: `RL_REMOTE_ENABLE_TLS`, `RL_REMOTE_HOST`, `RL_REMOTE_PORT` (the `examples/remote` client still uses `RL_REMOTE_WS_*` for its WebSocket URL only).
 
 Cppia host (`examples/cppia/src/ScriptableMain.hx`) loads `assets/scripts/cppia/MainScript.cppia`. With `ENABLE_SCRIPT_WATCHER` (desktop + wasm builds), the host connects an internal script_watcher WebSocket and reloads `.cppia` in-process (`onUnload` → fetch → `onLoad`); the catalog entry does not use `runtime_host` `watchedPaths`. Recompile gameplay with `npm run build:cppia:script` (or `watch:cppia:script`). Adjust `ASSET_HOST` / `SCRIPT_WATCHER_URL` for your LAN.
 

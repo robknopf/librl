@@ -239,10 +239,7 @@ export function startPerClientWatcher(options: PerClientWatchOptions): () => voi
   };
 }
 
-/** Default `examples/www/public` when running from `script_watcher/src`. */
-export function defaultPublicRoot(): string {
-  return path.resolve(import.meta.dir, "../../www/public");
-}
+export { defaultPublicRoot } from "./config";
 
 /** Default watch root: the project's `public/assets` tree. */
 export function defaultWatchRoot(publicRoot: string): string {

@@ -41,8 +41,8 @@ class ScriptableHost {
 	final ASSET_HOST:String = "./";
 	#else
 
-	/** Vite dev server; adjust for your LAN when running desktop cppia host. */
-	final ASSET_HOST:String = "https://192.168.1.100:4444";
+	/** script_watcher static host; adjust for your LAN. */
+	final ASSET_HOST:String = "https://192.168.1.100:9001";
 	#end
 
 	// final LOADER_CACHE_DIR:String = "/haxetest";

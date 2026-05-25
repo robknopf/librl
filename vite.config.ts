@@ -1,5 +1,4 @@
-import { defineConfig, Connect } from "vite";
-import type { ServerResponse } from 'http';
+import { defineConfig } from "vite";
 import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
@@ -8,6 +7,11 @@ import ViteRestart from "vite-plugin-restart";
 
 dotenv.config({
   quiet: true,
+});
+dotenv.config({
+  path: path.resolve(__dirname, "examples/script_watcher/.env"),
+  quiet: true,
+  override: false,
 });
 const homeDir = os.homedir();
 
@@ -49,6 +53,24 @@ const scriptableBundleDirs = [
   path.resolve(__dirname, "examples/www/public/assets/scripts/haxe"),
 ];
 
+const scriptWatcherPort = process.env.RL_REMOTE_PORT || "9001";
+const scriptWatcherTls = ["1", "true", "yes", "on"].includes(
+  (process.env.RL_REMOTE_ENABLE_TLS || "").toLowerCase(),
+);
+const scriptWatcherTarget = `${scriptWatcherTls ? "https" : "http"}://127.0.0.1:${scriptWatcherPort}`;
+
+function scriptWatcherProxyOptions() {
+  return {
+    target: scriptWatcherTarget,
+    changeOrigin: true,
+    secure: false,
+  };
+}
+
+// Testbed shell on Vite :4444 (vite-plugin-restart for wasm host rebuilds).
+// /examples, /bindings, /lib are proxied to script_watcher (RL_REMOTE_* env, default :9001).
+// Browse https://localhost:9001/ directly to skip Vite entirely.
+
 export default defineConfig({
   publicDir: "public",
   root: "./examples/www",
@@ -61,13 +83,13 @@ export default defineConfig({
   define: {
     CONFIG_ENV: JSON.stringify(process.env.CONFIG_ENV),
   },
-  resolve: {
-    alias: {
-      "/examples": path.resolve(__dirname, "examples"),
-      "/bindings": path.resolve(__dirname, "bindings"),
-      "/lib": path.resolve(__dirname, "lib"),
-    },
-  },
+  // resolve: {
+  //   alias: {
+  //     "/examples": path.resolve(__dirname, "examples"),
+  //     "/bindings": path.resolve(__dirname, "bindings"),
+  //     "/lib": path.resolve(__dirname, "lib"),
+  //   },
+  // },
   plugins: [
     ViteRestart({
       reload: [
@@ -91,51 +113,51 @@ export default defineConfig({
         }
       },
     },
-    {
-      name: "examples-mount",
-      configureServer(server) {
-        const examplesRoot = path.resolve(__dirname, "examples");
-        const bindingsRoot = path.resolve(__dirname, "bindings");
-        const libRoot = path.resolve(__dirname, "lib");
-
-        // Ensure files outside `root` that are imported via aliases or custom mounts
-        // are watched for HMR/full-reload updates.
-        // disabled for now, we are using ViteRestart plugin
-        //server.watcher.add(path.join(examplesRoot, "**/*"));
-        //server.watcher.add(path.join(bindingsRoot, "**/*"));
-        //server.watcher.add(path.join(libRoot, "**/*"));
-
-        const mountExternalDir = (mountPrefix: string, dirRoot: string) => (req: Connect.IncomingMessage, _res: ServerResponse, next: Connect.NextFunction) => {
-          const reqUrl = req.url || "";
-          const [cleanUrl, query = ""] = reqUrl.split("?");
-          if (!cleanUrl.startsWith(mountPrefix)) {
-            next();
-            return;
-          }
-
-          const relativePath = decodeURIComponent(
-            cleanUrl.slice(mountPrefix.length),
-          );
-          const fullPath = path.resolve(dirRoot, relativePath);
-
-          // Prevent path traversal outside the mounted directory.
-          if (
-            !(
-              fullPath === dirRoot ||
-              fullPath.startsWith(dirRoot + path.sep)
-            )
-          ) {
-            return;
-          }
-
-          req.url = `/@fs/${fullPath.replace(/\\/g, "/")}${query ? `?${query}` : ""}`;
-          next();
-        };
-
-        server.middlewares.use(mountExternalDir("/examples/", examplesRoot));
-        server.middlewares.use(mountExternalDir("/bindings/", bindingsRoot));
-      },
-    },
+    // {
+    //   name: "examples-mount",
+    //   configureServer(server) {
+    //     const examplesRoot = path.resolve(__dirname, "examples");
+    //     const bindingsRoot = path.resolve(__dirname, "bindings");
+    //     const libRoot = path.resolve(__dirname, "lib");
+    //
+    //     // Ensure files outside `root` that are imported via aliases or custom mounts
+    //     // are watched for HMR/full-reload updates.
+    //     // disabled for now, we are using ViteRestart plugin
+    //     //server.watcher.add(path.join(examplesRoot, "**/*"));
+    //     //server.watcher.add(path.join(bindingsRoot, "**/*"));
+    //     //server.watcher.add(path.join(libRoot, "**/*"));
+    //
+    //     const mountExternalDir = (mountPrefix: string, dirRoot: string) => (req: Connect.IncomingMessage, _res: ServerResponse, next: Connect.NextFunction) => {
+    //       const reqUrl = req.url || "";
+    //       const [cleanUrl, query = ""] = reqUrl.split("?");
+    //       if (!cleanUrl.startsWith(mountPrefix)) {
+    //         next();
+    //         return;
+    //       }
+    //
+    //       const relativePath = decodeURIComponent(
+    //         cleanUrl.slice(mountPrefix.length),
+    //       );
+    //       const fullPath = path.resolve(dirRoot, relativePath);
+    //
+    //       // Prevent path traversal outside the mounted directory.
+    //       if (
+    //         !(
+    //           fullPath === dirRoot ||
+    //           fullPath.startsWith(dirRoot + path.sep)
+    //         )
+    //       ) {
+    //         return;
+    //       }
+    //
+    //       req.url = `/@fs/${fullPath.replace(/\\/g, "/")}${query ? `?${query}` : ""}`;
+    //       next();
+    //     };
+    //
+    //     server.middlewares.use(mountExternalDir("/examples/", examplesRoot));
+    //     server.middlewares.use(mountExternalDir("/bindings/", bindingsRoot));
+    //   },
+    // },
   ],
   server: {
     host: "0.0.0.0",
@@ -146,6 +168,11 @@ export default defineConfig({
       "access-control-allow-origin": "*",
     },
     open: false,
+    proxy: {
+      "/examples": scriptWatcherProxyOptions(),
+      "/bindings": scriptWatcherProxyOptions(),
+      "/lib": scriptWatcherProxyOptions(),
+    },
     watch: {
       ignored: scriptableBundleDirs,
     },

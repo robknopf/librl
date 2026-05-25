@@ -1,11 +1,12 @@
 import type { ServerWebSocket } from "bun";
-import { existsSync, mkdirSync, readFileSync, statSync } from "fs";
-import * as path from "path";
+import { existsSync, readFileSync, statSync } from "fs";
+import { loadServerConfig } from "./config";
 import {
-  defaultPublicRoot,
   startPerClientWatcher,
   type WatchEntry,
 } from "./filewatcher";
+import { serveStaticRequest } from "./static";
+
 interface ClientData {
   id: string;
   stopWatcher?: () => void;
@@ -21,97 +22,59 @@ interface ClientMessage {
   data: any;
 }
 
-interface GameClient {
-  id: string;
-  send: (message: ServerMessage) => void;
-  disconnect: () => void;
-}
-
-const DEFAULT_ENABLE_TLS = false;
-const REQUESTED_PROTOCOL = process.env.RL_REMOTE_WS_PROTOCOL?.toLowerCase();
-if (REQUESTED_PROTOCOL && !(["wss", "ws"].includes(REQUESTED_PROTOCOL))) {
-    throw new Error(`[ERROR] "Unknown protocol from env.RL_REMOTE_WS_PROTOCOL: ${REQUESTED_PROTOCOL}`)
-}
-const ENABLE_TLS =
-  REQUESTED_PROTOCOL === "wss"
-    ? true
-    : REQUESTED_PROTOCOL === "ws"
-      ? false
-      : DEFAULT_ENABLE_TLS;
-
-// TODO: get keys directory from the .env file
-const keysDir = Bun.env.KEYS_DIR || "";
-const TLS_CERT = path.join(keysDir, "cert.pem");
-const TLS_KEY = path.join(keysDir, "privkey.pem");
-
-
-const DEFAULT_PORT = 9001;
-const PORT = (() => {
-  const raw = process.env.RL_REMOTE_WS_PORT || process.env.PORT;
-  if (!raw) {
-    return DEFAULT_PORT;
-  }
-
-  // ensure the provided value is a number (parseInt() will truncate it if it discovers invalid digits)
-  let parsed = Number(raw);
-  if (Number.isFinite(parsed) && Number.isInteger(parsed) && parsed > 0) {
-    return parsed;
-  }
-      throw new Error(`[ERROR] "Invalid port from env.RL_REMOTE_WS_PORT: ${raw}`)
-
-})();
-
-const DEFAULT_HOST = "0.0.0.0";
-const HOST = process.env.RL_REMOTE_WS_HOST || DEFAULT_HOST;
-
+const config = loadServerConfig();
+const {
+  enableTls: ENABLE_TLS,
+  tlsCert: TLS_CERT,
+  tlsKey: TLS_KEY,
+  host: HOST,
+  port: PORT,
+  publicRoot,
+  siteRoot,
+  watchDebounceMs,
+  httpMounts,
+} = config;
 
 const clients = new Map<string, ServerWebSocket<ClientData>>();
 
-function sendMessage(
-  ws: ServerWebSocket<ClientData>,
-  message: ServerMessage,
-): void {
-  ws.send(JSON.stringify(message));
-}
-
-function disconnectClient(ws: ServerWebSocket<ClientData>): void {
-  ws.close();
-}
-
-function createGameClient(ws: ServerWebSocket<ClientData>): GameClient {
-  return {
-    id: ws.data.id,
-    send: (message) => sendMessage(ws, message),
-    disconnect: () => disconnectClient(ws),
-  };
-}
-
-// Map watched file changes to the websocket message type clients consume.
-function messageTypeForExt(ext: string): string {
+function messageTypeForExt(_ext: string): string {
   return "file_changed";
 }
 
-function notifyClient(ws: ServerWebSocket<ClientData>, assetPath: string, ext: string): void {
+function notifyClient(
+  ws: ServerWebSocket<ClientData>,
+  assetPath: string,
+  ext: string,
+): void {
   const type = messageTypeForExt(ext);
   const message: ServerMessage = { type, data: { path: assetPath, ext } };
   ws.send(JSON.stringify(message));
   console.log(`[watch] ${type} → ${ws.data.id}: ${assetPath}`);
 }
 
-var publicRoot = Bun.env.RL_REMOTE_PUBLIC_ROOT ?? defaultPublicRoot();
-
-// make sure the publicRoot dir is absolute
-publicRoot = path.isAbsolute(publicRoot) ? publicRoot : path.resolve(publicRoot);
-
-// verify it exists
 if (!existsSync(publicRoot) || !statSync(publicRoot).isDirectory()) {
   throw new Error(`[ERROR] Watcher public root is not a directory: ${publicRoot}`);
 }
-console.log("Watcher public root directory: ", publicRoot)
-const watchDebounceMs = (() => {
-  const v = Number.parseInt(Bun.env.RL_REMOTE_WATCH_DEBOUNCE_MS ?? "150", 10);
-  return Number.isFinite(v) ? v : 150;
-})();
+
+if (!existsSync(siteRoot) || !statSync(siteRoot).isDirectory()) {
+  throw new Error(`[ERROR] HTTP site root is not a directory: ${siteRoot}`);
+}
+for (const mount of httpMounts) {
+  if (!existsSync(mount.root) || !statSync(mount.root).isDirectory()) {
+    throw new Error(
+      `[ERROR] HTTP mount root is not a directory: ${mount.prefix} → ${mount.root}`,
+    );
+  }
+}
+
+console.log(`Watcher public root directory: ${publicRoot}`);
+console.log(`HTTP site root directory: ${siteRoot}`);
+if (httpMounts.length > 0) {
+  console.log(
+    "HTTP mounts:",
+    httpMounts.map((mount) => `${mount.prefix} → ${mount.root}`).join(", "),
+  );
+}
 
 const server = Bun.serve<ClientData>({
   hostname: HOST,
@@ -157,7 +120,11 @@ const server = Bun.serve<ClientData>({
       return new Response("WebSocket upgrade failed", { status: 400 });
     }
 
-    return new Response("WebSocket server running", { status: 200 });
+    return serveStaticRequest(req, url, {
+      publicRoot,
+      siteRoot,
+      mounts: httpMounts,
+    });
   },
 
   websocket: {
@@ -167,7 +134,7 @@ const server = Bun.serve<ClientData>({
     },
 
     message(ws, message) {
-      console.log("got message:", message)
+      console.log("got message:", message);
       if (typeof message !== "string") return;
       try {
         const msg = JSON.parse(message) as ClientMessage;
@@ -202,8 +169,10 @@ const server = Bun.serve<ClientData>({
   },
 });
 
-const scheme = ENABLE_TLS && TLS_CERT && TLS_KEY ? "wss" : "ws";
-console.log(`[Server] Listening on ${scheme}://${HOST}:${PORT}/ws`);
+const httpScheme = ENABLE_TLS && TLS_CERT && TLS_KEY ? "https" : "http";
+const wsScheme = ENABLE_TLS && TLS_CERT && TLS_KEY ? "wss" : "ws";
+console.log(`[Server] WebSocket on ${wsScheme}://${HOST}:${PORT}/ws`);
+console.log(`[Server] HTTP static on ${httpScheme}://${HOST}:${PORT}/`);
 
 process.on("SIGINT", () => {
   for (const ws of clients.values()) ws.data.stopWatcher?.();

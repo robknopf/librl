@@ -105,6 +105,10 @@ class RL {
 		return rl.impl.RLImpl.getPlatform();
 	}
 
+	public static function handleKind(handle:Int):Int {
+		return rl.impl.RLImpl.handleGetKindNative(cast handle);
+	}
+
 	public static function versionMajor():Int {
 		return rl.impl.RLImpl.versionMajor();
 	}

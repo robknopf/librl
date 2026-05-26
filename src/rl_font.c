@@ -28,7 +28,7 @@ static uint16_t rl_font_free_indices[MAX_FONTS];
 static uint16_t rl_font_generations[MAX_FONTS];
 static unsigned char rl_font_occupied[MAX_FONTS];
 
-const rl_handle_t RL_FONT_DEFAULT = RL_HANDLE_MAKE(RL_FONT_DEFAULT_INDEX, 1u);
+const rl_handle_t RL_FONT_DEFAULT = RL_HANDLE_MAKE(RL_KIND_FONT, RL_FONT_DEFAULT_INDEX, 1u);
 
 static int rl_font_size_key(int font_size)
 {
@@ -215,6 +215,7 @@ void rl_font_init(void)
     uint16_t default_index = 0;
 
     rl_handle_pool_init(&rl_font_pool,
+                        RL_KIND_FONT,
                         MAX_FONTS,
                         rl_font_free_indices,
                         MAX_FONTS,

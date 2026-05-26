@@ -919,12 +919,14 @@ bool rl_model_is_valid_strict(rl_handle_t handle)
 void rl_model_init(void)
 {
     rl_handle_pool_init(&rl_model_instance_pool,
+                        RL_KIND_MODEL,
                         MAX_MODELS,
                         rl_model_instance_free_indices,
                         MAX_MODELS,
                         rl_model_instance_generations,
                         rl_model_instance_occupied);
     rl_handle_pool_init(&rl_model_asset_pool,
+                        RL_KIND_MODEL_ASSET,
                         MAX_MODEL_ASSETS,
                         rl_model_asset_free_indices,
                         MAX_MODEL_ASSETS,

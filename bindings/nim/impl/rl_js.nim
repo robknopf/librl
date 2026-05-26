@@ -286,6 +286,7 @@ async function __rlEnsureBindings(bindingsPath) {
   proc rl_get_delta_time*(): float {.importjs: "__gRl.getDeltaTime()".}
   proc rl_is_initialized*(): bool {.importjs: "__gRl.isInitialized()".}
   proc rl_get_platform*(): cstring {.importjs: "__gRl.getPlatform()".}
+  proc rl_handle_get_kind*(handle: RLHandle): int {.importjs: "__gRl.handleKind(#)".}
   proc rl_version_major*(): int {.importjs: "__gRl.getVersionMajor()".}
   proc rl_version_minor*(): int {.importjs: "__gRl.getVersionMinor()".}
   proc rl_version_patch*(): int {.importjs: "__gRl.getVersionPatch()".}

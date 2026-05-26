@@ -84,6 +84,9 @@ private extern class RLExterns {
     return untyped __cpp__("::String(::rl_get_platform())");
   }
 
+  @:native("rl_handle_get_kind")
+  static function handleGetKindNative(handle: cpp.UInt32): Int;
+
   @:native("rl_version_major")
   static function versionMajorNative(): Int;
 

@@ -1,6 +1,7 @@
 #include "rl_handle_pool_test.h"
 
 #include "internal/rl_handle_pool.h"
+#include "rl_handle.h"
 #include "test_common.h"
 
 #include <stddef.h>
@@ -19,7 +20,7 @@ int test_rl_handle_pool_run(void)
     rl_handle_t h4 = 0;
     rl_handle_t h2_new = 0;
 
-    rl_handle_pool_init(&pool, 4, free_indices, 4, generations, occupied);
+    rl_handle_pool_init(&pool, RL_KIND_TEXTURE, 4, free_indices, 4, generations, occupied);
 
     h1 = rl_handle_pool_alloc(&pool);
     h2 = rl_handle_pool_alloc(&pool);
@@ -31,8 +32,12 @@ int test_rl_handle_pool_run(void)
     TEST_ASSERT(h3 != 0);
     TEST_ASSERT(h4 == 0);
 
+    TEST_ASSERT(RL_HANDLE_KIND(h2) == RL_KIND_TEXTURE);
     TEST_ASSERT(rl_handle_pool_resolve(&pool, h2, &resolved_index));
     TEST_ASSERT(resolved_index == RL_HANDLE_INDEX(h2));
+    TEST_ASSERT(!rl_handle_pool_resolve(&pool, RL_HANDLE_MAKE(RL_KIND_COLOR, RL_HANDLE_INDEX(h2),
+                                                              RL_HANDLE_GENERATION(h2)),
+                                        &resolved_index));
 
     TEST_ASSERT(rl_handle_pool_free(&pool, h2));
     TEST_ASSERT(!rl_handle_pool_resolve(&pool, h2, &resolved_index));
@@ -54,6 +59,7 @@ int test_rl_handle_pool_run(void)
     TEST_ASSERT(h1 != 0);
     TEST_ASSERT(RL_HANDLE_INDEX(h1) == 1);
     TEST_ASSERT(RL_HANDLE_GENERATION(h1) == 1);
+    TEST_ASSERT(RL_HANDLE_KIND(h1) == RL_KIND_TEXTURE);
 
     return 0;
 }

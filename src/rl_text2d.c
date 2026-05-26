@@ -143,6 +143,7 @@ void rl_text2d_destroy(rl_handle_t handle)
 void rl_text2d_init(void)
 {
     rl_handle_pool_init(&rl_text2d_pool,
+                        RL_KIND_TEXT2D,
                         MAX_TEXT2D,
                         rl_text2d_free_indices,
                         MAX_TEXT2D,

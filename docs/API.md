@@ -14,6 +14,30 @@ Public C API exposed by `include/*.h`. `rl.h` is the umbrella header that includ
 
 ---
 
+## Handles (`include/rl_handle.h`)
+
+```c
+typedef enum rl_handle_kind_t {
+    RL_KIND_NONE = 0,
+    RL_KIND_COLOR = 1,
+    RL_KIND_CAMERA3D = 2,
+    RL_KIND_FONT = 3,
+    RL_KIND_TEXTURE = 4,
+    RL_KIND_SPRITE2D = 5,
+    RL_KIND_SPRITE3D = 6,
+    RL_KIND_MODEL = 7,
+    RL_KIND_MODEL_ASSET = 8,
+    RL_KIND_SOUND = 9,
+    RL_KIND_MUSIC = 10,
+    RL_KIND_TEXT2D = 11,
+    RL_KIND_ASSET_TASK = 12,
+} rl_handle_kind_t;
+
+rl_handle_kind_t rl_handle_get_kind(rl_handle_t handle);
+```
+
+---
+
 ## Types (`include/rl_types.h`)
 
 Shared base types used across all headers.

@@ -361,6 +361,7 @@ static const luaL_Reg rl_functions[] = {
     {"deinit", rl_deinit_lua},
     {"is_initialized", rl_is_initialized_lua},
     {"get_platform", rl_get_platform_lua},
+    {"handle_kind", rl_handle_get_kind_lua},
     {"version_major", rl_version_major_lua},
     {"version_minor", rl_version_minor_lua},
     {"version_patch", rl_version_patch_lua},

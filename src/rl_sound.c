@@ -25,7 +25,7 @@ static uint16_t rl_sound_free_indices[MAX_SOUNDS];
 static uint16_t rl_sound_generations[MAX_SOUNDS];
 static unsigned char rl_sound_occupied[MAX_SOUNDS];
 
-static rl_sound_entry_t *rl_sound_get_entry(rl_handle_t handle)
+static rl_sound_entry_t *resolve_sound_entry(rl_handle_t handle)
 {
     uint16_t index = 0;
     if (!rl_handle_pool_resolve(&rl_sound_pool, handle, &index)) {
@@ -39,7 +39,7 @@ static rl_sound_entry_t *rl_sound_get_entry(rl_handle_t handle)
     return &rl_sound_entries[index];
 }
 
-static void rl_sound_entry_reset(rl_sound_entry_t *entry)
+static void reset_sound_entry(rl_sound_entry_t *entry)
 {
     if (entry == NULL) {
         return;
@@ -49,7 +49,7 @@ static void rl_sound_entry_reset(rl_sound_entry_t *entry)
     entry->path[0] = '\0';
 }
 
-static bool rl_sound_ensure_audio_device(void)
+static bool ensure_sound_audio_device(void)
 {
     if (IsAudioDeviceReady()) {
         return true;
@@ -77,7 +77,7 @@ rl_handle_t rl_sound_create(const char *filename)
         return 0;
     }
 
-    if (!rl_sound_ensure_audio_device()) {
+    if (!ensure_sound_audio_device()) {
         return 0;
     }
 
@@ -105,7 +105,7 @@ rl_handle_t rl_sound_create(const char *filename)
     rl_handle_pool_resolve(&rl_sound_pool, handle, &index);
 
     entry = &rl_sound_entries[index];
-    rl_sound_entry_reset(entry);
+    reset_sound_entry(entry);
     entry->in_use = true;
     entry->sound = loaded_sound;
     snprintf(entry->path, sizeof(entry->path), "%s", normalized_path);
@@ -115,21 +115,21 @@ rl_handle_t rl_sound_create(const char *filename)
 RL_KEEP
 void rl_sound_destroy(rl_handle_t handle)
 {
-    rl_sound_entry_t *entry = rl_sound_get_entry(handle);
+    rl_sound_entry_t *entry = resolve_sound_entry(handle);
     if (entry == NULL) {
         return;
     }
 
     StopSound(entry->sound);
     UnloadSound(entry->sound);
-    rl_sound_entry_reset(entry);
+    reset_sound_entry(entry);
     rl_handle_pool_free(&rl_sound_pool, handle);
 }
 
 RL_KEEP
 bool rl_sound_play(rl_handle_t handle)
 {
-    rl_sound_entry_t *entry = rl_sound_get_entry(handle);
+    rl_sound_entry_t *entry = resolve_sound_entry(handle);
     if (entry == NULL) {
         return false;
     }
@@ -141,7 +141,7 @@ bool rl_sound_play(rl_handle_t handle)
 RL_KEEP
 bool rl_sound_pause(rl_handle_t handle)
 {
-    rl_sound_entry_t *entry = rl_sound_get_entry(handle);
+    rl_sound_entry_t *entry = resolve_sound_entry(handle);
     if (entry == NULL) {
         return false;
     }
@@ -153,7 +153,7 @@ bool rl_sound_pause(rl_handle_t handle)
 RL_KEEP
 bool rl_sound_resume(rl_handle_t handle)
 {
-    rl_sound_entry_t *entry = rl_sound_get_entry(handle);
+    rl_sound_entry_t *entry = resolve_sound_entry(handle);
     if (entry == NULL) {
         return false;
     }
@@ -165,7 +165,7 @@ bool rl_sound_resume(rl_handle_t handle)
 RL_KEEP
 bool rl_sound_stop(rl_handle_t handle)
 {
-    rl_sound_entry_t *entry = rl_sound_get_entry(handle);
+    rl_sound_entry_t *entry = resolve_sound_entry(handle);
     if (entry == NULL) {
         return false;
     }
@@ -177,7 +177,7 @@ bool rl_sound_stop(rl_handle_t handle)
 RL_KEEP
 bool rl_sound_set_volume(rl_handle_t handle, float volume)
 {
-    rl_sound_entry_t *entry = rl_sound_get_entry(handle);
+    rl_sound_entry_t *entry = resolve_sound_entry(handle);
     if (entry == NULL) {
         return false;
     }
@@ -189,7 +189,7 @@ bool rl_sound_set_volume(rl_handle_t handle, float volume)
 RL_KEEP
 bool rl_sound_set_pitch(rl_handle_t handle, float pitch)
 {
-    rl_sound_entry_t *entry = rl_sound_get_entry(handle);
+    rl_sound_entry_t *entry = resolve_sound_entry(handle);
     if (entry == NULL) {
         return false;
     }
@@ -201,7 +201,7 @@ bool rl_sound_set_pitch(rl_handle_t handle, float pitch)
 RL_KEEP
 bool rl_sound_set_pan(rl_handle_t handle, float pan)
 {
-    rl_sound_entry_t *entry = rl_sound_get_entry(handle);
+    rl_sound_entry_t *entry = resolve_sound_entry(handle);
     if (entry == NULL) {
         return false;
     }
@@ -213,7 +213,7 @@ bool rl_sound_set_pan(rl_handle_t handle, float pan)
 RL_KEEP
 bool rl_sound_is_playing(rl_handle_t handle)
 {
-    rl_sound_entry_t *entry = rl_sound_get_entry(handle);
+    rl_sound_entry_t *entry = resolve_sound_entry(handle);
     if (entry == NULL) {
         return false;
     }
@@ -231,7 +231,7 @@ void rl_sound_init(void)
                         rl_sound_generations,
                         rl_sound_occupied);
     for (int i = 0; i < MAX_SOUNDS; i++) {
-        rl_sound_entry_reset(&rl_sound_entries[i]);
+        reset_sound_entry(&rl_sound_entries[i]);
     }
 }
 

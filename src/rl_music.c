@@ -28,7 +28,7 @@ static uint16_t rl_music_free_indices[MAX_MUSIC];
 static uint16_t rl_music_generations[MAX_MUSIC];
 static unsigned char rl_music_occupied[MAX_MUSIC];
 
-static rl_music_entry_t *rl_music_get_entry(rl_handle_t handle)
+static rl_music_entry_t *resolve_music_entry(rl_handle_t handle)
 {
     uint16_t index = 0;
     if (!rl_handle_pool_resolve(&rl_music_pool, handle, &index)) {
@@ -42,7 +42,7 @@ static rl_music_entry_t *rl_music_get_entry(rl_handle_t handle)
     return &rl_music_entries[index];
 }
 
-static rl_handle_t rl_music_find_by_path(const char *normalized_path)
+static rl_handle_t find_music_by_path(const char *normalized_path)
 {
     if (!normalized_path || normalized_path[0] == '\0') {
         return 0;
@@ -60,7 +60,7 @@ static rl_handle_t rl_music_find_by_path(const char *normalized_path)
     return 0;
 }
 
-static void rl_music_entry_reset(rl_music_entry_t *entry)
+static void reset_music_entry(rl_music_entry_t *entry)
 {
     if (entry == NULL) {
         return;
@@ -74,7 +74,7 @@ static void rl_music_entry_reset(rl_music_entry_t *entry)
     entry->path[0] = '\0';
 }
 
-static bool rl_music_ensure_audio_device(void)
+static bool ensure_music_audio_device(void)
 {
     if (IsAudioDeviceReady()) {
         return true;
@@ -89,7 +89,7 @@ static bool rl_music_ensure_audio_device(void)
     return true;
 }
 
-static const char *rl_music_extension_or_default(const char *path)
+static const char *extension_for_music_path(const char *path)
 {
     const char *ext = path_get_extension(path);
     if (ext && ext[0] != '\0') {
@@ -116,21 +116,21 @@ rl_handle_t rl_music_create(const char *filename)
         return 0;
     }
 
-    if (!rl_music_ensure_audio_device()) {
+    if (!ensure_music_audio_device()) {
         return 0;
     }
 
     path_normalize(filename, normalized_path, sizeof(normalized_path));
-    handle = rl_music_find_by_path(normalized_path);
+    handle = find_music_by_path(normalized_path);
     if (handle != 0) {
-        entry = rl_music_get_entry(handle);
+        entry = resolve_music_entry(handle);
         if (entry != NULL) {
             entry->ref_count++;
         }
         return handle;
     }
 
-    music_ext = rl_music_extension_or_default(normalized_path);
+    music_ext = extension_for_music_path(normalized_path);
 
     music_data = LoadFileData(normalized_path, &music_data_size);
     if (music_data == NULL || music_data_size <= 0) {
@@ -155,7 +155,7 @@ rl_handle_t rl_music_create(const char *filename)
     rl_handle_pool_resolve(&rl_music_pool, handle, &index);
 
     entry = &rl_music_entries[index];
-    rl_music_entry_reset(entry);
+    reset_music_entry(entry);
     entry->in_use = true;
     entry->music = loaded_music;
     entry->data = music_data;
@@ -169,7 +169,7 @@ rl_handle_t rl_music_create(const char *filename)
 RL_KEEP
 void rl_music_destroy(rl_handle_t handle)
 {
-    rl_music_entry_t *entry = rl_music_get_entry(handle);
+    rl_music_entry_t *entry = resolve_music_entry(handle);
     if (entry == NULL) {
         return;
     }
@@ -189,14 +189,14 @@ void rl_music_destroy(rl_handle_t handle)
         entry->data = NULL;
     }
 
-    rl_music_entry_reset(entry);
+    reset_music_entry(entry);
     rl_handle_pool_free(&rl_music_pool, handle);
 }
 
 RL_KEEP
 bool rl_music_play(rl_handle_t handle)
 {
-    rl_music_entry_t *entry = rl_music_get_entry(handle);
+    rl_music_entry_t *entry = resolve_music_entry(handle);
     if (entry == NULL) {
         return false;
     }
@@ -207,7 +207,7 @@ bool rl_music_play(rl_handle_t handle)
 RL_KEEP
 bool rl_music_pause(rl_handle_t handle)
 {
-    rl_music_entry_t *entry = rl_music_get_entry(handle);
+    rl_music_entry_t *entry = resolve_music_entry(handle);
     if (entry == NULL) {
         return false;
     }
@@ -218,7 +218,7 @@ bool rl_music_pause(rl_handle_t handle)
 RL_KEEP
 bool rl_music_stop(rl_handle_t handle)
 {
-    rl_music_entry_t *entry = rl_music_get_entry(handle);
+    rl_music_entry_t *entry = resolve_music_entry(handle);
     if (entry == NULL) {
         return false;
     }
@@ -229,7 +229,7 @@ bool rl_music_stop(rl_handle_t handle)
 RL_KEEP
 bool rl_music_set_loop(rl_handle_t handle, bool loop)
 {
-    rl_music_entry_t *entry = rl_music_get_entry(handle);
+    rl_music_entry_t *entry = resolve_music_entry(handle);
     if (entry == NULL) {
         return false;
     }
@@ -241,7 +241,7 @@ bool rl_music_set_loop(rl_handle_t handle, bool loop)
 RL_KEEP
 bool rl_music_set_volume(rl_handle_t handle, float volume)
 {
-    rl_music_entry_t *entry = rl_music_get_entry(handle);
+    rl_music_entry_t *entry = resolve_music_entry(handle);
     if (entry == NULL) {
         return false;
     }
@@ -252,7 +252,7 @@ bool rl_music_set_volume(rl_handle_t handle, float volume)
 RL_KEEP
 bool rl_music_is_playing(rl_handle_t handle)
 {
-    rl_music_entry_t *entry = rl_music_get_entry(handle);
+    rl_music_entry_t *entry = resolve_music_entry(handle);
     if (entry == NULL) {
         return false;
     }
@@ -262,7 +262,7 @@ bool rl_music_is_playing(rl_handle_t handle)
 RL_KEEP
 bool rl_music_update(rl_handle_t handle)
 {
-    rl_music_entry_t *entry = rl_music_get_entry(handle);
+    rl_music_entry_t *entry = resolve_music_entry(handle);
     if (entry == NULL) {
         return false;
     }
@@ -291,7 +291,7 @@ void rl_music_init(void)
                         rl_music_generations,
                         rl_music_occupied);
     for (int i = 0; i < MAX_MUSIC; i++) {
-        rl_music_entry_reset(&rl_music_entries[i]);
+        reset_music_entry(&rl_music_entries[i]);
     }
 }
 

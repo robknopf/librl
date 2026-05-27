@@ -30,12 +30,12 @@ static unsigned char rl_font_occupied[MAX_FONTS];
 
 const rl_handle_t RL_FONT_DEFAULT = RL_HANDLE_MAKE(RL_HANDLE_KIND_FONT, RL_FONT_DEFAULT_INDEX, 1u);
 
-static int rl_font_size_key(int font_size)
+static int cache_key_for_font_size(int font_size)
 {
     return font_size;
 }
 
-static rl_font_entry_t *rl_font_get_entry(rl_handle_t handle)
+static rl_font_entry_t *resolve_font_entry(rl_handle_t handle)
 {
     uint16_t index = 0;
 
@@ -50,7 +50,7 @@ static rl_font_entry_t *rl_font_get_entry(rl_handle_t handle)
     return &rl_fonts[index];
 }
 
-static bool rl_font_handle_to_index(rl_handle_t handle, uint16_t *index_out)
+static bool resolve_font_handle_to_index(rl_handle_t handle, uint16_t *index_out)
 {
     if (index_out == NULL) {
         return false;
@@ -61,7 +61,7 @@ static bool rl_font_handle_to_index(rl_handle_t handle, uint16_t *index_out)
     return true;
 }
 
-static rl_handle_t rl_font_find(const char *normalized_path, int size_key)
+static rl_handle_t find_font_by_path(const char *normalized_path, int size_key)
 {
     for (uint16_t i = 2; i < MAX_FONTS; i++)
     {
@@ -82,7 +82,7 @@ rl_handle_t rl_font_create(const char *filename, int fontSize)
     unsigned char *font_data = NULL;
     char normalized_path[256] = {0};
     char font_extension[32] = {0};
-    int size_key = rl_font_size_key(fontSize);
+    int size_key = cache_key_for_font_size(fontSize);
     rl_handle_t handle = 0;
     Font loaded_font = (Font){0};
     uint16_t index = 0;
@@ -93,10 +93,10 @@ rl_handle_t rl_font_create(const char *filename, int fontSize)
 
     path_normalize(filename, normalized_path, sizeof(normalized_path));
 
-    handle = rl_font_find(normalized_path, size_key);
+    handle = find_font_by_path(normalized_path, size_key);
     if (handle != 0)
     {
-        rl_font_entry_t *entry = rl_font_get_entry(handle);
+        rl_font_entry_t *entry = resolve_font_entry(handle);
         if (entry != NULL) {
             entry->ref_count++;
         }
@@ -149,7 +149,7 @@ rl_handle_t rl_font_create(const char *filename, int fontSize)
 RL_KEEP
 void rl_font_destroy(rl_handle_t handle)
 {
-    rl_font_entry_t *entry = rl_font_get_entry(handle);
+    rl_font_entry_t *entry = resolve_font_entry(handle);
     if (entry == NULL) {
         return;
     }
@@ -182,7 +182,7 @@ rl_handle_t rl_font_get_default(void)
 
 Font rl_font_get(rl_handle_t handle)
 {
-    rl_font_entry_t *entry = rl_font_get_entry(handle);
+    rl_font_entry_t *entry = resolve_font_entry(handle);
     if (entry == NULL)
     {
         return rl_fonts[RL_FONT_DEFAULT_INDEX].font;
@@ -194,7 +194,7 @@ Font rl_font_get(rl_handle_t handle)
 void rl_font_set(rl_handle_t handle, Font font)
 {
     uint16_t index = 0;
-    if (!rl_font_handle_to_index(handle, &index)) {
+    if (!resolve_font_handle_to_index(handle, &index)) {
         if (handle != 0) log_warn("Invalid font handle (%u)", (unsigned int)handle);
         return;
     }

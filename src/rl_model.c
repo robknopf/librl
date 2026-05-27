@@ -931,7 +931,7 @@ bool rl_model_get_ray_collision_ex(rl_handle_t handle,
     return true;
 }
 
-static Matrix rl_model_instance_matrix(const rl_model_instance_t *inst)
+static Matrix build_model_instance_matrix(const rl_model_instance_t *inst)
 {
     Matrix translation = MatrixTranslate(inst->position_x, inst->position_y, inst->position_z);
     Matrix rotation = MatrixRotateXYZ((Vector3){
@@ -963,7 +963,7 @@ bool rl_model_scene_pick_broadphase(rl_handle_t handle, Ray ray)
         return false;
     }
 
-    transform = rl_model_instance_matrix(instance);
+    transform = build_model_instance_matrix(instance);
     model_transform = MatrixMultiply(asset->model->transform, transform);
     if (!asset->has_local_bounds) {
         return true;

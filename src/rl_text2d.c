@@ -33,7 +33,7 @@ static uint16_t rl_text2d_free_indices[MAX_TEXT2D];
 static uint16_t rl_text2d_generations[MAX_TEXT2D];
 static unsigned char rl_text2d_occupied[MAX_TEXT2D];
 
-static rl_text2d_instance_t *rl_text2d_get(rl_handle_t handle)
+static rl_text2d_instance_t *resolve_text2d_instance(rl_handle_t handle)
 {
     uint16_t index = 0;
     if (!rl_handle_pool_resolve(&rl_text2d_pool, handle, &index)) {
@@ -76,7 +76,7 @@ rl_handle_t rl_text2d_create(rl_handle_t font, float size)
 RL_KEEP
 void rl_text2d_set_font(rl_handle_t handle, rl_handle_t font)
 {
-    rl_text2d_instance_t *text = rl_text2d_get(handle);
+    rl_text2d_instance_t *text = resolve_text2d_instance(handle);
     if (text == NULL) return;
     text->font = font;
 }
@@ -84,7 +84,7 @@ void rl_text2d_set_font(rl_handle_t handle, rl_handle_t font)
 RL_KEEP
 void rl_text2d_set_size(rl_handle_t handle, float size)
 {
-    rl_text2d_instance_t *text = rl_text2d_get(handle);
+    rl_text2d_instance_t *text = resolve_text2d_instance(handle);
     if (text == NULL) return;
     text->size = size;
 }
@@ -92,7 +92,7 @@ void rl_text2d_set_size(rl_handle_t handle, float size)
 RL_KEEP
 void rl_text2d_set_content(rl_handle_t handle, const char *content)
 {
-    rl_text2d_instance_t *text = rl_text2d_get(handle);
+    rl_text2d_instance_t *text = resolve_text2d_instance(handle);
     if (text == NULL) return;
     strncpy(text->content, content, MAX_TEXT2D_CONTENT - 1);
     text->content[MAX_TEXT2D_CONTENT - 1] = '\0';
@@ -101,7 +101,7 @@ void rl_text2d_set_content(rl_handle_t handle, const char *content)
 RL_KEEP
 void rl_text2d_set_position(rl_handle_t handle, float x, float y)
 {
-    rl_text2d_instance_t *text = rl_text2d_get(handle);
+    rl_text2d_instance_t *text = resolve_text2d_instance(handle);
     if (text == NULL) return;
     text->x = x;
     text->y = y;
@@ -110,7 +110,7 @@ void rl_text2d_set_position(rl_handle_t handle, float x, float y)
 RL_KEEP
 void rl_text2d_set_color(rl_handle_t handle, rl_handle_t color)
 {
-    rl_text2d_instance_t *text = rl_text2d_get(handle);
+    rl_text2d_instance_t *text = resolve_text2d_instance(handle);
     if (text == NULL) return;
     text->color = color;
 }
@@ -118,7 +118,7 @@ void rl_text2d_set_color(rl_handle_t handle, rl_handle_t color)
 RL_KEEP
 bool rl_text2d_set_visible(rl_handle_t handle, bool visible)
 {
-    rl_text2d_instance_t *text = rl_text2d_get(handle);
+    rl_text2d_instance_t *text = resolve_text2d_instance(handle);
 
     if (text == NULL) {
         return false;
@@ -130,7 +130,7 @@ bool rl_text2d_set_visible(rl_handle_t handle, bool visible)
 RL_KEEP
 bool rl_text2d_set_pickable(rl_handle_t handle, bool pickable)
 {
-    rl_text2d_instance_t *text = rl_text2d_get(handle);
+    rl_text2d_instance_t *text = resolve_text2d_instance(handle);
 
     if (text == NULL) {
         return false;
@@ -142,7 +142,7 @@ bool rl_text2d_set_pickable(rl_handle_t handle, bool pickable)
 RL_KEEP
 bool rl_text2d_is_visible(rl_handle_t handle)
 {
-    rl_text2d_instance_t *text = rl_text2d_get(handle);
+    rl_text2d_instance_t *text = resolve_text2d_instance(handle);
 
     if (text == NULL) {
         return false;
@@ -153,7 +153,7 @@ bool rl_text2d_is_visible(rl_handle_t handle)
 RL_KEEP
 bool rl_text2d_is_pickable(rl_handle_t handle)
 {
-    rl_text2d_instance_t *text = rl_text2d_get(handle);
+    rl_text2d_instance_t *text = resolve_text2d_instance(handle);
 
     if (text == NULL) {
         return false;
@@ -164,7 +164,7 @@ bool rl_text2d_is_pickable(rl_handle_t handle)
 RL_KEEP
 void rl_text2d_draw(rl_handle_t handle)
 {
-    rl_text2d_instance_t *text = rl_text2d_get(handle);
+    rl_text2d_instance_t *text = resolve_text2d_instance(handle);
     if (text == NULL) return;
     if (!text->visible) return;
     if (text->content[0] == '\0') return;
@@ -183,7 +183,7 @@ void rl_text2d_draw(rl_handle_t handle)
 RL_KEEP
 void rl_text2d_destroy(rl_handle_t handle)
 {
-    rl_text2d_instance_t *text = rl_text2d_get(handle);
+    rl_text2d_instance_t *text = resolve_text2d_instance(handle);
     if (text == NULL) return;
     text->font = 0;
     text->color = 0;

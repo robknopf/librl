@@ -40,7 +40,7 @@ static unsigned char rl_camera3d_occupied[MAX_CAMERAS];
 
 const rl_handle_t RL_CAMERA3D_DEFAULT = RL_HANDLE_MAKE(RL_HANDLE_KIND_CAMERA3D, 1u, 1u);
 
-static Camera3D rl_camera3d_build(float position_x, float position_y, float position_z,
+static Camera3D build_camera3d(float position_x, float position_y, float position_z,
                                   float target_x, float target_y, float target_z,
                                   float up_x, float up_y, float up_z,
                                   float fovy, int projection)
@@ -54,7 +54,7 @@ static Camera3D rl_camera3d_build(float position_x, float position_y, float posi
     return camera;
 }
 
-static rl_camera3d_instance_t *rl_camera3d_get_entry(rl_handle_t handle)
+static rl_camera3d_instance_t *resolve_camera3d_entry(rl_handle_t handle)
 {
     uint16_t index = 0;
     if (!rl_handle_pool_resolve(&rl_camera3d_pool, handle, &index)) {
@@ -68,14 +68,14 @@ static rl_camera3d_instance_t *rl_camera3d_get_entry(rl_handle_t handle)
     return &rl_cameras[index];
 }
 
-static void rl_set_active_camera_internal(Camera3D camera, rl_handle_t handle)
+static void apply_internal_active_camera(Camera3D camera, rl_handle_t handle)
 {
     rl_active_camera = camera;
     rl_has_active_camera = true;
     rl_active_camera_handle = handle;
 }
 
-static Vector3 rl_vec3_normalized(Vector3 v)
+static Vector3 normalize_vector3(Vector3 v)
 {
     float length = sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
     if (length <= 0.00001f) {
@@ -86,7 +86,7 @@ static Vector3 rl_vec3_normalized(Vector3 v)
     return (Vector3){v.x * inv_length, v.y * inv_length, v.z * inv_length};
 }
 
-static bool rl_lighting_try_init(void)
+static bool try_init_lighting(void)
 {
     if (rl_lighting_ready) {
         return true;
@@ -185,7 +185,7 @@ bool rl_camera3d_get_camera(rl_handle_t handle, Camera3D *camera)
         return false;
     }
 
-    entry = rl_camera3d_get_entry(handle);
+    entry = resolve_camera3d_entry(handle);
     if (entry == NULL) {
         return false;
     }
@@ -194,7 +194,7 @@ bool rl_camera3d_get_camera(rl_handle_t handle, Camera3D *camera)
     return true;
 }
 
-static void rl_clear_active_camera(void)
+static void clear_active_camera(void)
 {
     rl_has_active_camera = false;
     rl_active_camera = (Camera3D){0};
@@ -216,7 +216,7 @@ rl_handle_t rl_camera3d_create(float position_x, float position_y, float positio
     rl_handle_pool_resolve(&rl_camera3d_pool, handle, &index);
 
     rl_cameras[index].in_use = true;
-    rl_cameras[index].camera = rl_camera3d_build(position_x, position_y, position_z,
+    rl_cameras[index].camera = build_camera3d(position_x, position_y, position_z,
                                                  target_x, target_y, target_z,
                                                  up_x, up_y, up_z,
                                                  fovy, projection);
@@ -236,18 +236,18 @@ bool rl_camera3d_set(rl_handle_t handle,
                      float up_x, float up_y, float up_z,
                      float fovy, int projection)
 {
-    rl_camera3d_instance_t *entry = rl_camera3d_get_entry(handle);
+    rl_camera3d_instance_t *entry = resolve_camera3d_entry(handle);
     if (entry == NULL) {
         return false;
     }
 
-    entry->camera = rl_camera3d_build(position_x, position_y, position_z,
+    entry->camera = build_camera3d(position_x, position_y, position_z,
                                       target_x, target_y, target_z,
                                       up_x, up_y, up_z,
                                       fovy, projection);
 
     if (rl_active_camera_handle == handle) {
-        rl_set_active_camera_internal(entry->camera, handle);
+        apply_internal_active_camera(entry->camera, handle);
     }
 
     return true;
@@ -256,12 +256,12 @@ bool rl_camera3d_set(rl_handle_t handle,
 RL_KEEP
 bool rl_camera3d_set_active(rl_handle_t handle)
 {
-    rl_camera3d_instance_t *entry = rl_camera3d_get_entry(handle);
+    rl_camera3d_instance_t *entry = resolve_camera3d_entry(handle);
     if (entry == NULL) {
         return false;
     }
 
-    rl_set_active_camera_internal(entry->camera, handle);
+    apply_internal_active_camera(entry->camera, handle);
     return true;
 }
 
@@ -274,7 +274,7 @@ rl_handle_t rl_camera3d_get_active(void)
 RL_KEEP
 void rl_camera3d_destroy(rl_handle_t handle)
 {
-    rl_camera3d_instance_t *entry = rl_camera3d_get_entry(handle);
+    rl_camera3d_instance_t *entry = resolve_camera3d_entry(handle);
     if (entry == NULL) {
         return;
     }
@@ -284,7 +284,7 @@ void rl_camera3d_destroy(rl_handle_t handle)
     }
 
     if (rl_active_camera_handle == handle) {
-        rl_clear_active_camera();
+        clear_active_camera();
     }
 
     entry->in_use = false;
@@ -296,12 +296,12 @@ bool rl_camera3d_ensure_active_camera(void)
 {
     if (!rl_has_active_camera)
     {
-        rl_camera3d_instance_t *default_entry = rl_camera3d_get_entry(RL_CAMERA3D_DEFAULT);
+        rl_camera3d_instance_t *default_entry = resolve_camera3d_entry(RL_CAMERA3D_DEFAULT);
         if (default_entry == NULL) {
             log_error("Missing default camera entry");
             return false;
         }
-        rl_set_active_camera_internal(default_entry->camera, RL_CAMERA3D_DEFAULT);
+        apply_internal_active_camera(default_entry->camera, RL_CAMERA3D_DEFAULT);
     }
     return true;
 }
@@ -310,7 +310,7 @@ RL_KEEP
 void rl_enable_lighting(void)
 {
     rl_lighting_enabled = true;
-    rl_lighting_try_init();
+    try_init_lighting();
 }
 
 RL_KEEP
@@ -328,7 +328,7 @@ int rl_is_lighting_enabled(void)
 RL_KEEP
 void rl_set_light_direction(float x, float y, float z)
 {
-    rl_light_direction = rl_vec3_normalized((Vector3){x, y, z});
+    rl_light_direction = normalize_vector3((Vector3){x, y, z});
 }
 
 RL_KEEP
@@ -354,7 +354,7 @@ void rl_camera3d_init(void)
     rl_light_tint_loc = -1;
     rl_light_direction = (Vector3){-0.6f, -1.0f, -0.5f};
     rl_light_ambient = 0.25f;
-    rl_clear_active_camera();
+    clear_active_camera();
 
     rl_handle_pool_init(&rl_camera3d_pool,
                         RL_HANDLE_KIND_CAMERA3D,
@@ -379,7 +379,7 @@ void rl_camera3d_init(void)
         }
 
         rl_cameras[default_index].in_use = true;
-        rl_cameras[default_index].camera = rl_camera3d_build(
+        rl_cameras[default_index].camera = build_camera3d(
         4.0f, 4.0f, 4.0f,
         0.0f, 1.0f, 0.0f,
         0.0f, 1.0f, 0.0f,
@@ -399,7 +399,7 @@ void rl_camera3d_deinit(void)
     rl_light_dir_loc = -1;
     rl_light_ambient_loc = -1;
     rl_light_tint_loc = -1;
-    rl_clear_active_camera();
+    clear_active_camera();
 
     for (int i = 0; i < MAX_CAMERAS; i++) {
         rl_cameras[i].in_use = false;

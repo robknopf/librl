@@ -51,7 +51,7 @@ const rl_handle_t RL_COLOR_BLANK = RL_HANDLE_MAKE(RL_HANDLE_KIND_COLOR, 25, 1);
 const rl_handle_t RL_COLOR_MAGENTA = RL_HANDLE_MAKE(RL_HANDLE_KIND_COLOR, 26, 1);
 const rl_handle_t RL_COLOR_RAYWHITE = RL_HANDLE_MAKE(RL_HANDLE_KIND_COLOR, 27, 1);
 
-static bool rl_color_resolve_index(rl_handle_t handle, uint16_t *index_out)
+static bool resolve_color_handle_to_index(rl_handle_t handle, uint16_t *index_out)
 {
     if (!rl_handle_pool_resolve(&rl_color_pool, handle, index_out)) {
         if (handle != 0) log_warn("Invalid color handle (%u)", (unsigned int)handle);
@@ -60,7 +60,7 @@ static bool rl_color_resolve_index(rl_handle_t handle, uint16_t *index_out)
     return true;
 }
 
-static bool rl_color_is_builtin_index(uint16_t index)
+static bool is_builtin_color_index(uint16_t index)
 {
     return index > 0 && index <= RL_COLOR_BUILTIN_COUNT;
 }
@@ -86,10 +86,10 @@ void rl_color_destroy(rl_handle_t handle)
 {
     uint16_t index = 0;
 
-    if (!rl_color_resolve_index(handle, &index)) {
+    if (!resolve_color_handle_to_index(handle, &index)) {
         return;
     }
-    if (rl_color_is_builtin_index(index)) {
+    if (is_builtin_color_index(index)) {
         log_error("Cannot destroy built-in color handle (%u)", (unsigned int)handle);
         return;
     }
@@ -102,7 +102,7 @@ void rl_color_set(rl_handle_t handle, int r, int g, int b, int a)
 {
     uint16_t index = 0;
 
-    if (!rl_color_resolve_index(handle, &index)) {
+    if (!resolve_color_handle_to_index(handle, &index)) {
         return;
     }
 
@@ -114,7 +114,7 @@ Color rl_color_get(rl_handle_t handle)
     uint16_t index = 0;
 
     if (handle == 0) return WHITE;
-    if (!rl_color_resolve_index(handle, &index)) return MAGENTA;
+    if (!resolve_color_handle_to_index(handle, &index)) return MAGENTA;
 
     return rl_colors[index];
 }

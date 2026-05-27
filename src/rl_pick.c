@@ -12,7 +12,7 @@
 
 static rl_pick_stats_t rl_pick_stats = {0};
 
-static rl_pick_result_t rl_pick_result_empty(void)
+static rl_pick_result_t make_empty_pick_result(void)
 {
     rl_pick_result_t result = {0};
     result.hit = false;
@@ -22,7 +22,7 @@ static rl_pick_result_t rl_pick_result_empty(void)
     return result;
 }
 
-static Matrix rl_pick_model_transform(float x, float y, float z,
+static Matrix build_model_pick_matrix(float x, float y, float z,
                                       float scale_x, float scale_y, float scale_z,
                                       float rotation_x, float rotation_y, float rotation_z)
 {
@@ -36,7 +36,7 @@ static Matrix rl_pick_model_transform(float x, float y, float z,
     return MatrixMultiply(MatrixMultiply(scaling, rotation), translation);
 }
 
-static Vector3 rl_pick_transform_direction(Matrix transform, Vector3 direction)
+static Vector3 transform_direction(Matrix transform, Vector3 direction)
 {
     return (Vector3){
         transform.m0*direction.x + transform.m4*direction.y + transform.m8*direction.z,
@@ -45,9 +45,9 @@ static Vector3 rl_pick_transform_direction(Matrix transform, Vector3 direction)
     };
 }
 
-static rl_pick_result_t rl_pick_from_ray_collision(RayCollision collision)
+static rl_pick_result_t pick_result_from_ray_collision(RayCollision collision)
 {
-    rl_pick_result_t result = rl_pick_result_empty();
+    rl_pick_result_t result = make_empty_pick_result();
     if (!collision.hit) {
         return result;
     }
@@ -76,16 +76,16 @@ rl_pick_result_t rl_pick_model_with_camera_ray(Camera3D camera_data,
     float rotation_x = 0, rotation_y = 0, rotation_z = 0;
 
     if (!rl_model_is_pickable(model)) {
-        return rl_pick_result_empty();
+        return make_empty_pick_result();
     }
 
     if (!rl_model_get_transform(model, &position_x, &position_y, &position_z,
                                 &scale_x, &scale_y, &scale_z,
                                 &rotation_x, &rotation_y, &rotation_z)) {
-        return rl_pick_result_empty();
+        return make_empty_pick_result();
     }
 
-    instance_transform = rl_pick_model_transform(position_x, position_y, position_z,
+    instance_transform = build_model_pick_matrix(position_x, position_y, position_z,
                                                  scale_x, scale_y, scale_z,
                                                  rotation_x, rotation_y, rotation_z);
     if (!rl_model_get_ray_collision_ex(model,
@@ -96,7 +96,7 @@ rl_pick_result_t rl_pick_model_with_camera_ray(Camera3D camera_data,
                                        &broadphase_tested,
                                        &broadphase_rejected,
                                        &narrowphase_ran)) {
-        return rl_pick_result_empty();
+        return make_empty_pick_result();
     }
 
     if (broadphase_tested) {
@@ -119,13 +119,13 @@ rl_pick_result_t rl_pick_model_with_camera_ray(Camera3D camera_data,
         Vector3 world_normal = {collision.normal.x, collision.normal.y, collision.normal.z};
         Vector3 local_pt = Vector3Transform(world_pt, inv);
         Vector3 local_normal = Vector3Normalize(
-            rl_pick_transform_direction(local_normal_transform, world_normal)
+            transform_direction(local_normal_transform, world_normal)
         );
         collision.point = local_pt;
         collision.normal = local_normal;
     }
 
-    return rl_pick_from_ray_collision(collision);
+    return pick_result_from_ray_collision(collision);
 }
 
 RL_KEEP
@@ -140,11 +140,11 @@ rl_pick_result_t rl_pick_sprite3d_with_camera_ray(Camera3D camera_data,
     float position_x = 0, position_y = 0, position_z = 0, size = 1;
 
     if (!rl_sprite3d_is_pickable(sprite3d)) {
-        return rl_pick_result_empty();
+        return make_empty_pick_result();
     }
 
     if (!rl_sprite3d_get_transform(sprite3d, &position_x, &position_y, &position_z, &size)) {
-        return rl_pick_result_empty();
+        return make_empty_pick_result();
     }
 
     if (!rl_sprite3d_get_ray_collision_ex(sprite3d,
@@ -158,7 +158,7 @@ rl_pick_result_t rl_pick_sprite3d_with_camera_ray(Camera3D camera_data,
                                           &broadphase_tested,
                                           &broadphase_rejected,
                                           &narrowphase_ran)) {
-        return rl_pick_result_empty();
+        return make_empty_pick_result();
     }
 
     if (broadphase_tested) {
@@ -178,7 +178,7 @@ rl_pick_result_t rl_pick_sprite3d_with_camera_ray(Camera3D camera_data,
         collision.normal = (Vector3){0.0f, 0.0f, (collision.normal.z < 0.0f) ? -1.0f : 1.0f};
     }
 
-    return rl_pick_from_ray_collision(collision);
+    return pick_result_from_ray_collision(collision);
 }
 
 RL_KEEP
@@ -191,7 +191,7 @@ rl_pick_result_t rl_pick_model(rl_handle_t camera,
     Ray ray = {0};
 
     if (!rl_camera3d_get_camera(camera, &camera_data)) {
-        return rl_pick_result_empty();
+        return make_empty_pick_result();
     }
 
     ray = GetMouseRay((Vector2){mouse_x, mouse_y}, camera_data);
@@ -221,7 +221,7 @@ rl_pick_result_t rl_pick_sprite3d(rl_handle_t camera,
     Ray ray = {0};
 
     if (!rl_camera3d_get_camera(camera, &camera_data)) {
-        return rl_pick_result_empty();
+        return make_empty_pick_result();
     }
 
     ray = GetMouseRay((Vector2){mouse_x, mouse_y}, camera_data);

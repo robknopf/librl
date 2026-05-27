@@ -35,7 +35,7 @@ static uint16_t rl_sprite3d_free_indices[MAX_SPRITE3D];
 static uint16_t rl_sprite3d_generations[MAX_SPRITE3D];
 static unsigned char rl_sprite3d_occupied[MAX_SPRITE3D];
 
-static rl_sprite3d_instance_t *rl_sprite3d_get(rl_handle_t handle)
+static rl_sprite3d_instance_t *resolve_sprite3d_instance(rl_handle_t handle)
 {
     uint16_t index = 0;
     if (!rl_handle_pool_resolve(&rl_sprite3d_pool, handle, &index)) {
@@ -122,7 +122,7 @@ rl_handle_t rl_sprite3d_create_from_file(const char *filename)
 RL_KEEP
 bool rl_sprite3d_set_texture(rl_handle_t handle, rl_handle_t texture)
 {
-    rl_sprite3d_instance_t *sprite = rl_sprite3d_get(handle);
+    rl_sprite3d_instance_t *sprite = resolve_sprite3d_instance(handle);
     if (sprite == NULL) return false;
     if (texture != 0 && !rl_texture_retain(texture)) {
         log_warn("Invalid texture handle (%u) for rl_sprite3d_set_texture", texture);
@@ -138,7 +138,7 @@ bool rl_sprite3d_get_transform(rl_handle_t handle,
                                float *position_x, float *position_y,
                                float *position_z, float *size)
 {
-    rl_sprite3d_instance_t *sprite = rl_sprite3d_get(handle);
+    rl_sprite3d_instance_t *sprite = resolve_sprite3d_instance(handle);
     if (sprite == NULL)
         return false;
     if (position_x) *position_x = sprite->position_x;
@@ -153,7 +153,7 @@ bool rl_sprite3d_set_transform(rl_handle_t handle,
                                float position_x, float position_y,
                                float position_z, float size)
 {
-    rl_sprite3d_instance_t *sprite = rl_sprite3d_get(handle);
+    rl_sprite3d_instance_t *sprite = resolve_sprite3d_instance(handle);
 
     if (sprite == NULL) {
         return false;
@@ -169,7 +169,7 @@ bool rl_sprite3d_set_transform(rl_handle_t handle,
 RL_KEEP
 bool rl_sprite3d_set_visible(rl_handle_t handle, bool visible)
 {
-    rl_sprite3d_instance_t *sprite = rl_sprite3d_get(handle);
+    rl_sprite3d_instance_t *sprite = resolve_sprite3d_instance(handle);
 
     if (sprite == NULL) {
         return false;
@@ -181,7 +181,7 @@ bool rl_sprite3d_set_visible(rl_handle_t handle, bool visible)
 RL_KEEP
 bool rl_sprite3d_set_pickable(rl_handle_t handle, bool pickable)
 {
-    rl_sprite3d_instance_t *sprite = rl_sprite3d_get(handle);
+    rl_sprite3d_instance_t *sprite = resolve_sprite3d_instance(handle);
 
     if (sprite == NULL) {
         return false;
@@ -193,7 +193,7 @@ bool rl_sprite3d_set_pickable(rl_handle_t handle, bool pickable)
 RL_KEEP
 bool rl_sprite3d_is_visible(rl_handle_t handle)
 {
-    rl_sprite3d_instance_t *sprite = rl_sprite3d_get(handle);
+    rl_sprite3d_instance_t *sprite = resolve_sprite3d_instance(handle);
 
     if (sprite == NULL) {
         return false;
@@ -204,7 +204,7 @@ bool rl_sprite3d_is_visible(rl_handle_t handle)
 RL_KEEP
 bool rl_sprite3d_is_pickable(rl_handle_t handle)
 {
-    rl_sprite3d_instance_t *sprite = rl_sprite3d_get(handle);
+    rl_sprite3d_instance_t *sprite = resolve_sprite3d_instance(handle);
 
     if (sprite == NULL) {
         return false;
@@ -215,7 +215,7 @@ bool rl_sprite3d_is_pickable(rl_handle_t handle)
 RL_KEEP
 void rl_sprite3d_draw(rl_handle_t handle)
 {
-    rl_sprite3d_instance_t *sprite = rl_sprite3d_get(handle);
+    rl_sprite3d_instance_t *sprite = resolve_sprite3d_instance(handle);
     Texture2D *texture = NULL;
     Camera3D camera = {0};
     if (sprite == NULL)
@@ -254,7 +254,7 @@ void rl_sprite3d_draw(rl_handle_t handle)
 RL_KEEP
 bool rl_sprite3d_set_tint(rl_handle_t handle, rl_handle_t color_handle)
 {
-    rl_sprite3d_instance_t *sprite = rl_sprite3d_get(handle);
+    rl_sprite3d_instance_t *sprite = resolve_sprite3d_instance(handle);
     if (sprite == NULL) return false;
     sprite->tint_handle = color_handle;
     return true;
@@ -263,7 +263,7 @@ bool rl_sprite3d_set_tint(rl_handle_t handle, rl_handle_t color_handle)
 RL_KEEP
 void rl_sprite3d_destroy(rl_handle_t handle)
 {
-    rl_sprite3d_instance_t *sprite = rl_sprite3d_get(handle);
+    rl_sprite3d_instance_t *sprite = resolve_sprite3d_instance(handle);
     if (sprite == NULL)
     {
         return;
@@ -280,7 +280,7 @@ void rl_sprite3d_destroy(rl_handle_t handle)
 /* TODO: If hover/mousemove picking becomes hot, profile this path.
  * Billboard quad construction is camera-dependent, so any cache must
  * invalidate on sprite transform or camera changes. */
-static bool rl_build_billboard_quad(Camera3D camera,
+static bool build_billboard_quad(Camera3D camera,
                                     Vector3 position,
                                     Vector2 size,
                                     Vector3 points[4],
@@ -339,7 +339,7 @@ bool rl_sprite3d_get_ray_collision_ex(rl_handle_t handle,
                                       bool *broadphase_rejected,
                                       bool *narrowphase_ran)
 {
-    rl_sprite3d_instance_t *sprite = rl_sprite3d_get(handle);
+    rl_sprite3d_instance_t *sprite = resolve_sprite3d_instance(handle);
     Texture2D *texture = NULL;
     Vector2 billboard_size = {0};
     Vector3 position = {position_x, position_y, position_z};
@@ -377,7 +377,7 @@ bool rl_sprite3d_get_ray_collision_ex(rl_handle_t handle,
         }
     }
 
-    if (!rl_build_billboard_quad(camera, position, billboard_size, points, &right_axis, &up_axis)) {
+    if (!build_billboard_quad(camera, position, billboard_size, points, &right_axis, &up_axis)) {
         return false;
     }
 
@@ -397,7 +397,7 @@ bool rl_sprite3d_get_ray_collision_ex(rl_handle_t handle,
 
 bool rl_sprite3d_scene_pick_broadphase(rl_handle_t handle, Ray ray)
 {
-    rl_sprite3d_instance_t *sprite = rl_sprite3d_get(handle);
+    rl_sprite3d_instance_t *sprite = resolve_sprite3d_instance(handle);
     Texture2D *texture = NULL;
     Vector2 billboard_size = {0};
     Vector3 position = {0};

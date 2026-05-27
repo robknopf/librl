@@ -5,7 +5,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-static int rl_logger_to_wgutils_level(rl_log_level_t level)
+static int map_log_level_to_wgutils(rl_log_level_t level)
 {
     switch (level) {
         case RL_LOGGER_LEVEL_TRACE:
@@ -25,7 +25,7 @@ static int rl_logger_to_wgutils_level(rl_log_level_t level)
     }
 }
 
-static void rl_logger_reroute_raylib_log(int log_level, const char *text, va_list args)
+static void install_raylib_log_reroute(int log_level, const char *text, va_list args)
 {
     char msg[2048];
     va_list copy;
@@ -71,7 +71,7 @@ void rl_logger_message(rl_log_level_t level, const char *format, ...)
     vsnprintf(message, sizeof(message), format, args);
     va_end(args);
 
-    log_message(rl_logger_to_wgutils_level(level), "app", 0, "%s", message);
+    log_message(map_log_level_to_wgutils(level), "app", 0, "%s", message);
 }
 
 void rl_logger_message_source(rl_log_level_t level,
@@ -87,7 +87,7 @@ void rl_logger_message_source(rl_log_level_t level,
     vsnprintf(message, sizeof(message), format, args);
     va_end(args);
 
-    log_message(rl_logger_to_wgutils_level(level),
+    log_message(map_log_level_to_wgutils(level),
                 source_file != NULL && source_file[0] != '\0' ? source_file : "app",
                 source_line,
                 "%s",
@@ -129,7 +129,7 @@ void rl_logger_set_level(rl_log_level_t level)
 
 void rl_logger_init(void)
 {
-    SetTraceLogCallback(rl_logger_reroute_raylib_log);
+    SetTraceLogCallback(install_raylib_log_reroute);
 }
 
 void rl_logger_deinit(void)

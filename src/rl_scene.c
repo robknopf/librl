@@ -47,7 +47,7 @@ static uint16_t rl_scene_free_indices[MAX_SCENES];
 static uint16_t rl_scene_generations[MAX_SCENES];
 static unsigned char rl_scene_occupied[MAX_SCENES];
 
-static rl_scene_instance_t *rl_scene_get(rl_handle_t scene)
+static rl_scene_instance_t *resolve_scene_instance(rl_handle_t scene)
 {
     uint16_t index = 0;
 
@@ -64,7 +64,7 @@ static rl_scene_instance_t *rl_scene_get(rl_handle_t scene)
     return &rl_scenes[index];
 }
 
-static bool rl_scene_is_drawable_kind(rl_handle_kind_t kind)
+static bool is_drawable_kind(rl_handle_kind_t kind)
 {
     switch (kind) {
     case RL_HANDLE_KIND_MODEL:
@@ -77,7 +77,7 @@ static bool rl_scene_is_drawable_kind(rl_handle_kind_t kind)
     }
 }
 
-static bool rl_scene_is_drawable_valid(rl_handle_t drawable, rl_handle_kind_t kind)
+static bool is_drawable_handle_valid(rl_handle_t drawable, rl_handle_kind_t kind)
 {
     switch (kind) {
     case RL_HANDLE_KIND_MODEL:
@@ -91,7 +91,7 @@ static bool rl_scene_is_drawable_valid(rl_handle_t drawable, rl_handle_kind_t ki
     }
 }
 
-static int rl_scene_find_member(const rl_scene_instance_t *scene, rl_handle_t drawable)
+static int find_member_index(const rl_scene_instance_t *scene, rl_handle_t drawable)
 {
     int i = 0;
 
@@ -107,7 +107,7 @@ static int rl_scene_find_member(const rl_scene_instance_t *scene, rl_handle_t dr
     return -1;
 }
 
-static rl_handle_t rl_scene_resolve_camera(const rl_scene_instance_t *scene,
+static rl_handle_t resolve_scene_camera_handle(const rl_scene_instance_t *scene,
                                            rl_handle_t camera_param)
 {
     if (camera_param != 0) {
@@ -119,14 +119,14 @@ static rl_handle_t rl_scene_resolve_camera(const rl_scene_instance_t *scene,
     return rl_camera3d_get_active();
 }
 
-static void rl_scene_apply_camera(rl_handle_t camera)
+static void apply_scene_camera(rl_handle_t camera)
 {
     if (camera != 0) {
         (void)rl_camera3d_set_active(camera);
     }
 }
 
-static void rl_scene_sort_members(rl_scene_member_t *members, int count)
+static void sort_scene_members(rl_scene_member_t *members, int count)
 {
     int i = 0;
     int j = 0;
@@ -152,7 +152,7 @@ static void rl_scene_sort_members(rl_scene_member_t *members, int count)
     }
 }
 
-static void rl_scene_draw_member(rl_handle_t drawable, rl_handle_kind_t kind)
+static void draw_scene_member(rl_handle_t drawable, rl_handle_kind_t kind)
 {
     switch (kind) {
     case RL_HANDLE_KIND_MODEL:
@@ -172,12 +172,12 @@ static void rl_scene_draw_member(rl_handle_t drawable, rl_handle_kind_t kind)
     }
 }
 
-static bool rl_scene_kind_supports_narrow_pick(rl_handle_kind_t kind)
+static bool is_kind_narrow_pickable(rl_handle_kind_t kind)
 {
     return kind == RL_HANDLE_KIND_MODEL || kind == RL_HANDLE_KIND_SPRITE3D;
 }
 
-static bool rl_scene_drawable_instance_visible(rl_handle_t drawable, rl_handle_kind_t kind)
+static bool is_drawable_visible(rl_handle_t drawable, rl_handle_kind_t kind)
 {
     switch (kind) {
     case RL_HANDLE_KIND_MODEL:
@@ -215,7 +215,7 @@ rl_handle_t rl_scene_create(void)
 RL_KEEP
 void rl_scene_destroy(rl_handle_t scene)
 {
-    rl_scene_instance_t *instance = rl_scene_get(scene);
+    rl_scene_instance_t *instance = resolve_scene_instance(scene);
 
     if (instance == NULL) {
         return;
@@ -231,7 +231,7 @@ void rl_scene_destroy(rl_handle_t scene)
 RL_KEEP
 bool rl_scene_add(rl_handle_t scene, rl_handle_t drawable, int layer)
 {
-    rl_scene_instance_t *instance = rl_scene_get(scene);
+    rl_scene_instance_t *instance = resolve_scene_instance(scene);
     rl_handle_kind_t kind = RL_HANDLE_KIND_NONE;
     rl_scene_member_t *member = NULL;
 
@@ -240,13 +240,13 @@ bool rl_scene_add(rl_handle_t scene, rl_handle_t drawable, int layer)
     }
 
     kind = rl_handle_get_kind(drawable);
-    if (!rl_scene_is_drawable_kind(kind)) {
+    if (!is_drawable_kind(kind)) {
         log_warn("rl_scene_add: unsupported drawable kind (%d) for handle (%u)",
                  (int)kind, (unsigned int)drawable);
         return false;
     }
 
-    if (rl_scene_find_member(instance, drawable) >= 0) {
+    if (find_member_index(instance, drawable) >= 0) {
         return false;
     }
 
@@ -266,14 +266,14 @@ bool rl_scene_add(rl_handle_t scene, rl_handle_t drawable, int layer)
 RL_KEEP
 bool rl_scene_set_layer(rl_handle_t scene, rl_handle_t drawable, int layer)
 {
-    rl_scene_instance_t *instance = rl_scene_get(scene);
+    rl_scene_instance_t *instance = resolve_scene_instance(scene);
     int index = 0;
 
     if (instance == NULL || drawable == 0) {
         return false;
     }
 
-    index = rl_scene_find_member(instance, drawable);
+    index = find_member_index(instance, drawable);
     if (index < 0) {
         return false;
     }
@@ -285,14 +285,14 @@ bool rl_scene_set_layer(rl_handle_t scene, rl_handle_t drawable, int layer)
 RL_KEEP
 bool rl_scene_remove(rl_handle_t scene, rl_handle_t drawable)
 {
-    rl_scene_instance_t *instance = rl_scene_get(scene);
+    rl_scene_instance_t *instance = resolve_scene_instance(scene);
     int index = 0;
 
     if (instance == NULL) {
         return false;
     }
 
-    index = rl_scene_find_member(instance, drawable);
+    index = find_member_index(instance, drawable);
     if (index < 0) {
         return false;
     }
@@ -307,7 +307,7 @@ bool rl_scene_remove(rl_handle_t scene, rl_handle_t drawable)
 RL_KEEP
 void rl_scene_clear(rl_handle_t scene)
 {
-    rl_scene_instance_t *instance = rl_scene_get(scene);
+    rl_scene_instance_t *instance = resolve_scene_instance(scene);
 
     if (instance == NULL) {
         return;
@@ -320,7 +320,7 @@ void rl_scene_clear(rl_handle_t scene)
 RL_KEEP
 void rl_scene_set_active_camera(rl_handle_t scene, rl_handle_t camera)
 {
-    rl_scene_instance_t *instance = rl_scene_get(scene);
+    rl_scene_instance_t *instance = resolve_scene_instance(scene);
 
     if (instance == NULL) {
         return;
@@ -332,7 +332,7 @@ void rl_scene_set_active_camera(rl_handle_t scene, rl_handle_t camera)
 RL_KEEP
 void rl_scene_draw(rl_handle_t scene)
 {
-    rl_scene_instance_t *instance = rl_scene_get(scene);
+    rl_scene_instance_t *instance = resolve_scene_instance(scene);
     rl_scene_member_t sorted[MAX_SCENE_MEMBERS];
     rl_handle_t camera = 0;
     int i = 0;
@@ -349,16 +349,16 @@ void rl_scene_draw(rl_handle_t scene)
 
     memcpy(sorted, instance->members,
            (size_t)instance->member_count * sizeof(sorted[0]));
-    rl_scene_sort_members(sorted, instance->member_count);
+    sort_scene_members(sorted, instance->member_count);
 
-    camera = rl_scene_resolve_camera(instance, 0);
-    rl_scene_apply_camera(camera);
+    camera = resolve_scene_camera_handle(instance, 0);
+    apply_scene_camera(camera);
 
     for (i = 0; i < instance->member_count; i++) {
-        if (!rl_scene_drawable_instance_visible(sorted[i].drawable, sorted[i].kind)) {
+        if (!is_drawable_visible(sorted[i].drawable, sorted[i].kind)) {
             continue;
         }
-        if (!rl_scene_is_drawable_valid(sorted[i].drawable, sorted[i].kind)) {
+        if (!is_drawable_handle_valid(sorted[i].drawable, sorted[i].kind)) {
             continue;
         }
         if (sorted[i].kind == RL_HANDLE_KIND_MODEL ||
@@ -376,13 +376,13 @@ void rl_scene_draw(rl_handle_t scene)
                 sorted[i].kind != RL_HANDLE_KIND_SPRITE3D) {
                 continue;
             }
-            if (!rl_scene_drawable_instance_visible(sorted[i].drawable, sorted[i].kind)) {
+            if (!is_drawable_visible(sorted[i].drawable, sorted[i].kind)) {
                 continue;
             }
-            if (!rl_scene_is_drawable_valid(sorted[i].drawable, sorted[i].kind)) {
+            if (!is_drawable_handle_valid(sorted[i].drawable, sorted[i].kind)) {
                 continue;
             }
-            rl_scene_draw_member(sorted[i].drawable, sorted[i].kind);
+            draw_scene_member(sorted[i].drawable, sorted[i].kind);
         }
         rl_render_end_mode_3d();
     }
@@ -393,13 +393,13 @@ void rl_scene_draw(rl_handle_t scene)
                 sorted[i].kind != RL_HANDLE_KIND_TEXT2D) {
                 continue;
             }
-            if (!rl_scene_drawable_instance_visible(sorted[i].drawable, sorted[i].kind)) {
+            if (!is_drawable_visible(sorted[i].drawable, sorted[i].kind)) {
                 continue;
             }
-            if (!rl_scene_is_drawable_valid(sorted[i].drawable, sorted[i].kind)) {
+            if (!is_drawable_handle_valid(sorted[i].drawable, sorted[i].kind)) {
                 continue;
             }
-            rl_scene_draw_member(sorted[i].drawable, sorted[i].kind);
+            draw_scene_member(sorted[i].drawable, sorted[i].kind);
         }
     }
 }
@@ -411,7 +411,7 @@ rl_pick_result_t rl_scene_pick(rl_handle_t scene,
                                float mouse_y,
                                rl_handle_t *out_handle)
 {
-    rl_scene_instance_t *instance = rl_scene_get(scene);
+    rl_scene_instance_t *instance = resolve_scene_instance(scene);
     rl_pick_result_t best = {0};
     rl_handle_t best_handle = 0;
     rl_handle_t pick_camera = 0;
@@ -427,7 +427,7 @@ rl_pick_result_t rl_scene_pick(rl_handle_t scene,
         return best;
     }
 
-    pick_camera = rl_scene_resolve_camera(instance, camera);
+    pick_camera = resolve_scene_camera_handle(instance, camera);
     if (pick_camera == 0) {
         return best;
     }
@@ -444,10 +444,10 @@ rl_pick_result_t rl_scene_pick(rl_handle_t scene,
         rl_scene_member_t *member = &instance->members[i];
         rl_pick_result_t result = {0};
 
-        if (!rl_scene_kind_supports_narrow_pick(member->kind)) {
+        if (!is_kind_narrow_pickable(member->kind)) {
             continue;
         }
-        if (!rl_scene_is_drawable_valid(member->drawable, member->kind)) {
+        if (!is_drawable_handle_valid(member->drawable, member->kind)) {
             continue;
         }
 
@@ -518,7 +518,7 @@ void rl_scene_on_drawable_destroy(rl_handle_t drawable)
             continue;
         }
 
-        index = rl_scene_find_member(scene, drawable);
+        index = find_member_index(scene, drawable);
         if (index < 0) {
             continue;
         }

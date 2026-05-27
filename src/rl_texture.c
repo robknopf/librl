@@ -37,7 +37,7 @@ static unsigned char rl_texture_occupied[MAX_TEXTURES];
 static Texture2D rl_texture_placeholder_singleton;
 static rl_handle_t rl_texture_default_handle = 0;
 
-static rl_texture_entry_t *rl_texture_get_entry(rl_handle_t handle)
+static rl_texture_entry_t *resolve_texture_entry(rl_handle_t handle)
 {
     uint16_t index = 0;
     if (!rl_handle_pool_resolve(&rl_texture_pool, handle, &index)) {
@@ -51,7 +51,7 @@ static rl_texture_entry_t *rl_texture_get_entry(rl_handle_t handle)
     return &rl_textures[index];
 }
 
-static rl_handle_t rl_texture_find_by_path(const char *normalized_path)
+static rl_handle_t find_texture_by_path(const char *normalized_path)
 {
     for (uint16_t i = 1; i < MAX_TEXTURES; i++) {
         if (!rl_textures[i].in_use) {
@@ -64,7 +64,7 @@ static rl_handle_t rl_texture_find_by_path(const char *normalized_path)
     return 0;
 }
 
-static Texture2D rl_texture_create_magenta_placeholder(void)
+static Texture2D create_magenta_placeholder_texture(void)
 {
     Image image = GenImageColor(2, 2, (Color){255, 0, 255, 255});
     Texture2D texture = LoadTextureFromImage(image);
@@ -85,7 +85,7 @@ rl_handle_t rl_texture_get_default(void)
 
 Texture2D *rl_texture_get_ptr(rl_handle_t handle)
 {
-    rl_texture_entry_t *entry = rl_texture_get_entry(handle);
+    rl_texture_entry_t *entry = resolve_texture_entry(handle);
     if (entry == NULL) {
         return NULL;
     }
@@ -94,7 +94,7 @@ Texture2D *rl_texture_get_ptr(rl_handle_t handle)
 
 bool rl_texture_retain(rl_handle_t handle)
 {
-    rl_texture_entry_t *entry = rl_texture_get_entry(handle);
+    rl_texture_entry_t *entry = resolve_texture_entry(handle);
     if (entry == NULL) {
         return false;
     }
@@ -104,7 +104,7 @@ bool rl_texture_retain(rl_handle_t handle)
 
 void rl_texture_release(rl_handle_t handle)
 {
-    rl_texture_entry_t *entry = rl_texture_get_entry(handle);
+    rl_texture_entry_t *entry = resolve_texture_entry(handle);
     if (entry == NULL) {
         return;
     }
@@ -137,7 +137,7 @@ rl_handle_t rl_texture_create(const char *filename)
     }
 
     path_normalize(filename, normalized_path, sizeof(normalized_path));
-    handle = rl_texture_find_by_path(normalized_path);
+    handle = find_texture_by_path(normalized_path);
     if (handle != 0) {
         rl_texture_retain(handle);
         return handle;
@@ -152,7 +152,7 @@ rl_handle_t rl_texture_create(const char *filename)
 
     texture = LoadTexture(normalized_path);
     if (!IsTextureValid(texture)) {
-        rl_handle_t placeholder_handle = rl_texture_find_by_path(RL_TEXTURE_PLACEHOLDER_KEY);
+        rl_handle_t placeholder_handle = find_texture_by_path(RL_TEXTURE_PLACEHOLDER_KEY);
 
         log_error("Failed to load texture (%s). Using magenta placeholder.", normalized_path);
 
@@ -161,7 +161,7 @@ rl_handle_t rl_texture_create(const char *filename)
             return placeholder_handle;
         }
 
-        texture = rl_texture_create_magenta_placeholder();
+        texture = create_magenta_placeholder_texture();
         if (!IsTextureValid(texture)) {
             log_error("Failed to create magenta placeholder texture");
             rl_handle_pool_free(&rl_texture_pool, handle);
@@ -246,10 +246,10 @@ void rl_texture_init(void)
         rl_textures[i].ref_count = 0;
         rl_textures[i].path[0] = '\0';
     }
-    rl_texture_placeholder_singleton = rl_texture_create_magenta_placeholder();
+    rl_texture_placeholder_singleton = create_magenta_placeholder_texture();
 
     {
-        Texture2D default_tex = rl_texture_create_magenta_placeholder();
+        Texture2D default_tex = create_magenta_placeholder_texture();
         rl_handle_t h = rl_handle_pool_alloc(&rl_texture_pool);
         if (h != 0) {
             uint16_t idx = 0;

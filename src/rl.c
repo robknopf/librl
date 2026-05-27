@@ -35,7 +35,7 @@ typedef struct rl_init_config {
     const char *fs_root_dir;
 } rl_init_config_t;
 
-static void rl_init_apply_defaults(rl_init_config_t *out)
+static void apply_init_config_defaults(rl_init_config_t *out)
 {
     if (out->window_width == 0) {
         out->window_width = 1024;
@@ -51,7 +51,7 @@ static void rl_init_apply_defaults(rl_init_config_t *out)
     }
 }
 
-static int rl_init_from_config(const rl_init_config_t *config, bool async)
+static int init_runtime_from_config(const rl_init_config_t *config, bool async)
 {
     rl_init_config_t cfg;
 
@@ -63,7 +63,7 @@ static int rl_init_from_config(const rl_init_config_t *config, bool async)
     if (config != NULL) {
         cfg = *config;
     }
-    rl_init_apply_defaults(&cfg);
+    apply_init_config_defaults(&cfg);
 
     rl_logger_init();
     rl_logger_info("librl %s", rl_version_string());
@@ -112,7 +112,7 @@ static int rl_init_from_config(const rl_init_config_t *config, bool async)
     return RL_INIT_OK;
 }
 
-static rl_init_config_t rl_init_config_from_values(int window_width,
+static rl_init_config_t build_init_config_from_values(int window_width,
                                                    int window_height,
                                                    const char *window_title,
                                                    unsigned int window_flags,
@@ -138,10 +138,10 @@ int rl_init_values(int window_width,
                    unsigned int window_flags,
                    const char *asset_host,
                    const char *fs_root_dir) {
-    rl_init_config_t cfg = rl_init_config_from_values(
+    rl_init_config_t cfg = build_init_config_from_values(
         window_width, window_height, window_title, window_flags, asset_host, fs_root_dir);
 
-    return rl_init_from_config(&cfg, false);
+    return init_runtime_from_config(&cfg, false);
 }
 
 RL_KEEP
@@ -151,10 +151,10 @@ int rl_init_values_async(int window_width,
                          unsigned int window_flags,
                          const char *asset_host,
                          const char *fs_root_dir) {
-    rl_init_config_t cfg = rl_init_config_from_values(
+    rl_init_config_t cfg = build_init_config_from_values(
         window_width, window_height, window_title, window_flags, asset_host, fs_root_dir);
 
-    return rl_init_from_config(&cfg, true);
+    return init_runtime_from_config(&cfg, true);
 }
 
 RL_KEEP

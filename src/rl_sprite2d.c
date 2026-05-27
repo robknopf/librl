@@ -32,7 +32,7 @@ static uint16_t rl_sprite2d_free_indices[MAX_SPRITE2D];
 static uint16_t rl_sprite2d_generations[MAX_SPRITE2D];
 static unsigned char rl_sprite2d_occupied[MAX_SPRITE2D];
 
-static rl_sprite2d_instance_t *rl_sprite2d_get(rl_handle_t handle)
+static rl_sprite2d_instance_t *resolve_sprite2d_instance(rl_handle_t handle)
 {
     uint16_t index = 0;
     if (!rl_handle_pool_resolve(&rl_sprite2d_pool, handle, &index)) {
@@ -119,7 +119,7 @@ rl_handle_t rl_sprite2d_create_from_file(const char *filename)
 RL_KEEP
 bool rl_sprite2d_set_texture(rl_handle_t handle, rl_handle_t texture)
 {
-    rl_sprite2d_instance_t *sprite = rl_sprite2d_get(handle);
+    rl_sprite2d_instance_t *sprite = resolve_sprite2d_instance(handle);
     if (sprite == NULL) return false;
     if (texture != 0 && !rl_texture_retain(texture)) {
         log_warn("Invalid texture handle (%u) for rl_sprite2d_set_texture", texture);
@@ -135,7 +135,7 @@ bool rl_sprite2d_set_transform(rl_handle_t handle,
                                float x, float y,
                                float scale, float rotation)
 {
-    rl_sprite2d_instance_t *sprite = rl_sprite2d_get(handle);
+    rl_sprite2d_instance_t *sprite = resolve_sprite2d_instance(handle);
     if (sprite == NULL) {
         return false;
     }
@@ -149,7 +149,7 @@ bool rl_sprite2d_set_transform(rl_handle_t handle,
 RL_KEEP
 bool rl_sprite2d_set_visible(rl_handle_t handle, bool visible)
 {
-    rl_sprite2d_instance_t *sprite = rl_sprite2d_get(handle);
+    rl_sprite2d_instance_t *sprite = resolve_sprite2d_instance(handle);
 
     if (sprite == NULL) {
         return false;
@@ -161,7 +161,7 @@ bool rl_sprite2d_set_visible(rl_handle_t handle, bool visible)
 RL_KEEP
 bool rl_sprite2d_set_pickable(rl_handle_t handle, bool pickable)
 {
-    rl_sprite2d_instance_t *sprite = rl_sprite2d_get(handle);
+    rl_sprite2d_instance_t *sprite = resolve_sprite2d_instance(handle);
 
     if (sprite == NULL) {
         return false;
@@ -173,7 +173,7 @@ bool rl_sprite2d_set_pickable(rl_handle_t handle, bool pickable)
 RL_KEEP
 bool rl_sprite2d_is_visible(rl_handle_t handle)
 {
-    rl_sprite2d_instance_t *sprite = rl_sprite2d_get(handle);
+    rl_sprite2d_instance_t *sprite = resolve_sprite2d_instance(handle);
 
     if (sprite == NULL) {
         return false;
@@ -184,7 +184,7 @@ bool rl_sprite2d_is_visible(rl_handle_t handle)
 RL_KEEP
 bool rl_sprite2d_is_pickable(rl_handle_t handle)
 {
-    rl_sprite2d_instance_t *sprite = rl_sprite2d_get(handle);
+    rl_sprite2d_instance_t *sprite = resolve_sprite2d_instance(handle);
 
     if (sprite == NULL) {
         return false;
@@ -195,7 +195,7 @@ bool rl_sprite2d_is_pickable(rl_handle_t handle)
 RL_KEEP
 void rl_sprite2d_draw(rl_handle_t handle)
 {
-    rl_sprite2d_instance_t *sprite = rl_sprite2d_get(handle);
+    rl_sprite2d_instance_t *sprite = resolve_sprite2d_instance(handle);
     Texture2D *texture = NULL;
     if (sprite == NULL) {
         if (handle != 0) {
@@ -226,7 +226,7 @@ void rl_sprite2d_draw(rl_handle_t handle)
 RL_KEEP
 bool rl_sprite2d_set_tint(rl_handle_t handle, rl_handle_t color_handle)
 {
-    rl_sprite2d_instance_t *sprite = rl_sprite2d_get(handle);
+    rl_sprite2d_instance_t *sprite = resolve_sprite2d_instance(handle);
     if (sprite == NULL) return false;
     sprite->tint_handle = color_handle;
     return true;
@@ -235,7 +235,7 @@ bool rl_sprite2d_set_tint(rl_handle_t handle, rl_handle_t color_handle)
 RL_KEEP
 void rl_sprite2d_destroy(rl_handle_t handle)
 {
-    rl_sprite2d_instance_t *sprite = rl_sprite2d_get(handle);
+    rl_sprite2d_instance_t *sprite = resolve_sprite2d_instance(handle);
     if (sprite == NULL) {
         return;
     }

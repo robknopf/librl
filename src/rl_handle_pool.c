@@ -48,7 +48,7 @@ void rl_handle_pool_reset(rl_handle_pool_t *pool)
     }
 }
 
-static uint16_t rl_handle_pool_find_free_index(rl_handle_pool_t *pool)
+static uint16_t find_free_slot_index(rl_handle_pool_t *pool)
 {
     if (pool->free_count > 0) {
         pool->free_count--;
@@ -71,7 +71,7 @@ static uint16_t rl_handle_pool_find_free_index(rl_handle_pool_t *pool)
     return 0;
 }
 
-static uint16_t rl_handle_pool_bump_generation(uint16_t generation)
+static uint16_t bump_slot_generation(uint16_t generation)
 {
     uint16_t next_generation = (uint16_t)((generation + 1u) & RL_HANDLE_GENERATION_MASK);
     if (next_generation == 0) {
@@ -89,7 +89,7 @@ rl_handle_t rl_handle_pool_alloc(rl_handle_pool_t *pool)
         return 0;
     }
 
-    index = rl_handle_pool_find_free_index(pool);
+    index = find_free_slot_index(pool);
     if (index == 0 || index >= pool->max) {
         return 0;
     }
@@ -130,7 +130,7 @@ bool rl_handle_pool_free(rl_handle_pool_t *pool, rl_handle_t handle)
     }
 
     pool->occupied[index] = 0;
-    pool->generations[index] = rl_handle_pool_bump_generation(generation);
+    pool->generations[index] = bump_slot_generation(generation);
 
     if (pool->free_count < pool->free_capacity) {
         pool->free_indices[pool->free_count] = index;

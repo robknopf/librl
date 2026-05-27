@@ -5,6 +5,12 @@
 - **Do not** change **observable behavior**, **public API contracts**, or **cross-platform semantics** (e.g. lifecycle, init/run/tick order, loader/IDBFS timing, what callers may assume) without the maintainer’s **explicit approval in the thread first**.
 - If a fix would alter when code runs, what is guaranteed, or how bindings or hosts behave, **stop and ask** before editing. Purely internal refactors with no behavioral impact are fine without that step.
 
+## Confirm before implementing
+
+- For **feature work, API design, or non-trivial fixes**, the agent should **outline the plan** (what will change, which files/surfaces, and any tradeoffs) and **wait for the maintainer’s explicit go-ahead in the thread** before editing, unless the user already directed implementation (e.g. “implement it”, “apply the patch”, “go ahead”).
+- **Read-only** tasks (questions, reviews, exploration) do not require this step.
+- This is in addition to the **Behavior and contract changes** rule above: any change that affects observable behavior or public contracts still needs approval there first.
+
 ## Binding Parity Policy
 
 - When public C API in `include/*.h` changes, update bindings in the same pass:
@@ -69,6 +75,12 @@ When adding new procs to any binding, always check: would a user need to write `
 - `docs/API.md` is the authoritative reference for the public C API. **When any function, type, constant, or enum in `include/*.h` is added, removed, or changed, update `docs/API.md` in the same pass.**
 - Each section in `docs/API.md` maps to one header. If a new header is added, add a new section. If a header is removed, remove its section.
 - Do not document internal-only symbols (e.g. `rl_window_open`, `rl_window_close`) — only symbols that appear in the public `include/` headers.
+
+## C implementation naming (`src/`)
+
+- **Public API** (`include/*.h`): subsystem-first `rl_<section>_<action>` (same template bindings mirror).
+- **`static` functions** in a single `.c` file: **do not** use the `rl_<subsystem>_` prefix. Use ordinary translation-unit-local names so it is obvious the symbol is not public and not shared across `src/*.c`.
+- **Cross-translation-unit** helpers (one `src/*.c` calling into another’s symbol): keep the `rl_<subsystem>_` prefix and declare the prototype only in **`src/internal/*.h`** — not in `include/` unless the symbol is promoted to the public API.
 
 ## Commit Workflow
 

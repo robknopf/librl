@@ -15,7 +15,8 @@
 # debug
 #--debug
 #--dce no
-#-lib hxcpp-debug-server
+-lib hxcpp-debug-server
+
 
 # release
 #--dce full

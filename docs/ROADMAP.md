@@ -18,7 +18,7 @@ Committed near-term work — pick up when Now is clear.
 
 ### Bindings and docs
 
-- **Binding parity** — closed (173/173 all bindings). Re-run `python3 tools/audit_binding_parity.py` after C API or binding changes; see Done (2025-05).
+- **Binding parity** — closed (172/172 all bindings). Re-run `python3 tools/audit_binding_parity.py` after C API or binding changes; see Done (2025-05).
 
 - Binding tooling for agents/maintainers — see `docs/MAINTAINER.md` § Tools (Python-first policy; generators, parity audit, `make binding-types` / `binding-version`).
 - remove scratch/ABI bindings from non-JS bindings — done for `scratch_refresh` / `scratchRefresh` / `rl_scratch_refresh` (commented in sources; see `docs/BINDINGS.md`); audit for any other `*_to_scratch` / `*_from_scratch` if added later
@@ -109,6 +109,7 @@ Designed enough to implement when prioritized.
 
 Needs evaluation or a design decision before implementation.
 
+- **`rl_scene` (retained presentation layer)** — design doc: [design/rl_scene.md](design/rl_scene.md). Scene membership + `rl_scene_draw` (Raylib) / `rl_scene_sync` (Defold future); builds on handle kinds in `rl_handle.h`. Prototype Raylib-only first.
 - **Scripting backend strategy** (current leaning hypothesis):
   - **Preferred path:** Haxe host (`hxcpp` → emcc on wasm) + `MainScript.cppia` for dev iteration (`onUnload` / `onLoad` state handoff, file-watcher reload in `examples/cppia/ScriptableMain`) + compile script into the host for production (no permanent interpreter at ship time).
   - **Lua:** keep as reference thin-host and desktop option (`examples/c-lua`, `bindings/lua`); not the default wasm gameplay path unless evaluation overturns this.
@@ -208,8 +209,7 @@ Deferred until scripting strategy settles (see **Research → Scripting backend 
 
 Changelog — trim periodically.
 
-- Handle kind encoding (2026-05): 32-bit layout `[ kind:6 | generation:10 | index:16 ]`; `rl_handle_get_kind()` + pool cross-kind reject; bindings + remote builtin handles aligned
-- Binding parity complete (2025-05): all bindings 173/173; `tools/audit_binding_parity.py`; Nim `rl_asset.h` FFI imports + string wrappers; `rl_fs_read*`, `rl_fs_normalize_path`, sprite default-texture/get-transform on Nim + Lua
+- Binding parity complete (2025-05): all bindings 172/172; `tools/audit_binding_parity.py`; Nim `rl_asset.h` FFI imports + string wrappers; `rl_fs_read*`, `rl_fs_normalize_path`, sprite default-texture/get-transform on Nim + Lua
 - JS binding TypeScript source (2025-05): `bindings/js/src/rl.ts` + `types.ts`; `bindings/js/package.json` scripts (esbuild bundle + `tsc` declarations) emit `dist/rl.js` and `dist/rl.d.ts`; retired `tools/gen_librl_dts.py`
 - C init ABI flattening (2025-05): public init is `rl_init_values` / `rl_init_values_async`; removed struct-based `rl_init*` and `rl_config.h`
 - JS init flattening (2025-05): `RL.init()` calls `rl_init_values`; struct marshaling removed from `bindings/js/rl.js`

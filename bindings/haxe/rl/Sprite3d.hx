@@ -24,6 +24,22 @@ class Sprite3d {
 		return rl.impl.RLImpl.sprite3dSetTransform(sprite, positionX, positionY, positionZ, size);
 	}
 
+	public static function setVisible(sprite:RLHandle, visible:Bool):Bool {
+		return rl.impl.RLImpl.sprite3dSetVisible(sprite, visible);
+	}
+
+	public static function setPickable(sprite:RLHandle, pickable:Bool):Bool {
+		return rl.impl.RLImpl.sprite3dSetPickable(sprite, pickable);
+	}
+
+	public static function isVisible(sprite:RLHandle):Bool {
+		return rl.impl.RLImpl.sprite3dIsVisible(sprite);
+	}
+
+	public static function isPickable(sprite:RLHandle):Bool {
+		return rl.impl.RLImpl.sprite3dIsPickable(sprite);
+	}
+
 	public static function getTransform(sprite:RLHandle):RLSprite3dTransform {
 		return rl.impl.RLImpl.sprite3dGetTransform(sprite);
 	}
@@ -32,8 +48,8 @@ class Sprite3d {
 		return rl.impl.RLImpl.sprite3dSetTint(sprite, color);
 	}
 
-	public static function draw(sprite:RLHandle, tint:RLHandle = 0):Void {
-		rl.impl.RLImpl.sprite3dDraw(sprite, tint);
+	public static function draw(sprite:RLHandle):Void {
+		rl.impl.RLImpl.sprite3dDraw(sprite);
 	}
 
 	public static function destroy(sprite:RLHandle):Void {

@@ -42,7 +42,6 @@ export interface DrawTextCommand {
 export interface DrawSprite3DCommand {
   type: CommandType.DRAW_SPRITE3D;
   sprite: Handle;
-  tint: Handle;
 }
 
 export interface PlaySoundCommand {
@@ -83,7 +82,6 @@ export interface SetMusicVolumeCommand {
 export interface DrawModelCommand {
   type: CommandType.DRAW_MODEL;
   model: Handle;
-  tint: Handle;
   animationIndex: number;
   animationFrame: number;
 }
@@ -176,7 +174,6 @@ export interface SetSprite2DTransformCommand {
 export interface DrawSprite2DCommand {
   type: CommandType.DRAW_SPRITE2D;
   sprite: Handle;
-  tint: Handle;
 }
 
 export type Command =

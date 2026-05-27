@@ -104,7 +104,6 @@ export function rl_model_set_transform(
 
 export function rl_model_draw(
   handle: number,
-  tint: number,
 ): void {
   const state = get_model_state(handle);
 
@@ -121,7 +120,6 @@ export function rl_model_draw(
   rl_frame_commands_append(current_frame_command_buffer, {
     type: CommandType.DRAW_MODEL,
     model: handle,
-    tint,
     animationIndex: state.animation_index,
     animationFrame: state.animation_frame,
   });

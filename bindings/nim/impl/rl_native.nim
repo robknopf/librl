@@ -146,7 +146,8 @@ const
   RL_HANDLE_KIND_SOUND* = 9
   RL_HANDLE_KIND_MUSIC* = 10
   RL_HANDLE_KIND_TEXT2D* = 11
-  RL_HANDLE_KIND_ASSET_TASK* = 12
+  RL_HANDLE_KIND_SCENE* = 12
+  RL_HANDLE_KIND_ASSET_TASK* = 32
 proc rl_init_values_raw(windowWidth: cint, windowHeight: cint, windowTitle: cstring,
                         windowFlags: RLWindowFlags, assetHost: cstring,
                         fsRootDir: cstring): cint {.importc: "rl_init_values", cdecl, header: "rl.h".}
@@ -558,7 +559,11 @@ proc rl_model_set_transform*(
   rotationX: cfloat, rotationY: cfloat, rotationZ: cfloat,
   scaleX: cfloat, scaleY: cfloat, scaleZ: cfloat
 ): bool {.importc, cdecl, header: "rl_model.h".}
-proc rl_model_draw*(model: RLHandle, tint: RLHandle = 0) {.importc, cdecl, header: "rl_model.h".}
+proc rl_model_set_visible*(model: RLHandle, visible: bool): bool {.importc, cdecl, header: "rl_model.h".}
+proc rl_model_set_pickable*(model: RLHandle, pickable: bool): bool {.importc, cdecl, header: "rl_model.h".}
+proc rl_model_is_visible*(model: RLHandle): bool {.importc, cdecl, header: "rl_model.h".}
+proc rl_model_is_pickable*(model: RLHandle): bool {.importc, cdecl, header: "rl_model.h".}
+proc rl_model_draw*(model: RLHandle) {.importc, cdecl, header: "rl_model.h".}
 proc rl_model_is_valid*(model: RLHandle): bool {.importc, cdecl, header: "rl_model.h".}
 proc rl_model_is_valid_strict*(model: RLHandle): bool {.importc, cdecl, header: "rl_model.h".}
 proc rl_model_get_animation_count_c(model: RLHandle): cint {.importc: "rl_model_get_animation_count", cdecl, header: "rl_model.h".}
@@ -587,6 +592,21 @@ proc rl_pick_get_broadphase_tests*(): cint {.importc, cdecl, header: "rl_pick.h"
 proc rl_pick_get_broadphase_rejects*(): cint {.importc, cdecl, header: "rl_pick.h".}
 proc rl_pick_get_narrowphase_tests*(): cint {.importc, cdecl, header: "rl_pick.h".}
 proc rl_pick_get_narrowphase_hits*(): cint {.importc, cdecl, header: "rl_pick.h".}
+proc rl_scene_create*(): RLHandle {.importc, cdecl, header: "rl_scene.h".}
+proc rl_scene_destroy*(scene: RLHandle) {.importc, cdecl, header: "rl_scene.h".}
+proc rl_scene_add*(scene: RLHandle, drawable: RLHandle, layer: cint): bool {.importc, cdecl, header: "rl_scene.h".}
+proc rl_scene_set_layer*(scene: RLHandle, drawable: RLHandle, layer: cint): bool {.importc, cdecl, header: "rl_scene.h".}
+proc rl_scene_remove*(scene: RLHandle, drawable: RLHandle): bool {.importc, cdecl, header: "rl_scene.h".}
+proc rl_scene_clear*(scene: RLHandle) {.importc, cdecl, header: "rl_scene.h".}
+proc rl_scene_set_active_camera*(scene: RLHandle, camera: RLHandle) {.importc, cdecl, header: "rl_scene.h".}
+proc rl_scene_draw*(scene: RLHandle) {.importc, cdecl, header: "rl_scene.h".}
+proc rl_scene_pick*(
+  scene: RLHandle,
+  camera: RLHandle,
+  mouseX: cfloat,
+  mouseY: cfloat,
+  outHandle: ptr RLHandle,
+): RLPickResult {.importc, cdecl, header: "rl_scene.h".}
 proc rl_music_create*(filename: cstring): RLHandle {.importc, cdecl, header: "rl_music.h".}
 proc rl_music_destroy*(music: RLHandle) {.importc, cdecl, header: "rl_music.h".}
 proc rl_music_play*(music: RLHandle): bool {.importc, cdecl, header: "rl_music.h".}
@@ -627,8 +647,12 @@ proc rl_sprite3d_set_transform*(
   positionX: cfloat, positionY: cfloat, positionZ: cfloat,
   size: cfloat
 ): bool {.importc, cdecl, header: "rl_sprite3d.h".}
+proc rl_sprite3d_set_visible*(sprite: RLHandle, visible: bool): bool {.importc, cdecl, header: "rl_sprite3d.h".}
+proc rl_sprite3d_set_pickable*(sprite: RLHandle, pickable: bool): bool {.importc, cdecl, header: "rl_sprite3d.h".}
+proc rl_sprite3d_is_visible*(sprite: RLHandle): bool {.importc, cdecl, header: "rl_sprite3d.h".}
+proc rl_sprite3d_is_pickable*(sprite: RLHandle): bool {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_set_tint*(sprite: RLHandle, color: RLHandle = 0): bool {.importc, cdecl, header: "rl_sprite3d.h".}
-proc rl_sprite3d_draw*(sprite: RLHandle, tint: RLHandle = 0) {.importc, cdecl, header: "rl_sprite3d.h".}
+proc rl_sprite3d_draw*(sprite: RLHandle) {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_destroy*(sprite: RLHandle) {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite2d_create*(texture: RLHandle): RLHandle {.importc, cdecl, header: "rl_sprite2d.h".}
 proc rl_sprite2d_get_default_texture*(): RLHandle {.importc, cdecl, header: "rl_sprite2d.h".}
@@ -639,8 +663,12 @@ proc rl_sprite2d_set_transform*(
   x: cfloat, y: cfloat,
   scale: cfloat, rotation: cfloat
 ): bool {.importc, cdecl, header: "rl_sprite2d.h".}
+proc rl_sprite2d_set_visible*(sprite: RLHandle, visible: bool): bool {.importc, cdecl, header: "rl_sprite2d.h".}
+proc rl_sprite2d_set_pickable*(sprite: RLHandle, pickable: bool): bool {.importc, cdecl, header: "rl_sprite2d.h".}
+proc rl_sprite2d_is_visible*(sprite: RLHandle): bool {.importc, cdecl, header: "rl_sprite2d.h".}
+proc rl_sprite2d_is_pickable*(sprite: RLHandle): bool {.importc, cdecl, header: "rl_sprite2d.h".}
 proc rl_sprite2d_set_tint*(sprite: RLHandle, color: RLHandle = 0): bool {.importc, cdecl, header: "rl_sprite2d.h".}
-proc rl_sprite2d_draw*(sprite: RLHandle, tint: RLHandle = 0) {.importc, cdecl, header: "rl_sprite2d.h".}
+proc rl_sprite2d_draw*(sprite: RLHandle) {.importc, cdecl, header: "rl_sprite2d.h".}
 proc rl_sprite2d_destroy*(sprite: RLHandle) {.importc, cdecl, header: "rl_sprite2d.h".}
 
 # Text2D
@@ -650,6 +678,10 @@ proc rl_text2d_set_size_c(handle: RLHandle, size: cfloat) {.importc: "rl_text2d_
 proc rl_text2d_set_content_c(handle: RLHandle, content: cstring) {.importc: "rl_text2d_set_content", cdecl, header: "rl_text2d.h".}
 proc rl_text2d_set_position_c(handle: RLHandle, x: cfloat, y: cfloat) {.importc: "rl_text2d_set_position", cdecl, header: "rl_text2d.h".}
 proc rl_text2d_set_color*(handle: RLHandle, color: RLHandle) {.importc, cdecl, header: "rl_text2d.h".}
+proc rl_text2d_set_visible*(handle: RLHandle, visible: bool): bool {.importc, cdecl, header: "rl_text2d.h".}
+proc rl_text2d_set_pickable*(handle: RLHandle, pickable: bool): bool {.importc, cdecl, header: "rl_text2d.h".}
+proc rl_text2d_is_visible*(handle: RLHandle): bool {.importc, cdecl, header: "rl_text2d.h".}
+proc rl_text2d_is_pickable*(handle: RLHandle): bool {.importc, cdecl, header: "rl_text2d.h".}
 proc rl_text2d_draw*(handle: RLHandle) {.importc, cdecl, header: "rl_text2d.h".}
 proc rl_text2d_destroy*(handle: RLHandle) {.importc, cdecl, header: "rl_text2d.h".}
 

@@ -10,6 +10,7 @@ import rl.Types.RLGamepad;
 import rl.Types.RLKeyboardState;
 import rl.Types.RLMouseState;
 import rl.Types.RLPickResult;
+import rl.Types.RLScenePickResult;
 import rl.Types.RLSprite3dTransform;
 import rl.Types.RLTouchpoint;
 import rl.Types.RLVec2;
@@ -75,7 +76,8 @@ class RLImpl {
 	public static inline var HANDLE_KIND_SOUND:Int = 9;
 	public static inline var HANDLE_KIND_MUSIC:Int = 10;
 	public static inline var HANDLE_KIND_TEXT2D:Int = 11;
-	public static inline var HANDLE_KIND_ASSET_TASK:Int = 12;
+	public static inline var HANDLE_KIND_SCENE:Int = 12;
+	public static inline var HANDLE_KIND_ASSET_TASK:Int = 32;
 
 	public static var COLOR_DEFAULT:RLHandle = 0;
 	public static var COLOR_LIGHTGRAY:RLHandle = 0;
@@ -628,9 +630,21 @@ class RLImpl {
 		return binding != null
 			&& cast binding.model.setTransform(model, positionX, positionY, positionZ, rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ);
 
-	public static function modelDraw(model:RLHandle, tint:RLHandle = 0):Void {
+	public static function modelSetVisible(model:RLHandle, visible:Bool):Bool
+		return binding != null && cast binding.model.setVisible(model, visible);
+
+	public static function modelSetPickable(model:RLHandle, pickable:Bool):Bool
+		return binding != null && cast binding.model.setPickable(model, pickable);
+
+	public static function modelIsVisible(model:RLHandle):Bool
+		return binding == null ? false : cast binding.model.isVisible(model);
+
+	public static function modelIsPickable(model:RLHandle):Bool
+		return binding == null ? false : cast binding.model.isPickable(model);
+
+	public static function modelDraw(model:RLHandle):Void {
 		if (binding != null)
-			binding.model.draw(model, tint);
+			binding.model.draw(model);
 	}
 
 	public static function modelSetAnimation(model:RLHandle, animationIndex:Int):Bool
@@ -738,12 +752,24 @@ class RLImpl {
 	public static function sprite3dSetTransform(sprite:RLHandle, positionX:Float, positionY:Float, positionZ:Float, size:Float):Bool
 		return binding != null && cast binding.sprite3d.setTransform(sprite, positionX, positionY, positionZ, size);
 
+	public static function sprite3dSetVisible(sprite:RLHandle, visible:Bool):Bool
+		return binding != null && cast binding.sprite3d.setVisible(sprite, visible);
+
+	public static function sprite3dSetPickable(sprite:RLHandle, pickable:Bool):Bool
+		return binding != null && cast binding.sprite3d.setPickable(sprite, pickable);
+
+	public static function sprite3dIsVisible(sprite:RLHandle):Bool
+		return binding == null ? false : cast binding.sprite3d.isVisible(sprite);
+
+	public static function sprite3dIsPickable(sprite:RLHandle):Bool
+		return binding == null ? false : cast binding.sprite3d.isPickable(sprite);
+
 	public static function sprite3dSetTint(sprite:RLHandle, color:RLHandle = 0):Bool
 		return binding != null && cast binding.sprite3d.setTint(sprite, color);
 
-	public static function sprite3dDraw(sprite:RLHandle, tint:RLHandle = 0):Void {
+	public static function sprite3dDraw(sprite:RLHandle):Void {
 		if (binding != null)
-			binding.sprite3d.draw(sprite, tint);
+			binding.sprite3d.draw(sprite);
 	}
 
 	public static function sprite3dDestroy(sprite:RLHandle):Void {
@@ -763,12 +789,24 @@ class RLImpl {
 	public static function sprite2dSetTransform(sprite:RLHandle, x:Float, y:Float, scale:Float, rotation:Float):Bool
 		return binding != null && cast binding.sprite2d.setTransform(sprite, x, y, scale, rotation);
 
+	public static function sprite2dSetVisible(sprite:RLHandle, visible:Bool):Bool
+		return binding != null && cast binding.sprite2d.setVisible(sprite, visible);
+
+	public static function sprite2dSetPickable(sprite:RLHandle, pickable:Bool):Bool
+		return binding != null && cast binding.sprite2d.setPickable(sprite, pickable);
+
+	public static function sprite2dIsVisible(sprite:RLHandle):Bool
+		return binding == null ? false : cast binding.sprite2d.isVisible(sprite);
+
+	public static function sprite2dIsPickable(sprite:RLHandle):Bool
+		return binding == null ? false : cast binding.sprite2d.isPickable(sprite);
+
 	public static function sprite2dSetTint(sprite:RLHandle, color:RLHandle = 0):Bool
 		return binding != null && cast binding.sprite2d.setTint(sprite, color);
 
-	public static function sprite2dDraw(sprite:RLHandle, tint:RLHandle = 0):Void {
+	public static function sprite2dDraw(sprite:RLHandle):Void {
 		if (binding != null)
-			binding.sprite2d.draw(sprite, tint);
+			binding.sprite2d.draw(sprite);
 	}
 
 	public static function sprite2dDestroy(sprite:RLHandle):Void {
@@ -806,6 +844,18 @@ class RLImpl {
 		if (binding != null)
 			binding.text2d.setColor(handle, color);
 	}
+
+	public static function text2dSetVisible(handle:RLHandle, visible:Bool):Bool
+		return binding != null && cast binding.text2d.setVisible(handle, visible);
+
+	public static function text2dSetPickable(handle:RLHandle, pickable:Bool):Bool
+		return binding != null && cast binding.text2d.setPickable(handle, pickable);
+
+	public static function text2dIsVisible(handle:RLHandle):Bool
+		return binding == null ? false : cast binding.text2d.isVisible(handle);
+
+	public static function text2dIsPickable(handle:RLHandle):Bool
+		return binding == null ? false : cast binding.text2d.isPickable(handle);
 
 	public static function text2dDraw(handle:RLHandle):Void {
 		if (binding != null)
@@ -916,6 +966,52 @@ class RLImpl {
 
 	public static function pickGetNarrowphaseHits():Int
 		return binding == null ? 0 : cast binding.helpers.getPickStats().narrowphaseHits;
+
+	public static function sceneCreate():RLHandle
+		return binding == null ? 0 : cast binding.scene.create();
+
+	public static function sceneDestroy(scene:RLHandle):Void {
+		if (binding != null)
+			binding.scene.destroy(scene);
+	}
+
+	public static function sceneAdd(scene:RLHandle, drawable:RLHandle, layer:Int):Bool
+		return binding != null && cast binding.scene.add(scene, drawable, layer);
+
+	public static function sceneSetLayer(scene:RLHandle, drawable:RLHandle, layer:Int):Bool
+		return binding != null && cast binding.scene.setLayer(scene, drawable, layer);
+
+	public static function sceneRemove(scene:RLHandle, drawable:RLHandle):Bool
+		return binding != null && cast binding.scene.remove(scene, drawable);
+
+	public static function sceneClear(scene:RLHandle):Void {
+		if (binding != null)
+			binding.scene.clear(scene);
+	}
+
+	public static function sceneSetActiveCamera(scene:RLHandle, camera:RLHandle):Void {
+		if (binding != null)
+			binding.scene.setActiveCamera(scene, camera);
+	}
+
+	public static function sceneDraw(scene:RLHandle):Void {
+		if (binding != null)
+			binding.scene.draw(scene);
+	}
+
+	public static function scenePick(scene:RLHandle, camera:RLHandle, mouseX:Float, mouseY:Float):RLScenePickResult {
+		if (binding == null) {
+			return {hit: false, handle: 0, distance: -1.0, point: {x: 0, y: 0, z: 0}, normal: {x: 0, y: 0, z: 0}};
+		}
+		var value = binding.scene.pick(scene, camera, mouseX, mouseY);
+		return {
+			hit: value.hit,
+			handle: value.handle,
+			distance: value.distance,
+			point: {x: value.point.x, y: value.point.y, z: value.point.z},
+			normal: {x: value.normal.x, y: value.normal.y, z: value.normal.z},
+		};
+	}
 
 	@async
 	public static function fsInit(?baseDir:String):Promise<Int> {

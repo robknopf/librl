@@ -23,12 +23,28 @@ class Sprite2d {
 		return rl.impl.RLImpl.sprite2dSetTransform(sprite, x, y, scale, rotation);
 	}
 
+	public static function setVisible(sprite:RLHandle, visible:Bool):Bool {
+		return rl.impl.RLImpl.sprite2dSetVisible(sprite, visible);
+	}
+
+	public static function setPickable(sprite:RLHandle, pickable:Bool):Bool {
+		return rl.impl.RLImpl.sprite2dSetPickable(sprite, pickable);
+	}
+
+	public static function isVisible(sprite:RLHandle):Bool {
+		return rl.impl.RLImpl.sprite2dIsVisible(sprite);
+	}
+
+	public static function isPickable(sprite:RLHandle):Bool {
+		return rl.impl.RLImpl.sprite2dIsPickable(sprite);
+	}
+
 	public static function setTint(sprite:RLHandle, color:RLHandle = 0):Bool {
 		return rl.impl.RLImpl.sprite2dSetTint(sprite, color);
 	}
 
-	public static function draw(sprite:RLHandle, tint:RLHandle = 0):Void {
-		rl.impl.RLImpl.sprite2dDraw(sprite, tint);
+	public static function draw(sprite:RLHandle):Void {
+		rl.impl.RLImpl.sprite2dDraw(sprite);
 	}
 
 	public static function destroy(sprite:RLHandle):Void {

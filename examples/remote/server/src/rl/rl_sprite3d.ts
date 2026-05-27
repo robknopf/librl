@@ -80,7 +80,6 @@ export function rl_sprite3d_set_transform(
 
 export function rl_sprite3d_draw(
   handle: number,
-  tint: number,
 ): void {
   const frame_command_buffer = get_frame_command_buffer();
   if (frame_command_buffer == null || !rl_sprite3d_states.has(handle)) {
@@ -90,7 +89,6 @@ export function rl_sprite3d_draw(
   rl_frame_commands_append(frame_command_buffer, {
     type: CommandType.DRAW_SPRITE3D,
     sprite: handle,
-    tint,
   });
 }
 

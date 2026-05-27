@@ -68,11 +68,38 @@ static int rl_model_set_transform_lua(lua_State *L)
     return 0;
 }
 
+static int rl_model_set_visible_lua(lua_State *L)
+{
+    rl_handle_t model = (rl_handle_t)luaL_checkinteger(L, 1);
+    lua_pushboolean(L, rl_model_set_visible(model, lua_toboolean(L, 2) != 0) ? 1 : 0);
+    return 1;
+}
+
+static int rl_model_set_pickable_lua(lua_State *L)
+{
+    rl_handle_t model = (rl_handle_t)luaL_checkinteger(L, 1);
+    lua_pushboolean(L, rl_model_set_pickable(model, lua_toboolean(L, 2) != 0) ? 1 : 0);
+    return 1;
+}
+
+static int rl_model_is_visible_lua(lua_State *L)
+{
+    rl_handle_t model = (rl_handle_t)luaL_checkinteger(L, 1);
+    lua_pushboolean(L, rl_model_is_visible(model) ? 1 : 0);
+    return 1;
+}
+
+static int rl_model_is_pickable_lua(lua_State *L)
+{
+    rl_handle_t model = (rl_handle_t)luaL_checkinteger(L, 1);
+    lua_pushboolean(L, rl_model_is_pickable(model) ? 1 : 0);
+    return 1;
+}
+
 static int rl_model_draw_lua(lua_State *L)
 {
     rl_handle_t model = (rl_handle_t)luaL_checkinteger(L, 1);
-    rl_handle_t tint = (rl_handle_t)luaL_optinteger(L, 2, 0);
-    rl_model_draw(model, tint);
+    rl_model_draw(model);
     return 0;
 }
 
@@ -183,6 +210,18 @@ void rl_register_model_bindings(lua_State *L)
 
     lua_pushcfunction(L, rl_model_set_transform_lua);
     lua_setfield(L, -2, "model_set_transform");
+
+    lua_pushcfunction(L, rl_model_set_visible_lua);
+    lua_setfield(L, -2, "model_set_visible");
+
+    lua_pushcfunction(L, rl_model_set_pickable_lua);
+    lua_setfield(L, -2, "model_set_pickable");
+
+    lua_pushcfunction(L, rl_model_is_visible_lua);
+    lua_setfield(L, -2, "model_is_visible");
+
+    lua_pushcfunction(L, rl_model_is_pickable_lua);
+    lua_setfield(L, -2, "model_is_pickable");
 
     lua_pushcfunction(L, rl_model_draw_lua);
     lua_setfield(L, -2, "model_draw");

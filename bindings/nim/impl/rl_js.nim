@@ -119,7 +119,8 @@ when defined(js):
     RL_HANDLE_KIND_SOUND* = 9
     RL_HANDLE_KIND_MUSIC* = 10
     RL_HANDLE_KIND_TEXT2D* = 11
-    RL_HANDLE_KIND_ASSET_TASK* = 12
+    RL_HANDLE_KIND_SCENE* = 12
+    RL_HANDLE_KIND_ASSET_TASK* = 32
 
   # Color handles — zero until rl_boot() succeeds (rl.js patches them after boot)
   var
@@ -424,7 +425,7 @@ async function __rlEnsureBindings(bindingsPath) {
   proc rl_model_create_from_file*(filename: string): RLHandle {.inline.} = rl_model_create_from_file(filename.cstring)
   proc rl_model_set_asset*(model: RLHandle, asset: RLHandle): bool {.importjs: "__gRl.model.setAsset(#,#)".}
   proc rl_model_destroy*(model: RLHandle) {.importjs: "__gRl.model.destroy(#)".}
-  proc rl_model_draw*(model: RLHandle, tint: RLHandle = 0) {.importjs: "__gRl.model.draw(#,#)".}
+  proc rl_model_draw*(model: RLHandle) {.importjs: "__gRl.model.draw(#)".}
   proc rl_model_is_valid*(model: RLHandle): bool {.importjs: "__gRl.model.isValid(#)".}
   proc rl_model_is_valid_strict*(model: RLHandle): bool {.importjs: "__gRl.model.isValidStrict(#)".}
   proc rl_model_set_transform*(model: RLHandle,
@@ -447,8 +448,38 @@ async function __rlEnsureBindings(bindingsPath) {
     importjs: "__gRl.model.setTint(#,#)".}
   proc rl_model_animate*(model: RLHandle, deltaSeconds: float): bool {.
     importjs: "__gRl.model.animate(#,#)".}
+  proc rl_model_set_visible*(model: RLHandle, visible: bool): bool {.
+    importjs: "__gRl.model.setVisible(#,#)".}
+  proc rl_model_set_pickable*(model: RLHandle, pickable: bool): bool {.
+    importjs: "__gRl.model.setPickable(#,#)".}
+  proc rl_model_is_visible*(model: RLHandle): bool {.
+    importjs: "__gRl.model.isVisible(#)".}
+  proc rl_model_is_pickable*(model: RLHandle): bool {.
+    importjs: "__gRl.model.isPickable(#)".}
   proc rl_pick_model*(camera, model: RLHandle, mouseX, mouseY: float): RLPickResult {.
     importjs: "__gRl.pick.model(#,#,#,#)".}
+
+  # Scene
+  proc rl_scene_create*(): RLHandle {.importjs: "__gRl.scene.create()".}
+  proc rl_scene_destroy*(scene: RLHandle) {.importjs: "__gRl.scene.destroy(#)".}
+  proc rl_scene_add*(scene, drawable: RLHandle, layer: int = 0): bool {.
+    importjs: "__gRl.scene.add(#,#,#)".}
+  proc rl_scene_set_layer*(scene, drawable: RLHandle, layer: int): bool {.
+    importjs: "__gRl.scene.setLayer(#,#,#)".}
+  proc rl_scene_remove*(scene, drawable: RLHandle): bool {.
+    importjs: "__gRl.scene.remove(#,#)".}
+  proc rl_scene_clear*(scene: RLHandle) {.importjs: "__gRl.scene.clear(#)".}
+  proc rl_scene_set_active_camera*(scene, camera: RLHandle) {.
+    importjs: "__gRl.scene.setActiveCamera(#,#)".}
+  proc rl_scene_draw*(scene: RLHandle) {.importjs: "__gRl.scene.draw(#)".}
+  type RLScenePickResult* = object
+    hit*: bool
+    handle*: RLHandle
+    distance*: float
+    point*: RLVec3
+    normal*: RLVec3
+  proc rl_scene_pick*(scene, camera: RLHandle, mouseX, mouseY: float): RLScenePickResult {.
+    importjs: "__gRl.scene.pick(#,#,#,#)".}
 
   # Sprite3D
   proc rl_sprite3d_create*(texture: RLHandle): RLHandle {.importjs: "__gRl.sprite3d.create(#)".}
@@ -459,8 +490,16 @@ async function __rlEnsureBindings(bindingsPath) {
   proc rl_sprite3d_set_transform*(sprite: RLHandle,
                                 positionX, positionY, positionZ, size: float): bool {.
     importjs: "__gRl.sprite3d.setTransform(#,#,#,#,#)".}
+  proc rl_sprite3d_set_visible*(sprite: RLHandle, visible: bool): bool {.
+    importjs: "__gRl.sprite3d.setVisible(#,#)".}
+  proc rl_sprite3d_set_pickable*(sprite: RLHandle, pickable: bool): bool {.
+    importjs: "__gRl.sprite3d.setPickable(#,#)".}
+  proc rl_sprite3d_is_visible*(sprite: RLHandle): bool {.
+    importjs: "__gRl.sprite3d.isVisible(#)".}
+  proc rl_sprite3d_is_pickable*(sprite: RLHandle): bool {.
+    importjs: "__gRl.sprite3d.isPickable(#)".}
   proc rl_sprite3d_set_tint*(sprite: RLHandle, color: RLHandle = 0): bool {.importjs: "__gRl.sprite3d.setTint(#,#)".}
-  proc rl_sprite3d_draw*(sprite: RLHandle, tint: RLHandle = 0) {.importjs: "__gRl.sprite3d.draw(#,#)".}
+  proc rl_sprite3d_draw*(sprite: RLHandle) {.importjs: "__gRl.sprite3d.draw(#)".}
   proc rl_sprite3d_destroy*(sprite: RLHandle) {.importjs: "__gRl.sprite3d.destroy(#)".}
   proc rl_pick_sprite3d*(camera, sprite3d: RLHandle, mouseX, mouseY: float): RLPickResult {.
     importjs: "__gRl.pick.sprite3d(#,#,#,#)".}
@@ -473,8 +512,16 @@ async function __rlEnsureBindings(bindingsPath) {
     importjs: "__gRl.sprite2d.setTexture(#,#)".}
   proc rl_sprite2d_set_transform*(sprite: RLHandle, x, y, scale, rotation: float): bool {.
     importjs: "__gRl.sprite2d.setTransform(#,#,#,#,#)".}
+  proc rl_sprite2d_set_visible*(sprite: RLHandle, visible: bool): bool {.
+    importjs: "__gRl.sprite2d.setVisible(#,#)".}
+  proc rl_sprite2d_set_pickable*(sprite: RLHandle, pickable: bool): bool {.
+    importjs: "__gRl.sprite2d.setPickable(#,#)".}
+  proc rl_sprite2d_is_visible*(sprite: RLHandle): bool {.
+    importjs: "__gRl.sprite2d.isVisible(#)".}
+  proc rl_sprite2d_is_pickable*(sprite: RLHandle): bool {.
+    importjs: "__gRl.sprite2d.isPickable(#)".}
   proc rl_sprite2d_set_tint*(sprite: RLHandle, color: RLHandle = 0): bool {.importjs: "__gRl.sprite2d.setTint(#,#)".}
-  proc rl_sprite2d_draw*(sprite: RLHandle, tint: RLHandle = 0) {.importjs: "__gRl.sprite2d.draw(#,#)".}
+  proc rl_sprite2d_draw*(sprite: RLHandle) {.importjs: "__gRl.sprite2d.draw(#)".}
   proc rl_sprite2d_destroy*(sprite: RLHandle) {.importjs: "__gRl.sprite2d.destroy(#)".}
 
   # Text2D
@@ -485,6 +532,14 @@ async function __rlEnsureBindings(bindingsPath) {
   proc rl_text2d_set_content*(handle: RLHandle, content: string) {.inline.} = rl_text2d_set_content_impl(handle, content.cstring)
   proc rl_text2d_set_position*(handle: RLHandle, x: float, y: float) {.importjs: "__gRl.text2d.setPosition(#,#,#)".}
   proc rl_text2d_set_color*(handle: RLHandle, color: RLHandle) {.importjs: "__gRl.text2d.setColor(#,#)".}
+  proc rl_text2d_set_visible*(handle: RLHandle, visible: bool): bool {.
+    importjs: "__gRl.text2d.setVisible(#,#)".}
+  proc rl_text2d_set_pickable*(handle: RLHandle, pickable: bool): bool {.
+    importjs: "__gRl.text2d.setPickable(#,#)".}
+  proc rl_text2d_is_visible*(handle: RLHandle): bool {.
+    importjs: "__gRl.text2d.isVisible(#)".}
+  proc rl_text2d_is_pickable*(handle: RLHandle): bool {.
+    importjs: "__gRl.text2d.isPickable(#)".}
   proc rl_text2d_draw*(handle: RLHandle) {.importjs: "__gRl.text2d.draw(#)".}
   proc rl_text2d_destroy*(handle: RLHandle) {.importjs: "__gRl.text2d.destroy(#)".}
 

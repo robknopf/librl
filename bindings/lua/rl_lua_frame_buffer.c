@@ -40,7 +40,7 @@ static int rl_frame_buffer_submit(lua_State *L)
     int idx = 1;  /* Lua tables are 1-indexed */
     int table_idx = 1;
     int i, count;
-    rl_handle_t handle, tint;
+    rl_handle_t handle;
     float x, y, z, scale, rotation, size;
     float rot_x, rot_y, rot_z, scale_x, scale_y, scale_z;
 
@@ -105,9 +105,6 @@ static int rl_frame_buffer_submit(lua_State *L)
             handle = (rl_handle_t)luaL_checkinteger(L, -1);
             lua_pop(L, 1);
             lua_rawgeti(L, table_idx, idx++);
-            tint = (rl_handle_t)luaL_checkinteger(L, -1);
-            lua_pop(L, 1);
-            lua_rawgeti(L, table_idx, idx++);
             x = (float)luaL_checknumber(L, -1);
             lua_pop(L, 1);
             lua_rawgeti(L, table_idx, idx++);
@@ -129,10 +126,7 @@ static int rl_frame_buffer_submit(lua_State *L)
             lua_rawgeti(L, table_idx, idx++);
             handle = (rl_handle_t)luaL_checkinteger(L, -1);
             lua_pop(L, 1);
-            lua_rawgeti(L, table_idx, idx++);
-            tint = (rl_handle_t)luaL_checkinteger(L, -1);
-            lua_pop(L, 1);
-            rl_sprite2d_draw(handle, tint);
+            rl_sprite2d_draw(handle);
         }
     }
 
@@ -141,9 +135,6 @@ static int rl_frame_buffer_submit(lua_State *L)
         for (i = 0; i < count; i++) {
             lua_rawgeti(L, table_idx, idx++);
             handle = (rl_handle_t)luaL_checkinteger(L, -1);
-            lua_pop(L, 1);
-            lua_rawgeti(L, table_idx, idx++);
-            tint = (rl_handle_t)luaL_checkinteger(L, -1);
             lua_pop(L, 1);
             lua_rawgeti(L, table_idx, idx++);
             x = (float)luaL_checknumber(L, -1);
@@ -167,10 +158,7 @@ static int rl_frame_buffer_submit(lua_State *L)
             lua_rawgeti(L, table_idx, idx++);
             handle = (rl_handle_t)luaL_checkinteger(L, -1);
             lua_pop(L, 1);
-            lua_rawgeti(L, table_idx, idx++);
-            tint = (rl_handle_t)luaL_checkinteger(L, -1);
-            lua_pop(L, 1);
-            rl_sprite3d_draw(handle, tint);
+            rl_sprite3d_draw(handle);
         }
     }
 
@@ -217,10 +205,7 @@ static int rl_frame_buffer_submit(lua_State *L)
             lua_rawgeti(L, table_idx, idx++);
             handle = (rl_handle_t)luaL_checkinteger(L, -1);
             lua_pop(L, 1);
-            lua_rawgeti(L, table_idx, idx++);
-            tint = (rl_handle_t)luaL_checkinteger(L, -1);
-            lua_pop(L, 1);
-            rl_model_draw(handle, tint);
+            rl_model_draw(handle);
         }
     }
 

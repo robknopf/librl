@@ -4,6 +4,7 @@
 #include <lauxlib.h>
 
 #include "rl.h"
+#include "rl_text2d.h"
 #include "rl_lua_text2d.h"
 
 static int rl_text2d_create_lua(lua_State *L)
@@ -56,6 +57,34 @@ static int rl_text2d_set_color_lua(lua_State *L)
     return 0;
 }
 
+static int rl_text2d_set_visible_lua(lua_State *L)
+{
+    rl_handle_t handle = (rl_handle_t)luaL_checkinteger(L, 1);
+    lua_pushboolean(L, rl_text2d_set_visible(handle, lua_toboolean(L, 2) != 0) ? 1 : 0);
+    return 1;
+}
+
+static int rl_text2d_set_pickable_lua(lua_State *L)
+{
+    rl_handle_t handle = (rl_handle_t)luaL_checkinteger(L, 1);
+    lua_pushboolean(L, rl_text2d_set_pickable(handle, lua_toboolean(L, 2) != 0) ? 1 : 0);
+    return 1;
+}
+
+static int rl_text2d_is_visible_lua(lua_State *L)
+{
+    rl_handle_t handle = (rl_handle_t)luaL_checkinteger(L, 1);
+    lua_pushboolean(L, rl_text2d_is_visible(handle) ? 1 : 0);
+    return 1;
+}
+
+static int rl_text2d_is_pickable_lua(lua_State *L)
+{
+    rl_handle_t handle = (rl_handle_t)luaL_checkinteger(L, 1);
+    lua_pushboolean(L, rl_text2d_is_pickable(handle) ? 1 : 0);
+    return 1;
+}
+
 static int rl_text2d_draw_lua(lua_State *L)
 {
     rl_handle_t handle = (rl_handle_t)luaL_checkinteger(L, 1);
@@ -89,6 +118,18 @@ void rl_register_text2d_bindings(lua_State *L)
 
     lua_pushcfunction(L, rl_text2d_set_color_lua);
     lua_setfield(L, -2, "text2d_set_color");
+
+    lua_pushcfunction(L, rl_text2d_set_visible_lua);
+    lua_setfield(L, -2, "text2d_set_visible");
+
+    lua_pushcfunction(L, rl_text2d_set_pickable_lua);
+    lua_setfield(L, -2, "text2d_set_pickable");
+
+    lua_pushcfunction(L, rl_text2d_is_visible_lua);
+    lua_setfield(L, -2, "text2d_is_visible");
+
+    lua_pushcfunction(L, rl_text2d_is_pickable_lua);
+    lua_setfield(L, -2, "text2d_is_pickable");
 
     lua_pushcfunction(L, rl_text2d_draw_lua);
     lua_setfield(L, -2, "text2d_draw");

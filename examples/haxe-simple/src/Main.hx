@@ -157,6 +157,7 @@ class MainScript extends Script {
 	function loadAssets():Void {	
 		ctx.model = Model.create(0);
 		Model.setTransform(ctx.model, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+		Model.setTint(ctx.model, Color.WHITE);
 		Model.setAnimation(ctx.model, 1);
 		Model.setAnimationSpeed(ctx.model, 1.0);
 		Model.setAnimationLoop(ctx.model, true);
@@ -167,6 +168,7 @@ class MainScript extends Script {
 
 		ctx.sprite = Sprite3d.create(0);
 		Sprite3d.setTransform(ctx.sprite, 0.0, 0.0, ctx.spriteYOffset, 1.0);
+		Sprite3d.setTint(ctx.sprite, Color.WHITE);
 		Asset.addTask(Asset.ensureAsync(SPRITE_PATH), (path, _) -> {
 			var textureAsset = Texture.create(path);
 			Sprite3d.setTexture(ctx.sprite, textureAsset);
@@ -289,8 +291,8 @@ class MainScript extends Script {
 		// 3d render
 		Render.beginMode3d();
 
-		Model.draw(ctx.model, Color.WHITE);
-		Sprite3d.draw(ctx.sprite, Color.WHITE);
+		Model.draw(ctx.model);
+		Sprite3d.draw(ctx.sprite);
 
 		Render.endMode3d();
 

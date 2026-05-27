@@ -72,6 +72,34 @@ static int rl_sprite3d_set_transform_lua(lua_State *L)
     return 0;
 }
 
+static int rl_sprite3d_set_visible_lua(lua_State *L)
+{
+    rl_handle_t sprite = (rl_handle_t)luaL_checkinteger(L, 1);
+    lua_pushboolean(L, rl_sprite3d_set_visible(sprite, lua_toboolean(L, 2) != 0) ? 1 : 0);
+    return 1;
+}
+
+static int rl_sprite3d_set_pickable_lua(lua_State *L)
+{
+    rl_handle_t sprite = (rl_handle_t)luaL_checkinteger(L, 1);
+    lua_pushboolean(L, rl_sprite3d_set_pickable(sprite, lua_toboolean(L, 2) != 0) ? 1 : 0);
+    return 1;
+}
+
+static int rl_sprite3d_is_visible_lua(lua_State *L)
+{
+    rl_handle_t sprite = (rl_handle_t)luaL_checkinteger(L, 1);
+    lua_pushboolean(L, rl_sprite3d_is_visible(sprite) ? 1 : 0);
+    return 1;
+}
+
+static int rl_sprite3d_is_pickable_lua(lua_State *L)
+{
+    rl_handle_t sprite = (rl_handle_t)luaL_checkinteger(L, 1);
+    lua_pushboolean(L, rl_sprite3d_is_pickable(sprite) ? 1 : 0);
+    return 1;
+}
+
 static int rl_sprite3d_set_tint_lua(lua_State *L)
 {
     rl_handle_t sprite = (rl_handle_t)luaL_checkinteger(L, 1);
@@ -83,8 +111,7 @@ static int rl_sprite3d_set_tint_lua(lua_State *L)
 static int rl_sprite3d_draw_lua(lua_State *L)
 {
     rl_handle_t sprite = (rl_handle_t)luaL_checkinteger(L, 1);
-    rl_handle_t tint = (rl_handle_t)luaL_optinteger(L, 2, 0);
-    rl_sprite3d_draw(sprite, tint);
+    rl_sprite3d_draw(sprite);
     return 0;
 }
 
@@ -114,6 +141,18 @@ void rl_register_sprite3d_bindings(lua_State *L)
 
     lua_pushcfunction(L, rl_sprite3d_set_transform_lua);
     lua_setfield(L, -2, "sprite3d_set_transform");
+
+    lua_pushcfunction(L, rl_sprite3d_set_visible_lua);
+    lua_setfield(L, -2, "sprite3d_set_visible");
+
+    lua_pushcfunction(L, rl_sprite3d_set_pickable_lua);
+    lua_setfield(L, -2, "sprite3d_set_pickable");
+
+    lua_pushcfunction(L, rl_sprite3d_is_visible_lua);
+    lua_setfield(L, -2, "sprite3d_is_visible");
+
+    lua_pushcfunction(L, rl_sprite3d_is_pickable_lua);
+    lua_setfield(L, -2, "sprite3d_is_pickable");
 
     lua_pushcfunction(L, rl_sprite3d_set_tint_lua);
     lua_setfield(L, -2, "sprite3d_set_tint");

@@ -79,13 +79,9 @@ static int parse_command(const json_value_t *cmd_json, rl_render_command_t *out_
 
     case RL_RENDER_CMD_DRAW_SPRITE3D: {
       int sprite = 0;
-      int tint = 0;
 
       if (json_object_get_int_value(cmd_json, "sprite", &sprite)) {
         out_cmd->data.draw_sprite3d.sprite = (rl_handle_t)sprite;
-      }
-      if (json_object_get_int_value(cmd_json, "tint", &tint)) {
-        out_cmd->data.draw_sprite3d.tint = (rl_handle_t)tint;
       }
       break;
     }
@@ -148,15 +144,11 @@ static int parse_command(const json_value_t *cmd_json, rl_render_command_t *out_
 
     case RL_RENDER_CMD_DRAW_MODEL: {
       int model = 0;
-      int tint = 0;
       int animation_index = 0;
       int animation_frame = 0;
 
       if (json_object_get_int_value(cmd_json, "model", &model)) {
         out_cmd->data.draw_model.model = (rl_handle_t)model;
-      }
-      if (json_object_get_int_value(cmd_json, "tint", &tint)) {
-        out_cmd->data.draw_model.tint = (rl_handle_t)tint;
       }
       if (json_object_get_int_value(cmd_json, "animationIndex", &animation_index)) {
         out_cmd->data.draw_model.animation_index = animation_index;
@@ -295,13 +287,9 @@ static int parse_command(const json_value_t *cmd_json, rl_render_command_t *out_
 
     case RL_RENDER_CMD_DRAW_SPRITE2D: {
       int sprite = 0;
-      int tint = 0;
 
       if (json_object_get_int_value(cmd_json, "sprite", &sprite)) {
         out_cmd->data.draw_sprite2d.sprite = (rl_handle_t)sprite;
-      }
-      if (json_object_get_int_value(cmd_json, "tint", &tint)) {
-        out_cmd->data.draw_sprite2d.tint = (rl_handle_t)tint;
       }
       break;
     }

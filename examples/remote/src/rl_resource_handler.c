@@ -178,19 +178,29 @@ static bool start_async_load(rl_resource_handler_t *handler, uint32_t rid,
 
 static rl_handle_t create_handle_for_type(rl_resource_request_type_t type,
                                            const char *filename, float size) {
+  rl_handle_t handle = 0;
+
   switch (type) {
     case RL_RESOURCE_REQUEST_CREATE_FONT:
       return rl_font_create(filename, size);
     case RL_RESOURCE_REQUEST_CREATE_TEXTURE:
       return rl_texture_create(filename);
     case RL_RESOURCE_REQUEST_CREATE_MODEL:
-      return rl_model_create_from_file(filename);
+      handle = rl_model_create_from_file(filename);
+      if (handle != 0) {
+        (void)rl_model_set_tint(handle, RL_COLOR_RAYWHITE);
+      }
+      return handle;
     case RL_RESOURCE_REQUEST_CREATE_SOUND:
       return rl_sound_create(filename);
     case RL_RESOURCE_REQUEST_CREATE_MUSIC:
       return rl_music_create(filename);
     case RL_RESOURCE_REQUEST_CREATE_SPRITE3D:
-      return rl_sprite3d_create_from_file(filename);
+      handle = rl_sprite3d_create_from_file(filename);
+      if (handle != 0) {
+        (void)rl_sprite3d_set_tint(handle, RL_COLOR_RAYWHITE);
+      }
+      return handle;
     default:
       return 0;
   }
@@ -415,7 +425,6 @@ void rl_resource_handler_resolve_frame_commands(
         break;
       case RL_RENDER_CMD_DRAW_SPRITE3D:
         command->data.draw_sprite3d.sprite = get_local_handle(handler, command->data.draw_sprite3d.sprite);
-        command->data.draw_sprite3d.tint = get_local_handle(handler, command->data.draw_sprite3d.tint);
         break;
       case RL_RENDER_CMD_PLAY_SOUND:
         command->data.play_sound.sound = get_local_handle(handler, command->data.play_sound.sound);
@@ -437,7 +446,6 @@ void rl_resource_handler_resolve_frame_commands(
         break;
       case RL_RENDER_CMD_DRAW_MODEL:
         command->data.draw_model.model = get_local_handle(handler, command->data.draw_model.model);
-        command->data.draw_model.tint = get_local_handle(handler, command->data.draw_model.tint);
         break;
       case RL_RENDER_CMD_DRAW_TEXTURE:
         command->data.draw_texture.texture = get_local_handle(handler, command->data.draw_texture.texture);

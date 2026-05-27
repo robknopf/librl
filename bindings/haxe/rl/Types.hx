@@ -62,6 +62,14 @@ typedef RLPickResult = {
 	var normal:RLVec3;
 }
 
+typedef RLScenePickResult = {
+	var hit:Bool;
+	var handle:RLHandle;
+	var distance:Float;
+	var point:RLVec3;
+	var normal:RLVec3;
+}
+
 typedef RLMouseState = {
 	var x:Int;
 	var y:Int;

@@ -13,6 +13,7 @@
 #include "internal/rl_color.h"
 #include "internal/rl_handle_pool.h"
 #include "internal/rl_model.h"
+#include "internal/rl_scene.h"
 #include "path/path.h"
 
 #define MAX_MODELS 255
@@ -59,6 +60,8 @@ typedef struct
     bool animation_playing;
     bool animation_gpu_warning_emitted;
     rl_handle_t tint_handle;
+    bool visible;
+    bool pickable;
 } rl_model_instance_t;
 
 static rl_model_asset_t rl_model_assets[MAX_MODEL_ASSETS];
@@ -157,6 +160,8 @@ static void reset_instance(rl_model_instance_t *instance)
     instance->animation_playing = false;
     instance->animation_gpu_warning_emitted = false;
     instance->tint_handle = 0;
+    instance->visible = true;
+    instance->pickable = true;
 }
 
 static rl_model_asset_t *get_asset(rl_handle_t handle)
@@ -503,6 +508,7 @@ void rl_model_destroy(rl_handle_t handle)
 
     release_asset(instance->asset_handle);
     reset_instance(instance);
+    rl_scene_on_drawable_destroy(handle);
     rl_handle_pool_free(&rl_model_instance_pool, handle);
 }
 
@@ -763,7 +769,53 @@ bool rl_model_set_transform(rl_handle_t handle,
 }
 
 RL_KEEP
-void rl_model_draw(rl_handle_t handle, rl_handle_t tint)
+bool rl_model_set_visible(rl_handle_t handle, bool visible)
+{
+    rl_model_instance_t *instance = get_instance(handle);
+
+    if (instance == NULL) {
+        return false;
+    }
+    instance->visible = visible;
+    return true;
+}
+
+RL_KEEP
+bool rl_model_set_pickable(rl_handle_t handle, bool pickable)
+{
+    rl_model_instance_t *instance = get_instance(handle);
+
+    if (instance == NULL) {
+        return false;
+    }
+    instance->pickable = pickable;
+    return true;
+}
+
+RL_KEEP
+bool rl_model_is_visible(rl_handle_t handle)
+{
+    rl_model_instance_t *instance = get_instance(handle);
+
+    if (instance == NULL) {
+        return false;
+    }
+    return instance->visible;
+}
+
+RL_KEEP
+bool rl_model_is_pickable(rl_handle_t handle)
+{
+    rl_model_instance_t *instance = get_instance(handle);
+
+    if (instance == NULL) {
+        return false;
+    }
+    return instance->pickable;
+}
+
+RL_KEEP
+void rl_model_draw(rl_handle_t handle)
 {
     rl_model_instance_t *instance = get_instance(handle);
     rl_model_asset_t *asset = NULL;
@@ -779,6 +831,10 @@ void rl_model_draw(rl_handle_t handle, rl_handle_t tint)
                         (Vector3){1.0f, 1.0f, 1.0f},
                         (Color){255, 0, 255, 255});
         }
+        return;
+    }
+
+    if (!instance->visible) {
         return;
     }
 
@@ -810,7 +866,7 @@ void rl_model_draw(rl_handle_t handle, rl_handle_t tint)
                 rotation_axis,
                 rotation_angle * RAD2DEG,
                 (Vector3){instance->scale_x, instance->scale_y, instance->scale_z},
-                rl_color_get(instance->tint_handle != 0 ? instance->tint_handle : tint));
+                rl_color_get(instance->tint_handle));
 }
 
 bool rl_model_get_ray_collision_ex(rl_handle_t handle,
@@ -873,6 +929,49 @@ bool rl_model_get_ray_collision_ex(rl_handle_t handle,
     }
 
     return true;
+}
+
+static Matrix rl_model_instance_matrix(const rl_model_instance_t *inst)
+{
+    Matrix translation = MatrixTranslate(inst->position_x, inst->position_y, inst->position_z);
+    Matrix rotation = MatrixRotateXYZ((Vector3){
+        inst->rotation_x * DEG2RAD,
+        inst->rotation_y * DEG2RAD,
+        inst->rotation_z * DEG2RAD
+    });
+    Matrix scaling = MatrixScale(inst->scale_x, inst->scale_y, inst->scale_z);
+    return MatrixMultiply(MatrixMultiply(scaling, rotation), translation);
+}
+
+bool rl_model_scene_pick_broadphase(rl_handle_t handle, Ray ray)
+{
+    rl_model_instance_t *instance = get_instance(handle);
+    rl_model_asset_t *asset = NULL;
+    Matrix transform = {0};
+    Matrix model_transform = {0};
+    BoundingBox world_bounds = {0};
+    RayCollision broad_hit = {0};
+
+    if (instance == NULL) {
+        return false;
+    }
+    if (!instance->pickable) {
+        return false;
+    }
+    asset = get_asset(instance->asset_handle);
+    if (asset == NULL || asset->model == NULL) {
+        return false;
+    }
+
+    transform = rl_model_instance_matrix(instance);
+    model_transform = MatrixMultiply(asset->model->transform, transform);
+    if (!asset->has_local_bounds) {
+        return true;
+    }
+
+    world_bounds = transform_bounding_box(asset->local_bounds, model_transform);
+    broad_hit = GetRayCollisionBox(ray, world_bounds);
+    return broad_hit.hit;
 }
 
 bool rl_model_get_ray_collision(rl_handle_t handle, Ray ray, Matrix transform, RayCollision *collision)

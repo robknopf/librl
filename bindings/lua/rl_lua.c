@@ -20,6 +20,7 @@
 #include "rl_lua_model.h"
 #include "rl_lua_music.h"
 #include "rl_lua_pick.h"
+#include "rl_lua_scene.h"
 #include "rl_lua_searcher.h"
 #include "rl_lua_task_group.h"
 #include "rl_lua_shape.h"
@@ -451,6 +452,8 @@ int luaopen_rl(lua_State *L)
     lua_setfield(L, -2, "HANDLE_KIND_MUSIC");
     lua_pushinteger(L, RL_HANDLE_KIND_TEXT2D);
     lua_setfield(L, -2, "HANDLE_KIND_TEXT2D");
+    lua_pushinteger(L, RL_HANDLE_KIND_SCENE);
+    lua_setfield(L, -2, "HANDLE_KIND_SCENE");
     lua_pushinteger(L, RL_HANDLE_KIND_ASSET_TASK);
     lua_setfield(L, -2, "HANDLE_KIND_ASSET_TASK");
     rl_register_camera3d_bindings(L);
@@ -465,6 +468,7 @@ int luaopen_rl(lua_State *L)
     rl_register_model_bindings(L);
     rl_register_music_bindings(L);
     rl_register_pick_bindings(L);
+    rl_register_scene_bindings(L);
     rl_register_shape_bindings(L);
     rl_register_sound_bindings(L);
     rl_register_sprite2d_bindings(L);

@@ -59,6 +59,7 @@ class rl.Sprite3d
 class rl.Sprite2d
 class rl.Sound
 class rl.Shape
+class rl.Scene
 class rl.Render
 class rl.RL
 class rl.Pick
@@ -277,6 +278,7 @@ file rl/Music.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bi
 file rl/Pick.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Pick.hx
 file rl/RL.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/RL.hx
 file rl/Render.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Render.hx
+file rl/Scene.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Scene.hx
 file rl/Shape.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Shape.hx
 file rl/Sound.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Sound.hx
 file rl/Sprite2d.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Sprite2d.hx

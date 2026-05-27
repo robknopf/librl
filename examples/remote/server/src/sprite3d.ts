@@ -35,13 +35,13 @@ export class Sprite3D {
     return sprite;
   }
 
-  draw(tint: number): void {
+  draw(): void {
     if (this.handle == null) {
       return;
     }
     this.sync();
 
-    rl_sprite3d_draw(this.handle, tint);
+    rl_sprite3d_draw(this.handle);
   }
 
   set(x: number, y: number, z: number, size: number): void {

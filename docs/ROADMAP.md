@@ -18,7 +18,7 @@ Committed near-term work — pick up when Now is clear.
 
 ### Bindings and docs
 
-- **Binding parity** — closed (172/172 all bindings). Re-run `python3 tools/audit_binding_parity.py` after C API or binding changes; see Done (2025-05).
+- **Binding parity** — 206 public C functions in `docs/API.md`; JS/Haxe/Nim/Lua 206/206 (`scene.pick` maps `rl_scene_pick_to_scratch` → `rl_scene_pick` in the parity audit). Re-run `python3 tools/audit_binding_parity.py` after C API or binding changes.
 
 - Binding tooling for agents/maintainers — see `docs/MAINTAINER.md` § Tools (Python-first policy; generators, parity audit, `make binding-types` / `binding-version`).
 - remove scratch/ABI bindings from non-JS bindings — done for `scratch_refresh` / `scratchRefresh` / `rl_scratch_refresh` (commented in sources; see `docs/BINDINGS.md`); audit for any other `*_to_scratch` / `*_from_scratch` if added later
@@ -109,7 +109,7 @@ Designed enough to implement when prioritized.
 
 Needs evaluation or a design decision before implementation.
 
-- **`rl_scene` (retained presentation layer)** — design doc: [design/rl_scene.md](design/rl_scene.md). Scene membership + `rl_scene_draw` (Raylib) / `rl_scene_sync` (Defold future); builds on handle kinds in `rl_handle.h`. Prototype Raylib-only first.
+- **`rl_scene` follow-ups** — design doc: [design/rl_scene.md](design/rl_scene.md). **Next:** optional dirty flags for backend sync (see doc).
 - **Scripting backend strategy** (current leaning hypothesis):
   - **Preferred path:** Haxe host (`hxcpp` → emcc on wasm) + `MainScript.cppia` for dev iteration (`onUnload` / `onLoad` state handoff, file-watcher reload in `examples/cppia/ScriptableMain`) + compile script into the host for production (no permanent interpreter at ship time).
   - **Lua:** keep as reference thin-host and desktop option (`examples/c-lua`, `bindings/lua`); not the default wasm gameplay path unless evaluation overturns this.

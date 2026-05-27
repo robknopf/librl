@@ -15,6 +15,7 @@ import rl.Types.RLInitConfig;
 import rl.Types.RLVec2;
 import rl.Types.RLVec3;
 import rl.Types.RLPickResult;
+import rl.Types.RLScenePickResult;
 import rl.Types.RLMouseState;
 import rl.Types.RLKeyboardState;
 import rl.Types.RLGamepad;
@@ -415,8 +416,20 @@ private extern class RLExterns {
     scaleX: Float, scaleY: Float, scaleZ: Float
   ): Bool;
 
+  @:native("rl_model_set_visible")
+  static function modelSetVisible(model: RLHandle, visible: Bool): Bool;
+
+  @:native("rl_model_set_pickable")
+  static function modelSetPickable(model: RLHandle, pickable: Bool): Bool;
+
+  @:native("rl_model_is_visible")
+  static function modelIsVisible(model: RLHandle): Bool;
+
+  @:native("rl_model_is_pickable")
+  static function modelIsPickable(model: RLHandle): Bool;
+
   @:native("rl_model_draw")
-  static function modelDraw(model: RLHandle, tint: RLHandle): Void;
+  static function modelDraw(model: RLHandle): Void;
 
   @:native("rl_model_set_animation")
   static function modelSetAnimation(model: RLHandle, animationIndex: Int): Bool;
@@ -452,11 +465,23 @@ private extern class RLExterns {
     size: Float
   ): Bool;
 
+  @:native("rl_sprite3d_set_visible")
+  static function sprite3dSetVisible(sprite: RLHandle, visible: Bool): Bool;
+
+  @:native("rl_sprite3d_set_pickable")
+  static function sprite3dSetPickable(sprite: RLHandle, pickable: Bool): Bool;
+
+  @:native("rl_sprite3d_is_visible")
+  static function sprite3dIsVisible(sprite: RLHandle): Bool;
+
+  @:native("rl_sprite3d_is_pickable")
+  static function sprite3dIsPickable(sprite: RLHandle): Bool;
+
   @:native("rl_sprite3d_set_tint")
   static function sprite3dSetTint(sprite: RLHandle, color: RLHandle): Bool;
 
   @:native("rl_sprite3d_draw")
-  static function sprite3dDraw(sprite: RLHandle, tint: RLHandle): Void;
+  static function sprite3dDraw(sprite: RLHandle): Void;
 
   @:native("rl_sprite3d_destroy")
   static function sprite3dDestroy(sprite: RLHandle): Void;
@@ -553,11 +578,23 @@ private extern class RLExterns {
     scale: Float, rotation: Float
   ): Bool;
 
+  @:native("rl_sprite2d_set_visible")
+  static function sprite2dSetVisible(sprite: RLHandle, visible: Bool): Bool;
+
+  @:native("rl_sprite2d_set_pickable")
+  static function sprite2dSetPickable(sprite: RLHandle, pickable: Bool): Bool;
+
+  @:native("rl_sprite2d_is_visible")
+  static function sprite2dIsVisible(sprite: RLHandle): Bool;
+
+  @:native("rl_sprite2d_is_pickable")
+  static function sprite2dIsPickable(sprite: RLHandle): Bool;
+
   @:native("rl_sprite2d_set_tint")
   static function sprite2dSetTint(sprite: RLHandle, color: RLHandle): Bool;
 
   @:native("rl_sprite2d_draw")
-  static function sprite2dDraw(sprite: RLHandle, tint: RLHandle): Void;
+  static function sprite2dDraw(sprite: RLHandle): Void;
 
   @:native("rl_sprite2d_destroy")
   static function sprite2dDestroy(sprite: RLHandle): Void;
@@ -582,6 +619,18 @@ private extern class RLExterns {
 
   @:native("rl_text2d_set_color")
   static function text2dSetColor(handle: RLHandle, color: RLHandle): Void;
+
+  @:native("rl_text2d_set_visible")
+  static function text2dSetVisible(handle: RLHandle, visible: Bool): Bool;
+
+  @:native("rl_text2d_set_pickable")
+  static function text2dSetPickable(handle: RLHandle, pickable: Bool): Bool;
+
+  @:native("rl_text2d_is_visible")
+  static function text2dIsVisible(handle: RLHandle): Bool;
+
+  @:native("rl_text2d_is_pickable")
+  static function text2dIsPickable(handle: RLHandle): Bool;
 
   @:native("rl_text2d_draw")
   static function text2dDraw(handle: RLHandle): Void;
@@ -641,6 +690,34 @@ private extern class RLExterns {
 
   @:native("rl_pick_get_narrowphase_hits")
   static function pickGetNarrowphaseHits(): Int;
+
+  @:native("rl_scene_create")
+  static function sceneCreate(): RLHandle;
+
+  @:native("rl_scene_destroy")
+  static function sceneDestroy(scene: RLHandle): Void;
+
+  @:native("rl_scene_add")
+  static function sceneAdd(scene: RLHandle, drawable: RLHandle, layer: Int): Bool;
+
+  @:native("rl_scene_set_layer")
+  static function sceneSetLayer(scene: RLHandle, drawable: RLHandle, layer: Int): Bool;
+
+  @:native("rl_scene_remove")
+  static function sceneRemove(scene: RLHandle, drawable: RLHandle): Bool;
+
+  @:native("rl_scene_clear")
+  static function sceneClear(scene: RLHandle): Void;
+
+  @:native("rl_scene_set_active_camera")
+  static function sceneSetActiveCamera(scene: RLHandle, camera: RLHandle): Void;
+
+  @:native("rl_scene_draw")
+  static function sceneDraw(scene: RLHandle): Void;
+
+  @:native("rl_scene_pick")
+  static function scenePickNative(scene: RLHandle, camera: RLHandle, mouseX: Float, mouseY: Float,
+                                  outHandle: cpp.RawPointer<cpp.UInt32>): RLPickResultNative;
 }
 
 @:include("rl_types.h")
@@ -960,7 +1037,8 @@ abstract RLImpl(RLExterns) {
   public static inline var HANDLE_KIND_SOUND: Int = 9;
   public static inline var HANDLE_KIND_MUSIC: Int = 10;
   public static inline var HANDLE_KIND_TEXT2D: Int = 11;
-  public static inline var HANDLE_KIND_ASSET_TASK: Int = 12;
+  public static inline var HANDLE_KIND_SCENE: Int = 12;
+  public static inline var HANDLE_KIND_ASSET_TASK: Int = 32;
   public static var COLOR_DEFAULT(get, never): RLHandle; static function get_COLOR_DEFAULT() return RLExterns.COLOR_DEFAULT;
   public static var COLOR_LIGHTGRAY(get, never): RLHandle; static function get_COLOR_LIGHTGRAY() return RLExterns.COLOR_LIGHTGRAY;
   public static var COLOR_GRAY(get, never): RLHandle; static function get_COLOR_GRAY() return RLExterns.COLOR_GRAY;
@@ -1082,7 +1160,11 @@ abstract RLImpl(RLExterns) {
   public static function modelCreateFromFile(filename: String): RLHandle { return RLExterns.modelCreateFromFile(filename); }
   public static function modelSetAsset(model: RLHandle, asset: RLHandle): Bool { return RLExterns.modelSetAsset(model, asset); }
   public static function modelSetTransform(model: RLHandle, positionX: Float, positionY: Float, positionZ: Float, rotationX: Float, rotationY: Float, rotationZ: Float, scaleX: Float, scaleY: Float, scaleZ: Float): Bool { return RLExterns.modelSetTransform(model, positionX, positionY, positionZ, rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ); }
-  public static function modelDraw(model: RLHandle, tint: RLHandle = 0): Void { RLExterns.modelDraw(model, tint); }
+  public static function modelSetVisible(model: RLHandle, visible: Bool): Bool { return RLExterns.modelSetVisible(model, visible); }
+  public static function modelSetPickable(model: RLHandle, pickable: Bool): Bool { return RLExterns.modelSetPickable(model, pickable); }
+  public static function modelIsVisible(model: RLHandle): Bool { return RLExterns.modelIsVisible(model); }
+  public static function modelIsPickable(model: RLHandle): Bool { return RLExterns.modelIsPickable(model); }
+  public static function modelDraw(model: RLHandle): Void { RLExterns.modelDraw(model); }
   public static function modelSetAnimation(model: RLHandle, animationIndex: Int): Bool { return RLExterns.modelSetAnimation(model, animationIndex); }
   public static function modelSetAnimationSpeed(model: RLHandle, speed: Float): Bool { return RLExterns.modelSetAnimationSpeed(model, speed); }
   public static function modelSetAnimationLoop(model: RLHandle, shouldLoop: Bool): Bool { return RLExterns.modelSetAnimationLoop(model, shouldLoop); }
@@ -1098,8 +1180,12 @@ abstract RLImpl(RLExterns) {
   public static function sprite3dCreateFromFile(filename: String): RLHandle { return RLExterns.sprite3dCreateFromFile(filename); }
   public static function sprite3dSetTexture(sprite: RLHandle, texture: RLHandle): Bool { return RLExterns.sprite3dSetTexture(sprite, texture); }
   public static function sprite3dSetTransform(sprite: RLHandle, positionX: Float, positionY: Float, positionZ: Float, size: Float): Bool { return RLExterns.sprite3dSetTransform(sprite, positionX, positionY, positionZ, size); }
+  public static function sprite3dSetVisible(sprite: RLHandle, visible: Bool): Bool { return RLExterns.sprite3dSetVisible(sprite, visible); }
+  public static function sprite3dSetPickable(sprite: RLHandle, pickable: Bool): Bool { return RLExterns.sprite3dSetPickable(sprite, pickable); }
+  public static function sprite3dIsVisible(sprite: RLHandle): Bool { return RLExterns.sprite3dIsVisible(sprite); }
+  public static function sprite3dIsPickable(sprite: RLHandle): Bool { return RLExterns.sprite3dIsPickable(sprite); }
   public static function sprite3dSetTint(sprite: RLHandle, color: RLHandle = 0): Bool { return RLExterns.sprite3dSetTint(sprite, color); }
-  public static function sprite3dDraw(sprite: RLHandle, tint: RLHandle = 0): Void { RLExterns.sprite3dDraw(sprite, tint); }
+  public static function sprite3dDraw(sprite: RLHandle): Void { RLExterns.sprite3dDraw(sprite); }
   public static function sprite3dDestroy(sprite: RLHandle): Void { RLExterns.sprite3dDestroy(sprite); }
   public static function sprite3dGetDefaultTexture(): RLHandle { return RLExterns.sprite3dGetDefaultTexture(); }
   public static function sprite3dGetTransform(sprite: RLHandle): RLSprite3dTransform {
@@ -1115,8 +1201,12 @@ abstract RLImpl(RLExterns) {
   public static function sprite2dCreateFromFile(filename: String): RLHandle { return RLExterns.sprite2dCreateFromFile(filename); }
   public static function sprite2dSetTexture(sprite: RLHandle, texture: RLHandle): Bool { return RLExterns.sprite2dSetTexture(sprite, texture); }
   public static function sprite2dSetTransform(sprite: RLHandle, x: Float, y: Float, scale: Float, rotation: Float): Bool { return RLExterns.sprite2dSetTransform(sprite, x, y, scale, rotation); }
+  public static function sprite2dSetVisible(sprite: RLHandle, visible: Bool): Bool { return RLExterns.sprite2dSetVisible(sprite, visible); }
+  public static function sprite2dSetPickable(sprite: RLHandle, pickable: Bool): Bool { return RLExterns.sprite2dSetPickable(sprite, pickable); }
+  public static function sprite2dIsVisible(sprite: RLHandle): Bool { return RLExterns.sprite2dIsVisible(sprite); }
+  public static function sprite2dIsPickable(sprite: RLHandle): Bool { return RLExterns.sprite2dIsPickable(sprite); }
   public static function sprite2dSetTint(sprite: RLHandle, color: RLHandle = 0): Bool { return RLExterns.sprite2dSetTint(sprite, color); }
-  public static function sprite2dDraw(sprite: RLHandle, tint: RLHandle = 0): Void { RLExterns.sprite2dDraw(sprite, tint); }
+  public static function sprite2dDraw(sprite: RLHandle): Void { RLExterns.sprite2dDraw(sprite); }
   public static function sprite2dDestroy(sprite: RLHandle): Void { RLExterns.sprite2dDestroy(sprite); }
   public static function sprite2dGetDefaultTexture(): RLHandle { return RLExterns.sprite2dGetDefaultTexture(); }
   public static function text2dCreate(font: RLHandle, size: Float): RLHandle { return RLExterns.text2dCreate(font, size); }
@@ -1125,6 +1215,10 @@ abstract RLImpl(RLExterns) {
   public static function text2dSetContent(handle: RLHandle, content: String): Void { RLExterns.text2dSetContent(handle, content); }
   public static function text2dSetPosition(handle: RLHandle, x: Float, y: Float): Void { RLExterns.text2dSetPosition(handle, x, y); }
   public static function text2dSetColor(handle: RLHandle, color: RLHandle): Void { RLExterns.text2dSetColor(handle, color); }
+  public static function text2dSetVisible(handle: RLHandle, visible: Bool): Bool { return RLExterns.text2dSetVisible(handle, visible); }
+  public static function text2dSetPickable(handle: RLHandle, pickable: Bool): Bool { return RLExterns.text2dSetPickable(handle, pickable); }
+  public static function text2dIsVisible(handle: RLHandle): Bool { return RLExterns.text2dIsVisible(handle); }
+  public static function text2dIsPickable(handle: RLHandle): Bool { return RLExterns.text2dIsPickable(handle); }
   public static function text2dDraw(handle: RLHandle): Void { RLExterns.text2dDraw(handle); }
   public static function text2dDestroy(handle: RLHandle): Void { RLExterns.text2dDestroy(handle); }
   public static function textureCreate(filename: String): RLHandle { return RLExterns.textureCreate(filename); }
@@ -1216,6 +1310,35 @@ abstract RLImpl(RLExterns) {
   public static function pickGetBroadphaseRejects(): Int { return RLExterns.pickGetBroadphaseRejects(); }
   public static function pickGetNarrowphaseTests(): Int { return RLExterns.pickGetNarrowphaseTests(); }
   public static function pickGetNarrowphaseHits(): Int { return RLExterns.pickGetNarrowphaseHits(); }
+
+  public static function sceneCreate(): RLHandle { return RLExterns.sceneCreate(); }
+  public static function sceneDestroy(scene: RLHandle): Void { RLExterns.sceneDestroy(scene); }
+  public static function sceneAdd(scene: RLHandle, drawable: RLHandle, layer: Int): Bool {
+    return RLExterns.sceneAdd(scene, drawable, layer);
+  }
+  public static function sceneSetLayer(scene: RLHandle, drawable: RLHandle, layer: Int): Bool {
+    return RLExterns.sceneSetLayer(scene, drawable, layer);
+  }
+  public static function sceneRemove(scene: RLHandle, drawable: RLHandle): Bool {
+    return RLExterns.sceneRemove(scene, drawable);
+  }
+  public static function sceneClear(scene: RLHandle): Void { RLExterns.sceneClear(scene); }
+  public static function sceneSetActiveCamera(scene: RLHandle, camera: RLHandle): Void {
+    RLExterns.sceneSetActiveCamera(scene, camera);
+  }
+  public static function sceneDraw(scene: RLHandle): Void { RLExterns.sceneDraw(scene); }
+  public static function scenePick(scene: RLHandle, camera: RLHandle, mouseX: Float, mouseY: Float): RLScenePickResult {
+    var picked: cpp.UInt32 = 0;
+    var outHandle = cpp.RawPointer.addressOf(picked);
+    var n: RLPickResultNative = RLExterns.scenePickNative(scene, camera, mouseX, mouseY, outHandle);
+    return {
+      hit: n.hit,
+      handle: picked,
+      distance: n.distance,
+      point: {x: n.point.x, y: n.point.y, z: n.point.z},
+      normal: {x: n.normal.x, y: n.normal.y, z: n.normal.z},
+    };
+  }
 
   public static function init(?config: RLInitConfig): Int {
     var values = normalizeInitConfig(config);

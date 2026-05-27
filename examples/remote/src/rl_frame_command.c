@@ -174,12 +174,10 @@ void rl_frame_commands_execute_3d(
                                           command->data.draw_model.animation_index,
                                           command->data.draw_model.animation_frame);
             }
-            rl_model_draw(command->data.draw_model.model,
-                          command->data.draw_model.tint);
+            rl_model_draw(command->data.draw_model.model);
             break;
         case RL_RENDER_CMD_DRAW_SPRITE3D:
-            rl_sprite3d_draw(command->data.draw_sprite3d.sprite,
-                             command->data.draw_sprite3d.tint);
+            rl_sprite3d_draw(command->data.draw_sprite3d.sprite);
             break;
         case RL_RENDER_CMD_DRAW_CUBE:
             rl_shape_draw_cube(command->data.draw_cube.x,
@@ -217,8 +215,7 @@ void rl_frame_commands_execute_2d(
         const rl_render_command_t *command = &frame_commands->commands[i];
         switch (command->type) {
         case RL_RENDER_CMD_DRAW_SPRITE2D:
-            rl_sprite2d_draw(command->data.draw_sprite2d.sprite,
-                             command->data.draw_sprite2d.tint);
+            rl_sprite2d_draw(command->data.draw_sprite2d.sprite);
             break;
         case RL_RENDER_CMD_DRAW_TEXTURE:
             rl_texture_draw_ex(command->data.draw_texture.texture,

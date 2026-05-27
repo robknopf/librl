@@ -30,7 +30,8 @@ typedef enum rl_handle_kind_t {
     RL_HANDLE_KIND_SOUND = 9,
     RL_HANDLE_KIND_MUSIC = 10,
     RL_HANDLE_KIND_TEXT2D = 11,
-    RL_HANDLE_KIND_ASSET_TASK = 12,
+    RL_HANDLE_KIND_SCENE = 12,
+    RL_HANDLE_KIND_ASSET_TASK = 32,
 } rl_handle_kind_t;
 
 rl_handle_kind_t rl_handle_get_kind(rl_handle_t handle);
@@ -374,17 +375,24 @@ bool rl_sprite2d_set_texture(rl_handle_t handle, rl_handle_t texture); // swap t
 bool rl_sprite2d_set_transform(rl_handle_t handle, float x, float y,
                                float scale, float rotation);
 
+// Visibility / picking (per instance)
+bool rl_sprite2d_set_visible(rl_handle_t handle, bool visible);
+bool rl_sprite2d_set_pickable(rl_handle_t handle, bool pickable);
+bool rl_sprite2d_is_visible(rl_handle_t handle);
+bool rl_sprite2d_is_pickable(rl_handle_t handle);
+
 // Tint
 bool rl_sprite2d_set_tint(rl_handle_t handle, rl_handle_t color_handle); // 0 clears stored tint
 
 // Draw
-void rl_sprite2d_draw(rl_handle_t handle, rl_handle_t tint);
+void rl_sprite2d_draw(rl_handle_t handle);
 ```
 
 Notes:
 - `rl_sprite2d_create(0)` creates a valid instance with no texture; draw is a silent no-op until `rl_sprite2d_set_texture` is called.
 - `rl_sprite2d_set_texture` retains the new texture and releases the old one.
-- `rl_sprite2d_set_tint` stores a tint on the instance. When non-zero it overrides the `tint` argument passed to `rl_sprite2d_draw`. Pass `0` to clear and restore draw-time tint.
+- `rl_sprite2d_set_tint` stores the draw tint on the instance. Pass `0` to clear (draw uses white).
+- New instances default to **`visible == true`**, **`pickable == false`**. When **`visible`** is `false`, `rl_sprite2d_draw()` returns immediately (no placeholder draw).
 
 ---
 
@@ -412,16 +420,49 @@ bool rl_sprite3d_set_transform(rl_handle_t handle,
                                float position_x, float position_y,
                                float position_z, float size);
 
+// Visibility / picking (per instance)
+bool rl_sprite3d_set_visible(rl_handle_t handle, bool visible);
+bool rl_sprite3d_set_pickable(rl_handle_t handle, bool pickable);
+bool rl_sprite3d_is_visible(rl_handle_t handle);
+bool rl_sprite3d_is_pickable(rl_handle_t handle);
+
 // Tint
 bool rl_sprite3d_set_tint(rl_handle_t handle, rl_handle_t color_handle); // 0 clears stored tint
 
 // Draw
-void rl_sprite3d_draw(rl_handle_t handle, rl_handle_t tint);
+void rl_sprite3d_draw(rl_handle_t handle);
 ```
 
 Notes:
 - `rl_sprite3d_create(0)` creates a valid instance with no texture; draw is a silent no-op until `rl_sprite3d_set_texture` is called.
-- `rl_sprite3d_set_tint` stores a tint on the instance. When non-zero it overrides the `tint` argument passed to `rl_sprite3d_draw`. Pass `0` to clear and restore draw-time tint.
+- `rl_sprite3d_set_tint` stores the draw tint on the instance. Pass `0` to clear (draw uses white).
+- New instances default to **`visible == true`**, **`pickable == true`**. When **`visible`** is `false`, `rl_sprite3d_draw()` returns immediately (no placeholder draw). `rl_pick_sprite3d` / `rl_scene_pick` skip instances with **`pickable == false`**.
+
+---
+
+## Text2D (`include/rl_text2d.h`)
+
+Screen-space text with instance-owned font, size, content, position, and color.
+
+```c
+rl_handle_t rl_text2d_create(rl_handle_t font, float size);
+void        rl_text2d_set_font(rl_handle_t handle, rl_handle_t font);
+void        rl_text2d_set_size(rl_handle_t handle, float size);
+void        rl_text2d_set_content(rl_handle_t handle, const char *content);
+void        rl_text2d_set_position(rl_handle_t handle, float x, float y);
+void        rl_text2d_set_color(rl_handle_t handle, rl_handle_t color);
+
+bool rl_text2d_set_visible(rl_handle_t handle, bool visible);
+bool rl_text2d_set_pickable(rl_handle_t handle, bool pickable);
+bool rl_text2d_is_visible(rl_handle_t handle);
+bool rl_text2d_is_pickable(rl_handle_t handle);
+
+void rl_text2d_draw(rl_handle_t handle);
+void rl_text2d_destroy(rl_handle_t handle);
+```
+
+Notes:
+- New instances default to **`visible == true`**, **`pickable == false`**. When **`visible`** is `false`, `rl_text2d_draw()` returns immediately.
 
 ---
 
@@ -452,11 +493,17 @@ bool rl_model_set_transform(rl_handle_t handle,
                             float rotation_x, float rotation_y, float rotation_z,
                             float scale_x, float scale_y, float scale_z);
 
+// Visibility / picking (per instance; draw and pick honor these)
+bool rl_model_set_visible(rl_handle_t handle, bool visible);
+bool rl_model_set_pickable(rl_handle_t handle, bool pickable);
+bool rl_model_is_visible(rl_handle_t handle);   // false if handle invalid
+bool rl_model_is_pickable(rl_handle_t handle);  // false if handle invalid
+
 // Tint
 bool rl_model_set_tint(rl_handle_t handle, rl_handle_t color_handle); // 0 clears stored tint
 
 // Draw
-void rl_model_draw(rl_handle_t handle, rl_handle_t tint);
+void rl_model_draw(rl_handle_t handle);
 
 // Validity
 bool rl_model_is_valid(rl_handle_t handle);         // true if handle is live
@@ -478,8 +525,8 @@ Notes:
 - `rl_model_create(0)` creates a valid instance with no asset; draw is a silent no-op until `rl_model_set_asset` is called.
 - On load failure, `rl_model_load_asset()` substitutes a placeholder cube; the asset handle is still valid.
 - `rl_model_set_asset` retains the new asset, releases the old one, and resets animation state.
-- `rl_model_draw()` uses the transform stored by `rl_model_set_transform()`.
-- `rl_model_set_tint` stores a tint on the instance. When non-zero it overrides the `tint` argument passed to `rl_model_draw`. Pass `0` to clear and restore draw-time tint.
+- `rl_model_draw()` uses the transform stored by `rl_model_set_transform()` and tint from `rl_model_set_tint()`. Pass `0` to clear tint (draw uses white).
+- New instances default to **`visible == true`** and **`pickable == true`**. When **`visible`** is `false`, `rl_model_draw()` returns immediately (no placeholder draw). `rl_pick_model` / `rl_scene_pick` narrow paths skip instances with **`pickable == false`** (same as `rl_pick_model_with_camera_ray` / scene broadphase early-out).
 
 ---
 
@@ -523,7 +570,44 @@ int  rl_pick_get_narrowphase_hits(void);
 Notes:
 - Picking reads the stored transform from the model/sprite instance; no explicit position arguments are needed.
 - Internally uses broad-phase culling before narrow-phase testing.
+- `rl_pick_model` / `rl_pick_sprite3d` (and the shared `*_with_camera_ray` helpers) return no hit when the target instance’s **`pickable`** flag is `false`.
 - `rl_pick_model_to_scratch` / `rl_pick_sprite3d_to_scratch` are internal wasm bridge functions used by the JS binding; consumers call `RL.pickModel()` / `RL.pickSprite3d()` which handle the scratch read transparently.
+
+---
+
+## Scene (`include/rl_scene.h`)
+
+Retained membership list for drawable handles. Gameplay mutates instances and scene membership; `rl_scene_draw` dispatches to existing draw paths. Callers own frame setup (`rl_render_begin`, clear, HUD overlays, `rl_render_end`).
+
+```c
+rl_handle_t rl_scene_create(void);
+void        rl_scene_destroy(rl_handle_t scene);
+
+bool rl_scene_add(rl_handle_t scene, rl_handle_t drawable, int layer);
+bool rl_scene_set_layer(rl_handle_t scene, rl_handle_t drawable, int layer);
+bool rl_scene_remove(rl_handle_t scene, rl_handle_t drawable);
+void rl_scene_clear(rl_handle_t scene);
+
+void rl_scene_set_active_camera(rl_handle_t scene, rl_handle_t camera);
+
+void rl_scene_draw(rl_handle_t scene);
+
+rl_pick_result_t rl_scene_pick(rl_handle_t scene,
+                               rl_handle_t camera,
+                               float mouse_x,
+                               float mouse_y,
+                               rl_handle_t *out_handle);
+```
+
+Notes:
+- **Visibility** and **pickability** are stored on each drawable instance (`rl_model_set_visible` / `rl_sprite3d_set_visible` / `rl_sprite2d_set_visible` / `rl_text2d_set_visible`, and the corresponding `*_set_pickable`). Defaults: **`visible`** is `true` for all; **`pickable`** is `true` for new **model** and **sprite3d** instances, **`false`** for new **sprite2d** and **text2d** (narrow pick exists only for model/sprite3d today).
+- `rl_scene_draw` skips members whose instance **`visible`** is `false` (early-out before calling `rl_*_draw`; individual `rl_*_draw` also no-op when invisible so direct draws match scene behavior).
+- `rl_scene_pick` only considers **model** and **sprite3d** members; each must pass that instance’s **`pickable`** check and scene broadphase before narrow pick (same narrow paths as `rl_pick_model` / `rl_pick_sprite3d`).
+- `rl_scene_set_layer` updates a member’s layer in place (returns `false` if the drawable is not in that scene). Stable order within a layer is unchanged (original insertion order).
+- `rl_scene_draw` sets the active camera from the scene when `rl_scene_set_active_camera` was called with a non-zero handle; otherwise uses the current active camera. Runs a 3D pass (`MODEL`, `SPRITE3D`) then a 2D pass (`SPRITE2D`, `TEXT2D`).
+- Destroying a drawable auto-removes it from every scene. Stale handles are skipped during draw/pick.
+- `rl_scene_pick`: `camera == 0` uses the scene camera when set, otherwise the current active camera. Resolves the camera and mouse ray once, then for each **model** / **sprite3d** member that is drawable-valid and **pickable**, runs **scene-level broadphase** (world AABB for models with cached asset bounds; bounding sphere for sprite3d billboards). Members that fail broadphase skip narrow picking; survivors use the same narrow paths as `rl_pick_model` / `rl_pick_sprite3d`. Models without cached local bounds are always narrow-tested. Closest hit wins. Pick stats (`rl_pick_reset_stats` / `rl_pick_get_*`) count only work done inside those narrow paths (members culled at the scene layer do not increment per-handle broadphase counters).
+- `rl_scene_pick_to_scratch` is an internal wasm bridge (JS binding); stores the picked handle in scratch vector2.x.
 
 ---
 

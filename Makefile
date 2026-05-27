@@ -139,6 +139,10 @@ LDFLAGS_WASM = \
 	"_rl_model_create_from_file", \
 	"_rl_model_set_asset", \
 	"_rl_model_set_transform", \
+	"_rl_model_set_visible", \
+	"_rl_model_set_pickable", \
+	"_rl_model_is_visible", \
+	"_rl_model_is_pickable", \
 	"_rl_model_draw", \
 	"_rl_model_is_valid", \
 	"_rl_model_is_valid_strict", \
@@ -159,6 +163,16 @@ LDFLAGS_WASM = \
 	"_rl_pick_get_broadphase_rejects", \
 	"_rl_pick_get_narrowphase_tests", \
 	"_rl_pick_get_narrowphase_hits", \
+	"_rl_scene_create", \
+	"_rl_scene_destroy", \
+	"_rl_scene_add", \
+	"_rl_scene_set_layer", \
+	"_rl_scene_remove", \
+	"_rl_scene_clear", \
+	"_rl_scene_set_active_camera", \
+	"_rl_scene_draw", \
+	"_rl_scene_pick", \
+	"_rl_scene_pick_to_scratch", \
 	"_rl_music_create", \
 	"_rl_music_destroy", \
 	"_rl_music_play", \
@@ -189,6 +203,10 @@ LDFLAGS_WASM = \
 	"_rl_sprite2d_create_from_file", \
 	"_rl_sprite2d_set_texture", \
 	"_rl_sprite2d_set_transform", \
+	"_rl_sprite2d_set_visible", \
+	"_rl_sprite2d_set_pickable", \
+	"_rl_sprite2d_is_visible", \
+	"_rl_sprite2d_is_pickable", \
 	"_rl_sprite2d_draw", \
 	"_rl_sprite2d_destroy", \
 	"_rl_text2d_create", \
@@ -197,6 +215,10 @@ LDFLAGS_WASM = \
 	"_rl_text2d_set_content", \
 	"_rl_text2d_set_position", \
 	"_rl_text2d_set_color", \
+	"_rl_text2d_set_visible", \
+	"_rl_text2d_set_pickable", \
+	"_rl_text2d_is_visible", \
+	"_rl_text2d_is_pickable", \
 	"_rl_text2d_draw", \
 	"_rl_text2d_destroy", \
 	"_rl_sprite3d_get_default_texture", \
@@ -204,6 +226,10 @@ LDFLAGS_WASM = \
 	"_rl_sprite3d_create_from_file", \
 	"_rl_sprite3d_set_texture", \
 	"_rl_sprite3d_set_transform", \
+	"_rl_sprite3d_set_visible", \
+	"_rl_sprite3d_set_pickable", \
+	"_rl_sprite3d_is_visible", \
+	"_rl_sprite3d_is_pickable", \
 	"_rl_sprite3d_draw", \
 	"_rl_sprite3d_destroy", \
 		"_rl_text_measure", \

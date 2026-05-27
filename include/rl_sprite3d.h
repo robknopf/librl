@@ -19,7 +19,11 @@ bool rl_sprite3d_set_transform(rl_handle_t handle,
                                float position_x, float position_y,
                                float position_z, float size);
 bool rl_sprite3d_set_tint(rl_handle_t handle, rl_handle_t color_handle);
-void rl_sprite3d_draw(rl_handle_t handle, rl_handle_t tint);
+bool rl_sprite3d_set_visible(rl_handle_t handle, bool visible);
+bool rl_sprite3d_set_pickable(rl_handle_t handle, bool pickable);
+bool rl_sprite3d_is_visible(rl_handle_t handle);
+bool rl_sprite3d_is_pickable(rl_handle_t handle);
+void rl_sprite3d_draw(rl_handle_t handle);
 void rl_sprite3d_destroy(rl_handle_t handle);
 
 #ifdef __cplusplus

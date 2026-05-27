@@ -6,7 +6,9 @@
 #include "internal/rl_camera3d.h"
 #include "internal/rl_model.h"
 #include "internal/rl_sprite3d.h"
+#include "rl_model.h"
 #include "rl_scratch.h"
+#include "rl_sprite3d.h"
 
 static rl_pick_stats_t rl_pick_stats = {0};
 
@@ -58,13 +60,11 @@ static rl_pick_result_t rl_pick_from_ray_collision(RayCollision collision)
 }
 
 RL_KEEP
-rl_pick_result_t rl_pick_model(rl_handle_t camera,
-                               rl_handle_t model,
-                               float mouse_x,
-                               float mouse_y)
+rl_pick_result_t rl_pick_model_with_camera_ray(Camera3D camera_data,
+                                               Ray ray,
+                                               rl_handle_t model)
 {
-    Camera3D camera_data = {0};
-    Ray ray = {0};
+    (void)camera_data;
     Matrix instance_transform = {0};
     Matrix model_transform = {0};
     RayCollision collision = {0};
@@ -75,16 +75,16 @@ rl_pick_result_t rl_pick_model(rl_handle_t camera,
     float scale_x = 1, scale_y = 1, scale_z = 1;
     float rotation_x = 0, rotation_y = 0, rotation_z = 0;
 
-    if (!rl_camera3d_get_camera(camera, &camera_data)) {
+    if (!rl_model_is_pickable(model)) {
         return rl_pick_result_empty();
     }
+
     if (!rl_model_get_transform(model, &position_x, &position_y, &position_z,
                                 &scale_x, &scale_y, &scale_z,
                                 &rotation_x, &rotation_y, &rotation_z)) {
         return rl_pick_result_empty();
     }
 
-    ray = GetMouseRay((Vector2){mouse_x, mouse_y}, camera_data);
     instance_transform = rl_pick_model_transform(position_x, position_y, position_z,
                                                  scale_x, scale_y, scale_z,
                                                  rotation_x, rotation_y, rotation_z);
@@ -129,40 +129,24 @@ rl_pick_result_t rl_pick_model(rl_handle_t camera,
 }
 
 RL_KEEP
-bool rl_pick_model_to_scratch(rl_handle_t camera,
-                              rl_handle_t model,
-                              float mouse_x,
-                              float mouse_y)
+rl_pick_result_t rl_pick_sprite3d_with_camera_ray(Camera3D camera_data,
+                                                 Ray ray,
+                                                 rl_handle_t sprite3d)
 {
-    rl_pick_result_t result = rl_pick_model(camera, model, mouse_x, mouse_y);
-
-    rl_scratch_set_vector3(result.point.x, result.point.y, result.point.z);
-    rl_scratch_set_vector4(result.normal.x, result.normal.y, result.normal.z, result.distance);
-    return result.hit;
-}
-
-RL_KEEP
-rl_pick_result_t rl_pick_sprite3d(rl_handle_t camera,
-                                  rl_handle_t sprite3d,
-                                  float mouse_x,
-                                  float mouse_y)
-{
-    Camera3D camera_data = {0};
-    Ray ray = {0};
     RayCollision collision = {0};
     bool broadphase_tested = false;
     bool broadphase_rejected = false;
     bool narrowphase_ran = false;
     float position_x = 0, position_y = 0, position_z = 0, size = 1;
 
-    if (!rl_camera3d_get_camera(camera, &camera_data)) {
+    if (!rl_sprite3d_is_pickable(sprite3d)) {
         return rl_pick_result_empty();
     }
+
     if (!rl_sprite3d_get_transform(sprite3d, &position_x, &position_y, &position_z, &size)) {
         return rl_pick_result_empty();
     }
 
-    ray = GetMouseRay((Vector2){mouse_x, mouse_y}, camera_data);
     if (!rl_sprite3d_get_ray_collision_ex(sprite3d,
                                           camera_data,
                                           ray,
@@ -195,6 +179,53 @@ rl_pick_result_t rl_pick_sprite3d(rl_handle_t camera,
     }
 
     return rl_pick_from_ray_collision(collision);
+}
+
+RL_KEEP
+rl_pick_result_t rl_pick_model(rl_handle_t camera,
+                               rl_handle_t model,
+                               float mouse_x,
+                               float mouse_y)
+{
+    Camera3D camera_data = {0};
+    Ray ray = {0};
+
+    if (!rl_camera3d_get_camera(camera, &camera_data)) {
+        return rl_pick_result_empty();
+    }
+
+    ray = GetMouseRay((Vector2){mouse_x, mouse_y}, camera_data);
+    return rl_pick_model_with_camera_ray(camera_data, ray, model);
+}
+
+RL_KEEP
+bool rl_pick_model_to_scratch(rl_handle_t camera,
+                              rl_handle_t model,
+                              float mouse_x,
+                              float mouse_y)
+{
+    rl_pick_result_t result = rl_pick_model(camera, model, mouse_x, mouse_y);
+
+    rl_scratch_set_vector3(result.point.x, result.point.y, result.point.z);
+    rl_scratch_set_vector4(result.normal.x, result.normal.y, result.normal.z, result.distance);
+    return result.hit;
+}
+
+RL_KEEP
+rl_pick_result_t rl_pick_sprite3d(rl_handle_t camera,
+                                  rl_handle_t sprite3d,
+                                  float mouse_x,
+                                  float mouse_y)
+{
+    Camera3D camera_data = {0};
+    Ray ray = {0};
+
+    if (!rl_camera3d_get_camera(camera, &camera_data)) {
+        return rl_pick_result_empty();
+    }
+
+    ray = GetMouseRay((Vector2){mouse_x, mouse_y}, camera_data);
+    return rl_pick_sprite3d_with_camera_ray(camera_data, ray, sprite3d);
 }
 
 RL_KEEP

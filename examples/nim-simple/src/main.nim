@@ -33,6 +33,7 @@ type
     labelText2d: RLHandle
     sprite: RLHandle
     camera: RLHandle
+    scene: RLHandle
     bgm: RLHandle
     greyAlphaColor: RLHandle
     gumshoe: RLHandle
@@ -81,7 +82,10 @@ proc queueAssets() =
         0.0, 0.0, 0.0,
         0.0, 0.0, 0.0,
         1.0, 1.0, 1.0
-      ),
+      )
+      discard rl_model_set_tint(loadedCtx.gumshoe, RL_COLOR_RAYWHITE)
+      if loadedCtx.scene != 0:
+        discard rl_scene_add(loadedCtx.scene, loadedCtx.gumshoe, 0),
     onError = proc(path: string, loadedCtx: var AppContext) =
       log.error("Failed to import MODEL: " & path)
   )
@@ -89,7 +93,10 @@ proc queueAssets() =
   ctx.loadingGroup.addImportTask(SpritePath,
     onSuccess = proc(path: string, loadedCtx: var AppContext) =
       loadedCtx.sprite = rl_sprite3d_create_from_file(path)
-      discard rl_sprite3d_set_transform(loadedCtx.sprite, 0.0, 0.0, loadedCtx.spriteYOffset, 1.0),
+      discard rl_sprite3d_set_transform(loadedCtx.sprite, 0.0, 0.0, loadedCtx.spriteYOffset, 1.0)
+      discard rl_sprite3d_set_tint(loadedCtx.sprite, RL_COLOR_RAYWHITE)
+      if loadedCtx.scene != 0:
+        discard rl_scene_add(loadedCtx.scene, loadedCtx.sprite, 0),
     onError = proc(path: string, loadedCtx: var AppContext) =
       log.error("Failed to import SPRITE: " & path)
   )
@@ -132,6 +139,9 @@ proc unloadAssets() =
     return
   if not ctx.loadingGroup.isNil:
     ctx.loadingGroup = nil
+  if ctx.scene != 0:
+    rl_scene_destroy(ctx.scene)
+    ctx.scene = 0
   if ctx.gumshoe != 0:
     rl_model_destroy(ctx.gumshoe)
     ctx.gumshoe = 0
@@ -177,6 +187,7 @@ proc onInit(): int {.rlAsync.} =
     komikaFont: 0,
     sprite: 0,
     camera: 0,
+    scene: 0,
     bgm: 0,
     greyAlphaColor: 0,
     gumshoe: 0,
@@ -212,6 +223,9 @@ proc onInit(): int {.rlAsync.} =
     45.0, RL_CAMERA_PERSPECTIVE
   )
   discard rl_camera3d_set_active(ctx.camera)
+  ctx.scene = rl_scene_create()
+  if ctx.scene != 0:
+    rl_scene_set_active_camera(ctx.scene, ctx.camera)
   ctx.greyAlphaColor = rl_color_create(0, 0, 0, 128)
   ctx.backgroundColor = rl_color_create(245, 245, 245, 255)
 
@@ -246,6 +260,7 @@ proc onTick(hostDt: float): int =
 
   ctx.elapsed += hostDt
   ctx.countdownTimer -= hostDt
+  ctx.totalTime += hostDt
   if ctx.countdownTimer <= 0:
     discard
 
@@ -259,25 +274,54 @@ proc onTick(hostDt: float): int =
 
   msg = "Nothing picked!!!"
 
-  if ctx.gumshoe != 0:
-    let pickResult = rl_pick_model(ctx.camera, ctx.gumshoe, mouse.x.float, mouse.y.float)
-    if pickResult.hit:
-      msg = fmt"Model pick: Mouse position (mouse.x:{mouse.x}, mouse.y:{mouse.y}) pick result y: {pickResult.point.y}"
-
-  if ctx.sprite != 0:
-    let pickResult = rl_pick_sprite3d(ctx.camera, ctx.sprite, mouse.x.float, mouse.y.float)
-    if pickResult.hit:
-      msg = fmt"Sprite pick: Mouse position (mouse.x:{mouse.x}, mouse.y:{mouse.y}) pick result y: {pickResult.point.y}"
+  when defined(js):
+    if ctx.scene != 0:
+      let scenePick = rl_scene_pick(ctx.scene, 0, mouse.x.float, mouse.y.float)
+      if scenePick.hit:
+        if scenePick.handle == ctx.gumshoe:
+          msg = fmt"Model pick: Mouse position (mouse.x:{mouse.x}, mouse.y:{mouse.y}) pick result y: {scenePick.point.y}"
+        elif scenePick.handle == ctx.sprite:
+          msg = fmt"Sprite pick: Mouse position (mouse.x:{mouse.x}, mouse.y:{mouse.y}) pick result y: {scenePick.point.y}"
+    else:
+      if ctx.gumshoe != 0:
+        let pickResult = rl_pick_model(ctx.camera, ctx.gumshoe, mouse.x.float, mouse.y.float)
+        if pickResult.hit:
+          msg = fmt"Model pick: Mouse position (mouse.x:{mouse.x}, mouse.y:{mouse.y}) pick result y: {pickResult.point.y}"
+      if ctx.sprite != 0:
+        let pickResult = rl_pick_sprite3d(ctx.camera, ctx.sprite, mouse.x.float, mouse.y.float)
+        if pickResult.hit:
+          msg = fmt"Sprite pick: Mouse position (mouse.x:{mouse.x}, mouse.y:{mouse.y}) pick result y: {pickResult.point.y}"
+  else:
+    if ctx.scene != 0:
+      var picked: RLHandle = 0
+      let scenePick = rl_scene_pick(ctx.scene, 0, mouse.x.float, mouse.y.float, addr picked)
+      if scenePick.hit:
+        if picked == ctx.gumshoe:
+          msg = fmt"Model pick: Mouse position (mouse.x:{mouse.x}, mouse.y:{mouse.y}) pick result y: {scenePick.point.y}"
+        elif picked == ctx.sprite:
+          msg = fmt"Sprite pick: Mouse position (mouse.x:{mouse.x}, mouse.y:{mouse.y}) pick result y: {scenePick.point.y}"
+    else:
+      if ctx.gumshoe != 0:
+        let pickResult = rl_pick_model(ctx.camera, ctx.gumshoe, mouse.x.float, mouse.y.float)
+        if pickResult.hit:
+          msg = fmt"Model pick: Mouse position (mouse.x:{mouse.x}, mouse.y:{mouse.y}) pick result y: {pickResult.point.y}"
+      if ctx.sprite != 0:
+        let pickResult = rl_pick_sprite3d(ctx.camera, ctx.sprite, mouse.x.float, mouse.y.float)
+        if pickResult.hit:
+          msg = fmt"Sprite pick: Mouse position (mouse.x:{mouse.x}, mouse.y:{mouse.y}) pick result y: {pickResult.point.y}"
 
   rl_render_begin()
   rl_render_clear_background(ctx.backgroundColor)
 
-  rl_render_begin_mode_3d()
-  if ctx.gumshoe != 0:
-    rl_model_draw(ctx.gumshoe, RL_COLOR_RAYWHITE)
-  if ctx.sprite != 0:
-    rl_sprite3d_draw(ctx.sprite, RL_COLOR_RAYWHITE)
-  rl_render_end_mode_3d()
+  if ctx.scene != 0:
+    rl_scene_draw(ctx.scene)
+  else:
+    rl_render_begin_mode_3d()
+    if ctx.gumshoe != 0:
+      rl_model_draw(ctx.gumshoe)
+    if ctx.sprite != 0:
+      rl_sprite3d_draw(ctx.sprite)
+    rl_render_end_mode_3d()
 
   let screen = rl_window_get_screen_size()
   if ctx.komikaFont != 0:

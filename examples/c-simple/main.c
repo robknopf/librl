@@ -55,6 +55,7 @@ typedef struct app_context_t {
   rl_handle_t bgm;
   rl_handle_t grey_alpha_color;
   rl_handle_t gumshoe;
+  rl_handle_t scene;
   rl_handle_t background_color;
   char message[OVERLAY_TEXT_CAPACITY];
   char platform_text[OVERLAY_TEXT_CAPACITY];
@@ -102,7 +103,11 @@ static void on_import_model_ready(const char *path, void *user_data) {
   (void)rl_model_set_animation_speed(ctx->gumshoe, 1.0f);
   (void)rl_model_set_animation_loop(ctx->gumshoe, true);
   (void)rl_model_set_transform(ctx->gumshoe, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-                               0.0f, 1.0f, 1.0f, 1.0f);
+                                0.0f, 1.0f, 1.0f, 1.0f);
+  (void)rl_model_set_tint(ctx->gumshoe, RL_COLOR_RAYWHITE);
+  if (ctx->scene != 0) {
+    (void)rl_scene_add(ctx->scene, ctx->gumshoe, 0);
+  }
 }
 
 static void on_import_sprite_ready(const char *path, void *user_data) {
@@ -112,7 +117,11 @@ static void on_import_sprite_ready(const char *path, void *user_data) {
   }
   ctx->sprite = rl_sprite3d_create_from_file(path);
   (void)rl_sprite3d_set_transform(ctx->sprite, 0.0f, 0.0f, ctx->sprite_y_offset,
-                                  1.0f);
+                                   1.0f);
+  (void)rl_sprite3d_set_tint(ctx->sprite, RL_COLOR_RAYWHITE);
+  if (ctx->scene != 0) {
+    (void)rl_scene_add(ctx->scene, ctx->sprite, 0);
+  }
 }
 
 static void on_import_debug_font_ready(const char *path, void *user_data) {
@@ -239,6 +248,10 @@ int rt_init(void *user_data) {
       rl_camera3d_create(12.0f, 12.0f, 12.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
                          0.0f, 45.0f, 0);
   (void)rl_camera3d_set_active(ctx->camera);
+  ctx->scene = rl_scene_create();
+  if (ctx->scene != 0) {
+    rl_scene_set_active_camera(ctx->scene, ctx->camera);
+  }
   ctx->grey_alpha_color = rl_color_create(0, 0, 0, 128);
   ctx->background_color = rl_color_create(245, 245, 245, 255);
 
@@ -291,38 +304,31 @@ int rt_tick(float host_dt) {
                  ctx->reload_count);
 
   set_message(ctx, "Nothing picked!");
-  if (ctx->gumshoe != 0) {
+  if (ctx->scene != 0) {
+    rl_handle_t picked = 0;
     rl_pick_result_t pick =
-        rl_pick_model(ctx->camera, ctx->gumshoe, (float)mouse.x, (float)mouse.y);
+        rl_scene_pick(ctx->scene, 0, (float)mouse.x, (float)mouse.y, &picked);
     if (pick.hit) {
-      (void)snprintf(ctx->message, sizeof(ctx->message),
-                     "Model pick: Mouse position (mouse.x:%d, mouse.y:%d) pick "
-                     "result y: %f",
-                     mouse.x, mouse.y, pick.point.y);
-    }
-  }
-  if (ctx->sprite != 0) {
-    rl_pick_result_t pick = rl_pick_sprite3d(ctx->camera, ctx->sprite,
-                                             (float)mouse.x, (float)mouse.y);
-    if (pick.hit) {
-      (void)snprintf(ctx->message, sizeof(ctx->message),
-                     "Sprite pick: Mouse position (mouse.x:%d, mouse.y:%d) "
-                     "pick result y: %f",
-                     mouse.x, mouse.y, pick.point.y);
+      if (picked == ctx->gumshoe) {
+        (void)snprintf(ctx->message, sizeof(ctx->message),
+                       "Model pick: Mouse position (mouse.x:%d, mouse.y:%d) pick "
+                       "result y: %f",
+                       mouse.x, mouse.y, pick.point.y);
+      } else if (picked == ctx->sprite) {
+        (void)snprintf(ctx->message, sizeof(ctx->message),
+                       "Sprite pick: Mouse position (mouse.x:%d, mouse.y:%d) "
+                       "pick result y: %f",
+                       mouse.x, mouse.y, pick.point.y);
+      }
     }
   }
 
   rl_render_begin();
   rl_render_clear_background(ctx->background_color);
 
-  rl_render_begin_mode_3d();
-  if (ctx->gumshoe != 0) {
-    rl_model_draw(ctx->gumshoe, RL_COLOR_RAYWHITE);
+  if (ctx->scene != 0) {
+    rl_scene_draw(ctx->scene);
   }
-  if (ctx->sprite != 0) {
-    rl_sprite3d_draw(ctx->sprite, RL_COLOR_RAYWHITE);
-  }
-  rl_render_end_mode_3d();
 
   {
     vec2_t screen = rl_window_get_screen_size();

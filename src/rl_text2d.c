@@ -8,6 +8,7 @@
 #include "internal/rl_color.h"
 #include "internal/rl_font.h"
 #include "internal/rl_handle_pool.h"
+#include "internal/rl_scene.h"
 #include "internal/rl_text2d.h"
 
 #define MAX_TEXT2D 256
@@ -22,6 +23,8 @@ typedef struct
     float x;
     float y;
     char content[MAX_TEXT2D_CONTENT];
+    bool visible;
+    bool pickable;
 } rl_text2d_instance_t;
 
 static rl_text2d_instance_t rl_text2d[MAX_TEXT2D];
@@ -63,6 +66,8 @@ rl_handle_t rl_text2d_create(rl_handle_t font, float size)
     rl_text2d[index].x = 0.0f;
     rl_text2d[index].y = 0.0f;
     rl_text2d[index].content[0] = '\0';
+    rl_text2d[index].visible = true;
+    rl_text2d[index].pickable = false;
     rl_text2d[index].in_use = true;
 
     return handle;
@@ -111,10 +116,57 @@ void rl_text2d_set_color(rl_handle_t handle, rl_handle_t color)
 }
 
 RL_KEEP
+bool rl_text2d_set_visible(rl_handle_t handle, bool visible)
+{
+    rl_text2d_instance_t *text = rl_text2d_get(handle);
+
+    if (text == NULL) {
+        return false;
+    }
+    text->visible = visible;
+    return true;
+}
+
+RL_KEEP
+bool rl_text2d_set_pickable(rl_handle_t handle, bool pickable)
+{
+    rl_text2d_instance_t *text = rl_text2d_get(handle);
+
+    if (text == NULL) {
+        return false;
+    }
+    text->pickable = pickable;
+    return true;
+}
+
+RL_KEEP
+bool rl_text2d_is_visible(rl_handle_t handle)
+{
+    rl_text2d_instance_t *text = rl_text2d_get(handle);
+
+    if (text == NULL) {
+        return false;
+    }
+    return text->visible;
+}
+
+RL_KEEP
+bool rl_text2d_is_pickable(rl_handle_t handle)
+{
+    rl_text2d_instance_t *text = rl_text2d_get(handle);
+
+    if (text == NULL) {
+        return false;
+    }
+    return text->pickable;
+}
+
+RL_KEEP
 void rl_text2d_draw(rl_handle_t handle)
 {
     rl_text2d_instance_t *text = rl_text2d_get(handle);
     if (text == NULL) return;
+    if (!text->visible) return;
     if (text->content[0] == '\0') return;
     if (text->font == 0) return;
 
@@ -137,6 +189,7 @@ void rl_text2d_destroy(rl_handle_t handle)
     text->color = 0;
     text->content[0] = '\0';
     text->in_use = false;
+    rl_scene_on_drawable_destroy(handle);
     rl_handle_pool_free(&rl_text2d_pool, handle);
 }
 
@@ -157,6 +210,8 @@ void rl_text2d_init(void)
         rl_text2d[i].x = 0.0f;
         rl_text2d[i].y = 0.0f;
         rl_text2d[i].content[0] = '\0';
+        rl_text2d[i].visible = true;
+        rl_text2d[i].pickable = false;
     }
 }
 

@@ -18,5 +18,6 @@ bool rl_model_get_ray_collision_ex(rl_handle_t handle,
                                    bool *broadphase_tested,
                                    bool *broadphase_rejected,
                                    bool *narrowphase_ran);
+bool rl_model_scene_pick_broadphase(rl_handle_t handle, Ray ray);
 
 #endif // RL_INTERNAL_MODEL_H

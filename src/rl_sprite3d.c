@@ -11,6 +11,7 @@
 #include "internal/rl_handle_pool.h"
 #include "internal/rl_sprite3d.h"
 #include "rl_texture.h"
+#include "internal/rl_scene.h"
 #include "internal/rl_texture.h"
 
 #define MAX_SPRITE3D 1024
@@ -24,6 +25,8 @@ typedef struct
     float position_z;
     float size;
     rl_handle_t tint_handle;
+    bool visible;
+    bool pickable;
 } rl_sprite3d_instance_t;
 
 static rl_sprite3d_instance_t rl_sprite3d[MAX_SPRITE3D];
@@ -78,6 +81,8 @@ rl_handle_t rl_sprite3d_create(rl_handle_t texture)
     rl_sprite3d[index].position_z = 0.0f;
     rl_sprite3d[index].size = 1.0f;
     rl_sprite3d[index].tint_handle = 0;
+    rl_sprite3d[index].visible = true;
+    rl_sprite3d[index].pickable = true;
     rl_sprite3d[index].in_use = true;
 
     return handle;
@@ -108,6 +113,8 @@ rl_handle_t rl_sprite3d_create_from_file(const char *filename)
     rl_sprite3d[index].position_z = 0.0f;
     rl_sprite3d[index].size = 1.0f;
     rl_sprite3d[index].tint_handle = 0;
+    rl_sprite3d[index].visible = true;
+    rl_sprite3d[index].pickable = true;
     rl_sprite3d[index].in_use = true;
     return handle;
 }
@@ -160,7 +167,53 @@ bool rl_sprite3d_set_transform(rl_handle_t handle,
 }
 
 RL_KEEP
-void rl_sprite3d_draw(rl_handle_t handle, rl_handle_t tint)
+bool rl_sprite3d_set_visible(rl_handle_t handle, bool visible)
+{
+    rl_sprite3d_instance_t *sprite = rl_sprite3d_get(handle);
+
+    if (sprite == NULL) {
+        return false;
+    }
+    sprite->visible = visible;
+    return true;
+}
+
+RL_KEEP
+bool rl_sprite3d_set_pickable(rl_handle_t handle, bool pickable)
+{
+    rl_sprite3d_instance_t *sprite = rl_sprite3d_get(handle);
+
+    if (sprite == NULL) {
+        return false;
+    }
+    sprite->pickable = pickable;
+    return true;
+}
+
+RL_KEEP
+bool rl_sprite3d_is_visible(rl_handle_t handle)
+{
+    rl_sprite3d_instance_t *sprite = rl_sprite3d_get(handle);
+
+    if (sprite == NULL) {
+        return false;
+    }
+    return sprite->visible;
+}
+
+RL_KEEP
+bool rl_sprite3d_is_pickable(rl_handle_t handle)
+{
+    rl_sprite3d_instance_t *sprite = rl_sprite3d_get(handle);
+
+    if (sprite == NULL) {
+        return false;
+    }
+    return sprite->pickable;
+}
+
+RL_KEEP
+void rl_sprite3d_draw(rl_handle_t handle)
 {
     rl_sprite3d_instance_t *sprite = rl_sprite3d_get(handle);
     Texture2D *texture = NULL;
@@ -172,6 +225,9 @@ void rl_sprite3d_draw(rl_handle_t handle, rl_handle_t tint)
                           (Vector3){0.0f, 0.0f, 0.0f}, 1.0f,
                           (Color){255, 0, 255, 255});
         }
+        return;
+    }
+    if (!sprite->visible) {
         return;
     }
     if (sprite->texture == 0) {
@@ -192,7 +248,7 @@ void rl_sprite3d_draw(rl_handle_t handle, rl_handle_t tint)
                   *texture,
                   (Vector3){sprite->position_x, sprite->position_y, sprite->position_z},
                   sprite->size,
-                  rl_color_get(sprite->tint_handle != 0 ? sprite->tint_handle : tint));
+                  rl_color_get(sprite->tint_handle));
 }
 
 RL_KEEP
@@ -215,6 +271,7 @@ void rl_sprite3d_destroy(rl_handle_t handle)
     if (sprite->texture != 0) rl_texture_release(sprite->texture);
     sprite->texture = 0;
     sprite->in_use = false;
+    rl_scene_on_drawable_destroy(handle);
     rl_handle_pool_free(&rl_sprite3d_pool, handle);
 }
 
@@ -338,6 +395,39 @@ bool rl_sprite3d_get_ray_collision_ex(rl_handle_t handle,
     return true;
 }
 
+bool rl_sprite3d_scene_pick_broadphase(rl_handle_t handle, Ray ray)
+{
+    rl_sprite3d_instance_t *sprite = rl_sprite3d_get(handle);
+    Texture2D *texture = NULL;
+    Vector2 billboard_size = {0};
+    Vector3 position = {0};
+    float half_width = 0.0f;
+    float half_height = 0.0f;
+    float radius = 0.0f;
+    RayCollision broad_hit = {0};
+
+    if (sprite == NULL) {
+        return false;
+    }
+    if (!sprite->pickable) {
+        return false;
+    }
+
+    texture = rl_texture_get_ptr(sprite->texture);
+    if (texture == NULL || texture->height == 0 || fabsf(sprite->size) <= 0.00001f) {
+        return false;
+    }
+
+    billboard_size = (Vector2){sprite->size * fabsf((float)texture->width / (float)texture->height),
+                               sprite->size};
+    half_width = fabsf(billboard_size.x) * 0.5f;
+    half_height = fabsf(billboard_size.y) * 0.5f;
+    radius = sqrtf((half_width * half_width) + (half_height * half_height));
+    position = (Vector3){sprite->position_x, sprite->position_y, sprite->position_z};
+    broad_hit = GetRayCollisionSphere(ray, position, radius);
+    return broad_hit.hit;
+}
+
 bool rl_sprite3d_get_ray_collision(rl_handle_t handle,
                                    Camera3D camera,
                                    Ray ray,
@@ -378,6 +468,8 @@ void rl_sprite3d_init(void)
         rl_sprite3d[i].position_z = 0.0f;
         rl_sprite3d[i].size = 1.0f;
         rl_sprite3d[i].tint_handle = 0;
+        rl_sprite3d[i].visible = true;
+        rl_sprite3d[i].pickable = true;
     }
 }
 

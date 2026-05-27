@@ -8,6 +8,7 @@
 #include "internal/rl_handle_pool.h"
 #include "internal/rl_sprite2d.h"
 #include "rl_texture.h"
+#include "internal/rl_scene.h"
 #include "internal/rl_texture.h"
 
 #define MAX_SPRITE2D 1024
@@ -21,6 +22,8 @@ typedef struct
     float scale;
     float rotation;
     rl_handle_t tint_handle;
+    bool visible;
+    bool pickable;
 } rl_sprite2d_instance_t;
 
 static rl_sprite2d_instance_t rl_sprite2d[MAX_SPRITE2D];
@@ -74,6 +77,8 @@ rl_handle_t rl_sprite2d_create(rl_handle_t texture)
     rl_sprite2d[index].scale = 1.0f;
     rl_sprite2d[index].rotation = 0.0f;
     rl_sprite2d[index].tint_handle = 0;
+    rl_sprite2d[index].visible = true;
+    rl_sprite2d[index].pickable = false;
     rl_sprite2d[index].in_use = true;
 
     return handle;
@@ -104,6 +109,8 @@ rl_handle_t rl_sprite2d_create_from_file(const char *filename)
     rl_sprite2d[index].scale = 1.0f;
     rl_sprite2d[index].rotation = 0.0f;
     rl_sprite2d[index].tint_handle = 0;
+    rl_sprite2d[index].visible = true;
+    rl_sprite2d[index].pickable = false;
     rl_sprite2d[index].in_use = true;
 
     return handle;
@@ -140,7 +147,53 @@ bool rl_sprite2d_set_transform(rl_handle_t handle,
 }
 
 RL_KEEP
-void rl_sprite2d_draw(rl_handle_t handle, rl_handle_t tint)
+bool rl_sprite2d_set_visible(rl_handle_t handle, bool visible)
+{
+    rl_sprite2d_instance_t *sprite = rl_sprite2d_get(handle);
+
+    if (sprite == NULL) {
+        return false;
+    }
+    sprite->visible = visible;
+    return true;
+}
+
+RL_KEEP
+bool rl_sprite2d_set_pickable(rl_handle_t handle, bool pickable)
+{
+    rl_sprite2d_instance_t *sprite = rl_sprite2d_get(handle);
+
+    if (sprite == NULL) {
+        return false;
+    }
+    sprite->pickable = pickable;
+    return true;
+}
+
+RL_KEEP
+bool rl_sprite2d_is_visible(rl_handle_t handle)
+{
+    rl_sprite2d_instance_t *sprite = rl_sprite2d_get(handle);
+
+    if (sprite == NULL) {
+        return false;
+    }
+    return sprite->visible;
+}
+
+RL_KEEP
+bool rl_sprite2d_is_pickable(rl_handle_t handle)
+{
+    rl_sprite2d_instance_t *sprite = rl_sprite2d_get(handle);
+
+    if (sprite == NULL) {
+        return false;
+    }
+    return sprite->pickable;
+}
+
+RL_KEEP
+void rl_sprite2d_draw(rl_handle_t handle)
 {
     rl_sprite2d_instance_t *sprite = rl_sprite2d_get(handle);
     Texture2D *texture = NULL;
@@ -150,6 +203,9 @@ void rl_sprite2d_draw(rl_handle_t handle, rl_handle_t tint)
                           (Vector2){0.0f, 0.0f}, 0.0f, 1.0f,
                           (Color){255, 0, 255, 255});
         }
+        return;
+    }
+    if (!sprite->visible) {
         return;
     }
     if (sprite->texture == 0) {
@@ -164,7 +220,7 @@ void rl_sprite2d_draw(rl_handle_t handle, rl_handle_t tint)
                   (Vector2){sprite->x, sprite->y},
                   sprite->rotation,
                   sprite->scale,
-                  rl_color_get(sprite->tint_handle != 0 ? sprite->tint_handle : tint));
+                  rl_color_get(sprite->tint_handle));
 }
 
 RL_KEEP
@@ -186,6 +242,7 @@ void rl_sprite2d_destroy(rl_handle_t handle)
     if (sprite->texture != 0) rl_texture_release(sprite->texture);
     sprite->texture = 0;
     sprite->in_use = false;
+    rl_scene_on_drawable_destroy(handle);
     rl_handle_pool_free(&rl_sprite2d_pool, handle);
 }
 
@@ -206,6 +263,8 @@ void rl_sprite2d_init(void)
         rl_sprite2d[i].scale = 1.0f;
         rl_sprite2d[i].rotation = 0.0f;
         rl_sprite2d[i].tint_handle = 0;
+        rl_sprite2d[i].visible = true;
+        rl_sprite2d[i].pickable = false;
     }
 }
 

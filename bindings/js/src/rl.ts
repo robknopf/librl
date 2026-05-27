@@ -29,6 +29,7 @@ import type {
     RLMusic,
     RLPick,
     RLRender,
+    RLScene,
     RLShape,
     RLSound,
     RLSprite2d,
@@ -751,7 +752,8 @@ const rlCore = {
     HANDLE_KIND_SOUND: 9,
     HANDLE_KIND_MUSIC: 10,
     HANDLE_KIND_TEXT2D: 11,
-    HANDLE_KIND_ASSET_TASK: 12,
+    HANDLE_KIND_SCENE: 12,
+    HANDLE_KIND_ASSET_TASK: 32,
 };
 
 const fs = {
@@ -1392,8 +1394,20 @@ const model = {
         ["number", "number", "number", "number", "number", "number", "number", "number", "number", "number"],
         [model, positionX, positionY, positionZ, rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ]
     ) !== 0,
-    draw: (model, tint) => reqModule().ccall(
-        "rl_model_draw", null, ["number", "number"], [model, tint]
+    setVisible: (model, visible) => reqModule().ccall(
+        "rl_model_set_visible", "number", ["number", "number"], [model, visible ? 1 : 0]
+    ) !== 0,
+    setPickable: (model, pickable) => reqModule().ccall(
+        "rl_model_set_pickable", "number", ["number", "number"], [model, pickable ? 1 : 0]
+    ) !== 0,
+    isVisible: (model) => reqModule().ccall(
+        "rl_model_is_visible", "number", ["number"], [model]
+    ) !== 0,
+    isPickable: (model) => reqModule().ccall(
+        "rl_model_is_pickable", "number", ["number"], [model]
+    ) !== 0,
+    draw: (model) => reqModule().ccall(
+        "rl_model_draw", null, ["number"], [model]
     ),
     isValid: (model) => reqModule().ccall(
         "rl_model_is_valid", "number", ["number"], [model]
@@ -1474,6 +1488,53 @@ const pick = {
     }
 } satisfies RLPick;
 
+const scene = {
+    create: () => ccHandle("rl_scene_create"),
+    destroy: (sceneHandle) => reqModule().ccall(
+        "rl_scene_destroy", null, ["number"], [sceneHandle]
+    ),
+    add: (sceneHandle, drawable, layer = 0) => reqModule().ccall(
+        "rl_scene_add", "number", ["number", "number", "number"], [sceneHandle, drawable, layer]
+    ) !== 0,
+  setLayer: (sceneHandle, drawable, layer) => reqModule().ccall(
+        "rl_scene_set_layer", "number", ["number", "number", "number"], [sceneHandle, drawable, layer]
+    ) !== 0,
+    remove: (sceneHandle, drawable) => reqModule().ccall(
+        "rl_scene_remove", "number", ["number", "number"], [sceneHandle, drawable]
+    ) !== 0,
+    clear: (sceneHandle) => reqModule().ccall(
+        "rl_scene_clear", null, ["number"], [sceneHandle]
+    ),
+    setActiveCamera: (sceneHandle, camera) => reqModule().ccall(
+        "rl_scene_set_active_camera", null, ["number", "number"], [sceneHandle, camera]
+    ),
+    draw: (sceneHandle) => reqModule().ccall(
+        "rl_scene_draw", null, ["number"], [sceneHandle]
+    ),
+    pick: (sceneHandle, camera, mouseX, mouseY) => {
+        const hit = reqModule().ccall(
+            "rl_scene_pick_to_scratch",
+            "number",
+            ["number", "number", "number", "number"],
+            [sceneHandle, camera, mouseX, mouseY]
+        ) !== 0;
+        const point = reqModule().getVector3();
+        const normalDistance = reqModule().getVector4();
+        const handleBits = reqModule().getVector2();
+        return {
+            hit,
+            handle: handleBits.x >>> 0,
+            distance: normalDistance.w,
+            point,
+            normal: {
+                x: normalDistance.x,
+                y: normalDistance.y,
+                z: normalDistance.z,
+            },
+        };
+    },
+} satisfies RLScene;
+
 const music = {
     create: (path: string) => ccHandle("rl_music_create", ["string"], [path]),
     destroy: (music) => reqModule().ccall(
@@ -1545,6 +1606,18 @@ const sprite3d = {
     setTransform: (sprite, positionX, positionY, positionZ, size) => reqModule().ccall(
         "rl_sprite3d_set_transform", "number", ["number", "number", "number", "number", "number"], [sprite, positionX, positionY, positionZ, size]
     ) !== 0,
+    setVisible: (sprite, visible) => reqModule().ccall(
+        "rl_sprite3d_set_visible", "number", ["number", "number"], [sprite, visible ? 1 : 0]
+    ) !== 0,
+    setPickable: (sprite, pickable) => reqModule().ccall(
+        "rl_sprite3d_set_pickable", "number", ["number", "number"], [sprite, pickable ? 1 : 0]
+    ) !== 0,
+    isVisible: (sprite) => reqModule().ccall(
+        "rl_sprite3d_is_visible", "number", ["number"], [sprite]
+    ) !== 0,
+    isPickable: (sprite) => reqModule().ccall(
+        "rl_sprite3d_is_pickable", "number", ["number"], [sprite]
+    ) !== 0,
     getDefaultTexture: () => ccHandle("rl_sprite3d_get_default_texture"),
     getTransform: (sprite) => {
         const stackSave = reqModule().stackSave;
@@ -1587,8 +1660,8 @@ const sprite3d = {
     setTint: (sprite, color = 0) => reqModule().ccall(
         "rl_sprite3d_set_tint", "number", ["number", "number"], [sprite, color]
     ) !== 0,
-    draw: (sprite, tint = 0) => reqModule().ccall(
-        "rl_sprite3d_draw", null, ["number", "number"], [sprite, tint]
+    draw: (sprite) => reqModule().ccall(
+        "rl_sprite3d_draw", null, ["number"], [sprite]
     ),
     destroy: (sprite) => reqModule().ccall(
         "rl_sprite3d_destroy", null, ["number"], [sprite]
@@ -1605,11 +1678,23 @@ const sprite2d = {
     setTransform: (sprite, x, y, scale, rotation) => reqModule().ccall(
         "rl_sprite2d_set_transform", "number", ["number", "number", "number", "number", "number"], [sprite, x, y, scale, rotation]
     ) !== 0,
+    setVisible: (sprite, visible) => reqModule().ccall(
+        "rl_sprite2d_set_visible", "number", ["number", "number"], [sprite, visible ? 1 : 0]
+    ) !== 0,
+    setPickable: (sprite, pickable) => reqModule().ccall(
+        "rl_sprite2d_set_pickable", "number", ["number", "number"], [sprite, pickable ? 1 : 0]
+    ) !== 0,
+    isVisible: (sprite) => reqModule().ccall(
+        "rl_sprite2d_is_visible", "number", ["number"], [sprite]
+    ) !== 0,
+    isPickable: (sprite) => reqModule().ccall(
+        "rl_sprite2d_is_pickable", "number", ["number"], [sprite]
+    ) !== 0,
     setTint: (sprite, color = 0) => reqModule().ccall(
         "rl_sprite2d_set_tint", "number", ["number", "number"], [sprite, color]
     ) !== 0,
-    draw: (sprite, tint = 0) => reqModule().ccall(
-        "rl_sprite2d_draw", null, ["number", "number"], [sprite, tint]
+    draw: (sprite) => reqModule().ccall(
+        "rl_sprite2d_draw", null, ["number"], [sprite]
     ),
     destroy: (sprite) => reqModule().ccall(
         "rl_sprite2d_destroy", null, ["number"], [sprite]
@@ -1633,6 +1718,18 @@ const text2d = {
     setColor: (handle, color) => reqModule().ccall(
         "rl_text2d_set_color", null, ["number", "number"], [handle, color]
     ),
+    setVisible: (handle, visible) => reqModule().ccall(
+        "rl_text2d_set_visible", "number", ["number", "number"], [handle, visible ? 1 : 0]
+    ) !== 0,
+    setPickable: (handle, pickable) => reqModule().ccall(
+        "rl_text2d_set_pickable", "number", ["number", "number"], [handle, pickable ? 1 : 0]
+    ) !== 0,
+    isVisible: (handle) => reqModule().ccall(
+        "rl_text2d_is_visible", "number", ["number"], [handle]
+    ) !== 0,
+    isPickable: (handle) => reqModule().ccall(
+        "rl_text2d_is_pickable", "number", ["number"], [handle]
+    ) !== 0,
     draw: (handle) => reqModule().ccall(
         "rl_text2d_draw", null, ["number"], [handle]
     ),
@@ -1816,7 +1913,7 @@ const helpers = {
 
 export const rl = {
     ...rlCore,
-    fs, asset, event, window, render, camera3d, shape, debug, text, texture, input, color, font, model, pick, music, sound, sprite3d, sprite2d, text2d, logger, helpers,
+    fs, asset, event, window, render, camera3d, shape, debug, text, texture, input, color, font, model, pick, scene, music, sound, sprite3d, sprite2d, text2d, logger, helpers,
 } satisfies RLApi;
 
 export default rl;

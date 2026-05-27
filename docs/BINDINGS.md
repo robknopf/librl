@@ -74,6 +74,7 @@ Wasm-only scratch bridge table (maintainer reference; JS callers use the right-h
 | `rl_text_measure_ex_to_scratch` | C → scratch | `measureTextEx(font, text, fontSize, spacing?)` | `vector2` (width/height) |
 | `rl_pick_model_to_scratch` | C → scratch | `pickModel(camera, model, mouseX, mouseY)` | `vector3` (point), `vector4` (normal xyz + distance w) |
 | `rl_pick_sprite3d_to_scratch` | C → scratch | `pickSprite3d(camera, sprite3d, mouseX, mouseY)` | `vector3` (point), `vector4` (normal xyz + distance w) |
+| `rl_scene_pick_to_scratch` | C → scratch | `scene.pick(scene, camera, mouseX, mouseY)` | `vector3` (point), `vector4` (normal xyz + distance w), `vector2.x` (picked handle) |
 | `rl_asset_ensure_many_from_scratch_async` | scratch → C | `RL.asset.ensureGroupAsync(filenames)` | JS writes string table via internal `writeScratchStringTable()` first |
 
 Direct scratch reads (no `*_to_scratch` call; require `refreshScratch()` or `tick()` first so C has populated the snapshot):
@@ -262,6 +263,7 @@ Binding-level async asset ergonomics:
 - The Nim example (`examples/nim-simple/src/main.nim`) is the canonical pattern:
   - `rl_run(onInit, onTick, onShutdown, addr ctx)` drives the main loop.
   - `if not ctx.loadingGroup.isNil and ctx.loadingGroup.process() > 0: return` gates frame work until imports finish.
+  - Retained scene matches `examples/c-simple`: `rl_scene_create` / `rl_scene_set_active_camera` after the camera, `rl_scene_add` when model and sprite finish loading, `rl_scene_draw` instead of immediate 3D draws, `rl_scene_pick` for hover text. **Visibility** and **pickability** are set on each drawable instance (`rl_model_set_visible` / `rl_model_set_pickable`, `rl_sprite3d_*`, `rl_sprite2d_*`, `rl_text2d_*` in C; corresponding methods on `RL.model`, `RL.sprite3d`, etc. in JS). On the Nim **js** backend, `rl_scene_pick` returns `RLScenePickResult` (includes `handle`); on **native** (desktop / emscripten) use `addr picked` for the out-handle parameter.
 
 ## Haxe Binding
 

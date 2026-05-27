@@ -31,6 +31,22 @@ class Text2d {
 		rl.impl.RLImpl.text2dSetColor(handle, color);
 	}
 
+	public static function setVisible(handle:RLHandle, visible:Bool):Bool {
+		return rl.impl.RLImpl.text2dSetVisible(handle, visible);
+	}
+
+	public static function setPickable(handle:RLHandle, pickable:Bool):Bool {
+		return rl.impl.RLImpl.text2dSetPickable(handle, pickable);
+	}
+
+	public static function isVisible(handle:RLHandle):Bool {
+		return rl.impl.RLImpl.text2dIsVisible(handle);
+	}
+
+	public static function isPickable(handle:RLHandle):Bool {
+		return rl.impl.RLImpl.text2dIsPickable(handle);
+	}
+
 	public static function draw(handle:RLHandle):Void {
 		rl.impl.RLImpl.text2dDraw(handle);
 	}

@@ -35,8 +35,24 @@ class Model {
 		return rl.impl.RLImpl.modelSetTransform(model, positionX, positionY, positionZ, rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ);
 	}
 
-	public static function draw(model:RLHandle, tint:RLHandle = 0):Void {
-		rl.impl.RLImpl.modelDraw(model, tint);
+	public static function setVisible(model:RLHandle, visible:Bool):Bool {
+		return rl.impl.RLImpl.modelSetVisible(model, visible);
+	}
+
+	public static function setPickable(model:RLHandle, pickable:Bool):Bool {
+		return rl.impl.RLImpl.modelSetPickable(model, pickable);
+	}
+
+	public static function isVisible(model:RLHandle):Bool {
+		return rl.impl.RLImpl.modelIsVisible(model);
+	}
+
+	public static function isPickable(model:RLHandle):Bool {
+		return rl.impl.RLImpl.modelIsPickable(model);
+	}
+
+	public static function draw(model:RLHandle):Void {
+		rl.impl.RLImpl.modelDraw(model);
 	}
 
 	public static function setAnimation(model:RLHandle, animationIndex:Int):Bool {

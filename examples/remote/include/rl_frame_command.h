@@ -49,7 +49,6 @@ typedef struct rl_frame_draw_text_t {
 
 typedef struct rl_frame_draw_sprite3d_t {
   rl_handle_t sprite;
-  rl_handle_t tint;
 } rl_frame_draw_sprite3d_t;
 
 typedef struct rl_frame_play_sound_t {
@@ -83,7 +82,6 @@ typedef struct rl_frame_set_music_volume_t {
 
 typedef struct rl_frame_draw_model_t {
   rl_handle_t model;
-  rl_handle_t tint;
   int animation_index;
   int animation_frame;
 } rl_frame_draw_model_t;
@@ -119,7 +117,6 @@ typedef struct rl_frame_draw_ground_texture_t {
 
 typedef struct rl_frame_draw_sprite2d_t {
   rl_handle_t sprite;
-  rl_handle_t tint;
 } rl_frame_draw_sprite2d_t;
 
 typedef struct rl_frame_set_sprite2d_transform_t {

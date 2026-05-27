@@ -13,6 +13,7 @@
 #include "rl_model.h" // IWYU pragma: keep
 #include "rl_music.h" // IWYU pragma: keep
 #include "rl_pick.h" // IWYU pragma: keep
+#include "rl_scene.h" // IWYU pragma: keep
 #include "rl_shape.h" // IWYU pragma: keep
 #include "rl_scratch.h" // IWYU pragma: keep
 #include "rl_sound.h" // IWYU pragma: keep

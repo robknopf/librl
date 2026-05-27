@@ -379,8 +379,8 @@ function generateWorldFrame(
     );
   }
 
-  if (world.assets.logoSprite3d && world.assets.whiteColor !== 0) {
-    world.assets.logoSprite3d.draw(world.assets.whiteColor);
+  if (world.assets.logoSprite3d) {
+    world.assets.logoSprite3d.draw();
   }
 
   if (world.assets.logoTexture && world.assets.whiteColor !== 0) {
@@ -393,8 +393,8 @@ function generateWorldFrame(
     );
   }
 
-  if (world.assets.gumshoeModel && world.assets.whiteColor !== 0) {
-    world.assets.gumshoeModel.draw(world.assets.whiteColor);
+  if (world.assets.gumshoeModel) {
+    world.assets.gumshoeModel.draw();
   }
 
   rl_render_end();
@@ -432,7 +432,7 @@ function drawSessionLogoAndShadow(
   }
 
   if (world.assets.whiteColor !== 0) {
-    logoSprite3d.draw(world.assets.whiteColor);
+    logoSprite3d.draw();
   }
 }
 

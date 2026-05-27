@@ -18,7 +18,11 @@ bool rl_model_set_transform(rl_handle_t handle,
                             float position_x, float position_y, float position_z,
                             float rotation_x, float rotation_y, float rotation_z,
                             float scale_x, float scale_y, float scale_z);
-void rl_model_draw(rl_handle_t handle, rl_handle_t tint);
+bool rl_model_set_visible(rl_handle_t handle, bool visible);
+bool rl_model_set_pickable(rl_handle_t handle, bool pickable);
+bool rl_model_is_visible(rl_handle_t handle);
+bool rl_model_is_pickable(rl_handle_t handle);
+void rl_model_draw(rl_handle_t handle);
 bool rl_model_is_valid(rl_handle_t handle);
 bool rl_model_is_valid_strict(rl_handle_t handle);
 int  rl_model_get_animation_count(rl_handle_t handle);

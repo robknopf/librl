@@ -242,7 +242,11 @@ export interface RLModel {
     createFromFile(path: string): RLHandle;
     setAsset(model: RLHandle, modelAsset: RLHandle): void;
     setTransform(model: RLHandle, positionX: number, positionY: number, positionZ: number, rotationX: number, rotationY: number, rotationZ: number, scaleX: number, scaleY: number, scaleZ: number): void;
-    draw(model: RLHandle, tint: RLHandle): void;
+    setVisible(model: RLHandle, visible: boolean): boolean;
+    setPickable(model: RLHandle, pickable: boolean): boolean;
+    isVisible(model: RLHandle): boolean;
+    isPickable(model: RLHandle): boolean;
+    draw(model: RLHandle): void;
     isValid(model: RLHandle): boolean;
     isValidStrict(model: RLHandle): boolean;
     getAnimationCount(model: RLHandle): number;
@@ -254,6 +258,34 @@ export interface RLModel {
     setTint(model: RLHandle, color: RLHandle): void;
     animate(model: RLHandle, deltaTime: number): void;
     destroy(model: RLHandle): void;
+}
+export interface RLPickResult {
+    hit: boolean;
+    distance: number;
+    point: {
+        x: number;
+        y: number;
+        z: number;
+    };
+    normal: {
+        x: number;
+        y: number;
+        z: number;
+    };
+}
+export interface RLScenePickResult extends RLPickResult {
+    handle: RLHandle;
+}
+export interface RLScene {
+    create(): RLHandle;
+    destroy(scene: RLHandle): void;
+    add(scene: RLHandle, drawable: RLHandle, layer?: number): boolean;
+    setLayer(scene: RLHandle, drawable: RLHandle, layer: number): boolean;
+    remove(scene: RLHandle, drawable: RLHandle): boolean;
+    clear(scene: RLHandle): void;
+    setActiveCamera(scene: RLHandle, camera: RLHandle): void;
+    draw(scene: RLHandle): void;
+    pick(scene: RLHandle, camera: RLHandle, mouseX: number, mouseY: number): RLScenePickResult;
 }
 export interface RLPick {
     model(camera: RLHandle, model: RLHandle, mouseX: number, mouseY: number): RLPickResult;
@@ -289,10 +321,14 @@ export interface RLSprite3d {
     createFromFile(path: string): RLHandle;
     setTexture(sprite: RLHandle, texture: RLHandle): boolean;
     setTransform(sprite: RLHandle, positionX: number, positionY: number, positionZ: number, size: number): boolean;
+    setVisible(sprite: RLHandle, visible: boolean): boolean;
+    setPickable(sprite: RLHandle, pickable: boolean): boolean;
+    isVisible(sprite: RLHandle): boolean;
+    isPickable(sprite: RLHandle): boolean;
     getDefaultTexture(): RLHandle;
     getTransform(sprite: RLHandle): RLSprite3dTransform | null;
     setTint(sprite: RLHandle, color?: RLHandle): boolean;
-    draw(sprite: RLHandle, tint?: RLHandle): void;
+    draw(sprite: RLHandle): void;
     destroy(sprite: RLHandle): void;
 }
 export interface RLSprite2d {
@@ -301,8 +337,12 @@ export interface RLSprite2d {
     getDefaultTexture(): RLHandle;
     setTexture(sprite: RLHandle, texture: RLHandle): boolean;
     setTransform(sprite: RLHandle, x: number, y: number, rotation: number, scale: number): boolean;
+    setVisible(sprite: RLHandle, visible: boolean): boolean;
+    setPickable(sprite: RLHandle, pickable: boolean): boolean;
+    isVisible(sprite: RLHandle): boolean;
+    isPickable(sprite: RLHandle): boolean;
     setTint(sprite: RLHandle, color?: RLHandle): boolean;
-    draw(sprite: RLHandle, tint?: RLHandle): void;
+    draw(sprite: RLHandle): void;
     destroy(sprite: RLHandle): void;
 }
 export interface RLText2d {
@@ -312,6 +352,10 @@ export interface RLText2d {
     setContent(handle: RLHandle, content: string): void;
     setPosition(handle: RLHandle, x: number, y: number): void;
     setColor(handle: RLHandle, color: RLHandle): void;
+    setVisible(handle: RLHandle, visible: boolean): boolean;
+    setPickable(handle: RLHandle, pickable: boolean): boolean;
+    isVisible(handle: RLHandle): boolean;
+    isPickable(handle: RLHandle): boolean;
     draw(handle: RLHandle): void;
     destroy(handle: RLHandle): void;
 }
@@ -402,6 +446,7 @@ export interface RLApi {
     HANDLE_KIND_SOUND: number;
     HANDLE_KIND_MUSIC: number;
     HANDLE_KIND_TEXT2D: number;
+    HANDLE_KIND_SCENE: number;
     HANDLE_KIND_ASSET_TASK: number;
     fs: RLFs;
     asset: RLAsset;
@@ -418,6 +463,7 @@ export interface RLApi {
     font: RLFont;
     model: RLModel;
     pick: RLPick;
+    scene: RLScene;
     music: RLMusic;
     sound: RLSound;
     sprite3d: RLSprite3d;

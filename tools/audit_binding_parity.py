@@ -20,6 +20,7 @@ JS_SCRATCH_BRIDGE_TO_C = {
     "rl_text_measure_ex_to_scratch": "rl_text_measure_ex",
     "rl_pick_model_to_scratch": "rl_pick_model",
     "rl_pick_sprite3d_to_scratch": "rl_pick_sprite3d",
+    "rl_scene_pick_to_scratch": "rl_scene_pick",
     "rl_asset_ensure_many_from_scratch_async": "rl_asset_ensure_many_async",
 }
 

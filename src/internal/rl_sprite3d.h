@@ -26,7 +26,9 @@ bool rl_sprite3d_get_ray_collision_ex(rl_handle_t handle,
                                       float size,
                                       RayCollision *collision,
                                       bool *broadphase_tested,
-                                      bool *broadphase_rejected,
-                                      bool *narrowphase_ran);
+                                   bool *broadphase_rejected,
+                                   bool *narrowphase_ran);
+
+bool rl_sprite3d_scene_pick_broadphase(rl_handle_t handle, Ray ray);
 
 #endif // RL_INTERNAL_SPRITE3D_H

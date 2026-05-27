@@ -60,17 +60,14 @@ export class Model {
     }
   }
 
-  draw(tint: number): void {
+  draw(): void {
     if (this.handle == null || !rl_model_is_valid(this.handle)) {
       return;
     }
 
     this.sync();
     rl_model_animation_update(this.handle, this.animationIndex, this.animationFrame);
-    rl_model_draw(
-      this.handle,
-      tint,
-    );
+    rl_model_draw(this.handle);
   }
 
   set(

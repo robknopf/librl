@@ -31,6 +31,7 @@ UNIT_TEST_MAIN := $(UNIT_TEST_DIR)/tests_main.c
 UNIT_TEST_SRCS := \
 	$(UNIT_TEST_DIR)/fetch_url_stub.c \
 	$(UNIT_TEST_DIR)/raylib_loader_stub.c \
+	$(UNIT_TEST_DIR)/rl_scene_stub.c \
 	$(UNIT_TEST_DIR)/rl_handle_pool_test.c \
 	$(UNIT_TEST_DIR)/rl_fs_test.c \
 	$(UNIT_TEST_DIR)/rl_version_test.c \

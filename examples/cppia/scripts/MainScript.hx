@@ -4,7 +4,7 @@ import rl.RL;
 import rl.*;
 import rl.helpers.Log;
 import rl.Types.RLHandle;
-import rl.Types.RLPickResult;
+import rl.Types.RLScenePickResult;
 import Types.RTResult;
 import Script;
 import haxe.io.Path;
@@ -30,6 +30,7 @@ typedef AppContext = {
 	var bgm:RLHandle;
 	var greyAlphaColor:RLHandle;
 	var model:RLHandle;
+	var scene:RLHandle;
 	var reloadCount:Int;
 	var spriteYOffset:Float;
 	var backgroundColor:RLHandle;
@@ -85,6 +86,7 @@ class MainScript extends Script {
 			bgm: 0,
 			greyAlphaColor: 0,
 			model: 0,
+			scene: 0,
 			reloadCount: 0,
 			spriteYOffset: 3.0,
 			backgroundColor: 0
@@ -124,12 +126,20 @@ class MainScript extends Script {
 		Render.setLightAmbient(0.25);
 		ctx.camera = Camera3d.create(12.0, 12.0, 12.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 45.0, Camera3d.PERSPECTIVE);
 		Camera3d.setActive(ctx.camera);
+		ctx.scene = Scene.create();
+		if (ctx.scene != 0) {
+			Scene.setActiveCamera(ctx.scene, ctx.camera);
+		}
 		ctx.greyAlphaColor = Color.create(0, 0, 0, 128);
 		ctx.backgroundColor = Color.create(245, 245, 245, 255);
 	}
 
 	private function teardownScene():Void {
 		Render.disableLighting();
+		if (ctx.scene != 0) {
+			Scene.destroy(ctx.scene);
+			ctx.scene = 0;
+		}
 		Camera3d.setActive(0);
 		Camera3d.destroy(ctx.camera);
 		ctx.camera = 0;
@@ -142,19 +152,27 @@ class MainScript extends Script {
 	function loadAssets():Void {
 		ctx.model = Model.create(0);
 		Model.setTransform(ctx.model, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+		Model.setTint(ctx.model, Color.WHITE);
 		Model.setAnimation(ctx.model, 1);
 		Model.setAnimationSpeed(ctx.model, 1.0);
 		Model.setAnimationLoop(ctx.model, true);
 		Asset.addTask(Asset.ensureAsync(MODEL_PATH), (path, _) -> {
 			var modelAsset = Model.loadAsset(MODEL_PATH);
 			Model.setAsset(ctx.model, modelAsset);
+			if (ctx.scene != 0 && ctx.model != 0) {
+				Scene.add(ctx.scene, ctx.model, 0);
+			}
 		}, null, ctx);
 
 		ctx.sprite = Sprite3d.create(0);
 		Sprite3d.setTransform(ctx.sprite, 0.0, 0.0, ctx.spriteYOffset, 1.0);
+		Sprite3d.setTint(ctx.sprite, Color.WHITE);
 		Asset.addTask(Asset.ensureAsync(SPRITE_PATH), (path, _) -> {
 			var textureAsset = Texture.create(path);
 			Sprite3d.setTexture(ctx.sprite, textureAsset);
+			if (ctx.scene != 0 && ctx.sprite != 0) {
+				Scene.add(ctx.scene, ctx.sprite, 0);
+			}
 		}, null, ctx);
 
 		ctx.labelText2d = Text2d.create(0, KOMIKA_FONT_SIZE);
@@ -254,30 +272,24 @@ class MainScript extends Script {
 
 		msg = "Nothing picked!";
 
-		var pickResult:RLPickResult;
-
-		pickResult = Pick.model(ctx.camera, ctx.model, mouse.x, mouse.y);
-		if (pickResult.hit) {
-			trace('Model pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y);
-			msg = 'Model pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y;
-		}
-
-		pickResult = Pick.sprite3d(ctx.camera, ctx.sprite, mouse.x, mouse.y);
-		if (pickResult.hit) {
-			trace('Sprite pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y);
-			msg = 'Sprite pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + pickResult.point.y;
+		if (ctx.scene != 0) {
+			var scenePick:RLScenePickResult = Scene.pick(ctx.scene, 0, mouse.x, mouse.y);
+			if (scenePick.hit) {
+				trace('Scene pick: handle=${scenePick.handle} y=${scenePick.point.y}');
+				if (scenePick.handle == ctx.model) {
+					msg = 'Model pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + scenePick.point.y;
+				} else if (scenePick.handle == ctx.sprite) {
+					msg = 'Sprite pick: Mouse position (mouse.x:${mouse.x}, mouse.y:${mouse.y}) pick result y: ' + scenePick.point.y;
+				}
+			}
 		}
 
 		Render.begin();
 		Render.clearBackground(ctx.backgroundColor);
 
-		// 3d render
-		Render.beginMode3d();
-
-		Model.draw(ctx.model, Color.WHITE);
-		Sprite3d.draw(ctx.sprite, Color.WHITE);
-
-		Render.endMode3d();
+		if (ctx.scene != 0) {
+			Scene.draw(ctx.scene);
+		}
 
 		// 2D UI overlay
 		var screen = Window.getScreenSize();

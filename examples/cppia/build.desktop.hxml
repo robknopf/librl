@@ -8,10 +8,12 @@ common.hxml
 
 -lib hxcpp-debug-server
 #--debug # we will let the user provide the --debug flag on the command line when they want debug builds
+--dce no
+#-D CPPIA_NO_JIT
 
 # Colon-separated source roots for CPPIA source resolution in hxcpp 4.x debugger.
 # Relative paths are resolved from the executable directory ($ORIGIN). Optional
 # runtime env HXCPP_CPPIA_SOURCE_ROOTS is merged additively (same syntax).
--D HXCPP_CPPIA_SOURCE_ROOTS=../../../../examples/www/public/assets/scripts/cppia:../../src:../../../../bindings/haxe
+-D HXCPP_CPPIA_SOURCE_ROOTS=../../:../../src:../../../../bindings/haxe
 -D ENABLE_SCRIPT_WATCHER
 -cpp out/desktop

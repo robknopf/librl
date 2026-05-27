@@ -83,7 +83,7 @@ LDFLAGS_WASM = \
 	"_rl_version_label", \
 	"_rl_version_number", \
 	"_rl_version_string", \
-	"_rl_handle_get_type", \
+	"_rl_handle_get_kind", \
 	"_rl_deinit", \
 	"_rl_scratch_refresh", \
 	"_rl_tick", \

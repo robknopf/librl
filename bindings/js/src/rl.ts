@@ -676,7 +676,7 @@ const rlCore = {
         reqModule().ccall('rl_scratch_refresh', null, [], []);
     },
     getTime: () => ccNum('rl_get_time'),
-    handleType: (handle: RLHandle) => ccNum('rl_handle_get_type', ['number'], [handle]),
+    handleKind: (handle: RLHandle) => ccNum('rl_handle_get_kind', ['number'], [handle]),
     deinit: async () => {
         eventListenersById.clear();
         eventListenerIdsByCallback = new WeakMap();

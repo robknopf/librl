@@ -23,33 +23,33 @@ static unsigned char rl_color_occupied[MAX_COLORS];
 // refcounted shared-asset semantics.
 
 // predefined colors
-const rl_handle_t RL_COLOR_DEFAULT = RL_HANDLE_MAKE(RL_TYPE_COLOR, 1, 1);
-const rl_handle_t RL_COLOR_LIGHTGRAY = RL_HANDLE_MAKE(RL_TYPE_COLOR, 2, 1);
-const rl_handle_t RL_COLOR_GRAY = RL_HANDLE_MAKE(RL_TYPE_COLOR, 3, 1);
-const rl_handle_t RL_COLOR_DARKGRAY = RL_HANDLE_MAKE(RL_TYPE_COLOR, 4, 1);
-const rl_handle_t RL_COLOR_YELLOW = RL_HANDLE_MAKE(RL_TYPE_COLOR, 5, 1);
-const rl_handle_t RL_COLOR_GOLD = RL_HANDLE_MAKE(RL_TYPE_COLOR, 6, 1);
-const rl_handle_t RL_COLOR_ORANGE = RL_HANDLE_MAKE(RL_TYPE_COLOR, 7, 1);
-const rl_handle_t RL_COLOR_PINK = RL_HANDLE_MAKE(RL_TYPE_COLOR, 8, 1);
-const rl_handle_t RL_COLOR_RED = RL_HANDLE_MAKE(RL_TYPE_COLOR, 9, 1);
-const rl_handle_t RL_COLOR_MAROON = RL_HANDLE_MAKE(RL_TYPE_COLOR, 10, 1);
-const rl_handle_t RL_COLOR_GREEN = RL_HANDLE_MAKE(RL_TYPE_COLOR, 11, 1);
-const rl_handle_t RL_COLOR_LIME = RL_HANDLE_MAKE(RL_TYPE_COLOR, 12, 1);
-const rl_handle_t RL_COLOR_DARKGREEN = RL_HANDLE_MAKE(RL_TYPE_COLOR, 13, 1);
-const rl_handle_t RL_COLOR_SKYBLUE = RL_HANDLE_MAKE(RL_TYPE_COLOR, 14, 1);
-const rl_handle_t RL_COLOR_BLUE = RL_HANDLE_MAKE(RL_TYPE_COLOR, 15, 1);
-const rl_handle_t RL_COLOR_DARKBLUE = RL_HANDLE_MAKE(RL_TYPE_COLOR, 16, 1);
-const rl_handle_t RL_COLOR_PURPLE = RL_HANDLE_MAKE(RL_TYPE_COLOR, 17, 1);
-const rl_handle_t RL_COLOR_VIOLET = RL_HANDLE_MAKE(RL_TYPE_COLOR, 18, 1);
-const rl_handle_t RL_COLOR_DARKPURPLE = RL_HANDLE_MAKE(RL_TYPE_COLOR, 19, 1);
-const rl_handle_t RL_COLOR_BEIGE = RL_HANDLE_MAKE(RL_TYPE_COLOR, 20, 1);
-const rl_handle_t RL_COLOR_BROWN = RL_HANDLE_MAKE(RL_TYPE_COLOR, 21, 1);
-const rl_handle_t RL_COLOR_DARKBROWN = RL_HANDLE_MAKE(RL_TYPE_COLOR, 22, 1);
-const rl_handle_t RL_COLOR_WHITE = RL_HANDLE_MAKE(RL_TYPE_COLOR, 23, 1);
-const rl_handle_t RL_COLOR_BLACK = RL_HANDLE_MAKE(RL_TYPE_COLOR, 24, 1);
-const rl_handle_t RL_COLOR_BLANK = RL_HANDLE_MAKE(RL_TYPE_COLOR, 25, 1);
-const rl_handle_t RL_COLOR_MAGENTA = RL_HANDLE_MAKE(RL_TYPE_COLOR, 26, 1);
-const rl_handle_t RL_COLOR_RAYWHITE = RL_HANDLE_MAKE(RL_TYPE_COLOR, 27, 1);
+const rl_handle_t RL_COLOR_DEFAULT = RL_HANDLE_MAKE(RL_KIND_COLOR, 1, 1);
+const rl_handle_t RL_COLOR_LIGHTGRAY = RL_HANDLE_MAKE(RL_KIND_COLOR, 2, 1);
+const rl_handle_t RL_COLOR_GRAY = RL_HANDLE_MAKE(RL_KIND_COLOR, 3, 1);
+const rl_handle_t RL_COLOR_DARKGRAY = RL_HANDLE_MAKE(RL_KIND_COLOR, 4, 1);
+const rl_handle_t RL_COLOR_YELLOW = RL_HANDLE_MAKE(RL_KIND_COLOR, 5, 1);
+const rl_handle_t RL_COLOR_GOLD = RL_HANDLE_MAKE(RL_KIND_COLOR, 6, 1);
+const rl_handle_t RL_COLOR_ORANGE = RL_HANDLE_MAKE(RL_KIND_COLOR, 7, 1);
+const rl_handle_t RL_COLOR_PINK = RL_HANDLE_MAKE(RL_KIND_COLOR, 8, 1);
+const rl_handle_t RL_COLOR_RED = RL_HANDLE_MAKE(RL_KIND_COLOR, 9, 1);
+const rl_handle_t RL_COLOR_MAROON = RL_HANDLE_MAKE(RL_KIND_COLOR, 10, 1);
+const rl_handle_t RL_COLOR_GREEN = RL_HANDLE_MAKE(RL_KIND_COLOR, 11, 1);
+const rl_handle_t RL_COLOR_LIME = RL_HANDLE_MAKE(RL_KIND_COLOR, 12, 1);
+const rl_handle_t RL_COLOR_DARKGREEN = RL_HANDLE_MAKE(RL_KIND_COLOR, 13, 1);
+const rl_handle_t RL_COLOR_SKYBLUE = RL_HANDLE_MAKE(RL_KIND_COLOR, 14, 1);
+const rl_handle_t RL_COLOR_BLUE = RL_HANDLE_MAKE(RL_KIND_COLOR, 15, 1);
+const rl_handle_t RL_COLOR_DARKBLUE = RL_HANDLE_MAKE(RL_KIND_COLOR, 16, 1);
+const rl_handle_t RL_COLOR_PURPLE = RL_HANDLE_MAKE(RL_KIND_COLOR, 17, 1);
+const rl_handle_t RL_COLOR_VIOLET = RL_HANDLE_MAKE(RL_KIND_COLOR, 18, 1);
+const rl_handle_t RL_COLOR_DARKPURPLE = RL_HANDLE_MAKE(RL_KIND_COLOR, 19, 1);
+const rl_handle_t RL_COLOR_BEIGE = RL_HANDLE_MAKE(RL_KIND_COLOR, 20, 1);
+const rl_handle_t RL_COLOR_BROWN = RL_HANDLE_MAKE(RL_KIND_COLOR, 21, 1);
+const rl_handle_t RL_COLOR_DARKBROWN = RL_HANDLE_MAKE(RL_KIND_COLOR, 22, 1);
+const rl_handle_t RL_COLOR_WHITE = RL_HANDLE_MAKE(RL_KIND_COLOR, 23, 1);
+const rl_handle_t RL_COLOR_BLACK = RL_HANDLE_MAKE(RL_KIND_COLOR, 24, 1);
+const rl_handle_t RL_COLOR_BLANK = RL_HANDLE_MAKE(RL_KIND_COLOR, 25, 1);
+const rl_handle_t RL_COLOR_MAGENTA = RL_HANDLE_MAKE(RL_KIND_COLOR, 26, 1);
+const rl_handle_t RL_COLOR_RAYWHITE = RL_HANDLE_MAKE(RL_KIND_COLOR, 27, 1);
 
 static bool rl_color_resolve_index(rl_handle_t handle, uint16_t *index_out)
 {
@@ -124,7 +124,7 @@ void rl_color_init(void)
     memset(rl_colors, 0, sizeof(rl_colors));
 
     rl_handle_pool_init(&rl_color_pool,
-                        RL_TYPE_COLOR,
+                        RL_KIND_COLOR,
                         MAX_COLORS,
                         rl_color_free_indices,
                         MAX_COLORS,

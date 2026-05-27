@@ -455,8 +455,8 @@ proc rl_render_begin*() {.importc, cdecl, header: "rl.h".}
 proc rl_render_end*() {.importc, cdecl, header: "rl.h".}
 proc rl_is_initialized*(): bool {.importc, cdecl, header: "rl.h".}
 proc rl_get_platform*(): cstring {.importc, cdecl, header: "rl.h".}
-proc rl_handle_get_type_c*(handle: RLHandle): cint {.importc: "rl_handle_get_type", cdecl, header: "rl_handle.h".}
-proc rl_handle_get_type*(handle: RLHandle): int {.inline.} = rl_handle_get_type_c(handle).int
+proc rl_handle_get_kind_c*(handle: RLHandle): cint {.importc: "rl_handle_get_kind", cdecl, header: "rl_handle.h".}
+proc rl_handle_get_kind*(handle: RLHandle): int {.inline.} = rl_handle_get_kind_c(handle).int
 
 proc rl_version_major_c*(): cint {.importc: "rl_version_major", cdecl, header: "rl_version.h".}
 proc rl_version_minor_c*(): cint {.importc: "rl_version_minor", cdecl, header: "rl_version.h".}

@@ -192,7 +192,7 @@ void rl_sprite2d_destroy(rl_handle_t handle)
 void rl_sprite2d_init(void)
 {
     rl_handle_pool_init(&rl_sprite2d_pool,
-                        RL_TYPE_SPRITE2D,
+                        RL_KIND_SPRITE2D,
                         MAX_SPRITE2D,
                         rl_sprite2d_free_indices,
                         MAX_SPRITE2D,

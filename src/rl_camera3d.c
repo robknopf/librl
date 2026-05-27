@@ -38,7 +38,7 @@ static uint16_t rl_camera3d_free_indices[MAX_CAMERAS];
 static uint16_t rl_camera3d_generations[MAX_CAMERAS];
 static unsigned char rl_camera3d_occupied[MAX_CAMERAS];
 
-const rl_handle_t RL_CAMERA3D_DEFAULT = RL_HANDLE_MAKE(RL_TYPE_CAMERA3D, 1u, 1u);
+const rl_handle_t RL_CAMERA3D_DEFAULT = RL_HANDLE_MAKE(RL_KIND_CAMERA3D, 1u, 1u);
 
 static Camera3D rl_camera3d_build(float position_x, float position_y, float position_z,
                                   float target_x, float target_y, float target_z,
@@ -357,7 +357,7 @@ void rl_camera3d_init(void)
     rl_clear_active_camera();
 
     rl_handle_pool_init(&rl_camera3d_pool,
-                        RL_TYPE_CAMERA3D,
+                        RL_KIND_CAMERA3D,
                         MAX_CAMERAS,
                         rl_camera3d_free_indices,
                         MAX_CAMERAS,

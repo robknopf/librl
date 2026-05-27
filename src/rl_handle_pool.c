@@ -3,7 +3,7 @@
 #include <string.h>
 
 void rl_handle_pool_init(rl_handle_pool_t *pool,
-                         rl_handle_type_t type,
+                         rl_handle_kind_t kind,
                          uint16_t max,
                          uint16_t *free_indices,
                          uint16_t free_capacity,
@@ -14,7 +14,7 @@ void rl_handle_pool_init(rl_handle_pool_t *pool,
         return;
     }
 
-    pool->type = type;
+    pool->kind = kind;
     pool->max = max;
     pool->next_index = 1; // 0 is always reserved as invalid
     pool->free_indices = free_indices;
@@ -85,7 +85,7 @@ rl_handle_t rl_handle_pool_alloc(rl_handle_pool_t *pool)
     uint16_t index = 0;
     uint16_t generation = 0;
 
-    if (pool == NULL || pool->type == RL_TYPE_NONE) {
+    if (pool == NULL || pool->kind == RL_KIND_NONE) {
         return 0;
     }
 
@@ -101,7 +101,7 @@ rl_handle_t rl_handle_pool_alloc(rl_handle_pool_t *pool)
     }
 
     pool->occupied[index] = 1;
-    return RL_HANDLE_MAKE(pool->type, index, generation);
+    return RL_HANDLE_MAKE(pool->kind, index, generation);
 }
 
 bool rl_handle_pool_free(rl_handle_pool_t *pool, rl_handle_t handle)
@@ -116,7 +116,7 @@ bool rl_handle_pool_free(rl_handle_pool_t *pool, rl_handle_t handle)
     index = RL_HANDLE_INDEX(handle);
     generation = RL_HANDLE_GENERATION(handle);
 
-    if (RL_HANDLE_TYPE(handle) != (uint8_t)pool->type) {
+    if (RL_HANDLE_KIND(handle) != (uint8_t)pool->kind) {
         return false;
     }
     if (index == 0 || index >= pool->max) {
@@ -152,7 +152,7 @@ bool rl_handle_pool_resolve(const rl_handle_pool_t *pool, rl_handle_t handle, ui
     index = RL_HANDLE_INDEX(handle);
     generation = RL_HANDLE_GENERATION(handle);
 
-    if (RL_HANDLE_TYPE(handle) != (uint8_t)pool->type) {
+    if (RL_HANDLE_KIND(handle) != (uint8_t)pool->kind) {
         return false;
     }
     if (index == 0 || index >= pool->max) {
@@ -173,7 +173,7 @@ bool rl_handle_pool_resolve(const rl_handle_pool_t *pool, rl_handle_t handle, ui
 
 rl_handle_t rl_handle_pool_handle_from_index(const rl_handle_pool_t *pool, uint16_t index)
 {
-    if (pool == NULL || pool->type == RL_TYPE_NONE) {
+    if (pool == NULL || pool->kind == RL_KIND_NONE) {
         return 0;
     }
     if (index == 0 || index >= pool->max) {
@@ -183,5 +183,5 @@ rl_handle_t rl_handle_pool_handle_from_index(const rl_handle_pool_t *pool, uint1
         return 0;
     }
 
-    return RL_HANDLE_MAKE(pool->type, index, pool->generations[index]);
+    return RL_HANDLE_MAKE(pool->kind, index, pool->generations[index]);
 }

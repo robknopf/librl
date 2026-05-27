@@ -6,7 +6,7 @@ Public C API exposed by `include/*.h`. `rl.h` is the umbrella header that includ
 
 ## Conventions
 
-- Resources use `rl_handle_t` (`unsigned int`) as an opaque handle. `0` is the invalid handle sentinel for all subsystems.
+- Resources use `rl_handle_t` (`unsigned int`) as an opaque handle. `0` is the invalid handle sentinel for all subsystems. Non-zero handles encode **kind (6 bits) | generation (10 bits) | index (16 bits)**; each resource pool is stamped with a fixed kind at init and rejects resolve/free when the handle kind does not match (see **Handles** below).
 - Synchronous functions complete before returning. Functions that may start async work use an `_async` suffix and return a task handle or similar poll-able token. Synchronous functions may still suspend on wasm when reached through a JSPI-exported entry point.
 - `rl_init_values()` / `rl_deinit()` bracket the entire runtime. Most subsystem APIs require the runtime to be initialized. `rl_deinit()` destroys all subsystem state (assets, handles, lighting, cameras) — callers do not need to explicitly destroy individual resources before calling it.
 - **Exception**: `rl_fs_init()` / `rl_fs_deinit()` may be used independently, outside of `rl_init_values()`, to fetch and cache assets before the window or full runtime is needed. This supports patterns where assets must be available at init time (e.g. loading a config file before creating the window).
@@ -17,24 +17,26 @@ Public C API exposed by `include/*.h`. `rl.h` is the umbrella header that includ
 ## Handles (`include/rl_handle.h`)
 
 ```c
-typedef enum rl_handle_type_t {
-    RL_TYPE_NONE = 0,
-    RL_TYPE_COLOR = 1,
-    RL_TYPE_CAMERA3D = 2,
-    RL_TYPE_FONT = 3,
-    RL_TYPE_TEXTURE = 4,
-    RL_TYPE_SPRITE2D = 5,
-    RL_TYPE_SPRITE3D = 6,
-    RL_TYPE_MODEL = 7,
-    RL_TYPE_MODEL_ASSET = 8,
-    RL_TYPE_SOUND = 9,
-    RL_TYPE_MUSIC = 10,
-    RL_TYPE_TEXT2D = 11,
-    RL_TYPE_ASSET_TASK = 12,
-} rl_handle_type_t;
+typedef enum rl_handle_kind_t {
+    RL_KIND_NONE = 0,
+    RL_KIND_COLOR = 1,
+    RL_KIND_CAMERA3D = 2,
+    RL_KIND_FONT = 3,
+    RL_KIND_TEXTURE = 4,
+    RL_KIND_SPRITE2D = 5,
+    RL_KIND_SPRITE3D = 6,
+    RL_KIND_MODEL = 7,
+    RL_KIND_MODEL_ASSET = 8,
+    RL_KIND_SOUND = 9,
+    RL_KIND_MUSIC = 10,
+    RL_KIND_TEXT2D = 11,
+    RL_KIND_ASSET_TASK = 12,
+} rl_handle_kind_t;
 
-rl_handle_type_t rl_handle_get_type(rl_handle_t handle);
+rl_handle_kind_t rl_handle_get_kind(rl_handle_t handle);
 ```
+
+**Layout (MSB → LSB):** `kind:6 @ 26 | generation:10 @ 16 | index:16 @ 0`. Built-in handles (e.g. `RL_COLOR_DEFAULT`) and pool-allocated handles share this encoding. `rl_handle_get_kind()` returns `RL_KIND_NONE` for handle `0`. Internal pool helpers (`rl_handle_pool_resolve`, `rl_handle_pool_free`) compare the handle kind field against the pool's stamped kind and fail when they differ — passing a texture handle to a color API fails at resolve time rather than corrupting the wrong slot.
 
 ---
 

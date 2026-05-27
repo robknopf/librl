@@ -224,7 +224,7 @@ bool rl_sound_is_playing(rl_handle_t handle)
 void rl_sound_init(void)
 {
     rl_handle_pool_init(&rl_sound_pool,
-                        RL_TYPE_SOUND,
+                        RL_KIND_SOUND,
                         MAX_SOUNDS,
                         rl_sound_free_indices,
                         MAX_SOUNDS,

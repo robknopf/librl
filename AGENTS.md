@@ -79,8 +79,16 @@ When adding new procs to any binding, always check: would a user need to write `
 ## C implementation naming (`src/`)
 
 - **Public API** (`include/*.h`): subsystem-first `rl_<section>_<action>` (same template bindings mirror).
-- **`static` functions** in a single `.c` file: **do not** use the `rl_<subsystem>_` prefix. Use ordinary translation-unit-local names so it is obvious the symbol is not public and not shared across `src/*.c`.
-- **Cross-translation-unit** helpers (one `src/*.c` calling into another’s symbol): keep the `rl_<subsystem>_` prefix and declare the prototype only in **`src/internal/*.h`** — not in `include/` unless the symbol is promoted to the public API.
+- **Cross-translation-unit** helpers (one `src/*.c` calling another’s symbol): use **`rl_<subsystem>_...`** and declare the prototype only in **`src/internal/*.h`** — not in `include/` unless promoted to the public API.
+- **File-local `static` functions** (one `.c` only): **`static`** is the real contract; naming makes it obvious at a glance that the symbol is **not** public and **not** shared across `src/*.c`.
+  - **Do not** use an **`rl_` prefix** on the function name (reserve `rl_*` for library-level symbols: public API and cross-TU internals above).
+  - Prefer **`snake_case`** shaped as **`verb_noun`**. Prefer the **shortest name that stays unambiguous in this translation unit**; add an extra noun or qualifier (e.g. `_path`, `_host`) **only when** another helper in the same file would otherwise read the same or collide on meaning (e.g. two different “prepare” steps). Do not add redundant tokens such as **`_task`** solely because a `*_t *` parameter exists — use them **only if** they disambiguate (e.g. pointer- vs handle-based siblings already use **`_ptr`** per below). Examples: `split_url_host_and_path`, `sort_members_for_draw`, `prepare_single_asset` when context is clear.
+  - **`_ptr` suffix:** use when the helper takes a **raw instance pointer** (e.g. `some_type_t *`) and related logic (or a sibling helper) uses a **`rl_handle_t`** — so call sites immediately see **pointer path** vs **handle path** (e.g. `poll_task_ptr` vs registering/polling by handle).
+  - **Boolean predicates:** prefer **`is_*`** (or `has_*` when possession is the point).
+  - **Handle → instance pointer** helpers: prefer **`resolve_*`** or **`lookup_*`** over bare `get_*` so they do not read like tiny public accessors.
+  - Large files with several internal sub-areas may use a **short non-`rl_` token** in the noun if it helps scanning (optional); avoid subsystem-shaped `rl_<subsystem>_` prefixes here.
+  - **Emscripten `EM_ASYNC_JS` / `EM_JS` (and similar):** do **not** rename the **C function identifier** passed into the macro. Emscripten **embeds that name** in generated JavaScript / linkage glue; renaming breaks the wasm build or runtime unless the Emscripten side is regenerated and updated in lockstep. Treat these identifiers as a **stable Emscripten-facing ABI** for that configuration, **not** as ordinary file-local helpers—even when the definition lives in a single `.c` file. They usually **do not** belong in **`src/internal/*.h`** because other `src/*.c` files do not call them; the contract is with the **toolchain**, not cross-module C.
+- **Promotion:** if a helper must become visible to another `src/*.c`, **drop `static`**, rename to **`rl_<subsystem>_...`**, and move the declaration into **`src/internal/*.h`** (do not rely on a `static` helper declared in a header).
 
 ## Commit Workflow
 

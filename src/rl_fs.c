@@ -80,7 +80,7 @@ EM_ASYNC_JS(int, rl_fs_wait_for_idbfs_sync_js, (int timeout_ms), {
 });
 #endif
 
-static void rl_fs_init_asset_host_from_env(void)
+static void init_asset_host_from_env(void)
 {
     const char *env_asset_host = getenv("RL_ASSET_HOST");
 
@@ -135,19 +135,19 @@ struct rl_fileio_task
 };
 
 static void mark_task_complete_ptr(rl_asset_task_t *task, int status);
-static int rl_fileio_cache_local_file_if_needed(const char *resolved_path);
-static void rl_fileio_get_parent_dir(const char *resolved_path, char *buffer, size_t buffer_size);
-static int rl_fileio_start_fetch(rl_asset_task_t *task, const char *path);
+static int cache_local_file_if_needed(const char *resolved_path);
+static void fill_parent_dir_path(const char *resolved_path, char *buffer, size_t buffer_size);
+static int start_task_fetch(rl_asset_task_t *task, const char *path);
 static rl_asset_task_t *restore_task_async_ptr(void);
 static rl_asset_task_t *ensure_task_async_ptr(const char *local_path, const char *src);
 static rl_asset_task_t *ensure_group_task_async_ptr(const char *const *filenames, size_t filename_count);
 static rl_asset_task_t *ensure_many_from_scratch_task_async_ptr(size_t filename_count);
 static bool poll_task_ptr(rl_asset_task_t *task);
-static const char *get_task_path_ptr(rl_asset_task_t *task);
+static const char *lookup_task_path_ptr(rl_asset_task_t *task);
 static void free_task_ptr(rl_asset_task_t *task);
-static void rl_fs_flush_fileio_before_deinit(void);
+static void flush_fileio_before_deinit(void);
 
-static void rl_asset_task_pool_init_once(void)
+static void init_asset_task_pool_once(void)
 {
     if (rl_asset_task_pool_ready) {
         return;
@@ -173,7 +173,7 @@ static rl_handle_t register_task_ptr(rl_asset_task_t *task)
         return 0;
     }
 
-    rl_asset_task_pool_init_once();
+    init_asset_task_pool_once();
     handle = rl_handle_pool_alloc(&rl_asset_task_pool);
     if (handle == 0) {
         free_task_ptr(task);
@@ -238,7 +238,7 @@ static void free_all_task_handles(void)
     rl_handle_pool_reset(&rl_asset_task_pool);
 }
 
-static bool rl_fileio_is_http_url(const char *path)
+static bool is_http_url(const char *path)
 {
     if (!path) {
         return false;
@@ -246,7 +246,7 @@ static bool rl_fileio_is_http_url(const char *path)
     return (strncmp(path, "http://", 7) == 0) || (strncmp(path, "https://", 8) == 0);
 }
 
-static bool rl_fileio_split_url(const char *url, char *host, size_t host_size, char *path, size_t path_size)
+static bool split_url_host_and_path(const char *url, char *host, size_t host_size, char *path, size_t path_size)
 {
     const char *scheme = strstr(url, "://");
     const char *path_start = NULL;
@@ -287,7 +287,7 @@ static bool rl_fileio_split_url(const char *url, char *host, size_t host_size, c
     return true;
 }
 
-static const char *rl_fileio_strip_leading_slash(const char *path)
+static const char *strip_leading_slash(const char *path)
 {
     if (path && path[0] == '/') {
         return path + 1;
@@ -295,7 +295,7 @@ static const char *rl_fileio_strip_leading_slash(const char *path)
     return path;
 }
 
-static void rl_fileio_trim_trailing_slashes(const char *input, char *output, size_t output_size)
+static void trim_trailing_slashes(const char *input, char *output, size_t output_size)
 {
     size_t len = 0;
 
@@ -319,7 +319,7 @@ static void rl_fileio_trim_trailing_slashes(const char *input, char *output, siz
     }
 }
 
-static const char *rl_fileio_get_extension(const char *path)
+static const char *find_path_extension(const char *path)
 {
     const char *dot = NULL;
     const char *slash = NULL;
@@ -340,7 +340,7 @@ static const char *rl_fileio_get_extension(const char *path)
     return dot;
 }
 
-static bool rl_fileio_ext_eq(const char *ext, const char *target)
+static bool is_extension_equal(const char *ext, const char *target)
 {
     size_t i = 0;
     if (!ext || !target) {
@@ -358,29 +358,29 @@ static bool rl_fileio_ext_eq(const char *ext, const char *target)
     return ext[i] == '\0' && target[i] == '\0';
 }
 
-static bool rl_fileio_should_memory_cache_path(const char *resolved_path)
+static bool is_memory_cache_path(const char *resolved_path)
 {
-    const char *ext = rl_fileio_get_extension(resolved_path);
+    const char *ext = find_path_extension(resolved_path);
     if (!ext) {
         return false;
     }
 
     // Keep cache selective so RAM usage is predictable.
-    return rl_fileio_ext_eq(ext, ".glb") ||
-           rl_fileio_ext_eq(ext, ".gltf") ||
-           rl_fileio_ext_eq(ext, ".ttf") ||
-           rl_fileio_ext_eq(ext, ".otf") ||
-           rl_fileio_ext_eq(ext, ".png");
+    return is_extension_equal(ext, ".glb") ||
+           is_extension_equal(ext, ".gltf") ||
+           is_extension_equal(ext, ".ttf") ||
+           is_extension_equal(ext, ".otf") ||
+           is_extension_equal(ext, ".png");
 }
 
-static bool rl_fileio_is_dependency_bearing_asset_path(const char *path)
+static bool is_dependency_bearing_asset_path(const char *path)
 {
-    const char *ext = rl_fileio_get_extension(path);
+    const char *ext = find_path_extension(path);
 
-    return ext != NULL && rl_fileio_ext_eq(ext, ".gltf");
+    return ext != NULL && is_extension_equal(ext, ".gltf");
 }
 
-static bool rl_fs_restore_barrier_poll(void)
+static bool poll_restore_barrier(void)
 {
     int restore_rc = 0;
     clock_t now = 0;
@@ -426,7 +426,7 @@ static bool rl_fs_restore_barrier_poll(void)
 }
 
 #ifdef EMSCRIPTEN
-static void rl_fs_restore_barrier_timeout(void)
+static void expire_restore_barrier(void)
 {
     if (rl_fs_restore_barrier != NULL) {
         fileio_sync_op_free(rl_fs_restore_barrier);
@@ -439,7 +439,7 @@ static void rl_fs_restore_barrier_timeout(void)
 }
 #endif
 
-static int rl_fileio_wait_until_ready(void)
+static int wait_until_fileio_ready(void)
 {
     if (rl_fs_restore_ready || rl_fs_restore_barrier == NULL) {
         rl_fs_restore_ready = true;
@@ -448,25 +448,25 @@ static int rl_fileio_wait_until_ready(void)
 
 #ifdef EMSCRIPTEN
     if (rl_fs_wait_for_idbfs_sync_js(RL_FILEIO_RESTORE_TIMEOUT_MS) != 0) {
-        rl_fs_restore_barrier_timeout();
+        expire_restore_barrier();
         return 0;
     }
-    (void)rl_fs_restore_barrier_poll();
+    (void)poll_restore_barrier();
     return 0;
 #else
-    while (!rl_fs_restore_barrier_poll()) {
+    while (!poll_restore_barrier()) {
     }
     return 0;
 #endif
 }
 
-static void rl_fs_flush_fileio_before_deinit(void)
+static void flush_fileio_before_deinit(void)
 {
     fileio_sync_op_t *flush_op = NULL;
     int flush_rc = 0;
 
     if (rl_fs_restore_barrier != NULL) {
-        (void)rl_fileio_wait_until_ready();
+        (void)wait_until_fileio_ready();
     }
 
     flush_op = fileio_flush_async();
@@ -494,7 +494,7 @@ static void rl_fs_flush_fileio_before_deinit(void)
     }
 }
 
-static int rl_fileio_prepare_single_asset(rl_asset_task_t *task)
+static int prepare_single_asset(rl_asset_task_t *task)
 {
     const char *local_check = NULL;
 
@@ -503,40 +503,40 @@ static int rl_fileio_prepare_single_asset(rl_asset_task_t *task)
     }
 
     local_check = task->write_path[0] ? task->write_path : task->resolved_path;
-    task->should_cache_in_memory = rl_fileio_should_memory_cache_path(local_check);
+    task->should_cache_in_memory = is_memory_cache_path(local_check);
 
     if (fileio_exists(local_check)) {
-        mark_task_complete_ptr(task, rl_fileio_cache_local_file_if_needed(local_check));
+        mark_task_complete_ptr(task, cache_local_file_if_needed(local_check));
         return 0;
     }
 
-    if (rl_fileio_start_fetch(task, task->resolved_path) != 0) {
+    if (start_task_fetch(task, task->resolved_path) != 0) {
         return -1;
     }
     task->prepare_state = RL_FILEIO_PREPARE_STATE_FETCHING_ROOT;
     return 0;
 }
 
-static int rl_fileio_prepare_import_asset(rl_asset_task_t *task)
+static int prepare_import_asset(rl_asset_task_t *task)
 {
     if (!task) {
         return -1;
     }
 
-    task->should_cache_in_memory = rl_fileio_should_memory_cache_path(task->resolved_path);
+    task->should_cache_in_memory = is_memory_cache_path(task->resolved_path);
 
-    if (!rl_fileio_is_dependency_bearing_asset_path(task->resolved_path)) {
-        return rl_fileio_prepare_single_asset(task);
+    if (!is_dependency_bearing_asset_path(task->resolved_path)) {
+        return prepare_single_asset(task);
     }
 
-    rl_fileio_get_parent_dir(task->resolved_path, task->root_dir, sizeof(task->root_dir));
+    fill_parent_dir_path(task->resolved_path, task->root_dir, sizeof(task->root_dir));
 
     if (fileio_exists(task->resolved_path)) {
         task->prepare_state = RL_FILEIO_PREPARE_STATE_PARSING_ROOT;
         return 0;
     }
 
-    if (rl_fileio_start_fetch(task, task->resolved_path) != 0) {
+    if (start_task_fetch(task, task->resolved_path) != 0) {
         return -1;
     }
     task->prepare_state = RL_FILEIO_PREPARE_STATE_FETCHING_ROOT;
@@ -554,7 +554,7 @@ static void mark_task_complete_ptr(rl_asset_task_t *task, int status)
     task->prepare_state = RL_FILEIO_PREPARE_STATE_DONE;
 }
 
-static void rl_fileio_cache_memory_copy_if_needed(const char *resolved_path,
+static void copy_memory_cache_if_needed(const char *resolved_path,
                                                   const unsigned char *data,
                                                   size_t size)
 {
@@ -566,7 +566,7 @@ static void rl_fileio_cache_memory_copy_if_needed(const char *resolved_path,
         return;
     }
 
-    if (!rl_fileio_should_memory_cache_path(resolved_path)) {
+    if (!is_memory_cache_path(resolved_path)) {
         return;
     }
 
@@ -577,7 +577,7 @@ static void rl_fileio_cache_memory_copy_if_needed(const char *resolved_path,
     lru_cache_put_copy(rl_fs_memory_cache, resolved_path, data, size);
 }
 
-static int rl_fileio_cache_local_file_if_needed(const char *resolved_path)
+static int cache_local_file_if_needed(const char *resolved_path)
 {
     fileio_read_result_t result = {0};
 
@@ -585,7 +585,7 @@ static int rl_fileio_cache_local_file_if_needed(const char *resolved_path)
         return -1;
     }
 
-    if (!rl_fileio_should_memory_cache_path(resolved_path) || rl_fs_memory_cache == NULL) {
+    if (!is_memory_cache_path(resolved_path) || rl_fs_memory_cache == NULL) {
         return fileio_exists(resolved_path) ? 0 : -1;
     }
 
@@ -597,12 +597,12 @@ static int rl_fileio_cache_local_file_if_needed(const char *resolved_path)
         return -1;
     }
 
-    rl_fileio_cache_memory_copy_if_needed(resolved_path, result.data, result.size);
+    copy_memory_cache_if_needed(resolved_path, result.data, result.size);
     free(result.data);
     return 0;
 }
 
-static void rl_fileio_get_parent_dir(const char *resolved_path, char *buffer, size_t buffer_size)
+static void fill_parent_dir_path(const char *resolved_path, char *buffer, size_t buffer_size)
 {
     const char *slash = NULL;
     size_t dir_len = 0;
@@ -630,7 +630,7 @@ static void rl_fileio_get_parent_dir(const char *resolved_path, char *buffer, si
     buffer[dir_len] = '\0';
 }
 
-static int rl_fileio_resolve_prepare_target(const char *filename,
+static int resolve_prepare_target(const char *filename,
                                             char *host,
                                             size_t host_size,
                                             char *resolved_path,
@@ -642,11 +642,11 @@ static int rl_fileio_resolve_prepare_target(const char *filename,
         return -1;
     }
 
-    if (rl_fileio_is_http_url(filename)) {
-        return rl_fileio_split_url(filename, host, host_size, resolved_path, resolved_path_size) ? 0 : -1;
+    if (is_http_url(filename)) {
+        return split_url_host_and_path(filename, host, host_size, resolved_path, resolved_path_size) ? 0 : -1;
     }
 
-    relative_path = rl_fileio_strip_leading_slash(filename);
+    relative_path = strip_leading_slash(filename);
     if (!relative_path || relative_path[0] == '\0') {
         return -1;
     }
@@ -661,7 +661,7 @@ static int rl_fileio_resolve_prepare_target(const char *filename,
     return 0;
 }
 
-static int rl_fileio_append_dependency_path(rl_asset_task_t *task, const char *dependency_path)
+static int append_dependency_path(rl_asset_task_t *task, const char *dependency_path)
 {
     char **next_paths = NULL;
     char *copy = NULL;
@@ -687,7 +687,7 @@ static int rl_fileio_append_dependency_path(rl_asset_task_t *task, const char *d
     return 0;
 }
 
-static bool rl_fileio_should_skip_dependency_uri(const char *uri)
+static bool is_skipped_dependency_uri(const char *uri)
 {
     if (!uri || uri[0] == '\0') {
         return true;
@@ -696,7 +696,7 @@ static bool rl_fileio_should_skip_dependency_uri(const char *uri)
     return strncmp(uri, "data:", 5) == 0;
 }
 
-static int rl_fileio_dependency_uri_to_local_path(const char *root_dir,
+static int map_dependency_uri_to_local_path(const char *root_dir,
                                                   const char *uri,
                                                   char *resolved_path,
                                                   size_t resolved_path_size)
@@ -707,13 +707,13 @@ static int rl_fileio_dependency_uri_to_local_path(const char *root_dir,
         return -1;
     }
 
-    if (rl_fileio_should_skip_dependency_uri(uri)) {
+    if (is_skipped_dependency_uri(uri)) {
         return 1;
     }
 
-    if (rl_fileio_is_http_url(uri)) {
+    if (is_http_url(uri)) {
         char host[RL_ASSET_MAX_HOST_LENGTH] = {0};
-        return rl_fileio_split_url(uri, host, sizeof(host), resolved_path, resolved_path_size) ? 0 : -1;
+        return split_url_host_and_path(uri, host, sizeof(host), resolved_path, resolved_path_size) ? 0 : -1;
     }
 
     if (root_dir && root_dir[0] != '\0') {
@@ -725,7 +725,7 @@ static int rl_fileio_dependency_uri_to_local_path(const char *root_dir,
     return resolved_path[0] != '\0' ? 0 : -1;
 }
 
-static int rl_fileio_collect_gltf_dependency_uris(rl_asset_task_t *task,
+static int collect_gltf_dependency_uris(rl_asset_task_t *task,
                                                   const unsigned char *json_bytes,
                                                   size_t json_size)
 {
@@ -757,14 +757,14 @@ static int rl_fileio_collect_gltf_dependency_uris(rl_asset_task_t *task,
                 continue;
             }
 
-            rc = rl_fileio_dependency_uri_to_local_path(task->root_dir,
+            rc = map_dependency_uri_to_local_path(task->root_dir,
                                                         json_get_string(uri),
                                                         resolved_path,
                                                         sizeof(resolved_path));
             if (rc == 1) {
                 continue;
             }
-            if (rc != 0 || rl_fileio_append_dependency_path(task, resolved_path) != 0) {
+            if (rc != 0 || append_dependency_path(task, resolved_path) != 0) {
                 json_delete(root);
                 return -1;
             }
@@ -784,14 +784,14 @@ static int rl_fileio_collect_gltf_dependency_uris(rl_asset_task_t *task,
                 continue;
             }
 
-            rc = rl_fileio_dependency_uri_to_local_path(task->root_dir,
+            rc = map_dependency_uri_to_local_path(task->root_dir,
                                                         json_get_string(uri),
                                                         resolved_path,
                                                         sizeof(resolved_path));
             if (rc == 1) {
                 continue;
             }
-            if (rc != 0 || rl_fileio_append_dependency_path(task, resolved_path) != 0) {
+            if (rc != 0 || append_dependency_path(task, resolved_path) != 0) {
                 json_delete(root);
                 return -1;
             }
@@ -802,7 +802,7 @@ static int rl_fileio_collect_gltf_dependency_uris(rl_asset_task_t *task,
     return 0;
 }
 
-static int rl_fileio_start_fetch(rl_asset_task_t *task, const char *path)
+static int start_task_fetch(rl_asset_task_t *task, const char *path)
 {
     char fetch_host[RL_ASSET_MAX_HOST_LENGTH] = {0};
     char full_url[512];
@@ -820,7 +820,7 @@ static int rl_fileio_start_fetch(rl_asset_task_t *task, const char *path)
         return -1;
     }
 
-    rl_fileio_trim_trailing_slashes(task->fetch_host, fetch_host, sizeof(fetch_host));
+    trim_trailing_slashes(task->fetch_host, fetch_host, sizeof(fetch_host));
     if (fetch_host[0] == '\0') {
         return -1;
     }
@@ -835,7 +835,7 @@ static int rl_fileio_start_fetch(rl_asset_task_t *task, const char *path)
     return task->fetch_op != NULL ? 0 : -1;
 }
 
-static int rl_fileio_handle_fetch_completion(rl_asset_task_t *task, fetch_url_result_t *fetch_result)
+static int apply_fetch_completion(rl_asset_task_t *task, fetch_url_result_t *fetch_result)
 {
     if (!task || !fetch_result) {
         return -1;
@@ -854,19 +854,19 @@ static int rl_fileio_handle_fetch_completion(rl_asset_task_t *task, fetch_url_re
             fetch_result->data = NULL;
             return -1;
         }
-        rl_fileio_cache_memory_copy_if_needed(write_dest,
+        copy_memory_cache_if_needed(write_dest,
                                               (const unsigned char *)fetch_result->data,
                                               fetch_result->size);
     }
     return 0;
 }
 
-static rl_asset_task_t *rl_fileio_import_auto(const char *filename)
+static rl_asset_task_t *import_asset_auto(const char *filename)
 {
     return ensure_task_async_ptr(filename, NULL);
 }
 
-static int rl_fs_clear_dir(const char *abs_dir, const char *rel_dir)
+static int clear_dir_contents(const char *abs_dir, const char *rel_dir)
 {
     struct stat st;
     DIR *dir = NULL;
@@ -920,7 +920,7 @@ static int rl_fs_clear_dir(const char *abs_dir, const char *rel_dir)
         }
         rel_child[sizeof(rel_child) - 1] = '\0';
 
-        child_rc = rl_fs_clear_dir(abs_child, rel_child);
+        child_rc = clear_dir_contents(abs_child, rel_child);
         if (child_rc != 0)
         {
             closedir(dir);
@@ -941,7 +941,7 @@ static int rl_fs_clear_dir(const char *abs_dir, const char *rel_dir)
     return 0;
 }
 
-static unsigned char *rl_fileio_load_file_data_cb(const char *file_name, int *data_size)
+static unsigned char *load_file_data_cb(const char *file_name, int *data_size)
 {
     fileio_read_result_t result = {0};
     const char *resolved_path = NULL;
@@ -960,16 +960,16 @@ static unsigned char *rl_fileio_load_file_data_cb(const char *file_name, int *da
     }
 
     // Step 1: Resolve host/path. Explicit URL overrides default asset host.
-    if (rl_fileio_is_http_url(file_name)) {
-        if (!rl_fileio_split_url(file_name, parsed_asset_host, sizeof(parsed_asset_host), parsed_path, sizeof(parsed_path))) {
+    if (is_http_url(file_name)) {
+        if (!split_url_host_and_path(file_name, parsed_asset_host, sizeof(parsed_asset_host), parsed_path, sizeof(parsed_path))) {
             return NULL;
         }
         resolved_path = parsed_path;
     } else {
-        resolved_path = rl_fileio_strip_leading_slash(file_name);
+        resolved_path = strip_leading_slash(file_name);
     }
 
-    should_cache_in_memory = rl_fileio_should_memory_cache_path(resolved_path);
+    should_cache_in_memory = is_memory_cache_path(resolved_path);
 
     // Step 2: Cache-first read from in-memory LRU for selected asset types.
     if (should_cache_in_memory && rl_fs_memory_cache != NULL) {
@@ -1042,7 +1042,7 @@ float rl_asset_ping_host(const char *asset_host)
     if (probe_host == NULL || probe_host[0] == '\0') {
         probe_host = rl_asset_host_buf;
     }
-    rl_fileio_trim_trailing_slashes(probe_host, fetch_host, sizeof(fetch_host));
+    trim_trailing_slashes(probe_host, fetch_host, sizeof(fetch_host));
     if (fetch_host[0] == '\0') {
         return -1.0f;
     }
@@ -1078,7 +1078,7 @@ static rl_asset_task_t *restore_task_async_ptr(void)
     return task;
 }
 
-static rl_asset_task_t *rl_fileio_import_single_asset(const char *local_path, const char *src)
+static rl_asset_task_t *import_single_asset(const char *local_path, const char *src)
 {
     rl_asset_task_t *task = NULL;
     const char *stripped = NULL;
@@ -1098,7 +1098,7 @@ static rl_asset_task_t *rl_fileio_import_single_asset(const char *local_path, co
 
     /* Resolve fetch URL from src (or local_path if src is NULL). */
     fetch_src = (src != NULL && src[0] != '\0') ? src : local_path;
-    if (rl_fileio_resolve_prepare_target(fetch_src,
+    if (resolve_prepare_target(fetch_src,
                                          task->fetch_host,
                                          sizeof(task->fetch_host),
                                          task->resolved_path,
@@ -1109,7 +1109,7 @@ static rl_asset_task_t *rl_fileio_import_single_asset(const char *local_path, co
 
     /* When src differs from local_path, store the local write destination. */
     if (src != NULL && src[0] != '\0') {
-        stripped = rl_fileio_strip_leading_slash(local_path);
+        stripped = strip_leading_slash(local_path);
         if (!stripped || stripped[0] == '\0') {
             free(task);
             return NULL;
@@ -1141,10 +1141,10 @@ int rl_asset_ensure(const char *local_path, const char *src)
     }
 
     /* Wait for any in-flight IDBFS restore to settle. */
-    (void)rl_fileio_wait_until_ready();
+    (void)wait_until_fileio_ready();
 
     /* Resolve local storage path from local_path. */
-    stripped = rl_fileio_strip_leading_slash(local_path);
+    stripped = strip_leading_slash(local_path);
     if (!stripped || stripped[0] == '\0') {
         return -1;
     }
@@ -1153,12 +1153,12 @@ int rl_asset_ensure(const char *local_path, const char *src)
     }
 
     if (fileio_exists(resolved_path)) {
-        return rl_fileio_cache_local_file_if_needed(resolved_path);
+        return cache_local_file_if_needed(resolved_path);
     }
 
     /* Resolve fetch host + URL path from src (or local_path if src is NULL). */
     fetch_src = (src != NULL && src[0] != '\0') ? src : local_path;
-    if (rl_fileio_resolve_prepare_target(fetch_src, host, sizeof(host), fetch_path, sizeof(fetch_path)) != 0) {
+    if (resolve_prepare_target(fetch_src, host, sizeof(host), fetch_path, sizeof(fetch_path)) != 0) {
         return -1;
     }
 
@@ -1177,7 +1177,7 @@ int rl_asset_ensure(const char *local_path, const char *src)
         return -1;
     }
 
-    rl_fileio_cache_memory_copy_if_needed(resolved_path,
+    copy_memory_cache_if_needed(resolved_path,
                                           (const unsigned char *)result.data,
                                           result.size);
     free(result.data);
@@ -1194,9 +1194,9 @@ static rl_asset_task_t *ensure_task_async_ptr(const char *local_path, const char
         return NULL;
     }
 
-    ext = rl_fileio_get_extension(fetch_src);
-    if (ext == NULL || !rl_fileio_ext_eq(ext, ".gltf")) {
-        return rl_fileio_import_single_asset(local_path, src);
+    ext = find_path_extension(fetch_src);
+    if (ext == NULL || !is_extension_equal(ext, ".gltf")) {
+        return import_single_asset(local_path, src);
     }
 
     task = (rl_asset_task_t *)calloc(1, sizeof(rl_asset_task_t));
@@ -1207,7 +1207,7 @@ static rl_asset_task_t *ensure_task_async_ptr(const char *local_path, const char
     task->kind = RL_FILEIO_TASK_KIND_IMPORT_ASSET;
     task->prepare_state = RL_FILEIO_PREPARE_STATE_INIT;
 
-    if (rl_fileio_resolve_prepare_target(fetch_src,
+    if (resolve_prepare_target(fetch_src,
                                          task->fetch_host,
                                          sizeof(task->fetch_host),
                                          task->resolved_path,
@@ -1312,10 +1312,10 @@ static bool poll_task_ptr(rl_asset_task_t *task)
             return true;
         case RL_FILEIO_TASK_KIND_IMPORT_ASSET:
             if (task->prepare_state == RL_FILEIO_PREPARE_STATE_INIT) {
-                if (!rl_fs_restore_barrier_poll()) {
+                if (!poll_restore_barrier()) {
                     return false;
                 }
-                if (rl_fileio_prepare_import_asset(task) != 0) {
+                if (prepare_import_asset(task) != 0) {
                     mark_task_complete_ptr(task, -1);
                     return true;
                 }
@@ -1337,7 +1337,7 @@ static bool poll_task_ptr(rl_asset_task_t *task)
                     mark_task_complete_ptr(task, -1);
                     return true;
                 }
-                if (rl_fileio_handle_fetch_completion(task, &fetch_result) != 0) {
+                if (apply_fetch_completion(task, &fetch_result) != 0) {
                     free(fetch_result.data);
                     mark_task_complete_ptr(task, -1);
                     return true;
@@ -1352,7 +1352,7 @@ static bool poll_task_ptr(rl_asset_task_t *task)
             }
 
             if (task->prepare_state == RL_FILEIO_PREPARE_STATE_PARSING_ROOT) {
-                if (!rl_fileio_is_dependency_bearing_asset_path(task->resolved_path)) {
+                if (!is_dependency_bearing_asset_path(task->resolved_path)) {
                     mark_task_complete_ptr(task, 0);
                     return true;
                 }
@@ -1364,7 +1364,7 @@ static bool poll_task_ptr(rl_asset_task_t *task)
                         mark_task_complete_ptr(task, -1);
                         return true;
                     }
-                    if (rl_fileio_collect_gltf_dependency_uris(task, root_result.data, root_result.size) != 0) {
+                    if (collect_gltf_dependency_uris(task, root_result.data, root_result.size) != 0) {
                         free(root_result.data);
                         mark_task_complete_ptr(task, -1);
                         return true;
@@ -1374,7 +1374,7 @@ static bool poll_task_ptr(rl_asset_task_t *task)
 
                 while (task->dependency_index < task->dependency_count &&
                        fileio_exists(task->dependency_paths[task->dependency_index])) {
-                    rl_fileio_cache_local_file_if_needed(task->dependency_paths[task->dependency_index]);
+                    cache_local_file_if_needed(task->dependency_paths[task->dependency_index]);
                     task->dependency_index++;
                 }
 
@@ -1383,7 +1383,7 @@ static bool poll_task_ptr(rl_asset_task_t *task)
                     return true;
                 }
 
-                if (rl_fileio_start_fetch(task, task->dependency_paths[task->dependency_index]) != 0) {
+                if (start_task_fetch(task, task->dependency_paths[task->dependency_index]) != 0) {
                     mark_task_complete_ptr(task, -1);
                     return true;
                 }
@@ -1403,7 +1403,7 @@ static bool poll_task_ptr(rl_asset_task_t *task)
                 mark_task_complete_ptr(task, -1);
                 return true;
             }
-            if (rl_fileio_handle_fetch_completion(task, &fetch_result) != 0) {
+            if (apply_fetch_completion(task, &fetch_result) != 0) {
                 free(fetch_result.data);
                 mark_task_complete_ptr(task, -1);
                 return true;
@@ -1414,7 +1414,7 @@ static bool poll_task_ptr(rl_asset_task_t *task)
         case RL_FILEIO_TASK_KIND_IMPORT_ASSETS:
             while (task->batch_index < task->batch_count) {
                 if (task->child_task == NULL) {
-                    task->child_task = rl_fileio_import_auto(task->batch_paths[task->batch_index]);
+                    task->child_task = import_asset_auto(task->batch_paths[task->batch_index]);
                     if (task->child_task == NULL) {
                         mark_task_complete_ptr(task, -1);
                         return true;
@@ -1444,7 +1444,7 @@ static bool poll_task_ptr(rl_asset_task_t *task)
     }
 }
 
-static const char *get_task_path_ptr(rl_asset_task_t *task)
+static const char *lookup_task_path_ptr(rl_asset_task_t *task)
 {
     if (task == NULL) {
         return NULL;
@@ -1464,7 +1464,7 @@ static const char *get_task_path_ptr(rl_asset_task_t *task)
             return NULL;
         case RL_FILEIO_TASK_KIND_IMPORT_ASSETS:
             if (task->child_task != NULL) {
-                return get_task_path_ptr(task->child_task);
+                return lookup_task_path_ptr(task->child_task);
             }
             if (task->batch_index < task->batch_count) {
                 return task->batch_paths[task->batch_index];
@@ -1553,7 +1553,7 @@ int rl_asset_finish_task(rl_handle_t task)
 RL_KEEP
 const char *rl_asset_get_task_path(rl_handle_t task)
 {
-    return get_task_path_ptr(resolve_task_ptr(task));
+    return lookup_task_path_ptr(resolve_task_ptr(task));
 }
 
 RL_KEEP
@@ -1575,7 +1575,7 @@ bool rl_fs_exists(const char *filename)
         return false;
     }
 
-    if (rl_fileio_resolve_prepare_target(filename,
+    if (resolve_prepare_target(filename,
                                          host,
                                          sizeof(host),
                                          resolved_path,
@@ -1602,7 +1602,7 @@ int rl_fs_read(const char *path, unsigned char **out_data, size_t *out_size)
         return -1;
     }
 
-    stripped = rl_fileio_strip_leading_slash(path);
+    stripped = strip_leading_slash(path);
     if (!stripped || stripped[0] == '\0') {
         return -1;
     }
@@ -1610,7 +1610,7 @@ int rl_fs_read(const char *path, unsigned char **out_data, size_t *out_size)
         return -1;
     }
 
-    should_cache_in_memory = rl_fileio_should_memory_cache_path(resolved_path);
+    should_cache_in_memory = is_memory_cache_path(resolved_path);
     if (should_cache_in_memory && rl_fs_memory_cache != NULL) {
         if (lru_cache_get_copy(rl_fs_memory_cache, resolved_path, &cached_data, &cached_size)) {
             *out_data = cached_data;
@@ -1645,7 +1645,7 @@ void rl_fs_normalize_path(const char *path, char *buffer, size_t buffer_size)
 
 int rl_fs_remove(const char *filename)
 {
-    const char *resolved_path = rl_fileio_strip_leading_slash(filename);
+    const char *resolved_path = strip_leading_slash(filename);
     int rc = 0;
 
     if (!resolved_path || resolved_path[0] == '\0') {
@@ -1667,7 +1667,7 @@ int rl_fs_clear(void)
         return -1;
     }
 
-    if (rl_fs_clear_dir(fileio_mount_point, "") != 0) {
+    if (clear_dir_contents(fileio_mount_point, "") != 0) {
         return -1;
     }
 
@@ -1680,7 +1680,7 @@ int rl_fs_clear(void)
 
 bool rl_fs_is_ready(void)
 {
-    return rl_fs_restore_barrier_poll();
+    return poll_restore_barrier();
 }
 
 #define RL_FILEIO_MAX_MANAGED_TASKS 16
@@ -1715,7 +1715,7 @@ rl_asset_add_task_result_t rl_asset_add_task(rl_handle_t task,
         return RL_ASSET_ADD_TASK_ERR_INVALID;
     }
 
-    path = get_task_path_ptr(task_ptr);
+    path = lookup_task_path_ptr(task_ptr);
 
     for (i = 0; i < RL_FILEIO_MAX_MANAGED_TASKS; i++) {
         if (!rl_fileio_managed_tasks[i].in_use) {
@@ -1750,7 +1750,7 @@ void rl_asset_tick(void)
 {
     int i = 0;
 
-    rl_fs_restore_barrier_poll();
+    poll_restore_barrier();
 
     for (i = 0; i < RL_FILEIO_MAX_MANAGED_TASKS; i++) {
         rl_fileio_managed_task_t *slot = &rl_fileio_managed_tasks[i];
@@ -1802,7 +1802,7 @@ int rl_fs_init_async(const char *base_dir)
         return -1;
     }
 
-    rl_fs_init_asset_host_from_env();
+    init_asset_host_from_env();
 
     rl_fs_restore_barrier = fileio_restore_async();
     rl_fs_restore_ready = (rl_fs_restore_barrier == NULL);
@@ -1811,7 +1811,7 @@ int rl_fs_init_async(const char *base_dir)
 
     rl_fs_memory_cache = lru_cache_create(RL_FILEIO_LRU_MAX_BYTES, RL_FILEIO_LRU_MAX_ENTRIES);
 
-    SetLoadFileDataCallback(rl_fileio_load_file_data_cb);
+    SetLoadFileDataCallback(load_file_data_cb);
 
     rl_fs_initialized = true;
     return 0;
@@ -1825,7 +1825,7 @@ int rl_fs_init(const char *base_dir)
         return rc;
     }
 
-    return rl_fileio_wait_until_ready();
+    return wait_until_fileio_ready();
 }
 
 void rl_fs_deinit(void)
@@ -1848,7 +1848,7 @@ void rl_fs_deinit(void)
     SetLoadFileDataCallback(NULL);
     lru_cache_destroy(rl_fs_memory_cache);
     rl_fs_memory_cache = NULL;
-    rl_fs_flush_fileio_before_deinit();
+    flush_fileio_before_deinit();
     rl_fs_restore_ready = false;
     rl_fs_restore_failed = false;
     rl_fs_restore_started_at = 0;
@@ -1926,7 +1926,7 @@ int rl_fs_flush(void)
         return -1;
     }
 
-    (void)rl_fileio_wait_until_ready();
+    (void)wait_until_fileio_ready();
 
     flush_op = fileio_flush_async();
     if (flush_op == NULL) {
@@ -1960,7 +1960,7 @@ int rl_fs_write(const char *path, const unsigned char *data, size_t size)
         return -1;
     }
 
-    stripped = rl_fileio_strip_leading_slash(path);
+    stripped = strip_leading_slash(path);
     if (!stripped || stripped[0] == '\0') {
         return -1;
     }
@@ -1977,7 +1977,7 @@ int rl_fs_mkdir(const char *path)
         return -1;
     }
 
-    stripped = rl_fileio_strip_leading_slash(path);
+    stripped = strip_leading_slash(path);
     if (!stripped || stripped[0] == '\0') {
         return -1;
     }
@@ -1994,7 +1994,7 @@ int rl_fs_rmdir(const char *path)
         return -1;
     }
 
-    stripped = rl_fileio_strip_leading_slash(path);
+    stripped = strip_leading_slash(path);
     if (!stripped || stripped[0] == '\0') {
         return -1;
     }

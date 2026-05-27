@@ -22,5 +22,5 @@ Public-facing headers stay in `include/`.
 
 ## C symbol naming
 
-- **`static` functions** in one `.c` file: **do not** use the `rl_<subsystem>_` prefix. They are translation-unit private; local names make that obvious at a glance.
-- **Symbols shared across `src/*.c` files** (non-`static`, internal linkage to the library): use the usual **`rl_<subsystem>_...`** shape and declare them **only** in headers under this directory (`src/internal/rl_*.h`). They are **not** public API unless also added to `include/`.
+- **Shared across `src/*.c`** (non-`static`): use **`rl_<subsystem>_...`** and declare them **only** in headers here (`src/internal/rl_*.h`). They are **not** public API unless also added to `include/`.
+- **File-local `static` functions:** no **`rl_`** prefix; prefer shortest clear **`verb_noun`** in `snake_case`; add qualifiers only to disambiguate within the file. Use a **`_ptr` suffix** when the API takes a **raw `*` instance** vs a sibling path that uses a **`rl_handle_t`**. Boolean predicates: prefer **`is_*`**. Handle→pointer helpers: prefer **`resolve_*`** / **`lookup_*`**. **`static`** is the contract; naming signals “this translation unit only.” **Exception:** do **not** rename identifiers used in **`EM_ASYNC_JS` / `EM_JS`** (Emscripten embeds the name). See **AGENTS.md** § C implementation naming (`src/`) for the full checklist and promotion rule (internal header + `rl_*` when a helper leaves one `.c`).

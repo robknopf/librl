@@ -130,6 +130,7 @@ Notes:
 - JS exposes `isInitialized()` for `rl_is_initialized()`.
 - JS exposes `getPlatform()` for `rl_get_platform()`.
 - JS exposes `handleKind(handle)` for `rl_handle_get_kind()` (Haxe `RL.handleKind`, Nim `rl_handle_get_kind`, Lua `rl.handle_kind`).
+- Handle kind constants mirror `rl_handle_kind_t` as `HANDLE_KIND_*` (JS/Haxe/Lua) and `RL_HANDLE_KIND_*` (Nim/C).
 - Version queries (`rl_version_*` in `rl_version.h`) are exposed on all bindings:
   - JS version helpers: `getVersionMajor()`, `getVersionMinor()`, `getVersionPatch()`, `getVersionLabel()`, `getVersionNumber()`, `getVersionString()`
   - Nim: `rl_version_major()`, … (plus `RL_VERSION_*` constants)

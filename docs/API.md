@@ -18,25 +18,25 @@ Public C API exposed by `include/*.h`. `rl.h` is the umbrella header that includ
 
 ```c
 typedef enum rl_handle_kind_t {
-    RL_KIND_NONE = 0,
-    RL_KIND_COLOR = 1,
-    RL_KIND_CAMERA3D = 2,
-    RL_KIND_FONT = 3,
-    RL_KIND_TEXTURE = 4,
-    RL_KIND_SPRITE2D = 5,
-    RL_KIND_SPRITE3D = 6,
-    RL_KIND_MODEL = 7,
-    RL_KIND_MODEL_ASSET = 8,
-    RL_KIND_SOUND = 9,
-    RL_KIND_MUSIC = 10,
-    RL_KIND_TEXT2D = 11,
-    RL_KIND_ASSET_TASK = 12,
+    RL_HANDLE_KIND_NONE = 0,
+    RL_HANDLE_KIND_COLOR = 1,
+    RL_HANDLE_KIND_CAMERA3D = 2,
+    RL_HANDLE_KIND_FONT = 3,
+    RL_HANDLE_KIND_TEXTURE = 4,
+    RL_HANDLE_KIND_SPRITE2D = 5,
+    RL_HANDLE_KIND_SPRITE3D = 6,
+    RL_HANDLE_KIND_MODEL = 7,
+    RL_HANDLE_KIND_MODEL_ASSET = 8,
+    RL_HANDLE_KIND_SOUND = 9,
+    RL_HANDLE_KIND_MUSIC = 10,
+    RL_HANDLE_KIND_TEXT2D = 11,
+    RL_HANDLE_KIND_ASSET_TASK = 12,
 } rl_handle_kind_t;
 
 rl_handle_kind_t rl_handle_get_kind(rl_handle_t handle);
 ```
 
-**Layout (MSB → LSB):** `kind:6 @ 26 | generation:10 @ 16 | index:16 @ 0`. Built-in handles (e.g. `RL_COLOR_DEFAULT`) and pool-allocated handles share this encoding. `rl_handle_get_kind()` returns `RL_KIND_NONE` for handle `0`. Internal pool helpers (`rl_handle_pool_resolve`, `rl_handle_pool_free`) compare the handle kind field against the pool's stamped kind and fail when they differ — passing a texture handle to a color API fails at resolve time rather than corrupting the wrong slot.
+**Layout (MSB → LSB):** `kind:6 @ 26 | generation:10 @ 16 | index:16 @ 0`. Built-in handles (e.g. `RL_COLOR_DEFAULT`) and pool-allocated handles share this encoding. `rl_handle_get_kind()` returns `RL_HANDLE_KIND_NONE` for handle `0`. Internal pool helpers (`rl_handle_pool_resolve`, `rl_handle_pool_free`) compare the handle kind field against the pool's stamped kind and fail when they differ — passing a texture handle to a color API fails at resolve time rather than corrupting the wrong slot.
 
 ---
 

@@ -63,6 +63,19 @@ class RLImpl {
 	public static inline var LOGGER_LEVEL_WARN:Int = 3;
 	public static inline var LOGGER_LEVEL_ERROR:Int = 4;
 	public static inline var LOGGER_LEVEL_FATAL:Int = 5;
+	public static inline var HANDLE_KIND_NONE:Int = 0;
+	public static inline var HANDLE_KIND_COLOR:Int = 1;
+	public static inline var HANDLE_KIND_CAMERA3D:Int = 2;
+	public static inline var HANDLE_KIND_FONT:Int = 3;
+	public static inline var HANDLE_KIND_TEXTURE:Int = 4;
+	public static inline var HANDLE_KIND_SPRITE2D:Int = 5;
+	public static inline var HANDLE_KIND_SPRITE3D:Int = 6;
+	public static inline var HANDLE_KIND_MODEL:Int = 7;
+	public static inline var HANDLE_KIND_MODEL_ASSET:Int = 8;
+	public static inline var HANDLE_KIND_SOUND:Int = 9;
+	public static inline var HANDLE_KIND_MUSIC:Int = 10;
+	public static inline var HANDLE_KIND_TEXT2D:Int = 11;
+	public static inline var HANDLE_KIND_ASSET_TASK:Int = 12;
 
 	public static var COLOR_DEFAULT:RLHandle = 0;
 	public static var COLOR_LIGHTGRAY:RLHandle = 0;

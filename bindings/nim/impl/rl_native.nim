@@ -134,6 +134,19 @@ const
   RL_ASSET_ADD_TASK_OK* = 0
   RL_ASSET_ADD_TASK_ERR_INVALID* = -1
   RL_ASSET_ADD_TASK_ERR_QUEUE_FULL* = -2
+  RL_HANDLE_KIND_NONE* = 0
+  RL_HANDLE_KIND_COLOR* = 1
+  RL_HANDLE_KIND_CAMERA3D* = 2
+  RL_HANDLE_KIND_FONT* = 3
+  RL_HANDLE_KIND_TEXTURE* = 4
+  RL_HANDLE_KIND_SPRITE2D* = 5
+  RL_HANDLE_KIND_SPRITE3D* = 6
+  RL_HANDLE_KIND_MODEL* = 7
+  RL_HANDLE_KIND_MODEL_ASSET* = 8
+  RL_HANDLE_KIND_SOUND* = 9
+  RL_HANDLE_KIND_MUSIC* = 10
+  RL_HANDLE_KIND_TEXT2D* = 11
+  RL_HANDLE_KIND_ASSET_TASK* = 12
 proc rl_init_values_raw(windowWidth: cint, windowHeight: cint, windowTitle: cstring,
                         windowFlags: RLWindowFlags, assetHost: cstring,
                         fsRootDir: cstring): cint {.importc: "rl_init_values", cdecl, header: "rl.h".}

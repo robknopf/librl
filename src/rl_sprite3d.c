@@ -363,7 +363,7 @@ bool rl_sprite3d_get_ray_collision(rl_handle_t handle,
 void rl_sprite3d_init(void)
 {
     rl_handle_pool_init(&rl_sprite3d_pool,
-                        RL_KIND_SPRITE3D,
+                        RL_HANDLE_KIND_SPRITE3D,
                         MAX_SPRITE3D,
                         rl_sprite3d_free_indices,
                         MAX_SPRITE3D,

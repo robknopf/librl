@@ -109,6 +109,71 @@ class RL {
 		return rl.impl.RLImpl.handleKind(handle);
 	}
 
+	public static var HANDLE_KIND_NONE(get, never):Int;
+
+	static inline function get_HANDLE_KIND_NONE():Int
+		return rl.impl.RLImpl.HANDLE_KIND_NONE;
+
+	public static var HANDLE_KIND_COLOR(get, never):Int;
+
+	static inline function get_HANDLE_KIND_COLOR():Int
+		return rl.impl.RLImpl.HANDLE_KIND_COLOR;
+
+	public static var HANDLE_KIND_CAMERA3D(get, never):Int;
+
+	static inline function get_HANDLE_KIND_CAMERA3D():Int
+		return rl.impl.RLImpl.HANDLE_KIND_CAMERA3D;
+
+	public static var HANDLE_KIND_FONT(get, never):Int;
+
+	static inline function get_HANDLE_KIND_FONT():Int
+		return rl.impl.RLImpl.HANDLE_KIND_FONT;
+
+	public static var HANDLE_KIND_TEXTURE(get, never):Int;
+
+	static inline function get_HANDLE_KIND_TEXTURE():Int
+		return rl.impl.RLImpl.HANDLE_KIND_TEXTURE;
+
+	public static var HANDLE_KIND_SPRITE2D(get, never):Int;
+
+	static inline function get_HANDLE_KIND_SPRITE2D():Int
+		return rl.impl.RLImpl.HANDLE_KIND_SPRITE2D;
+
+	public static var HANDLE_KIND_SPRITE3D(get, never):Int;
+
+	static inline function get_HANDLE_KIND_SPRITE3D():Int
+		return rl.impl.RLImpl.HANDLE_KIND_SPRITE3D;
+
+	public static var HANDLE_KIND_MODEL(get, never):Int;
+
+	static inline function get_HANDLE_KIND_MODEL():Int
+		return rl.impl.RLImpl.HANDLE_KIND_MODEL;
+
+	public static var HANDLE_KIND_MODEL_ASSET(get, never):Int;
+
+	static inline function get_HANDLE_KIND_MODEL_ASSET():Int
+		return rl.impl.RLImpl.HANDLE_KIND_MODEL_ASSET;
+
+	public static var HANDLE_KIND_SOUND(get, never):Int;
+
+	static inline function get_HANDLE_KIND_SOUND():Int
+		return rl.impl.RLImpl.HANDLE_KIND_SOUND;
+
+	public static var HANDLE_KIND_MUSIC(get, never):Int;
+
+	static inline function get_HANDLE_KIND_MUSIC():Int
+		return rl.impl.RLImpl.HANDLE_KIND_MUSIC;
+
+	public static var HANDLE_KIND_TEXT2D(get, never):Int;
+
+	static inline function get_HANDLE_KIND_TEXT2D():Int
+		return rl.impl.RLImpl.HANDLE_KIND_TEXT2D;
+
+	public static var HANDLE_KIND_ASSET_TASK(get, never):Int;
+
+	static inline function get_HANDLE_KIND_ASSET_TASK():Int
+		return rl.impl.RLImpl.HANDLE_KIND_ASSET_TASK;
+
 	public static function versionMajor():Int {
 		return rl.impl.RLImpl.versionMajor();
 	}

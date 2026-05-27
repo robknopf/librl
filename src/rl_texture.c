@@ -234,7 +234,7 @@ void rl_texture_draw_ground(rl_handle_t texture,
 void rl_texture_init(void)
 {
     rl_handle_pool_init(&rl_texture_pool,
-                        RL_KIND_TEXTURE,
+                        RL_HANDLE_KIND_TEXTURE,
                         MAX_TEXTURES,
                         rl_texture_free_indices,
                         MAX_TEXTURES,

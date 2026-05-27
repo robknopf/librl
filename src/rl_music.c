@@ -284,7 +284,7 @@ void rl_music_update_all(void)
 void rl_music_init(void)
 {
     rl_handle_pool_init(&rl_music_pool,
-                        RL_KIND_MUSIC,
+                        RL_HANDLE_KIND_MUSIC,
                         MAX_MUSIC,
                         rl_music_free_indices,
                         MAX_MUSIC,

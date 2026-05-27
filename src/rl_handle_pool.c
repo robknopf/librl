@@ -85,7 +85,7 @@ rl_handle_t rl_handle_pool_alloc(rl_handle_pool_t *pool)
     uint16_t index = 0;
     uint16_t generation = 0;
 
-    if (pool == NULL || pool->kind == RL_KIND_NONE) {
+    if (pool == NULL || pool->kind == RL_HANDLE_KIND_NONE) {
         return 0;
     }
 
@@ -173,7 +173,7 @@ bool rl_handle_pool_resolve(const rl_handle_pool_t *pool, rl_handle_t handle, ui
 
 rl_handle_t rl_handle_pool_handle_from_index(const rl_handle_pool_t *pool, uint16_t index)
 {
-    if (pool == NULL || pool->kind == RL_KIND_NONE) {
+    if (pool == NULL || pool->kind == RL_HANDLE_KIND_NONE) {
         return 0;
     }
     if (index == 0 || index >= pool->max) {

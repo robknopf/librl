@@ -8,21 +8,21 @@
 #include "rl.h"
 #include "rl_handle.h"
 
-/* 32-bit handle: [ kind: 6 @ 26 ][ generation: 10 @ 16 ][ index: 16 @ 0 ] */
-#define RL_HANDLE_KIND_BITS 6u
+/* 32-bit handle: [ type: 6 @ 26 ][ generation: 10 @ 16 ][ index: 16 @ 0 ] */
+#define RL_HANDLE_TYPE_BITS 6u
 #define RL_HANDLE_GENERATION_BITS 10u
 #define RL_HANDLE_INDEX_BITS 16u
 
 #define RL_HANDLE_INDEX_MASK ((1u << RL_HANDLE_INDEX_BITS) - 1u)
 #define RL_HANDLE_GENERATION_MASK ((1u << RL_HANDLE_GENERATION_BITS) - 1u)
-#define RL_HANDLE_KIND_MASK ((1u << RL_HANDLE_KIND_BITS) - 1u)
+#define RL_HANDLE_TYPE_MASK ((1u << RL_HANDLE_TYPE_BITS) - 1u)
 
 #define RL_HANDLE_INDEX_SHIFT 0u
 #define RL_HANDLE_GENERATION_SHIFT RL_HANDLE_INDEX_BITS
-#define RL_HANDLE_KIND_SHIFT (RL_HANDLE_INDEX_BITS + RL_HANDLE_GENERATION_BITS)
+#define RL_HANDLE_TYPE_SHIFT (RL_HANDLE_INDEX_BITS + RL_HANDLE_GENERATION_BITS)
 
-#define RL_HANDLE_MAKE(kind, index, generation)                                                      \
-    ((rl_handle_t)((((uint32_t)(kind) & RL_HANDLE_KIND_MASK) << RL_HANDLE_KIND_SHIFT) |             \
+#define RL_HANDLE_MAKE(type, index, generation)                                                      \
+    ((rl_handle_t)((((uint32_t)(type) & RL_HANDLE_TYPE_MASK) << RL_HANDLE_TYPE_SHIFT) |             \
                    (((uint32_t)(generation) & RL_HANDLE_GENERATION_MASK)                            \
                     << RL_HANDLE_GENERATION_SHIFT) |                                               \
                    (((uint32_t)(index) & RL_HANDLE_INDEX_MASK) << RL_HANDLE_INDEX_SHIFT)))
@@ -33,12 +33,12 @@
 #define RL_HANDLE_GENERATION(handle)                                                                     \
     ((uint16_t)(((handle) >> RL_HANDLE_GENERATION_SHIFT) & RL_HANDLE_GENERATION_MASK))
 
-#define RL_HANDLE_KIND(handle)                                                                           \
-    ((uint8_t)(((handle) >> RL_HANDLE_KIND_SHIFT) & RL_HANDLE_KIND_MASK))
+#define RL_HANDLE_TYPE(handle)                                                                           \
+    ((uint8_t)(((handle) >> RL_HANDLE_TYPE_SHIFT) & RL_HANDLE_TYPE_MASK))
 
 typedef struct
 {
-    rl_handle_kind_t kind;
+    rl_handle_type_t type;
     uint16_t max;
     uint16_t next_index;
 
@@ -51,7 +51,7 @@ typedef struct
 } rl_handle_pool_t;
 
 void rl_handle_pool_init(rl_handle_pool_t *pool,
-                         rl_handle_kind_t kind,
+                         rl_handle_type_t type,
                          uint16_t max,
                          uint16_t *free_indices,
                          uint16_t free_capacity,

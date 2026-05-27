@@ -183,10 +183,10 @@ static int rl_get_platform_lua(lua_State *L)
     return 1;
 }
 
-static int rl_handle_get_kind_lua(lua_State *L)
+static int rl_handle_get_type_lua(lua_State *L)
 {
     rl_handle_t handle = (rl_handle_t)luaL_checkinteger(L, 1);
-    lua_pushinteger(L, (lua_Integer)rl_handle_get_kind(handle));
+    lua_pushinteger(L, (lua_Integer)rl_handle_get_type(handle));
     return 1;
 }
 
@@ -368,7 +368,7 @@ static const luaL_Reg rl_functions[] = {
     {"deinit", rl_deinit_lua},
     {"is_initialized", rl_is_initialized_lua},
     {"get_platform", rl_get_platform_lua},
-    {"handle_kind", rl_handle_get_kind_lua},
+    {"handle_type", rl_handle_get_type_lua},
     {"version_major", rl_version_major_lua},
     {"version_minor", rl_version_minor_lua},
     {"version_patch", rl_version_patch_lua},

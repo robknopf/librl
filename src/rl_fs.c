@@ -154,7 +154,7 @@ static void rl_asset_task_pool_init_once(void)
     }
 
     rl_handle_pool_init(&rl_asset_task_pool,
-                        RL_KIND_ASSET_TASK,
+                        RL_TYPE_ASSET_TASK,
                         RL_FILEIO_MAX_TASK_HANDLES,
                         rl_asset_task_free_indices,
                         RL_FILEIO_MAX_TASK_HANDLES,

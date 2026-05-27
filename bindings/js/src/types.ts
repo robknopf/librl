@@ -400,7 +400,7 @@ export interface RLApi {
   initAsync(opts?: RLInitOptions): number;
   refreshScratch(): void;
   getTime(): number;
-  handleKind(handle: RLHandle): number;
+  handleType(handle: RLHandle): number;
   deinit(): Promise<void>;
   isInitialized(): boolean;
   getPlatform(): string;

@@ -183,6 +183,13 @@ static int rl_get_platform_lua(lua_State *L)
     return 1;
 }
 
+static int rl_handle_get_kind_lua(lua_State *L)
+{
+    rl_handle_t handle = (rl_handle_t)luaL_checkinteger(L, 1);
+    lua_pushinteger(L, (lua_Integer)rl_handle_get_kind(handle));
+    return 1;
+}
+
 static int rl_version_major_lua(lua_State *L)
 {
     (void)L;

@@ -1240,6 +1240,10 @@ abstract RLImpl(RLExterns) {
     return RLExterns.getPlatformNative();
   }
 
+  public static function handleKind(handle: RLHandle): Int {
+    return RLExterns.handleGetKindNative(handle);
+  }
+
   public static function versionMajor(): Int {
     return RLExterns.versionMajorNative();
   }

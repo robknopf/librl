@@ -106,7 +106,7 @@ class RL {
 	}
 
 	public static function handleKind(handle:Int):Int {
-		return rl.impl.RLImpl.handleGetKindNative(cast handle);
+		return rl.impl.RLImpl.handleKind(handle);
 	}
 
 	public static function versionMajor():Int {

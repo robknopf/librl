@@ -4,6 +4,7 @@ import { WorldResources } from "../world_resource_manager";
 import { CommandType } from "../types";
 import { get_frame_command_buffer } from "../frame_command_buffer";
 import { rl_frame_commands_append } from "./rl_frame_commands";
+import { BUILTIN_HANDLES } from "../handles";
 
 interface rl_camera3d_state_t {
   position_x: number;
@@ -23,7 +24,7 @@ const rl_camera3d_states = new Map<number, rl_camera3d_state_t>();
 let rl_camera3d_active = 0;
 let rl_camera3d_resource_manager: ResourceManager = WorldResources;
 
-export const RL_CAMERA3D_DEFAULT = 0;
+export const RL_CAMERA3D_DEFAULT = BUILTIN_HANDLES.CAMERA3D_DEFAULT;
 
 export function set_resource_manager(resourceManager: ResourceManager): void {
   rl_camera3d_resource_manager = resourceManager;

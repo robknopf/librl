@@ -3,6 +3,7 @@
 // RL_HANDLE_MAKE(kind, index, generation)
 
 const RL_KIND_COLOR = 1;
+const RL_KIND_CAMERA3D = 2;
 const RL_KIND_FONT = 3;
 
 const RL_HANDLE_MAKE = (kind: number, index: number, generation: number): number => {
@@ -41,6 +42,9 @@ export const BUILTIN_HANDLES = {
 
   // Fonts - from rl_font.c (index 1, generation 1)
   FONT_DEFAULT: RL_HANDLE_MAKE(RL_KIND_FONT, 1, 1),
+
+  // Cameras - from rl_camera3d.c (index 1, generation 1)
+  CAMERA3D_DEFAULT: RL_HANDLE_MAKE(RL_KIND_CAMERA3D, 1, 1),
 } as const;
 
 // Resource registry for dynamically created resources

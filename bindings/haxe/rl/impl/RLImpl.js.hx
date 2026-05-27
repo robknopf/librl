@@ -275,6 +275,10 @@ class RLImpl {
 		return cast binding.getPlatform();
 	}
 
+	public static function handleKind(handle:Int):Int {
+		return binding == null ? 0 : cast binding.handleKind(handle);
+	}
+
 	public static function versionMajor():Int {
 		return binding == null ? 0 : cast binding.getVersionMajor();
 	}

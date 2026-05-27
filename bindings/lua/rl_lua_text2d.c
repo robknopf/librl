@@ -3,7 +3,6 @@
 #include <lua.h>
 #include <lauxlib.h>
 
-#include "rl.h"
 #include "rl_text2d.h"
 #include "rl_lua_text2d.h"
 

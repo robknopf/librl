@@ -61,6 +61,8 @@ def should_exclude_symbol(name: str) -> str | None:
         return "logger macro, not a function export"
     if name.startswith("rl_frame_command"):
         return "examples/remote only"
+    if name == "rl_fs_read_free":
+        return "binding-internal ownership helper; fs_read wrappers copy/own returned bytes"
     if name.startswith("rl_scratch_") or "_to_scratch" in name or "_from_scratch" in name:
         return "scratch/SAB bridge"
     return None
@@ -180,11 +182,46 @@ def parse_lua_bindings() -> set[str]:
     covered: set[str] = set()
     for path in (ROOT / "bindings/lua").glob("*.c"):
         text = path.read_text(encoding="utf-8")
-        for m in re.finditer(r"\brl_[a-z0-9_]+\s*\(", text):
-            sym = m.group(0).rstrip("(")
-            if should_exclude_symbol(sym):
+        wrapper_calls: dict[str, set[str]] = {}
+        for m in re.finditer(r"static int\s+(rl_[a-z0-9_]+_lua)\s*\(lua_State \*L\)\s*\{", text):
+            wrapper = m.group(1)
+            start = m.end()
+            next_match = re.search(r"\n(?:static int|void rl_register_[a-z0-9_]+_bindings)\b", text[start:])
+            end = len(text) if next_match is None else start + next_match.start()
+            body = text[start:end]
+            calls: set[str] = set()
+            for call in re.finditer(r"\b(rl_[a-z0-9_]+)\s*\(", body):
+                sym = call.group(1)
+                if should_exclude_symbol(sym):
+                    continue
+                calls.add(sym)
+            wrapper_calls[wrapper] = calls
+
+        registration_pattern = re.compile(
+            r'lua_pushcfunction\(L,\s*(rl_[a-z0-9_]+_lua)\s*\);\s*'
+            r'lua_setfield\(L,\s*-2,\s*"([a-z0-9_]+)"\s*\);',
+            re.DOTALL,
+        )
+        registrations = list(registration_pattern.finditer(text))
+        array_pattern = re.compile(r'\{\s*"([a-z0-9_]+)"\s*,\s*(rl_[a-z0-9_]+_lua)\s*\}')
+        registrations.extend(array_pattern.finditer(text))
+
+        for m in registrations:
+            if m.lastindex != 2:
                 continue
-            covered.add(sym)
+            if m.re is registration_pattern:
+                wrapper = m.group(1)
+                field = m.group(2)
+            else:
+                field = m.group(1)
+                wrapper = m.group(2)
+            calls = wrapper_calls.get(wrapper, set())
+            if len(calls) == 1:
+                covered |= calls
+                continue
+            prefixed = f"rl_{field}"
+            if prefixed in calls and not should_exclude_symbol(prefixed):
+                covered.add(prefixed)
     return covered
 
 
@@ -234,6 +271,7 @@ def load_documented_omissions() -> list[str]:
         "scratch/SAB bridge (`rl_scratch_*`, `*_to_scratch`, `*_from_scratch`) — JS/wasm only; see `docs/BINDINGS.md`",
         "`rl_asset_ensure_many_from_scratch_async` — wasm scratch path; covered by JS `ensureGroupAsync` → `rl_asset_ensure_many_async`",
         "Logger convenience macros (`rl_logger_trace`, …) — bindings expose `setLevel` / message helpers instead",
+        "`rl_fs_read_free` — binding-internal ownership helper; Haxe/Lua `fs_read` copy bytes into managed values and free native buffers internally",
     ]
     return items
 
@@ -264,7 +302,8 @@ def render_roadmap_block(audited: list[str], gaps: list[dict]) -> str:
     lines.extend(
         [
             "",
-            "**Intentional non-gaps:** scratch/SAB; `rl_init_values*`; `rl_frame_command*` (examples/remote). "
+            "**Intentional non-gaps:** scratch/SAB; `rl_init_values*`; `rl_frame_command*` (examples/remote); "
+            "`rl_fs_read_free` (binding-internal ownership helper). "
             "See `docs/BINDINGS.md`.",
             "",
         ]

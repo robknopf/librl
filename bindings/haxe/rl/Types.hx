@@ -23,6 +23,13 @@ typedef RLSprite3dTransform = {
 	var size:Float;
 }
 
+enum abstract RLSprite3dFacing(Int) from Int to Int {
+	var CAMERA = 0;
+	var CAMERA_FIXED_Y = 1;
+	var Y_UP = 2;
+	var NONE = 3;
+}
+
 typedef RLInitConfig = {
 	?windowWidth:Int,
 	?windowHeight:Int,

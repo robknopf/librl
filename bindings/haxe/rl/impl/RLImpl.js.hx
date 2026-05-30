@@ -11,6 +11,7 @@ import rl.Types.RLKeyboardState;
 import rl.Types.RLMouseState;
 import rl.Types.RLPickResult;
 import rl.Types.RLScenePickResult;
+import rl.Types.RLSprite3dFacing;
 import rl.Types.RLSprite3dTransform;
 import rl.Types.RLTouchpoint;
 import rl.Types.RLVec2;
@@ -763,6 +764,9 @@ class RLImpl {
 
 	public static function sprite3dIsPickable(sprite:RLHandle):Bool
 		return binding == null ? false : cast binding.sprite3d.isPickable(sprite);
+
+	public static function sprite3dSetFacing(sprite:RLHandle, facing:RLSprite3dFacing):Bool
+		return binding != null && cast binding.sprite3d.setFacing(sprite, facing);
 
 	public static function sprite3dSetTint(sprite:RLHandle, color:RLHandle = 0):Bool
 		return binding != null && cast binding.sprite3d.setTint(sprite, color);

@@ -65,6 +65,8 @@ export interface RLSprite3dTransform {
   size: number;
 }
 
+export type RLSprite3dFacing = 0 | 1 | 2 | 3;
+
 export interface RLPickStats {
   broadphaseTests: number;
   broadphaseRejects: number;
@@ -366,6 +368,7 @@ export interface RLSprite3d {
   createFromFile(path: string): RLHandle;
   setTexture(sprite: RLHandle, texture: RLHandle): boolean;
   setTransform(sprite: RLHandle, positionX: number, positionY: number, positionZ: number, size: number): boolean;
+  setFacing(sprite: RLHandle, facing: RLSprite3dFacing): boolean;
   setVisible(sprite: RLHandle, visible: boolean): boolean;
   setPickable(sprite: RLHandle, pickable: boolean): boolean;
   isVisible(sprite: RLHandle): boolean;

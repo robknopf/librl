@@ -2,10 +2,16 @@
 package rl;
 
 import rl.Types.RLHandle;
+import rl.Types.RLSprite3dFacing;
 import rl.Types.RLSprite3dTransform;
 
 @:keep
 class Sprite3d {
+	public static inline var FACING_CAMERA:RLSprite3dFacing = RLSprite3dFacing.CAMERA;
+	public static inline var FACING_CAMERA_FIXED_Y:RLSprite3dFacing = RLSprite3dFacing.CAMERA_FIXED_Y;
+	public static inline var FACING_Y_UP:RLSprite3dFacing = RLSprite3dFacing.Y_UP;
+	public static inline var FACING_NONE:RLSprite3dFacing = RLSprite3dFacing.NONE;
+
 
 
 	public static function create(texture:RLHandle):RLHandle {
@@ -42,6 +48,10 @@ class Sprite3d {
 
 	public static function getTransform(sprite:RLHandle):RLSprite3dTransform {
 		return rl.impl.RLImpl.sprite3dGetTransform(sprite);
+	}
+
+	public static function setFacing(sprite:RLHandle, facing:RLSprite3dFacing):Bool {
+		return rl.impl.RLImpl.sprite3dSetFacing(sprite, facing);
 	}
 
 	public static function setTint(sprite:RLHandle, color:RLHandle = 0):Bool {

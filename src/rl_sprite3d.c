@@ -13,6 +13,7 @@
 #include "rl_texture.h"
 #include "internal/rl_scene.h"
 #include "internal/rl_texture.h"
+#include <rlgl.h>
 
 #define MAX_SPRITE3D 1024
 
@@ -27,6 +28,7 @@ typedef struct
     rl_handle_t tint_handle;
     bool visible;
     bool pickable;
+    rl_sprite3d_facing_t facing;
 } rl_sprite3d_instance_t;
 
 static rl_sprite3d_instance_t rl_sprite3d[MAX_SPRITE3D];
@@ -83,6 +85,7 @@ rl_handle_t rl_sprite3d_create(rl_handle_t texture)
     rl_sprite3d[index].tint_handle = 0;
     rl_sprite3d[index].visible = true;
     rl_sprite3d[index].pickable = true;
+    rl_sprite3d[index].facing = RL_SPRITE3D_FACING_CAMERA_FIXED_Y;
     rl_sprite3d[index].in_use = true;
 
     return handle;
@@ -115,6 +118,7 @@ rl_handle_t rl_sprite3d_create_from_file(const char *filename)
     rl_sprite3d[index].tint_handle = 0;
     rl_sprite3d[index].visible = true;
     rl_sprite3d[index].pickable = true;
+    rl_sprite3d[index].facing = RL_SPRITE3D_FACING_CAMERA_FIXED_Y;
     rl_sprite3d[index].in_use = true;
     return handle;
 }
@@ -244,11 +248,56 @@ void rl_sprite3d_draw(rl_handle_t handle)
         return;
     }
 
-    DrawBillboard(camera,
-                  *texture,
-                  (Vector3){sprite->position_x, sprite->position_y, sprite->position_z},
-                  sprite->size,
-                  rl_color_get(sprite->tint_handle));
+    Color tint = rl_color_get(sprite->tint_handle);
+    Vector3 pos = {sprite->position_x, sprite->position_y, sprite->position_z};
+
+    switch (sprite->facing) {
+        case RL_SPRITE3D_FACING_CAMERA: {
+            Rectangle source = {0.0f, 0.0f, (float)texture->width, (float)texture->height};
+            Vector2 size = {sprite->size * fabsf((float)texture->width / (float)texture->height), sprite->size};
+            DrawBillboardPro(camera, *texture, source, pos, camera.up, size, Vector2Scale(size, 0.5f), 0.0f, tint);
+            break;
+        }
+        case RL_SPRITE3D_FACING_CAMERA_FIXED_Y: {
+            DrawBillboard(camera, *texture, pos, sprite->size, tint);
+            break;
+        }
+        case RL_SPRITE3D_FACING_Y_UP: {
+            float hs = sprite->size * 0.5f;
+            rlSetTexture(texture->id);
+            rlBegin(RL_QUADS);
+            rlColor4ub(tint.r, tint.g, tint.b, tint.a);
+            rlTexCoord2f(0, 0); rlVertex3f(pos.x - hs, pos.y, pos.z - hs);
+            rlTexCoord2f(1, 0); rlVertex3f(pos.x + hs, pos.y, pos.z - hs);
+            rlTexCoord2f(1, 1); rlVertex3f(pos.x + hs, pos.y, pos.z + hs);
+            rlTexCoord2f(0, 1); rlVertex3f(pos.x - hs, pos.y, pos.z + hs);
+            rlEnd();
+            rlSetTexture(0);
+            break;
+        }
+        case RL_SPRITE3D_FACING_NONE: {
+            float hs = sprite->size * 0.5f;
+            rlSetTexture(texture->id);
+            rlBegin(RL_QUADS);
+            rlColor4ub(tint.r, tint.g, tint.b, tint.a);
+            rlTexCoord2f(0, 0); rlVertex3f(pos.x - hs, pos.y - hs, pos.z);
+            rlTexCoord2f(1, 0); rlVertex3f(pos.x + hs, pos.y - hs, pos.z);
+            rlTexCoord2f(1, 1); rlVertex3f(pos.x + hs, pos.y + hs, pos.z);
+            rlTexCoord2f(0, 1); rlVertex3f(pos.x - hs, pos.y + hs, pos.z);
+            rlEnd();
+            rlSetTexture(0);
+            break;
+        }
+    }
+}
+
+RL_KEEP
+bool rl_sprite3d_set_facing(rl_handle_t handle, int facing)
+{
+    rl_sprite3d_instance_t *sprite = resolve_sprite3d_instance(handle);
+    if (sprite == NULL) return false;
+    sprite->facing = (rl_sprite3d_facing_t)facing;
+    return true;
 }
 
 RL_KEEP
@@ -275,19 +324,19 @@ void rl_sprite3d_destroy(rl_handle_t handle)
     rl_handle_pool_free(&rl_sprite3d_pool, handle);
 }
 
-/* Mirrors raylib DrawBillboardPro() quad construction for Y-locked billboards.
+/* Mirrors raylib DrawBillboardPro() quad construction for camera-facing quads.
  * Keep this in sync with raylib when vendored billboard math changes. */
 /* TODO: If hover/mousemove picking becomes hot, profile this path.
  * Billboard quad construction is camera-dependent, so any cache must
  * invalidate on sprite transform or camera changes. */
-static bool build_billboard_quad(Camera3D camera,
-                                    Vector3 position,
-                                    Vector2 size,
-                                    Vector3 points[4],
-                                    Vector3 *right_axis,
-                                    Vector3 *up_axis)
+static bool build_camera_quad(Camera3D camera,
+                              Vector3 position,
+                              Vector3 up,
+                              Vector2 size,
+                              Vector3 points[4],
+                              Vector3 *right_axis,
+                              Vector3 *up_axis)
 {
-    Vector3 up = {0.0f, 1.0f, 0.0f};
     Vector2 origin = Vector2Scale(size, 0.5f);
     Matrix mat_view = MatrixLookAt(camera.position, camera.target, camera.up);
     Vector3 right = {mat_view.m0, mat_view.m4, mat_view.m8};
@@ -325,6 +374,60 @@ static bool build_billboard_quad(Camera3D camera,
     if (right_axis != NULL) *right_axis = right;
     if (up_axis != NULL) *up_axis = up;
     return true;
+}
+
+static bool build_camera_fixed_y_quad(Camera3D camera,
+                                      Vector3 position,
+                                      Vector2 size,
+                                      Vector3 points[4],
+                                      Vector3 *right_axis,
+                                      Vector3 *up_axis)
+{
+    return build_camera_quad(camera,
+                             position,
+                             (Vector3){0.0f, 1.0f, 0.0f},
+                             size,
+                             points,
+                             right_axis,
+                             up_axis);
+}
+
+static void build_y_up_quad(Vector3 position,
+                            float size,
+                            Vector3 points[4],
+                            Vector3 *right_axis,
+                            Vector3 *forward_axis)
+{
+    float hs = size * 0.5f;
+    Vector3 right = {size, 0.0f, 0.0f};
+    Vector3 forward = {0.0f, 0.0f, size};
+
+    points[0] = (Vector3){position.x - hs, position.y, position.z - hs};
+    points[1] = (Vector3){position.x + hs, position.y, position.z - hs};
+    points[2] = (Vector3){position.x + hs, position.y, position.z + hs};
+    points[3] = (Vector3){position.x - hs, position.y, position.z + hs};
+
+    if (right_axis != NULL) *right_axis = right;
+    if (forward_axis != NULL) *forward_axis = forward;
+}
+
+static void build_none_quad(Vector3 position,
+                            float size,
+                            Vector3 points[4],
+                            Vector3 *right_axis,
+                            Vector3 *up_axis)
+{
+    float hs = size * 0.5f;
+    Vector3 right = {size, 0.0f, 0.0f};
+    Vector3 up = {0.0f, size, 0.0f};
+
+    points[0] = (Vector3){position.x - hs, position.y - hs, position.z};
+    points[1] = (Vector3){position.x + hs, position.y - hs, position.z};
+    points[2] = (Vector3){position.x + hs, position.y + hs, position.z};
+    points[3] = (Vector3){position.x - hs, position.y + hs, position.z};
+
+    if (right_axis != NULL) *right_axis = right;
+    if (up_axis != NULL) *up_axis = up;
 }
 
 bool rl_sprite3d_get_ray_collision_ex(rl_handle_t handle,
@@ -377,8 +480,18 @@ bool rl_sprite3d_get_ray_collision_ex(rl_handle_t handle,
         }
     }
 
-    if (!build_billboard_quad(camera, position, billboard_size, points, &right_axis, &up_axis)) {
-        return false;
+    if (sprite->facing == RL_SPRITE3D_FACING_CAMERA) {
+        if (!build_camera_quad(camera, position, camera.up, billboard_size, points, &right_axis, &up_axis)) {
+            return false;
+        }
+    } else if (sprite->facing == RL_SPRITE3D_FACING_CAMERA_FIXED_Y) {
+        if (!build_camera_fixed_y_quad(camera, position, billboard_size, points, &right_axis, &up_axis)) {
+            return false;
+        }
+    } else if (sprite->facing == RL_SPRITE3D_FACING_Y_UP) {
+        build_y_up_quad(position, size, points, &right_axis, &up_axis);
+    } else {
+        build_none_quad(position, size, points, &right_axis, &up_axis);
     }
 
     if (narrowphase_ran != NULL) *narrowphase_ran = true;
@@ -389,8 +502,17 @@ bool rl_sprite3d_get_ray_collision_ex(rl_handle_t handle,
         Vector3 up_dir = Vector3Normalize(up_axis);
         float local_x = Vector3DotProduct(offset, right_dir);
         float local_y = Vector3DotProduct(offset, up_dir);
-        collision->point = (Vector3){local_x, local_y, 0.0f};
-        collision->normal = (Vector3){0.0f, 0.0f, (collision->normal.z < 0.0f) ? -1.0f : 1.0f};
+        if (sprite->facing == RL_SPRITE3D_FACING_CAMERA ||
+            sprite->facing == RL_SPRITE3D_FACING_CAMERA_FIXED_Y) {
+            collision->point = (Vector3){local_x, local_y, 0.0f};
+            collision->normal = (Vector3){0.0f, 0.0f, (collision->normal.z < 0.0f) ? -1.0f : 1.0f};
+        } else if (sprite->facing == RL_SPRITE3D_FACING_Y_UP) {
+            collision->point = (Vector3){local_x, 0.0f, local_y};
+            collision->normal = (Vector3){0.0f, (collision->normal.y < 0.0f) ? -1.0f : 1.0f, 0.0f};
+        } else {
+            collision->point = (Vector3){local_x, local_y, 0.0f};
+            collision->normal = (Vector3){0.0f, 0.0f, (collision->normal.z < 0.0f) ? -1.0f : 1.0f};
+        }
     }
     return true;
 }
@@ -470,6 +592,7 @@ void rl_sprite3d_init(void)
         rl_sprite3d[i].tint_handle = 0;
         rl_sprite3d[i].visible = true;
         rl_sprite3d[i].pickable = true;
+        rl_sprite3d[i].facing = RL_SPRITE3D_FACING_CAMERA_FIXED_Y;
     }
 }
 

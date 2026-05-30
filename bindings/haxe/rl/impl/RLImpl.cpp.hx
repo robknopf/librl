@@ -19,6 +19,7 @@ import rl.Types.RLScenePickResult;
 import rl.Types.RLMouseState;
 import rl.Types.RLKeyboardState;
 import rl.Types.RLGamepad;
+import rl.Types.RLSprite3dFacing;
 import rl.Types.RLSprite3dTransform;
 import rl.Types.RLTouchpoint;
 import rl.gen.RLVersion;
@@ -476,6 +477,9 @@ private extern class RLExterns {
 
   @:native("rl_sprite3d_is_pickable")
   static function sprite3dIsPickable(sprite: RLHandle): Bool;
+
+  @:native("rl_sprite3d_set_facing")
+  static function sprite3dSetFacing(sprite: RLHandle, facing: Int): Bool;
 
   @:native("rl_sprite3d_set_tint")
   static function sprite3dSetTint(sprite: RLHandle, color: RLHandle): Bool;
@@ -1184,6 +1188,7 @@ abstract RLImpl(RLExterns) {
   public static function sprite3dSetPickable(sprite: RLHandle, pickable: Bool): Bool { return RLExterns.sprite3dSetPickable(sprite, pickable); }
   public static function sprite3dIsVisible(sprite: RLHandle): Bool { return RLExterns.sprite3dIsVisible(sprite); }
   public static function sprite3dIsPickable(sprite: RLHandle): Bool { return RLExterns.sprite3dIsPickable(sprite); }
+  public static function sprite3dSetFacing(sprite: RLHandle, facing: RLSprite3dFacing): Bool { return RLExterns.sprite3dSetFacing(sprite, cast facing); }
   public static function sprite3dSetTint(sprite: RLHandle, color: RLHandle = 0): Bool { return RLExterns.sprite3dSetTint(sprite, color); }
   public static function sprite3dDraw(sprite: RLHandle): Void { RLExterns.sprite3dDraw(sprite); }
   public static function sprite3dDestroy(sprite: RLHandle): Void { RLExterns.sprite3dDestroy(sprite); }

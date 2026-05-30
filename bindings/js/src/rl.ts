@@ -1606,6 +1606,9 @@ const sprite3d = {
     setTransform: (sprite, positionX, positionY, positionZ, size) => reqModule().ccall(
         "rl_sprite3d_set_transform", "number", ["number", "number", "number", "number", "number"], [sprite, positionX, positionY, positionZ, size]
     ) !== 0,
+    setFacing: (sprite, facing) => reqModule().ccall(
+        "rl_sprite3d_set_facing", "number", ["number", "number"], [sprite, facing]
+    ) !== 0,
     setVisible: (sprite, visible) => reqModule().ccall(
         "rl_sprite3d_set_visible", "number", ["number", "number"], [sprite, visible ? 1 : 0]
     ) !== 0,

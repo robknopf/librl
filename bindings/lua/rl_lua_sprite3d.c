@@ -72,6 +72,14 @@ static int rl_sprite3d_set_transform_lua(lua_State *L)
     return 0;
 }
 
+static int rl_sprite3d_set_facing_lua(lua_State *L)
+{
+    rl_handle_t sprite = (rl_handle_t)luaL_checkinteger(L, 1);
+    int facing = (int)luaL_checkinteger(L, 2);
+    lua_pushboolean(L, rl_sprite3d_set_facing(sprite, facing) ? 1 : 0);
+    return 1;
+}
+
 static int rl_sprite3d_set_visible_lua(lua_State *L)
 {
     rl_handle_t sprite = (rl_handle_t)luaL_checkinteger(L, 1);
@@ -141,6 +149,9 @@ void rl_register_sprite3d_bindings(lua_State *L)
 
     lua_pushcfunction(L, rl_sprite3d_set_transform_lua);
     lua_setfield(L, -2, "sprite3d_set_transform");
+
+    lua_pushcfunction(L, rl_sprite3d_set_facing_lua);
+    lua_setfield(L, -2, "sprite3d_set_facing");
 
     lua_pushcfunction(L, rl_sprite3d_set_visible_lua);
     lua_setfield(L, -2, "sprite3d_set_visible");

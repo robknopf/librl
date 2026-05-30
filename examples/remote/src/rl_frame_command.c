@@ -142,7 +142,10 @@ void rl_frame_commands_execute_state(
                                             command->data.set_sprite3d_transform.position_x,
                                             command->data.set_sprite3d_transform.position_y,
                                             command->data.set_sprite3d_transform.position_z,
-                                            command->data.set_sprite3d_transform.size);
+                                            0.0f, 0.0f, 0.0f,
+                                            1.0f, 1.0f, 1.0f);
+            (void)rl_sprite3d_set_size(command->data.set_sprite3d_transform.sprite,
+                                       command->data.set_sprite3d_transform.size);
             break;
         case RL_RENDER_CMD_SET_SPRITE2D_TRANSFORM:
             (void)rl_sprite2d_set_transform(command->data.set_sprite2d_transform.sprite,

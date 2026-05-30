@@ -34,22 +34,33 @@ static int rl_sprite3d_get_transform_lua(lua_State *L)
     float x = 0.0f;
     float y = 0.0f;
     float z = 0.0f;
-    float size = 0.0f;
+    float rot_x = 0.0f, rot_y = 0.0f, rot_z = 0.0f;
+    float scale_x = 0.0f, scale_y = 0.0f, scale_z = 0.0f;
 
-    if (!rl_sprite3d_get_transform(sprite, &x, &y, &z, &size)) {
+    if (!rl_sprite3d_get_transform(sprite, &x, &y, &z, &rot_x, &rot_y, &rot_z, &scale_x, &scale_y, &scale_z)) {
         lua_pushnil(L);
         return 1;
     }
 
-    lua_createtable(L, 0, 4);
+    lua_createtable(L, 0, 9);
     lua_pushnumber(L, x);
     lua_setfield(L, -2, "x");
     lua_pushnumber(L, y);
     lua_setfield(L, -2, "y");
     lua_pushnumber(L, z);
     lua_setfield(L, -2, "z");
-    lua_pushnumber(L, size);
-    lua_setfield(L, -2, "size");
+    lua_pushnumber(L, rot_x);
+    lua_setfield(L, -2, "rotation_x");
+    lua_pushnumber(L, rot_y);
+    lua_setfield(L, -2, "rotation_y");
+    lua_pushnumber(L, rot_z);
+    lua_setfield(L, -2, "rotation_z");
+    lua_pushnumber(L, scale_x);
+    lua_setfield(L, -2, "scale_x");
+    lua_pushnumber(L, scale_y);
+    lua_setfield(L, -2, "scale_y");
+    lua_pushnumber(L, scale_z);
+    lua_setfield(L, -2, "scale_z");
     return 1;
 }
 
@@ -67,9 +78,34 @@ static int rl_sprite3d_set_transform_lua(lua_State *L)
     float x = (float)luaL_checknumber(L, 2);
     float y = (float)luaL_checknumber(L, 3);
     float z = (float)luaL_checknumber(L, 4);
-    float size = (float)luaL_checknumber(L, 5);
-    rl_sprite3d_set_transform(sprite, x, y, z, size);
+    float rot_x = (float)luaL_checknumber(L, 5);
+    float rot_y = (float)luaL_checknumber(L, 6);
+    float rot_z = (float)luaL_checknumber(L, 7);
+    float scale_x = (float)luaL_checknumber(L, 8);
+    float scale_y = (float)luaL_checknumber(L, 9);
+    float scale_z = (float)luaL_checknumber(L, 10);
+    rl_sprite3d_set_transform(sprite, x, y, z, rot_x, rot_y, rot_z, scale_x, scale_y, scale_z);
     return 0;
+}
+
+static int rl_sprite3d_get_size_lua(lua_State *L)
+{
+    rl_handle_t sprite = (rl_handle_t)luaL_checkinteger(L, 1);
+    float size = 0.0f;
+    if (!rl_sprite3d_get_size(sprite, &size)) {
+        lua_pushnumber(L, 0.0);
+        return 1;
+    }
+    lua_pushnumber(L, size);
+    return 1;
+}
+
+static int rl_sprite3d_set_size_lua(lua_State *L)
+{
+    rl_handle_t sprite = (rl_handle_t)luaL_checkinteger(L, 1);
+    float size = (float)luaL_checknumber(L, 2);
+    lua_pushboolean(L, rl_sprite3d_set_size(sprite, size) ? 1 : 0);
+    return 1;
 }
 
 static int rl_sprite3d_set_facing_lua(lua_State *L)
@@ -149,6 +185,12 @@ void rl_register_sprite3d_bindings(lua_State *L)
 
     lua_pushcfunction(L, rl_sprite3d_set_transform_lua);
     lua_setfield(L, -2, "sprite3d_set_transform");
+
+    lua_pushcfunction(L, rl_sprite3d_get_size_lua);
+    lua_setfield(L, -2, "sprite3d_get_size");
+
+    lua_pushcfunction(L, rl_sprite3d_set_size_lua);
+    lua_setfield(L, -2, "sprite3d_set_size");
 
     lua_pushcfunction(L, rl_sprite3d_set_facing_lua);
     lua_setfield(L, -2, "sprite3d_set_facing");

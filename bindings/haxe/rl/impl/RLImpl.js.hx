@@ -750,8 +750,8 @@ class RLImpl {
 	public static function sprite3dSetTexture(sprite:RLHandle, texture:RLHandle):Bool
 		return binding != null && cast binding.sprite3d.setTexture(sprite, texture);
 
-	public static function sprite3dSetTransform(sprite:RLHandle, positionX:Float, positionY:Float, positionZ:Float, size:Float):Bool
-		return binding != null && cast binding.sprite3d.setTransform(sprite, positionX, positionY, positionZ, size);
+	public static function sprite3dSetTransform(sprite:RLHandle, positionX:Float, positionY:Float, positionZ:Float, rotationX:Float, rotationY:Float, rotationZ:Float, scaleX:Float, scaleY:Float, scaleZ:Float):Bool
+		return binding != null && cast binding.sprite3d.setTransform(sprite, positionX, positionY, positionZ, rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ);
 
 	public static function sprite3dSetVisible(sprite:RLHandle, visible:Bool):Bool
 		return binding != null && cast binding.sprite3d.setVisible(sprite, visible);
@@ -764,6 +764,12 @@ class RLImpl {
 
 	public static function sprite3dIsPickable(sprite:RLHandle):Bool
 		return binding == null ? false : cast binding.sprite3d.isPickable(sprite);
+
+	public static function sprite3dGetSize(sprite:RLHandle):Float
+		return binding == null ? 0.0 : cast binding.sprite3d.getSize(sprite);
+
+	public static function sprite3dSetSize(sprite:RLHandle, size:Float):Bool
+		return binding != null && cast binding.sprite3d.setSize(sprite, size);
 
 	public static function sprite3dSetFacing(sprite:RLHandle, facing:RLSprite3dFacing):Bool
 		return binding != null && cast binding.sprite3d.setFacing(sprite, facing);

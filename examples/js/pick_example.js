@@ -41,7 +41,8 @@ import { rl } from "../../bindings/js/dist/rl.js";
     const komikaSmall = rl.font.create(fontPath, smallFontSize);
     const gumshoe = rl.model.createFromFile(modelPath);
     const sprite = rl.sprite3d.createFromFile(spritePath);
-    rl.sprite3d.setTransform(sprite, spritePos.x, spritePos.y, spritePos.z, spriteSize);
+    rl.sprite3d.setTransform(sprite, spritePos.x, spritePos.y, spritePos.z, 0, 0, 0, 1, 1, 1);
+    rl.sprite3d.setSize(sprite, spriteSize);
     const camera = rl.camera3d.create(
       12.0, 12.0, 12.0,
       0.0, 1.0, 0.0,

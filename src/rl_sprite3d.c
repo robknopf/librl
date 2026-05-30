@@ -24,6 +24,12 @@ typedef struct
     float position_x;
     float position_y;
     float position_z;
+    float rotation_x;
+    float rotation_y;
+    float rotation_z;
+    float scale_x;
+    float scale_y;
+    float scale_z;
     float size;
     rl_handle_t tint_handle;
     bool visible;
@@ -50,6 +56,81 @@ static rl_sprite3d_instance_t *resolve_sprite3d_instance(rl_handle_t handle)
     }
     return &rl_sprite3d[index];
 }
+
+static float sprite3d_texture_aspect(const Texture2D *texture)
+{
+    if (texture == NULL || texture->height == 0) {
+        return 1.0f;
+    }
+    return fabsf((float)texture->width / (float)texture->height);
+}
+
+static Vector2 sprite3d_billboard_size(const rl_sprite3d_instance_t *sprite, const Texture2D *texture)
+{
+    float aspect = sprite3d_texture_aspect(texture);
+    return (Vector2){
+        aspect * sprite->scale_x * sprite->size,
+        sprite->scale_y * sprite->size
+    };
+}
+
+static float sprite3d_y_up_width(const rl_sprite3d_instance_t *sprite, const Texture2D *texture)
+{
+    return sprite3d_texture_aspect(texture) * sprite->scale_x * sprite->size;
+}
+
+static float sprite3d_y_up_length(const rl_sprite3d_instance_t *sprite)
+{
+    return sprite->scale_z * sprite->size;
+}
+
+static Matrix sprite3d_rotation_matrix(const rl_sprite3d_instance_t *sprite)
+{
+    return MatrixRotateXYZ((Vector3){
+        sprite->rotation_x * DEG2RAD,
+        sprite->rotation_y * DEG2RAD,
+        sprite->rotation_z * DEG2RAD
+    });
+}
+
+static void draw_textured_quad(const Texture2D *texture, const Vector3 points[4], Color tint)
+{
+    rlSetTexture(texture->id);
+    rlBegin(RL_QUADS);
+    rlColor4ub(tint.r, tint.g, tint.b, tint.a);
+    rlTexCoord2f(0, 0); rlVertex3f(points[0].x, points[0].y, points[0].z);
+    rlTexCoord2f(1, 0); rlVertex3f(points[1].x, points[1].y, points[1].z);
+    rlTexCoord2f(1, 1); rlVertex3f(points[2].x, points[2].y, points[2].z);
+    rlTexCoord2f(0, 1); rlVertex3f(points[3].x, points[3].y, points[3].z);
+    rlEnd();
+    rlSetTexture(0);
+}
+
+static bool build_camera_quad(Camera3D camera,
+                              Vector3 position,
+                              Vector3 up,
+                              Vector2 size,
+                              Vector3 points[4],
+                              Vector3 *right_axis,
+                              Vector3 *up_axis);
+static bool build_camera_fixed_y_quad(Camera3D camera,
+                                      Vector3 position,
+                                      Vector2 size,
+                                      Vector3 points[4],
+                                      Vector3 *right_axis,
+                                      Vector3 *up_axis);
+static void build_y_up_quad(Vector3 position,
+                            float width,
+                            float length,
+                            Vector3 points[4],
+                            Vector3 *right_axis,
+                            Vector3 *forward_axis);
+static void build_free_quad(Vector3 position,
+                            Matrix rotation,
+                            Vector2 size,
+                            Vector3 points[4],
+                            Vector3 *right_axis,
+                            Vector3 *up_axis);
 
 RL_KEEP
 rl_handle_t rl_sprite3d_get_default_texture(void)
@@ -81,11 +162,17 @@ rl_handle_t rl_sprite3d_create(rl_handle_t texture)
     rl_sprite3d[index].position_x = 0.0f;
     rl_sprite3d[index].position_y = 0.0f;
     rl_sprite3d[index].position_z = 0.0f;
+    rl_sprite3d[index].rotation_x = 0.0f;
+    rl_sprite3d[index].rotation_y = 0.0f;
+    rl_sprite3d[index].rotation_z = 0.0f;
+    rl_sprite3d[index].scale_x = 1.0f;
+    rl_sprite3d[index].scale_y = 1.0f;
+    rl_sprite3d[index].scale_z = 1.0f;
     rl_sprite3d[index].size = 1.0f;
     rl_sprite3d[index].tint_handle = 0;
     rl_sprite3d[index].visible = true;
     rl_sprite3d[index].pickable = true;
-    rl_sprite3d[index].facing = RL_SPRITE3D_FACING_CAMERA_FIXED_Y;
+    rl_sprite3d[index].facing = RL_SPRITE3D_FACING_FREE;
     rl_sprite3d[index].in_use = true;
 
     return handle;
@@ -114,11 +201,17 @@ rl_handle_t rl_sprite3d_create_from_file(const char *filename)
     rl_sprite3d[index].position_x = 0.0f;
     rl_sprite3d[index].position_y = 0.0f;
     rl_sprite3d[index].position_z = 0.0f;
+    rl_sprite3d[index].rotation_x = 0.0f;
+    rl_sprite3d[index].rotation_y = 0.0f;
+    rl_sprite3d[index].rotation_z = 0.0f;
+    rl_sprite3d[index].scale_x = 1.0f;
+    rl_sprite3d[index].scale_y = 1.0f;
+    rl_sprite3d[index].scale_z = 1.0f;
     rl_sprite3d[index].size = 1.0f;
     rl_sprite3d[index].tint_handle = 0;
     rl_sprite3d[index].visible = true;
     rl_sprite3d[index].pickable = true;
-    rl_sprite3d[index].facing = RL_SPRITE3D_FACING_CAMERA_FIXED_Y;
+    rl_sprite3d[index].facing = RL_SPRITE3D_FACING_FREE;
     rl_sprite3d[index].in_use = true;
     return handle;
 }
@@ -139,8 +232,9 @@ bool rl_sprite3d_set_texture(rl_handle_t handle, rl_handle_t texture)
 
 RL_KEEP
 bool rl_sprite3d_get_transform(rl_handle_t handle,
-                               float *position_x, float *position_y,
-                               float *position_z, float *size)
+                               float *position_x, float *position_y, float *position_z,
+                               float *rotation_x, float *rotation_y, float *rotation_z,
+                               float *scale_x, float *scale_y, float *scale_z)
 {
     rl_sprite3d_instance_t *sprite = resolve_sprite3d_instance(handle);
     if (sprite == NULL)
@@ -148,14 +242,20 @@ bool rl_sprite3d_get_transform(rl_handle_t handle,
     if (position_x) *position_x = sprite->position_x;
     if (position_y) *position_y = sprite->position_y;
     if (position_z) *position_z = sprite->position_z;
-    if (size)       *size       = sprite->size;
+    if (rotation_x) *rotation_x = sprite->rotation_x;
+    if (rotation_y) *rotation_y = sprite->rotation_y;
+    if (rotation_z) *rotation_z = sprite->rotation_z;
+    if (scale_x)    *scale_x    = sprite->scale_x;
+    if (scale_y)    *scale_y    = sprite->scale_y;
+    if (scale_z)    *scale_z    = sprite->scale_z;
     return true;
 }
 
 RL_KEEP
 bool rl_sprite3d_set_transform(rl_handle_t handle,
-                               float position_x, float position_y,
-                               float position_z, float size)
+                               float position_x, float position_y, float position_z,
+                               float rotation_x, float rotation_y, float rotation_z,
+                               float scale_x, float scale_y, float scale_z)
 {
     rl_sprite3d_instance_t *sprite = resolve_sprite3d_instance(handle);
 
@@ -166,6 +266,33 @@ bool rl_sprite3d_set_transform(rl_handle_t handle,
     sprite->position_x = position_x;
     sprite->position_y = position_y;
     sprite->position_z = position_z;
+    sprite->rotation_x = rotation_x;
+    sprite->rotation_y = rotation_y;
+    sprite->rotation_z = rotation_z;
+    sprite->scale_x = scale_x;
+    sprite->scale_y = scale_y;
+    sprite->scale_z = scale_z;
+    return true;
+}
+
+RL_KEEP
+bool rl_sprite3d_get_size(rl_handle_t handle, float *size)
+{
+    rl_sprite3d_instance_t *sprite = resolve_sprite3d_instance(handle);
+    if (sprite == NULL) {
+        return false;
+    }
+    if (size) *size = sprite->size;
+    return true;
+}
+
+RL_KEEP
+bool rl_sprite3d_set_size(rl_handle_t handle, float size)
+{
+    rl_sprite3d_instance_t *sprite = resolve_sprite3d_instance(handle);
+    if (sprite == NULL) {
+        return false;
+    }
     sprite->size = size;
     return true;
 }
@@ -254,38 +381,27 @@ void rl_sprite3d_draw(rl_handle_t handle)
     switch (sprite->facing) {
         case RL_SPRITE3D_FACING_CAMERA: {
             Rectangle source = {0.0f, 0.0f, (float)texture->width, (float)texture->height};
-            Vector2 size = {sprite->size * fabsf((float)texture->width / (float)texture->height), sprite->size};
+            Vector2 size = sprite3d_billboard_size(sprite, texture);
             DrawBillboardPro(camera, *texture, source, pos, camera.up, size, Vector2Scale(size, 0.5f), 0.0f, tint);
             break;
         }
         case RL_SPRITE3D_FACING_CAMERA_FIXED_Y: {
-            DrawBillboard(camera, *texture, pos, sprite->size, tint);
+            Rectangle source = {0.0f, 0.0f, (float)texture->width, (float)texture->height};
+            Vector2 size = sprite3d_billboard_size(sprite, texture);
+            DrawBillboardPro(camera, *texture, source, pos, (Vector3){0.0f, 1.0f, 0.0f}, size, Vector2Scale(size, 0.5f), 0.0f, tint);
             break;
         }
-        case RL_SPRITE3D_FACING_Y_UP: {
-            float hs = sprite->size * 0.5f;
-            rlSetTexture(texture->id);
-            rlBegin(RL_QUADS);
-            rlColor4ub(tint.r, tint.g, tint.b, tint.a);
-            rlTexCoord2f(0, 0); rlVertex3f(pos.x - hs, pos.y, pos.z - hs);
-            rlTexCoord2f(1, 0); rlVertex3f(pos.x + hs, pos.y, pos.z - hs);
-            rlTexCoord2f(1, 1); rlVertex3f(pos.x + hs, pos.y, pos.z + hs);
-            rlTexCoord2f(0, 1); rlVertex3f(pos.x - hs, pos.y, pos.z + hs);
-            rlEnd();
-            rlSetTexture(0);
-            break;
-        }
-        case RL_SPRITE3D_FACING_NONE: {
-            float hs = sprite->size * 0.5f;
-            rlSetTexture(texture->id);
-            rlBegin(RL_QUADS);
-            rlColor4ub(tint.r, tint.g, tint.b, tint.a);
-            rlTexCoord2f(0, 0); rlVertex3f(pos.x - hs, pos.y - hs, pos.z);
-            rlTexCoord2f(1, 0); rlVertex3f(pos.x + hs, pos.y - hs, pos.z);
-            rlTexCoord2f(1, 1); rlVertex3f(pos.x + hs, pos.y + hs, pos.z);
-            rlTexCoord2f(0, 1); rlVertex3f(pos.x - hs, pos.y + hs, pos.z);
-            rlEnd();
-            rlSetTexture(0);
+        case RL_SPRITE3D_FACING_Y_UP:
+        case RL_SPRITE3D_FACING_FREE: {
+            Vector3 points[4] = {0};
+            Vector3 axis_a = {0};
+            Vector3 axis_b = {0};
+            if (sprite->facing == RL_SPRITE3D_FACING_Y_UP) {
+                build_y_up_quad(pos, sprite3d_y_up_width(sprite, texture), sprite3d_y_up_length(sprite), points, &axis_a, &axis_b);
+            } else {
+                build_free_quad(pos, sprite3d_rotation_matrix(sprite), sprite3d_billboard_size(sprite, texture), points, &axis_a, &axis_b);
+            }
+            draw_textured_quad(texture, points, tint);
             break;
         }
     }
@@ -393,39 +509,48 @@ static bool build_camera_fixed_y_quad(Camera3D camera,
 }
 
 static void build_y_up_quad(Vector3 position,
-                            float size,
+                            float width,
+                            float length,
                             Vector3 points[4],
                             Vector3 *right_axis,
                             Vector3 *forward_axis)
 {
-    float hs = size * 0.5f;
-    Vector3 right = {size, 0.0f, 0.0f};
-    Vector3 forward = {0.0f, 0.0f, size};
+    float half_width = width * 0.5f;
+    float half_length = length * 0.5f;
+    Vector3 right = {width, 0.0f, 0.0f};
+    Vector3 forward = {0.0f, 0.0f, length};
 
-    points[0] = (Vector3){position.x - hs, position.y, position.z - hs};
-    points[1] = (Vector3){position.x + hs, position.y, position.z - hs};
-    points[2] = (Vector3){position.x + hs, position.y, position.z + hs};
-    points[3] = (Vector3){position.x - hs, position.y, position.z + hs};
+    points[0] = (Vector3){position.x - half_width, position.y, position.z - half_length};
+    points[1] = (Vector3){position.x + half_width, position.y, position.z - half_length};
+    points[2] = (Vector3){position.x + half_width, position.y, position.z + half_length};
+    points[3] = (Vector3){position.x - half_width, position.y, position.z + half_length};
 
     if (right_axis != NULL) *right_axis = right;
     if (forward_axis != NULL) *forward_axis = forward;
 }
 
-static void build_none_quad(Vector3 position,
-                            float size,
+static void build_free_quad(Vector3 position,
+                            Matrix rotation,
+                            Vector2 size,
                             Vector3 points[4],
                             Vector3 *right_axis,
                             Vector3 *up_axis)
 {
-    float hs = size * 0.5f;
-    Vector3 right = {size, 0.0f, 0.0f};
-    Vector3 up = {0.0f, size, 0.0f};
+    float half_width = size.x * 0.5f;
+    float half_height = size.y * 0.5f;
+    Vector3 local_points[4] = {
+        {-half_width, -half_height, 0.0f},
+        { half_width, -half_height, 0.0f},
+        { half_width,  half_height, 0.0f},
+        {-half_width,  half_height, 0.0f}
+    };
+    Vector3 right = Vector3Transform((Vector3){size.x, 0.0f, 0.0f}, rotation);
+    Vector3 up = Vector3Transform((Vector3){0.0f, size.y, 0.0f}, rotation);
+    int i = 0;
 
-    points[0] = (Vector3){position.x - hs, position.y - hs, position.z};
-    points[1] = (Vector3){position.x + hs, position.y - hs, position.z};
-    points[2] = (Vector3){position.x + hs, position.y + hs, position.z};
-    points[3] = (Vector3){position.x - hs, position.y + hs, position.z};
-
+    for (i = 0; i < 4; i++) {
+        points[i] = Vector3Add(position, Vector3Transform(local_points[i], rotation));
+    }
     if (right_axis != NULL) *right_axis = right;
     if (up_axis != NULL) *up_axis = up;
 }
@@ -436,6 +561,12 @@ bool rl_sprite3d_get_ray_collision_ex(rl_handle_t handle,
                                       float position_x,
                                       float position_y,
                                       float position_z,
+                                      float rotation_x,
+                                      float rotation_y,
+                                      float rotation_z,
+                                      float scale_x,
+                                      float scale_y,
+                                      float scale_z,
                                       float size,
                                       RayCollision *collision,
                                       bool *broadphase_tested,
@@ -444,11 +575,13 @@ bool rl_sprite3d_get_ray_collision_ex(rl_handle_t handle,
 {
     rl_sprite3d_instance_t *sprite = resolve_sprite3d_instance(handle);
     Texture2D *texture = NULL;
-    Vector2 billboard_size = {0};
     Vector3 position = {position_x, position_y, position_z};
     Vector3 points[4] = {0};
     Vector3 right_axis = {0};
     Vector3 up_axis = {0};
+    Vector2 billboard_size = {0};
+    float radius = 0.0f;
+    Matrix rotation = MatrixRotateXYZ((Vector3){rotation_x * DEG2RAD, rotation_y * DEG2RAD, rotation_z * DEG2RAD});
 
     if (collision == NULL) {
         return false;
@@ -467,11 +600,19 @@ bool rl_sprite3d_get_ray_collision_ex(rl_handle_t handle,
         return false;
     }
 
-    billboard_size = (Vector2){size * fabsf((float)texture->width / (float)texture->height), size};
     {
-        float half_width = fabsf(billboard_size.x) * 0.5f;
-        float half_height = fabsf(billboard_size.y) * 0.5f;
-        float radius = sqrtf((half_width * half_width) + (half_height * half_height));
+        float width = 0.0f;
+        float height = 0.0f;
+
+        if (sprite->facing == RL_SPRITE3D_FACING_Y_UP) {
+            width = fabsf(sprite3d_texture_aspect(texture) * scale_x * size);
+            height = fabsf(scale_z * size);
+        } else {
+            width = fabsf(sprite3d_texture_aspect(texture) * scale_x * size);
+            height = fabsf(scale_y * size);
+        }
+
+        radius = sqrtf((0.5f * width * 0.5f * width) + (0.5f * height * 0.5f * height));
         if (broadphase_tested != NULL) *broadphase_tested = true;
         RayCollision broad_hit = GetRayCollisionSphere(ray, position, radius);
         if (!broad_hit.hit) {
@@ -480,6 +621,7 @@ bool rl_sprite3d_get_ray_collision_ex(rl_handle_t handle,
         }
     }
 
+    billboard_size = (Vector2){sprite3d_texture_aspect(texture) * scale_x * size, scale_y * size};
     if (sprite->facing == RL_SPRITE3D_FACING_CAMERA) {
         if (!build_camera_quad(camera, position, camera.up, billboard_size, points, &right_axis, &up_axis)) {
             return false;
@@ -489,9 +631,14 @@ bool rl_sprite3d_get_ray_collision_ex(rl_handle_t handle,
             return false;
         }
     } else if (sprite->facing == RL_SPRITE3D_FACING_Y_UP) {
-        build_y_up_quad(position, size, points, &right_axis, &up_axis);
+        build_y_up_quad(position,
+                        sprite3d_texture_aspect(texture) * scale_x * size,
+                        scale_z * size,
+                        points,
+                        &right_axis,
+                        &up_axis);
     } else {
-        build_none_quad(position, size, points, &right_axis, &up_axis);
+        build_free_quad(position, rotation, billboard_size, points, &right_axis, &up_axis);
     }
 
     if (narrowphase_ran != NULL) *narrowphase_ran = true;
@@ -511,7 +658,7 @@ bool rl_sprite3d_get_ray_collision_ex(rl_handle_t handle,
             collision->normal = (Vector3){0.0f, (collision->normal.y < 0.0f) ? -1.0f : 1.0f, 0.0f};
         } else {
             collision->point = (Vector3){local_x, local_y, 0.0f};
-            collision->normal = (Vector3){0.0f, 0.0f, (collision->normal.z < 0.0f) ? -1.0f : 1.0f};
+            collision->normal = (Vector3){0.0f, 0.0f, (Vector3DotProduct(collision->normal, Vector3Normalize(Vector3CrossProduct(right_axis, up_axis))) < 0.0f) ? -1.0f : 1.0f};
         }
     }
     return true;
@@ -521,10 +668,7 @@ bool rl_sprite3d_scene_pick_broadphase(rl_handle_t handle, Ray ray)
 {
     rl_sprite3d_instance_t *sprite = resolve_sprite3d_instance(handle);
     Texture2D *texture = NULL;
-    Vector2 billboard_size = {0};
     Vector3 position = {0};
-    float half_width = 0.0f;
-    float half_height = 0.0f;
     float radius = 0.0f;
     RayCollision broad_hit = {0};
 
@@ -540,11 +684,16 @@ bool rl_sprite3d_scene_pick_broadphase(rl_handle_t handle, Ray ray)
         return false;
     }
 
-    billboard_size = (Vector2){sprite->size * fabsf((float)texture->width / (float)texture->height),
-                               sprite->size};
-    half_width = fabsf(billboard_size.x) * 0.5f;
-    half_height = fabsf(billboard_size.y) * 0.5f;
-    radius = sqrtf((half_width * half_width) + (half_height * half_height));
+    if (sprite->facing == RL_SPRITE3D_FACING_Y_UP) {
+        float width = fabsf(sprite3d_y_up_width(sprite, texture));
+        float length = fabsf(sprite3d_y_up_length(sprite));
+        radius = sqrtf((0.5f * width * 0.5f * width) + (0.5f * length * 0.5f * length));
+    } else {
+        Vector2 billboard_size = sprite3d_billboard_size(sprite, texture);
+        float half_width = fabsf(billboard_size.x) * 0.5f;
+        float half_height = fabsf(billboard_size.y) * 0.5f;
+        radius = sqrtf((half_width * half_width) + (half_height * half_height));
+    }
     position = (Vector3){sprite->position_x, sprite->position_y, sprite->position_z};
     broad_hit = GetRayCollisionSphere(ray, position, radius);
     return broad_hit.hit;
@@ -556,6 +705,12 @@ bool rl_sprite3d_get_ray_collision(rl_handle_t handle,
                                    float position_x,
                                    float position_y,
                                    float position_z,
+                                   float rotation_x,
+                                   float rotation_y,
+                                   float rotation_z,
+                                   float scale_x,
+                                   float scale_y,
+                                   float scale_z,
                                    float size,
                                    RayCollision *collision)
 {
@@ -565,6 +720,12 @@ bool rl_sprite3d_get_ray_collision(rl_handle_t handle,
                                             position_x,
                                             position_y,
                                             position_z,
+                                            rotation_x,
+                                            rotation_y,
+                                            rotation_z,
+                                            scale_x,
+                                            scale_y,
+                                            scale_z,
                                             size,
                                             collision,
                                             NULL,
@@ -588,11 +749,17 @@ void rl_sprite3d_init(void)
         rl_sprite3d[i].position_x = 0.0f;
         rl_sprite3d[i].position_y = 0.0f;
         rl_sprite3d[i].position_z = 0.0f;
+        rl_sprite3d[i].rotation_x = 0.0f;
+        rl_sprite3d[i].rotation_y = 0.0f;
+        rl_sprite3d[i].rotation_z = 0.0f;
+        rl_sprite3d[i].scale_x = 1.0f;
+        rl_sprite3d[i].scale_y = 1.0f;
+        rl_sprite3d[i].scale_z = 1.0f;
         rl_sprite3d[i].size = 1.0f;
         rl_sprite3d[i].tint_handle = 0;
         rl_sprite3d[i].visible = true;
         rl_sprite3d[i].pickable = true;
-        rl_sprite3d[i].facing = RL_SPRITE3D_FACING_CAMERA_FIXED_Y;
+        rl_sprite3d[i].facing = RL_SPRITE3D_FACING_FREE;
     }
 }
 

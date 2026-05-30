@@ -172,7 +172,7 @@ Notes:
   - Logger levels exposed as `LOGGER_LEVEL_*`; window flags as `FLAG_*` (including all `RL_WINDOW_FLAG_*` values)
 - JS texture/sprite helpers:
   - `getDefaultTexture()` → `rl_texture_get_default`
-  - `getSprite3dTransform(sprite)` → `rl_sprite3d_get_transform` (returns `{ positionX, positionY, positionZ, size }` or `null`)
+  - `getSprite3dTransform(sprite)` → `rl_sprite3d_get_transform` (returns `{ positionX, positionY, positionZ, rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ }` or `null`)
   - `getDefaultFont()` → `rl_font_get_default`
   - `getDefaultCamera3d()` → `rl_camera3d_get_default`
   - Default handles use getters only (no binding-level `FONT_DEFAULT` / `CAMERA3D_DEFAULT` constants; C symbols remain for internal use)

@@ -8,13 +8,23 @@
 
 void rl_sprite3d_init(void);
 void rl_sprite3d_deinit(void);
-bool rl_sprite3d_get_transform(rl_handle_t handle, float *position_x, float *position_y, float *position_z, float *size);
+bool rl_sprite3d_get_transform(rl_handle_t handle,
+                               float *position_x, float *position_y, float *position_z,
+                               float *rotation_x, float *rotation_y, float *rotation_z,
+                               float *scale_x, float *scale_y, float *scale_z);
+bool rl_sprite3d_get_size(rl_handle_t handle, float *size);
 bool rl_sprite3d_get_ray_collision(rl_handle_t handle,
                                    Camera3D camera,
                                    Ray ray,
                                    float position_x,
                                    float position_y,
                                    float position_z,
+                                   float rotation_x,
+                                   float rotation_y,
+                                   float rotation_z,
+                                   float scale_x,
+                                   float scale_y,
+                                   float scale_z,
                                    float size,
                                    RayCollision *collision);
 bool rl_sprite3d_get_ray_collision_ex(rl_handle_t handle,
@@ -23,6 +33,12 @@ bool rl_sprite3d_get_ray_collision_ex(rl_handle_t handle,
                                       float position_x,
                                       float position_y,
                                       float position_z,
+                                      float rotation_x,
+                                      float rotation_y,
+                                      float rotation_z,
+                                      float scale_x,
+                                      float scale_y,
+                                      float scale_z,
                                       float size,
                                       RayCollision *collision,
                                       bool *broadphase_tested,

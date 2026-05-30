@@ -167,7 +167,7 @@ class MainScript extends Script {
 		}, null, ctx);
 
 		ctx.sprite = Sprite3d.create(0);
-		Sprite3d.setTransform(ctx.sprite, 0.0, 0.0, ctx.spriteYOffset, 1.0);
+		Sprite3d.setTransform(ctx.sprite, 0.0, 0.0, ctx.spriteYOffset, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
 		Sprite3d.setTint(ctx.sprite, Color.WHITE);
 		Asset.addTask(Asset.ensureAsync(SPRITE_PATH), (path, _) -> {
 			var textureAsset = Texture.create(path);
@@ -245,7 +245,7 @@ class MainScript extends Script {
 		 */
 
 		if (ctx.sprite != 0) {
-			Sprite3d.setTransform(ctx.sprite, spriteX, spriteY, spriteZ, 1.0);
+			Sprite3d.setTransform(ctx.sprite, spriteX, spriteY, spriteZ, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
 		}
 	}
 

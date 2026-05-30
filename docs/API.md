@@ -414,11 +414,15 @@ bool rl_sprite3d_set_texture(rl_handle_t handle, rl_handle_t texture); // swap t
 
 // Transform
 bool rl_sprite3d_get_transform(rl_handle_t handle,
-                               float *position_x, float *position_y,
-                               float *position_z, float *size);
+                               float *position_x, float *position_y, float *position_z,
+                               float *rotation_x, float *rotation_y, float *rotation_z,
+                               float *scale_x, float *scale_y, float *scale_z);
 bool rl_sprite3d_set_transform(rl_handle_t handle,
-                               float position_x, float position_y,
-                               float position_z, float size);
+                               float position_x, float position_y, float position_z,
+                               float rotation_x, float rotation_y, float rotation_z,
+                               float scale_x, float scale_y, float scale_z);
+bool rl_sprite3d_get_size(rl_handle_t handle, float *size);
+bool rl_sprite3d_set_size(rl_handle_t handle, float size);
 
 // Visibility / picking (per instance)
 bool rl_sprite3d_set_visible(rl_handle_t handle, bool visible);
@@ -438,7 +442,9 @@ Notes:
 - `rl_sprite3d_create(0)` creates a valid instance with no texture; draw is a silent no-op until `rl_sprite3d_set_texture` is called.
 - `rl_sprite3d_set_tint` stores the draw tint on the instance. Pass `0` to clear (draw uses white).
 - New instances default to **`visible == true`**, **`pickable == true`**. When **`visible`** is `false`, `rl_sprite3d_draw()` returns immediately (no placeholder draw). `rl_pick_sprite3d` / `rl_scene_pick` skip instances with **`pickable == false`**.
-- `rl_sprite3d_set_facing` accepts `RL_SPRITE3D_FACING_CAMERA`, `RL_SPRITE3D_FACING_CAMERA_FIXED_Y`, `RL_SPRITE3D_FACING_Y_UP`, or `RL_SPRITE3D_FACING_NONE`.
+- `rl_sprite3d_set_transform` stores position, rotation, and non-uniform scale. `rl_sprite3d_set_size` applies an additional uniform scalar on top of the stored scale.
+- New instances default to `RL_SPRITE3D_FACING_FREE`.
+- `rl_sprite3d_set_facing` accepts `RL_SPRITE3D_FACING_CAMERA`, `RL_SPRITE3D_FACING_CAMERA_FIXED_Y`, `RL_SPRITE3D_FACING_Y_UP`, or `RL_SPRITE3D_FACING_FREE`.
 
 ---
 

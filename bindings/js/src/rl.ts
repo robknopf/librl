@@ -1603,8 +1603,28 @@ const sprite3d = {
     setTexture: (sprite, texture) => reqModule().ccall(
         "rl_sprite3d_set_texture", "number", ["number", "number"], [sprite, texture]
     ) !== 0,
-    setTransform: (sprite, positionX, positionY, positionZ, size) => reqModule().ccall(
-        "rl_sprite3d_set_transform", "number", ["number", "number", "number", "number", "number"], [sprite, positionX, positionY, positionZ, size]
+    setTransform: (sprite, positionX, positionY, positionZ, rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ) => reqModule().ccall(
+        "rl_sprite3d_set_transform", "number", ["number", "number", "number", "number", "number", "number", "number", "number", "number", "number"], [sprite, positionX, positionY, positionZ, rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ]
+    ) !== 0,
+    getSize: (sprite) => {
+        const stackSave = reqModule().stackSave;
+        const stackRestore = reqModule().stackRestore;
+        const stackAlloc = reqModule().stackAlloc;
+        const heapF32 = reqModule().HEAPF32;
+        if (typeof stackSave !== "function" || typeof stackRestore !== "function" || typeof stackAlloc !== "function" || !heapF32) {
+            return 0;
+        }
+        const prevSp = stackSave();
+        try {
+            const sizePtr = stackAlloc(4) >>> 0;
+            const ok = reqModule().ccall("rl_sprite3d_get_size", "number", ["number", "number"], [sprite >>> 0, sizePtr]) !== 0;
+            return ok ? heapF32[sizePtr >> 2] : 0;
+        } finally {
+            stackRestore(prevSp);
+        }
+    },
+    setSize: (sprite, size) => reqModule().ccall(
+        "rl_sprite3d_set_size", "number", ["number", "number"], [sprite, size]
     ) !== 0,
     setFacing: (sprite, facing) => reqModule().ccall(
         "rl_sprite3d_set_facing", "number", ["number", "number"], [sprite, facing]
@@ -1640,12 +1660,17 @@ const sprite3d = {
             const positionXPtr = stackAlloc(4) >>> 0;
             const positionYPtr = stackAlloc(4) >>> 0;
             const positionZPtr = stackAlloc(4) >>> 0;
-            const sizePtr = stackAlloc(4) >>> 0;
+            const rotationXPtr = stackAlloc(4) >>> 0;
+            const rotationYPtr = stackAlloc(4) >>> 0;
+            const rotationZPtr = stackAlloc(4) >>> 0;
+            const scaleXPtr = stackAlloc(4) >>> 0;
+            const scaleYPtr = stackAlloc(4) >>> 0;
+            const scaleZPtr = stackAlloc(4) >>> 0;
             const ok = reqModule().ccall(
                 "rl_sprite3d_get_transform",
                 "number",
-                ["number", "number", "number", "number", "number"],
-                [sprite >>> 0, positionXPtr, positionYPtr, positionZPtr, sizePtr]
+                ["number", "number", "number", "number", "number", "number", "number", "number", "number", "number"],
+                [sprite >>> 0, positionXPtr, positionYPtr, positionZPtr, rotationXPtr, rotationYPtr, rotationZPtr, scaleXPtr, scaleYPtr, scaleZPtr]
             ) !== 0;
             if (!ok) {
                 return null;
@@ -1654,7 +1679,12 @@ const sprite3d = {
                 positionX: heapF32[positionXPtr >> 2],
                 positionY: heapF32[positionYPtr >> 2],
                 positionZ: heapF32[positionZPtr >> 2],
-                size: heapF32[sizePtr >> 2],
+                rotationX: heapF32[rotationXPtr >> 2],
+                rotationY: heapF32[rotationYPtr >> 2],
+                rotationZ: heapF32[rotationZPtr >> 2],
+                scaleX: heapF32[scaleXPtr >> 2],
+                scaleY: heapF32[scaleYPtr >> 2],
+                scaleZ: heapF32[scaleZPtr >> 2],
             };
         } finally {
             stackRestore(prevSp);

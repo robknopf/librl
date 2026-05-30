@@ -148,7 +148,8 @@ static int rl_frame_buffer_submit(lua_State *L)
             lua_rawgeti(L, table_idx, idx++);
             size = (float)luaL_checknumber(L, -1);
             lua_pop(L, 1);
-            rl_sprite3d_set_transform(handle, x, y, z, size);
+            rl_sprite3d_set_transform(handle, x, y, z, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f);
+            rl_sprite3d_set_size(handle, size);
         }
     }
 

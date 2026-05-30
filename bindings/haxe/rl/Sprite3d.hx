@@ -10,7 +10,7 @@ class Sprite3d {
 	public static inline var FACING_CAMERA:RLSprite3dFacing = RLSprite3dFacing.CAMERA;
 	public static inline var FACING_CAMERA_FIXED_Y:RLSprite3dFacing = RLSprite3dFacing.CAMERA_FIXED_Y;
 	public static inline var FACING_Y_UP:RLSprite3dFacing = RLSprite3dFacing.Y_UP;
-	public static inline var FACING_NONE:RLSprite3dFacing = RLSprite3dFacing.NONE;
+	public static inline var FACING_FREE:RLSprite3dFacing = RLSprite3dFacing.FREE;
 
 
 
@@ -26,8 +26,8 @@ class Sprite3d {
 		return rl.impl.RLImpl.sprite3dSetTexture(sprite, texture);
 	}
 
-	public static function setTransform(sprite:RLHandle, positionX:Float, positionY:Float, positionZ:Float, size:Float):Bool {
-		return rl.impl.RLImpl.sprite3dSetTransform(sprite, positionX, positionY, positionZ, size);
+	public static function setTransform(sprite:RLHandle, positionX:Float, positionY:Float, positionZ:Float, rotationX:Float, rotationY:Float, rotationZ:Float, scaleX:Float, scaleY:Float, scaleZ:Float):Bool {
+		return rl.impl.RLImpl.sprite3dSetTransform(sprite, positionX, positionY, positionZ, rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ);
 	}
 
 	public static function setVisible(sprite:RLHandle, visible:Bool):Bool {
@@ -48,6 +48,14 @@ class Sprite3d {
 
 	public static function getTransform(sprite:RLHandle):RLSprite3dTransform {
 		return rl.impl.RLImpl.sprite3dGetTransform(sprite);
+	}
+
+	public static function getSize(sprite:RLHandle):Float {
+		return rl.impl.RLImpl.sprite3dGetSize(sprite);
+	}
+
+	public static function setSize(sprite:RLHandle, size:Float):Bool {
+		return rl.impl.RLImpl.sprite3dSetSize(sprite, size);
 	}
 
 	public static function setFacing(sprite:RLHandle, facing:RLSprite3dFacing):Bool {

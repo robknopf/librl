@@ -488,8 +488,14 @@ async function __rlEnsureBindings(bindingsPath) {
   proc rl_sprite3d_set_texture*(sprite: RLHandle, texture: RLHandle): bool {.
     importjs: "__gRl.sprite3d.setTexture(#,#)".}
   proc rl_sprite3d_set_transform*(sprite: RLHandle,
-                                positionX, positionY, positionZ, size: float): bool {.
-    importjs: "__gRl.sprite3d.setTransform(#,#,#,#,#)".}
+                                positionX, positionY, positionZ,
+                                rotationX, rotationY, rotationZ,
+                                scaleX, scaleY, scaleZ: float): bool {.
+    importjs: "__gRl.sprite3d.setTransform(#,#,#,#,#,#,#,#,#,#)".}
+  proc rl_sprite3d_get_size*(sprite: RLHandle): float {.
+    importjs: "__gRl.sprite3d.getSize(#)".}
+  proc rl_sprite3d_set_size*(sprite: RLHandle, size: float): bool {.
+    importjs: "__gRl.sprite3d.setSize(#,#)".}
   proc rl_sprite3d_set_visible*(sprite: RLHandle, visible: bool): bool {.
     importjs: "__gRl.sprite3d.setVisible(#,#)".}
   proc rl_sprite3d_set_pickable*(sprite: RLHandle, pickable: bool): bool {.
@@ -713,4 +719,3 @@ async function __rlEnsureBindings(bindingsPath) {
     if group.isNil: return
     for entry in group.entries:
       if entry.done and entry.rc != 0: result.add(entry.path)
-

@@ -20,14 +20,19 @@ typedef RLSprite3dTransform = {
 	var positionX:Float;
 	var positionY:Float;
 	var positionZ:Float;
-	var size:Float;
+	var rotationX:Float;
+	var rotationY:Float;
+	var rotationZ:Float;
+	var scaleX:Float;
+	var scaleY:Float;
+	var scaleZ:Float;
 }
 
 enum abstract RLSprite3dFacing(Int) from Int to Int {
 	var CAMERA = 0;
 	var CAMERA_FIXED_Y = 1;
 	var Y_UP = 2;
-	var NONE = 3;
+	var FREE = 3;
 }
 
 typedef RLInitConfig = {

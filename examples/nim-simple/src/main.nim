@@ -93,7 +93,7 @@ proc queueAssets() =
   ctx.loadingGroup.addImportTask(SpritePath,
     onSuccess = proc(path: string, loadedCtx: var AppContext) =
       loadedCtx.sprite = rl_sprite3d_create_from_file(path)
-      discard rl_sprite3d_set_transform(loadedCtx.sprite, 0.0, 0.0, loadedCtx.spriteYOffset, 1.0)
+      discard rl_sprite3d_set_transform(loadedCtx.sprite, 0.0, 0.0, loadedCtx.spriteYOffset, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0)
       discard rl_sprite3d_set_tint(loadedCtx.sprite, RL_COLOR_RAYWHITE)
       if loadedCtx.scene != 0:
         discard rl_scene_add(loadedCtx.scene, loadedCtx.sprite, 0),
@@ -132,7 +132,7 @@ proc animateFrame(deltaTimeSec: float) =
     spriteY = y + ctx.spriteYOffset
 
   if ctx.sprite != 0:
-    discard rl_sprite3d_set_transform(ctx.sprite, spriteX, spriteY, spriteZ, 1.0)
+    discard rl_sprite3d_set_transform(ctx.sprite, spriteX, spriteY, spriteZ, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0)
 
 proc unloadAssets() =
   if ctx.isNil:

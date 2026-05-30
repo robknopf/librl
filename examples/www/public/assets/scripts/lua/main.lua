@@ -125,7 +125,7 @@ local function on_tick(delta_time)
   -- bob sprite
   if ctx.sprite and ctx.sprite ~= 0 then
     local bob_y = math.sin(ctx.elapsed) * 1.5 + ctx.sprite_y_offset
-    rl.sprite3d_set_transform(ctx.sprite, 0.0, bob_y, 0.0, 1.0)
+    rl.sprite3d_set_transform(ctx.sprite, 0.0, bob_y, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0)
   end
 
   -- animate model

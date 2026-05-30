@@ -463,8 +463,12 @@ private extern class RLExterns {
   static function sprite3dSetTransform(
     sprite: RLHandle,
     positionX: Float, positionY: Float, positionZ: Float,
-    size: Float
+    rotationX: Float, rotationY: Float, rotationZ: Float,
+    scaleX: Float, scaleY: Float, scaleZ: Float
   ): Bool;
+
+  @:native("rl_sprite3d_set_size")
+  static function sprite3dSetSize(sprite: RLHandle, size: Float): Bool;
 
   @:native("rl_sprite3d_set_visible")
   static function sprite3dSetVisible(sprite: RLHandle, visible: Bool): Bool;
@@ -792,17 +796,37 @@ private class RLSprite3dBridge {
   public static var lastPositionX: Float = 0;
   public static var lastPositionY: Float = 0;
   public static var lastPositionZ: Float = 0;
+  public static var lastRotationX: Float = 0;
+  public static var lastRotationY: Float = 0;
+  public static var lastRotationZ: Float = 0;
+  public static var lastScaleX: Float = 0;
+  public static var lastScaleY: Float = 0;
+  public static var lastScaleZ: Float = 0;
   public static var lastSize: Float = 0;
 
   @:functionCode('
-    float px = 0.0f, py = 0.0f, pz = 0.0f, sz = 0.0f;
-    ::rl_sprite3d_get_transform(sprite, &px, &py, &pz, &sz);
+    float px = 0.0f, py = 0.0f, pz = 0.0f;
+    float rx = 0.0f, ry = 0.0f, rz = 0.0f;
+    float sx = 0.0f, sy = 0.0f, sz = 0.0f;
+    ::rl_sprite3d_get_transform(sprite, &px, &py, &pz, &rx, &ry, &rz, &sx, &sy, &sz);
     lastPositionX = px;
     lastPositionY = py;
     lastPositionZ = pz;
-    lastSize = sz;
+    lastRotationX = rx;
+    lastRotationY = ry;
+    lastRotationZ = rz;
+    lastScaleX = sx;
+    lastScaleY = sy;
+    lastScaleZ = sz;
   ')
   public static function fetchNative(sprite: RLHandle): Void {}
+
+  @:functionCode('
+    float sz = 0.0f;
+    ::rl_sprite3d_get_size(sprite, &sz);
+    lastSize = sz;
+  ')
+  public static function fetchSizeNative(sprite: RLHandle): Void {}
 }
 
 private typedef RLEventListenerEntry = {
@@ -1183,11 +1207,13 @@ abstract RLImpl(RLExterns) {
   public static function sprite3dCreate(texture: RLHandle): RLHandle { return RLExterns.sprite3dCreate(texture); }
   public static function sprite3dCreateFromFile(filename: String): RLHandle { return RLExterns.sprite3dCreateFromFile(filename); }
   public static function sprite3dSetTexture(sprite: RLHandle, texture: RLHandle): Bool { return RLExterns.sprite3dSetTexture(sprite, texture); }
-  public static function sprite3dSetTransform(sprite: RLHandle, positionX: Float, positionY: Float, positionZ: Float, size: Float): Bool { return RLExterns.sprite3dSetTransform(sprite, positionX, positionY, positionZ, size); }
+  public static function sprite3dSetTransform(sprite: RLHandle, positionX: Float, positionY: Float, positionZ: Float, rotationX: Float, rotationY: Float, rotationZ: Float, scaleX: Float, scaleY: Float, scaleZ: Float): Bool { return RLExterns.sprite3dSetTransform(sprite, positionX, positionY, positionZ, rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ); }
   public static function sprite3dSetVisible(sprite: RLHandle, visible: Bool): Bool { return RLExterns.sprite3dSetVisible(sprite, visible); }
   public static function sprite3dSetPickable(sprite: RLHandle, pickable: Bool): Bool { return RLExterns.sprite3dSetPickable(sprite, pickable); }
   public static function sprite3dIsVisible(sprite: RLHandle): Bool { return RLExterns.sprite3dIsVisible(sprite); }
   public static function sprite3dIsPickable(sprite: RLHandle): Bool { return RLExterns.sprite3dIsPickable(sprite); }
+  public static function sprite3dGetSize(sprite: RLHandle): Float { RLSprite3dBridge.fetchSizeNative(sprite); return RLSprite3dBridge.lastSize; }
+  public static function sprite3dSetSize(sprite: RLHandle, size: Float): Bool { return RLExterns.sprite3dSetSize(sprite, size); }
   public static function sprite3dSetFacing(sprite: RLHandle, facing: RLSprite3dFacing): Bool { return RLExterns.sprite3dSetFacing(sprite, cast facing); }
   public static function sprite3dSetTint(sprite: RLHandle, color: RLHandle = 0): Bool { return RLExterns.sprite3dSetTint(sprite, color); }
   public static function sprite3dDraw(sprite: RLHandle): Void { RLExterns.sprite3dDraw(sprite); }
@@ -1199,7 +1225,12 @@ abstract RLImpl(RLExterns) {
       positionX: RLSprite3dBridge.lastPositionX,
       positionY: RLSprite3dBridge.lastPositionY,
       positionZ: RLSprite3dBridge.lastPositionZ,
-      size: RLSprite3dBridge.lastSize
+      rotationX: RLSprite3dBridge.lastRotationX,
+      rotationY: RLSprite3dBridge.lastRotationY,
+      rotationZ: RLSprite3dBridge.lastRotationZ,
+      scaleX: RLSprite3dBridge.lastScaleX,
+      scaleY: RLSprite3dBridge.lastScaleY,
+      scaleZ: RLSprite3dBridge.lastScaleZ
     };
   }
   public static function sprite2dCreate(texture: RLHandle): RLHandle { return RLExterns.sprite2dCreate(texture); }

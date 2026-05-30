@@ -70,7 +70,9 @@ type RLInitConfig* = object
   fsRootDir*: string
 
 type RLSprite3dTransform* = object
-  positionX*, positionY*, positionZ*, size*: float
+  positionX*, positionY*, positionZ*: float
+  rotationX*, rotationY*, rotationZ*: float
+  scaleX*, scaleY*, scaleZ*: float
 
 var rlFileioClosureTasks: seq[RLAssetClosureTask] = @[]
 
@@ -640,13 +642,18 @@ proc rl_sprite3d_create_from_file*(filename: cstring): RLHandle {.importc, cdecl
 proc rl_sprite3d_set_texture*(sprite: RLHandle, texture: RLHandle): bool {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_get_transform_raw(
   sprite: RLHandle,
-  positionX, positionY, positionZ, size: ptr cfloat
+  positionX, positionY, positionZ: ptr cfloat,
+  rotationX, rotationY, rotationZ: ptr cfloat,
+  scaleX, scaleY, scaleZ: ptr cfloat
 ): bool {.importc: "rl_sprite3d_get_transform", cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_set_transform*(
   sprite: RLHandle,
   positionX: cfloat, positionY: cfloat, positionZ: cfloat,
-  size: cfloat
+  rotationX: cfloat, rotationY: cfloat, rotationZ: cfloat,
+  scaleX: cfloat, scaleY: cfloat, scaleZ: cfloat
 ): bool {.importc, cdecl, header: "rl_sprite3d.h".}
+proc rl_sprite3d_get_size_raw(sprite: RLHandle, size: ptr cfloat): bool {.importc: "rl_sprite3d_get_size", cdecl, header: "rl_sprite3d.h".}
+proc rl_sprite3d_set_size*(sprite: RLHandle, size: cfloat): bool {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_set_visible*(sprite: RLHandle, visible: bool): bool {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_set_pickable*(sprite: RLHandle, pickable: bool): bool {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_set_facing*(sprite: RLHandle, facing: cint): bool {.importc, cdecl, header: "rl_sprite3d.h".}
@@ -878,19 +885,43 @@ proc rl_sprite3d_create_from_file*(filename: string): RLHandle {.inline.} =
   rl_sprite3d_create_from_file(filename.cstring)
 
 proc rl_sprite3d_set_transform*(sprite: RLHandle,
-                                positionX, positionY, positionZ, size: float): bool {.inline.} =
-  rl_sprite3d_set_transform(sprite, positionX.cfloat, positionY.cfloat, positionZ.cfloat, size.cfloat)
+                                positionX, positionY, positionZ,
+                                rotationX, rotationY, rotationZ,
+                                scaleX, scaleY, scaleZ: float): bool {.inline.} =
+  rl_sprite3d_set_transform(sprite,
+    positionX.cfloat, positionY.cfloat, positionZ.cfloat,
+    rotationX.cfloat, rotationY.cfloat, rotationZ.cfloat,
+    scaleX.cfloat, scaleY.cfloat, scaleZ.cfloat)
 
 proc rl_sprite3d_get_transform*(sprite: RLHandle): Option[RLSprite3dTransform] =
-  var positionX, positionY, positionZ, size: cfloat
-  if not rl_sprite3d_get_transform_raw(sprite, addr positionX, addr positionY, addr positionZ, addr size):
+  var positionX, positionY, positionZ: cfloat
+  var rotationX, rotationY, rotationZ: cfloat
+  var scaleX, scaleY, scaleZ: cfloat
+  if not rl_sprite3d_get_transform_raw(sprite,
+                                       addr positionX, addr positionY, addr positionZ,
+                                       addr rotationX, addr rotationY, addr rotationZ,
+                                       addr scaleX, addr scaleY, addr scaleZ):
     return none(RLSprite3dTransform)
   some(RLSprite3dTransform(
     positionX: positionX.float,
     positionY: positionY.float,
     positionZ: positionZ.float,
-    size: size.float,
+    rotationX: rotationX.float,
+    rotationY: rotationY.float,
+    rotationZ: rotationZ.float,
+    scaleX: scaleX.float,
+    scaleY: scaleY.float,
+    scaleZ: scaleZ.float,
   ))
+
+proc rl_sprite3d_get_size*(sprite: RLHandle): float =
+  var size: cfloat
+  if not rl_sprite3d_get_size_raw(sprite, addr size):
+    return 0.0
+  size.float
+
+proc rl_sprite3d_set_size*(sprite: RLHandle, size: float): bool {.inline.} =
+  rl_sprite3d_set_size(sprite, size.cfloat)
 
 proc rl_sprite2d_create_from_file*(filename: string): RLHandle {.inline.} =
   rl_sprite2d_create_from_file(filename.cstring)

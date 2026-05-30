@@ -4,7 +4,7 @@ local Sprite3D = {}
 Sprite3D.__index = Sprite3D
 local ResourceAsync = require("resource_async")
 
-local transform_fields = { x=true, y=true, z=true, size=true }
+local transform_fields = { x=true, y=true, z=true, rotation_x=true, rotation_y=true, rotation_z=true, scale_x=true, scale_y=true, scale_z=true, size=true }
 
 local function wrap_handle(handle)
   if handle == nil or handle == 0 then
@@ -16,6 +16,12 @@ local function wrap_handle(handle)
     x = 0.0,
     y = 0.0,
     z = 0.0,
+    rotation_x = 0.0,
+    rotation_y = 0.0,
+    rotation_z = 0.0,
+    scale_x = 1.0,
+    scale_y = 1.0,
+    scale_z = 1.0,
     size = 1.0,
     _transform_dirty = true,
   }, Sprite3D)
@@ -47,7 +53,8 @@ function Sprite3D:sync()
   if not self._transform_dirty then
     return
   end
-  rl.sprite3d_set_transform(self.handle, self.x, self.y, self.z, self.size)
+  rl.sprite3d_set_transform(self.handle, self.x, self.y, self.z, self.rotation_x, self.rotation_y, self.rotation_z, self.scale_x, self.scale_y, self.scale_z)
+  rl.sprite3d_set_size(self.handle, self.size)
   self._transform_dirty = false
 end
 

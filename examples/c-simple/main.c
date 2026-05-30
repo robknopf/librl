@@ -117,7 +117,8 @@ static void on_import_sprite_ready(const char *path, void *user_data) {
   }
   ctx->sprite = rl_sprite3d_create_from_file(path);
   (void)rl_sprite3d_set_transform(ctx->sprite, 0.0f, 0.0f, ctx->sprite_y_offset,
-                                   1.0f);
+                                  0.0f, 0.0f, 0.0f,
+                                  1.0f, 1.0f, 1.0f);
   (void)rl_sprite3d_set_tint(ctx->sprite, RL_COLOR_RAYWHITE);
   if (ctx->scene != 0) {
     (void)rl_scene_add(ctx->scene, ctx->sprite, 0);
@@ -207,7 +208,8 @@ static void animate_frame(app_context_t *ctx, float delta_time_sec) {
     float y = sinf(ctx->elapsed * bob_speed) * bob_height;
     sprite_y = y + ctx->sprite_y_offset;
     (void)rl_sprite3d_set_transform(ctx->sprite, sprite_x, sprite_y, sprite_z,
-                                    1.0f);
+                                    0.0f, 0.0f, 0.0f,
+                                    1.0f, 1.0f, 1.0f);
   }
 }
 

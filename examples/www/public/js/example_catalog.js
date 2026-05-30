@@ -68,7 +68,12 @@ export const EXAMPLES = {
     module: "assets/scripts/haxe/main.js",
     watchedPaths: [{ dir: "assets/scripts/haxe", ext: ".js", recursive: false }],
   },
-  cppia: {
+  "cppia-debug": {
+    label: "Cppia (debug)",
+    module: "examples/cppia/out/wasm/ScriptableMain-debug.js",
+    //watchedPaths: [{ dir: "assets/scripts/cppia", ext: ".cppia", recursive: true }],
+  },
+    "cppia": {
     label: "Cppia",
     module: "examples/cppia/out/wasm/ScriptableMain.js",
     //watchedPaths: [{ dir: "assets/scripts/cppia", ext: ".cppia", recursive: true }],

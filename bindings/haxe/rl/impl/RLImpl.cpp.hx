@@ -802,8 +802,6 @@ private class RLSprite3dBridge {
   public static var lastScaleX: Float = 0;
   public static var lastScaleY: Float = 0;
   public static var lastScaleZ: Float = 0;
-  public static var lastSize: Float = 0;
-
   @:functionCode('
     float px = 0.0f, py = 0.0f, pz = 0.0f;
     float rx = 0.0f, ry = 0.0f, rz = 0.0f;
@@ -820,13 +818,6 @@ private class RLSprite3dBridge {
     lastScaleZ = sz;
   ')
   public static function fetchNative(sprite: RLHandle): Void {}
-
-  @:functionCode('
-    float sz = 0.0f;
-    ::rl_sprite3d_get_size(sprite, &sz);
-    lastSize = sz;
-  ')
-  public static function fetchSizeNative(sprite: RLHandle): Void {}
 }
 
 private typedef RLEventListenerEntry = {
@@ -1212,7 +1203,6 @@ abstract RLImpl(RLExterns) {
   public static function sprite3dSetPickable(sprite: RLHandle, pickable: Bool): Bool { return RLExterns.sprite3dSetPickable(sprite, pickable); }
   public static function sprite3dIsVisible(sprite: RLHandle): Bool { return RLExterns.sprite3dIsVisible(sprite); }
   public static function sprite3dIsPickable(sprite: RLHandle): Bool { return RLExterns.sprite3dIsPickable(sprite); }
-  public static function sprite3dGetSize(sprite: RLHandle): Float { RLSprite3dBridge.fetchSizeNative(sprite); return RLSprite3dBridge.lastSize; }
   public static function sprite3dSetSize(sprite: RLHandle, size: Float): Bool { return RLExterns.sprite3dSetSize(sprite, size); }
   public static function sprite3dSetFacing(sprite: RLHandle, facing: RLSprite3dFacing): Bool { return RLExterns.sprite3dSetFacing(sprite, cast facing); }
   public static function sprite3dSetTint(sprite: RLHandle, color: RLHandle = 0): Bool { return RLExterns.sprite3dSetTint(sprite, color); }

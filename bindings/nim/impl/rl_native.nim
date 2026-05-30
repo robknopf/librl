@@ -652,7 +652,6 @@ proc rl_sprite3d_set_transform*(
   rotationX: cfloat, rotationY: cfloat, rotationZ: cfloat,
   scaleX: cfloat, scaleY: cfloat, scaleZ: cfloat
 ): bool {.importc, cdecl, header: "rl_sprite3d.h".}
-proc rl_sprite3d_get_size_raw(sprite: RLHandle, size: ptr cfloat): bool {.importc: "rl_sprite3d_get_size", cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_set_size*(sprite: RLHandle, size: cfloat): bool {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_set_visible*(sprite: RLHandle, visible: bool): bool {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_set_pickable*(sprite: RLHandle, pickable: bool): bool {.importc, cdecl, header: "rl_sprite3d.h".}
@@ -913,12 +912,6 @@ proc rl_sprite3d_get_transform*(sprite: RLHandle): Option[RLSprite3dTransform] =
     scaleY: scaleY.float,
     scaleZ: scaleZ.float,
   ))
-
-proc rl_sprite3d_get_size*(sprite: RLHandle): float =
-  var size: cfloat
-  if not rl_sprite3d_get_size_raw(sprite, addr size):
-    return 0.0
-  size.float
 
 proc rl_sprite3d_set_size*(sprite: RLHandle, size: float): bool {.inline.} =
   rl_sprite3d_set_size(sprite, size.cfloat)

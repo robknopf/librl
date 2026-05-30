@@ -276,17 +276,6 @@ bool rl_sprite3d_set_transform(rl_handle_t handle,
 }
 
 RL_KEEP
-bool rl_sprite3d_get_size(rl_handle_t handle, float *size)
-{
-    rl_sprite3d_instance_t *sprite = resolve_sprite3d_instance(handle);
-    if (sprite == NULL) {
-        return false;
-    }
-    if (size) *size = sprite->size;
-    return true;
-}
-
-RL_KEEP
 bool rl_sprite3d_set_size(rl_handle_t handle, float size)
 {
     rl_sprite3d_instance_t *sprite = resolve_sprite3d_instance(handle);
@@ -295,6 +284,15 @@ bool rl_sprite3d_set_size(rl_handle_t handle, float size)
     }
     sprite->size = size;
     return true;
+}
+
+float rl_sprite3d_get_size_internal(rl_handle_t handle)
+{
+    rl_sprite3d_instance_t *sprite = resolve_sprite3d_instance(handle);
+    if (sprite == NULL) {
+        return 0.0f;
+    }
+    return sprite->size;
 }
 
 RL_KEEP

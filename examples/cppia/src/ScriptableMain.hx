@@ -189,12 +189,13 @@ class ScriptableHost {
 		onLoad(ctx);
 	}
 
+	@async
 	public function onBoot():RTResult {
 		// trace("ScriptableMain: onBoot (host)");
 		trace("Using script: " + PathUtil.joinPath("./", MAIN_CPPIA_FILE));
 		trace("Edit " + PathUtil.joinPath("./", PathUtil.withoutExtension(MAIN_CPPIA_FILE)) + ".hx to change the script");
 
-		var rc = RL.boot();
+		var rc = @await RL.boot();
 		if (rc != RL.BOOT_OK) {
 			Log.error('[script] RL.boot failed (code $rc)');
 			return RT_FAILED;

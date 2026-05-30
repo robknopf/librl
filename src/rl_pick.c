@@ -140,7 +140,7 @@ rl_pick_result_t rl_pick_sprite3d_with_camera_ray(Camera3D camera_data,
     float position_x = 0, position_y = 0, position_z = 0;
     float rotation_x = 0, rotation_y = 0, rotation_z = 0;
     float scale_x = 1, scale_y = 1, scale_z = 1;
-    float size = 1;
+    float size = 1.0f;
 
     if (!rl_sprite3d_is_pickable(sprite3d)) {
         return make_empty_pick_result();
@@ -149,10 +149,10 @@ rl_pick_result_t rl_pick_sprite3d_with_camera_ray(Camera3D camera_data,
     if (!rl_sprite3d_get_transform(sprite3d,
                                    &position_x, &position_y, &position_z,
                                    &rotation_x, &rotation_y, &rotation_z,
-                                   &scale_x, &scale_y, &scale_z) ||
-        !rl_sprite3d_get_size(sprite3d, &size)) {
+                                   &scale_x, &scale_y, &scale_z)) {
         return make_empty_pick_result();
     }
+    size = rl_sprite3d_get_size_internal(sprite3d);
 
     if (!rl_sprite3d_get_ray_collision_ex(sprite3d,
                                           camera_data,

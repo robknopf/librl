@@ -88,18 +88,6 @@ static int rl_sprite3d_set_transform_lua(lua_State *L)
     return 0;
 }
 
-static int rl_sprite3d_get_size_lua(lua_State *L)
-{
-    rl_handle_t sprite = (rl_handle_t)luaL_checkinteger(L, 1);
-    float size = 0.0f;
-    if (!rl_sprite3d_get_size(sprite, &size)) {
-        lua_pushnumber(L, 0.0);
-        return 1;
-    }
-    lua_pushnumber(L, size);
-    return 1;
-}
-
 static int rl_sprite3d_set_size_lua(lua_State *L)
 {
     rl_handle_t sprite = (rl_handle_t)luaL_checkinteger(L, 1);
@@ -185,9 +173,6 @@ void rl_register_sprite3d_bindings(lua_State *L)
 
     lua_pushcfunction(L, rl_sprite3d_set_transform_lua);
     lua_setfield(L, -2, "sprite3d_set_transform");
-
-    lua_pushcfunction(L, rl_sprite3d_get_size_lua);
-    lua_setfield(L, -2, "sprite3d_get_size");
 
     lua_pushcfunction(L, rl_sprite3d_set_size_lua);
     lua_setfield(L, -2, "sprite3d_set_size");

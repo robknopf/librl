@@ -335,7 +335,6 @@ SIGNATURES: dict[str, str] = {
     "sprite3dSetTexture": "public static function setTexture(sprite:RLHandle, texture:RLHandle):Bool",
     "sprite3dSetTransform": "public static function setTransform(sprite:RLHandle, positionX:Float, positionY:Float, positionZ:Float, rotationX:Float, rotationY:Float, rotationZ:Float, scaleX:Float, scaleY:Float, scaleZ:Float):Bool",
     "sprite3dGetTransform": "public static function getTransform(sprite:RLHandle):RLSprite3dTransform",
-    "sprite3dGetSize": "public static function getSize(sprite:RLHandle):Float",
     "sprite3dSetSize": "public static function setSize(sprite:RLHandle, size:Float):Bool",
     "sprite3dSetFacing": "public static function setFacing(sprite:RLHandle, facing:RLSprite3dFacing):Bool",
     "sprite3dSetTint": "public static function setTint(sprite:RLHandle, color:RLHandle = 0):Bool",

@@ -327,7 +327,6 @@ export interface RLSprite3d {
     createFromFile(path: string): RLHandle;
     setTexture(sprite: RLHandle, texture: RLHandle): boolean;
     setTransform(sprite: RLHandle, positionX: number, positionY: number, positionZ: number, rotationX: number, rotationY: number, rotationZ: number, scaleX: number, scaleY: number, scaleZ: number): boolean;
-    getSize(sprite: RLHandle): number;
     setSize(sprite: RLHandle, size: number): boolean;
     setFacing(sprite: RLHandle, facing: RLSprite3dFacing): boolean;
     setVisible(sprite: RLHandle, visible: boolean): boolean;

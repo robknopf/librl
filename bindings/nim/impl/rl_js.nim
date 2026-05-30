@@ -492,8 +492,6 @@ async function __rlEnsureBindings(bindingsPath) {
                                 rotationX, rotationY, rotationZ,
                                 scaleX, scaleY, scaleZ: float): bool {.
     importjs: "__gRl.sprite3d.setTransform(#,#,#,#,#,#,#,#,#,#)".}
-  proc rl_sprite3d_get_size*(sprite: RLHandle): float {.
-    importjs: "__gRl.sprite3d.getSize(#)".}
   proc rl_sprite3d_set_size*(sprite: RLHandle, size: float): bool {.
     importjs: "__gRl.sprite3d.setSize(#,#)".}
   proc rl_sprite3d_set_visible*(sprite: RLHandle, visible: bool): bool {.

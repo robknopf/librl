@@ -765,9 +765,6 @@ class RLImpl {
 	public static function sprite3dIsPickable(sprite:RLHandle):Bool
 		return binding == null ? false : cast binding.sprite3d.isPickable(sprite);
 
-	public static function sprite3dGetSize(sprite:RLHandle):Float
-		return binding == null ? 0.0 : cast binding.sprite3d.getSize(sprite);
-
 	public static function sprite3dSetSize(sprite:RLHandle, size:Float):Bool
 		return binding != null && cast binding.sprite3d.setSize(sprite, size);
 

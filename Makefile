@@ -227,7 +227,6 @@ LDFLAGS_WASM = \
 	"_rl_sprite3d_set_texture", \
 	"_rl_sprite3d_get_transform", \
 	"_rl_sprite3d_set_transform", \
-	"_rl_sprite3d_get_size", \
 	"_rl_sprite3d_set_size", \
 	"_rl_sprite3d_set_facing", \
 	"_rl_sprite3d_set_visible", \

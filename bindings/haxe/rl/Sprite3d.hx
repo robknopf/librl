@@ -50,10 +50,6 @@ class Sprite3d {
 		return rl.impl.RLImpl.sprite3dGetTransform(sprite);
 	}
 
-	public static function getSize(sprite:RLHandle):Float {
-		return rl.impl.RLImpl.sprite3dGetSize(sprite);
-	}
-
 	public static function setSize(sprite:RLHandle, size:Float):Bool {
 		return rl.impl.RLImpl.sprite3dSetSize(sprite, size);
 	}

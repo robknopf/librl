@@ -1606,23 +1606,6 @@ const sprite3d = {
     setTransform: (sprite, positionX, positionY, positionZ, rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ) => reqModule().ccall(
         "rl_sprite3d_set_transform", "number", ["number", "number", "number", "number", "number", "number", "number", "number", "number", "number"], [sprite, positionX, positionY, positionZ, rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ]
     ) !== 0,
-    getSize: (sprite) => {
-        const stackSave = reqModule().stackSave;
-        const stackRestore = reqModule().stackRestore;
-        const stackAlloc = reqModule().stackAlloc;
-        const heapF32 = reqModule().HEAPF32;
-        if (typeof stackSave !== "function" || typeof stackRestore !== "function" || typeof stackAlloc !== "function" || !heapF32) {
-            return 0;
-        }
-        const prevSp = stackSave();
-        try {
-            const sizePtr = stackAlloc(4) >>> 0;
-            const ok = reqModule().ccall("rl_sprite3d_get_size", "number", ["number", "number"], [sprite >>> 0, sizePtr]) !== 0;
-            return ok ? heapF32[sizePtr >> 2] : 0;
-        } finally {
-            stackRestore(prevSp);
-        }
-    },
     setSize: (sprite, size) => reqModule().ccall(
         "rl_sprite3d_set_size", "number", ["number", "number"], [sprite, size]
     ) !== 0,

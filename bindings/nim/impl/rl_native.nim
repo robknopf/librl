@@ -649,6 +649,7 @@ proc rl_sprite3d_set_transform*(
 ): bool {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_set_visible*(sprite: RLHandle, visible: bool): bool {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_set_pickable*(sprite: RLHandle, pickable: bool): bool {.importc, cdecl, header: "rl_sprite3d.h".}
+proc rl_sprite3d_set_facing*(sprite: RLHandle, facing: cint): bool {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_is_visible*(sprite: RLHandle): bool {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_is_pickable*(sprite: RLHandle): bool {.importc, cdecl, header: "rl_sprite3d.h".}
 proc rl_sprite3d_set_tint*(sprite: RLHandle, color: RLHandle = 0): bool {.importc, cdecl, header: "rl_sprite3d.h".}

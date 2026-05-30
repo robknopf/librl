@@ -494,6 +494,8 @@ async function __rlEnsureBindings(bindingsPath) {
     importjs: "__gRl.sprite3d.setVisible(#,#)".}
   proc rl_sprite3d_set_pickable*(sprite: RLHandle, pickable: bool): bool {.
     importjs: "__gRl.sprite3d.setPickable(#,#)".}
+  proc rl_sprite3d_set_facing*(sprite: RLHandle, facing: cint): bool {.
+    importjs: "__gRl.sprite3d.setFacing(#,#)".}
   proc rl_sprite3d_is_visible*(sprite: RLHandle): bool {.
     importjs: "__gRl.sprite3d.isVisible(#)".}
   proc rl_sprite3d_is_pickable*(sprite: RLHandle): bool {.

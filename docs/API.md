@@ -423,6 +423,7 @@ bool rl_sprite3d_set_transform(rl_handle_t handle,
 // Visibility / picking (per instance)
 bool rl_sprite3d_set_visible(rl_handle_t handle, bool visible);
 bool rl_sprite3d_set_pickable(rl_handle_t handle, bool pickable);
+bool rl_sprite3d_set_facing(rl_handle_t handle, int facing); // RL_SPRITE3D_FACING_*
 bool rl_sprite3d_is_visible(rl_handle_t handle);
 bool rl_sprite3d_is_pickable(rl_handle_t handle);
 
@@ -437,6 +438,7 @@ Notes:
 - `rl_sprite3d_create(0)` creates a valid instance with no texture; draw is a silent no-op until `rl_sprite3d_set_texture` is called.
 - `rl_sprite3d_set_tint` stores the draw tint on the instance. Pass `0` to clear (draw uses white).
 - New instances default to **`visible == true`**, **`pickable == true`**. When **`visible`** is `false`, `rl_sprite3d_draw()` returns immediately (no placeholder draw). `rl_pick_sprite3d` / `rl_scene_pick` skip instances with **`pickable == false`**.
+- `rl_sprite3d_set_facing` accepts `RL_SPRITE3D_FACING_CAMERA`, `RL_SPRITE3D_FACING_CAMERA_FIXED_Y`, `RL_SPRITE3D_FACING_Y_UP`, or `RL_SPRITE3D_FACING_NONE`.
 
 ---
 

@@ -441,7 +441,7 @@ Notes:
 - `rl_sprite3d_create(0)` creates a valid instance with no texture; draw is a silent no-op until `rl_sprite3d_set_texture` is called.
 - `rl_sprite3d_set_tint` stores the draw tint on the instance. Pass `0` to clear (draw uses white).
 - New instances default to **`visible == true`**, **`pickable == true`**. When **`visible`** is `false`, `rl_sprite3d_draw()` returns immediately (no placeholder draw). `rl_pick_sprite3d` / `rl_scene_pick` skip instances with **`pickable == false`**.
-- `rl_sprite3d_set_transform` stores position, rotation, and non-uniform scale. `rl_sprite3d_set_size` applies an additional uniform scalar on top of the stored scale.
+- `rl_sprite3d_set_transform` stores position, rotation in radians, and non-uniform scale. `rl_sprite3d_set_size` applies an additional uniform scalar on top of the stored scale.
 - New instances default to `RL_SPRITE3D_FACING_FREE`.
 - `rl_sprite3d_set_facing` accepts `RL_SPRITE3D_FACING_CAMERA`, `RL_SPRITE3D_FACING_CAMERA_FIXED_Y`, `RL_SPRITE3D_FACING_Y_UP`, or `RL_SPRITE3D_FACING_FREE`.
 
@@ -532,7 +532,7 @@ Notes:
 - `rl_model_create(0)` creates a valid instance with no asset; draw is a silent no-op until `rl_model_set_asset` is called.
 - On load failure, `rl_model_load_asset()` substitutes a placeholder cube; the asset handle is still valid.
 - `rl_model_set_asset` retains the new asset, releases the old one, and resets animation state.
-- `rl_model_draw()` uses the transform stored by `rl_model_set_transform()` and tint from `rl_model_set_tint()`. Pass `0` to clear tint (draw uses white).
+- `rl_model_draw()` uses the transform stored by `rl_model_set_transform()`; model rotations are specified in radians. Tint comes from `rl_model_set_tint()`. Pass `0` to clear tint (draw uses white).
 - New instances default to **`visible == true`** and **`pickable == true`**. When **`visible`** is `false`, `rl_model_draw()` returns immediately (no placeholder draw). `rl_pick_model` / `rl_scene_pick` narrow paths skip instances with **`pickable == false`** (same as `rl_pick_model_with_camera_ray` / scene broadphase early-out).
 
 ---

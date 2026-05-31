@@ -28,9 +28,9 @@ static Matrix build_model_pick_matrix(float x, float y, float z,
 {
     Matrix translation = MatrixTranslate(x, y, z);
     Matrix rotation = MatrixRotateXYZ((Vector3){
-        rotation_x * DEG2RAD,
-        rotation_y * DEG2RAD,
-        rotation_z * DEG2RAD
+        rotation_x,
+        rotation_y,
+        rotation_z
     });
     Matrix scaling = MatrixScale(scale_x, scale_y, scale_z);
     return MatrixMultiply(MatrixMultiply(scaling, rotation), translation);

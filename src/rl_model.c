@@ -844,9 +844,9 @@ void rl_model_draw(rl_handle_t handle)
 
     asset = get_asset(instance->asset_handle);
     if (asset == NULL || asset->model == NULL) {
-        rotation_quat = QuaternionFromEuler(instance->rotation_x * DEG2RAD,
-                                            instance->rotation_y * DEG2RAD,
-                                            instance->rotation_z * DEG2RAD);
+        rotation_quat = QuaternionFromEuler(instance->rotation_x,
+                                            instance->rotation_y,
+                                            instance->rotation_z);
         QuaternionToAxisAngle(rotation_quat, &rotation_axis, &rotation_angle);
         DrawModelEx(rl_model_placeholder,
                     (Vector3){instance->position_x, instance->position_y, instance->position_z},
@@ -856,9 +856,9 @@ void rl_model_draw(rl_handle_t handle)
         return;
     }
 
-    rotation_quat = QuaternionFromEuler(instance->rotation_x * DEG2RAD,
-                                        instance->rotation_y * DEG2RAD,
-                                        instance->rotation_z * DEG2RAD);
+    rotation_quat = QuaternionFromEuler(instance->rotation_x,
+                                        instance->rotation_y,
+                                        instance->rotation_z);
     QuaternionToAxisAngle(rotation_quat, &rotation_axis, &rotation_angle);
 
     DrawModelEx(*(asset->model),
@@ -935,9 +935,9 @@ static Matrix build_model_instance_matrix(const rl_model_instance_t *inst)
 {
     Matrix translation = MatrixTranslate(inst->position_x, inst->position_y, inst->position_z);
     Matrix rotation = MatrixRotateXYZ((Vector3){
-        inst->rotation_x * DEG2RAD,
-        inst->rotation_y * DEG2RAD,
-        inst->rotation_z * DEG2RAD
+        inst->rotation_x,
+        inst->rotation_y,
+        inst->rotation_z
     });
     Matrix scaling = MatrixScale(inst->scale_x, inst->scale_y, inst->scale_z);
     return MatrixMultiply(MatrixMultiply(scaling, rotation), translation);

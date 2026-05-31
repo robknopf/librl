@@ -313,7 +313,7 @@ local function update(frame)
     gumshoe_model.z = math.sin(gumshoe_orbit) * gumshoe_radius
     gumshoe_model.scale = 1.0
     gumshoe_model.rot_x = 0.0
-    gumshoe_model.rot_y = math.deg(math.atan2(gumshoe_vx, gumshoe_vz))
+    gumshoe_model.rot_y = math.atan2(gumshoe_vx, gumshoe_vz)
     gumshoe_model.rot_z = 0.0
     gumshoe_model.animation_frame = math.floor(time_s * (gumshoe_model.animation_fps or 60.0))
   end

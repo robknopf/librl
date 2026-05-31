@@ -16,7 +16,7 @@ rl_handle_t rl_model_create_from_file(const char *filename);
 bool rl_model_set_asset(rl_handle_t handle, rl_handle_t asset_handle);
 bool rl_model_set_transform(rl_handle_t handle,
                             float position_x, float position_y, float position_z,
-                            float rotation_x, float rotation_y, float rotation_z,
+                            float rotation_x, float rotation_y, float rotation_z, /* radians */
                             float scale_x, float scale_y, float scale_z);
 bool rl_model_set_visible(rl_handle_t handle, bool visible);
 bool rl_model_set_pickable(rl_handle_t handle, bool pickable);

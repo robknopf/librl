@@ -25,7 +25,7 @@ bool rl_sprite3d_get_transform(rl_handle_t handle,
                                float *scale_x, float *scale_y, float *scale_z);
 bool rl_sprite3d_set_transform(rl_handle_t handle,
                                float position_x, float position_y, float position_z,
-                               float rotation_x, float rotation_y, float rotation_z,
+                               float rotation_x, float rotation_y, float rotation_z, /* radians */
                                float scale_x, float scale_y, float scale_z);
 bool rl_sprite3d_set_size(rl_handle_t handle, float size);
 bool rl_sprite3d_set_facing(rl_handle_t handle, int facing);

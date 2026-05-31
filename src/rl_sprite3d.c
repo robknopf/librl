@@ -87,9 +87,9 @@ static float sprite3d_y_up_length(const rl_sprite3d_instance_t *sprite)
 static Matrix sprite3d_rotation_matrix(const rl_sprite3d_instance_t *sprite)
 {
     return MatrixRotateXYZ((Vector3){
-        sprite->rotation_x * DEG2RAD,
-        sprite->rotation_y * DEG2RAD,
-        sprite->rotation_z * DEG2RAD
+        sprite->rotation_x,
+        sprite->rotation_y,
+        sprite->rotation_z
     });
 }
 
@@ -579,7 +579,7 @@ bool rl_sprite3d_get_ray_collision_ex(rl_handle_t handle,
     Vector3 up_axis = {0};
     Vector2 billboard_size = {0};
     float radius = 0.0f;
-    Matrix rotation = MatrixRotateXYZ((Vector3){rotation_x * DEG2RAD, rotation_y * DEG2RAD, rotation_z * DEG2RAD});
+    Matrix rotation = MatrixRotateXYZ((Vector3){rotation_x, rotation_y, rotation_z});
 
     if (collision == NULL) {
         return false;

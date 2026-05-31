@@ -518,10 +518,10 @@ static void build_y_up_quad(Vector3 position,
     Vector3 right = {width, 0.0f, 0.0f};
     Vector3 forward = {0.0f, 0.0f, length};
 
-    points[0] = (Vector3){position.x - half_width, position.y, position.z - half_length};
-    points[1] = (Vector3){position.x + half_width, position.y, position.z - half_length};
-    points[2] = (Vector3){position.x + half_width, position.y, position.z + half_length};
-    points[3] = (Vector3){position.x - half_width, position.y, position.z + half_length};
+    points[0] = (Vector3){position.x - half_width, position.y, position.z + half_length};
+    points[1] = (Vector3){position.x + half_width, position.y, position.z + half_length};
+    points[2] = (Vector3){position.x + half_width, position.y, position.z - half_length};
+    points[3] = (Vector3){position.x - half_width, position.y, position.z - half_length};
 
     if (right_axis != NULL) *right_axis = right;
     if (forward_axis != NULL) *forward_axis = forward;

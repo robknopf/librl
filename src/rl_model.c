@@ -8,11 +8,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <rlgl.h>
 
 #include "internal/exports.h"
 #include "internal/rl_color.h"
 #include "internal/rl_handle_pool.h"
 #include "internal/rl_model.h"
+#include "internal/rl_render_pass.h"
 #include "internal/rl_scene.h"
 #include "path/path.h"
 
@@ -92,6 +94,77 @@ static void log_invalid_details(const char *filename, Model model)
     log_error("  model.materialCount: %d", model.materialCount);
 }
 
+static void log_model_material_details(const char *filename, const Model *model)
+{
+    if (filename == NULL || model == NULL) {
+        return;
+    }
+
+    log_debug("Model materials for %s: meshes=%d materials=%d",
+             filename, model->meshCount, model->materialCount);
+
+    for (int i = 0; i < model->materialCount; i++) {
+        Material material = model->materials[i];
+        Texture2D albedo = material.maps[MATERIAL_MAP_ALBEDO].texture;
+        Color color = material.maps[MATERIAL_MAP_ALBEDO].color;
+
+        log_debug("  material[%d]: shader=%u albedoTex=%u size=%dx%d format=%d mipmaps=%d color=(%u,%u,%u,%u)",
+                 i,
+                 material.shader.id,
+                 albedo.id,
+                 albedo.width,
+                 albedo.height,
+                 albedo.format,
+                 albedo.mipmaps,
+                 color.r, color.g, color.b, color.a);
+
+        if ((albedo.id > 0) && (albedo.width == 256) && (albedo.height == 256)) {
+            Image gpu_image = LoadImageFromTexture(albedo);
+            if (gpu_image.data != NULL) {
+                Rectangle gpu_alpha_border = GetImageAlphaBorder(gpu_image, 0.01f);
+                log_debug("    gpuReadback: format=%d alphaBorder=(%.0f,%.0f %.0fx%.0f)",
+                         gpu_image.format,
+                         gpu_alpha_border.x, gpu_alpha_border.y,
+                         gpu_alpha_border.width, gpu_alpha_border.height);
+                UnloadImage(gpu_image);
+            } else {
+                log_debug("    gpuReadback: failed");
+            }
+        }
+    }
+
+    if (model->meshMaterial != NULL) {
+        for (int i = 0; i < model->meshCount; i++) {
+            Mesh mesh = model->meshes[i];
+            float min_u = 0.0f;
+            float max_u = 0.0f;
+            float min_v = 0.0f;
+            float max_v = 0.0f;
+
+            if ((mesh.texcoords != NULL) && (mesh.vertexCount > 0)) {
+                min_u = max_u = mesh.texcoords[0];
+                min_v = max_v = mesh.texcoords[1];
+
+                for (int j = 1; j < mesh.vertexCount; j++) {
+                    float u = mesh.texcoords[j*2];
+                    float v = mesh.texcoords[j*2 + 1];
+                    if (u < min_u) min_u = u;
+                    if (u > max_u) max_u = u;
+                    if (v < min_v) min_v = v;
+                    if (v > max_v) max_v = v;
+                }
+            }
+
+            log_warn("  mesh[%d] -> material[%d] verts=%d texcoords=%s uvRange=(%.3f,%.3f)-(%.3f,%.3f)",
+                     i,
+                     model->meshMaterial[i],
+                     mesh.vertexCount,
+                     mesh.texcoords != NULL ? "yes" : "no",
+                     min_u, min_v, max_u, max_v);
+        }
+    }
+}
+
 static void reset_asset(rl_model_asset_t *asset)
 {
     if (asset == NULL) {
@@ -162,6 +235,66 @@ static void reset_instance(rl_model_instance_t *instance)
     instance->tint_handle = 0;
     instance->visible = true;
     instance->pickable = true;
+}
+
+static bool material_is_transparent(const Material *material)
+{
+    if (material == NULL) {
+        return false;
+    }
+    return material->maps[MATERIAL_MAP_DIFFUSE].color.a < 255;
+}
+
+static bool model_has_mesh_for_pass(const Model *model, rl_render_pass_t pass)
+{
+    int i = 0;
+
+    if (model == NULL || model->materials == NULL || model->meshMaterial == NULL) {
+        return false;
+    }
+
+    for (i = 0; i < model->meshCount; i++) {
+        int material_index = model->meshMaterial[i];
+        bool transparent = false;
+
+        if (material_index < 0 || material_index >= model->materialCount) {
+            continue;
+        }
+
+        transparent = material_is_transparent(&model->materials[material_index]);
+        if ((pass == RL_RENDER_PASS_TRANSPARENT_3D && transparent) ||
+            (pass == RL_RENDER_PASS_OPAQUE_3D && !transparent)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static void draw_model_placeholder(const rl_model_instance_t *instance)
+{
+    Quaternion rotation_quat = {0};
+    Vector3 rotation_axis = {0.0f, 1.0f, 0.0f};
+    float rotation_angle = 0.0f;
+
+    if (instance == NULL) {
+        DrawModelEx(rl_model_placeholder,
+                    (Vector3){0.0f, 0.0f, 0.0f},
+                    (Vector3){0.0f, 1.0f, 0.0f}, 0.0f,
+                    (Vector3){1.0f, 1.0f, 1.0f},
+                    (Color){255, 0, 255, 255});
+        return;
+    }
+
+    rotation_quat = QuaternionFromEuler(instance->rotation_x,
+                                        instance->rotation_y,
+                                        instance->rotation_z);
+    QuaternionToAxisAngle(rotation_quat, &rotation_axis, &rotation_angle);
+    DrawModelEx(rl_model_placeholder,
+                (Vector3){instance->position_x, instance->position_y, instance->position_z},
+                rotation_axis, rotation_angle * RAD2DEG,
+                (Vector3){instance->scale_x, instance->scale_y, instance->scale_z},
+                (Color){255, 0, 255, 255});
 }
 
 static rl_model_asset_t *get_asset(rl_handle_t handle)
@@ -420,6 +553,8 @@ rl_handle_t rl_model_load_asset(const char *filename)
         }
         using_placeholder = true;
     }
+
+    //log_model_material_details(normalized_path, &loaded_model);
 
     if (!using_placeholder) {
         animations = LoadModelAnimations(normalized_path, &animation_count);
@@ -815,44 +950,71 @@ bool rl_model_is_pickable(rl_handle_t handle)
 }
 
 RL_KEEP
-void rl_model_draw(rl_handle_t handle)
+bool rl_model_has_render_pass(rl_handle_t handle, rl_render_pass_t pass)
+{
+    rl_model_instance_t *instance = get_instance(handle);
+    rl_model_asset_t *asset = NULL;
+
+    if (instance == NULL) {
+        return handle != 0 && pass == RL_RENDER_PASS_OPAQUE_3D;
+    }
+
+    if (!instance->visible) {
+        return false;
+    }
+
+    if (instance->asset_handle == 0) {
+        return pass == RL_RENDER_PASS_OPAQUE_3D;
+    }
+
+    asset = get_asset(instance->asset_handle);
+    if (asset == NULL || asset->model == NULL) {
+        return pass == RL_RENDER_PASS_OPAQUE_3D;
+    }
+
+    return model_has_mesh_for_pass(asset->model, pass);
+}
+
+RL_KEEP
+void rl_model_draw_pass(rl_handle_t handle, rl_render_pass_t pass)
 {
     rl_model_instance_t *instance = get_instance(handle);
     rl_model_asset_t *asset = NULL;
     Quaternion rotation_quat = {0};
     Vector3 rotation_axis = {0.0f, 1.0f, 0.0f};
     float rotation_angle = 0.0f;
+    Matrix mat_scale = MatrixIdentity();
+    Matrix mat_rotation = MatrixIdentity();
+    Matrix mat_translation = MatrixIdentity();
+    Matrix mat_transform = MatrixIdentity();
+    Matrix model_transform = MatrixIdentity();
+    Color tint = {255, 255, 255, 255};
+    int i = 0;
 
+    if (!rl_model_has_render_pass(handle, pass)) {
+        return;
+    }
+
+    instance = get_instance(handle);
     if (instance == NULL) {
-        if (handle != 0) {
-            DrawModelEx(rl_model_placeholder,
-                        (Vector3){0.0f, 0.0f, 0.0f},
-                        (Vector3){0.0f, 1.0f, 0.0f}, 0.0f,
-                        (Vector3){1.0f, 1.0f, 1.0f},
-                        (Color){255, 0, 255, 255});
+        if (pass == RL_RENDER_PASS_OPAQUE_3D) {
+            draw_model_placeholder(NULL);
         }
         return;
     }
 
-    if (!instance->visible) {
-        return;
-    }
-
     if (instance->asset_handle == 0) {
+        if (pass == RL_RENDER_PASS_OPAQUE_3D) {
+            draw_model_placeholder(instance);
+        }
         return;
     }
 
     asset = get_asset(instance->asset_handle);
     if (asset == NULL || asset->model == NULL) {
-        rotation_quat = QuaternionFromEuler(instance->rotation_x,
-                                            instance->rotation_y,
-                                            instance->rotation_z);
-        QuaternionToAxisAngle(rotation_quat, &rotation_axis, &rotation_angle);
-        DrawModelEx(rl_model_placeholder,
-                    (Vector3){instance->position_x, instance->position_y, instance->position_z},
-                    rotation_axis, rotation_angle * RAD2DEG,
-                    (Vector3){instance->scale_x, instance->scale_y, instance->scale_z},
-                    (Color){255, 0, 255, 255});
+        if (pass == RL_RENDER_PASS_OPAQUE_3D) {
+            draw_model_placeholder(instance);
+        }
         return;
     }
 
@@ -860,13 +1022,56 @@ void rl_model_draw(rl_handle_t handle)
                                         instance->rotation_y,
                                         instance->rotation_z);
     QuaternionToAxisAngle(rotation_quat, &rotation_axis, &rotation_angle);
+    mat_scale = MatrixScale(instance->scale_x, instance->scale_y, instance->scale_z);
+    mat_rotation = MatrixRotate(rotation_axis, rotation_angle);
+    mat_translation = MatrixTranslate(instance->position_x,
+                                      instance->position_y,
+                                      instance->position_z);
+    mat_transform = MatrixMultiply(MatrixMultiply(mat_scale, mat_rotation), mat_translation);
+    model_transform = MatrixMultiply(asset->model->transform, mat_transform);
+    tint = rl_color_get(instance->tint_handle);
 
-    DrawModelEx(*(asset->model),
-                (Vector3){instance->position_x, instance->position_y, instance->position_z},
-                rotation_axis,
-                rotation_angle * RAD2DEG,
-                (Vector3){instance->scale_x, instance->scale_y, instance->scale_z},
-                rl_color_get(instance->tint_handle));
+    for (i = 0; i < asset->model->meshCount; i++) {
+        int material_index = asset->model->meshMaterial[i];
+        Material material = {0};
+        Color diffuse = {0};
+        bool transparent = false;
+
+        if (material_index < 0 || material_index >= asset->model->materialCount) {
+            continue;
+        }
+
+        material = asset->model->materials[material_index];
+        transparent = material_is_transparent(&material);
+        if ((pass == RL_RENDER_PASS_TRANSPARENT_3D && !transparent) ||
+            (pass == RL_RENDER_PASS_OPAQUE_3D && transparent)) {
+            continue;
+        }
+
+        diffuse = material.maps[MATERIAL_MAP_DIFFUSE].color;
+        material.maps[MATERIAL_MAP_DIFFUSE].color.r = (unsigned char)(((int)diffuse.r * (int)tint.r) / 255);
+        material.maps[MATERIAL_MAP_DIFFUSE].color.g = (unsigned char)(((int)diffuse.g * (int)tint.g) / 255);
+        material.maps[MATERIAL_MAP_DIFFUSE].color.b = (unsigned char)(((int)diffuse.b * (int)tint.b) / 255);
+        material.maps[MATERIAL_MAP_DIFFUSE].color.a = (unsigned char)(((int)diffuse.a * (int)tint.a) / 255);
+
+        if ((material.shader.locs != NULL) &&
+            (material.shader.locs[SHADER_LOC_MATRIX_BONETRANSFORMS] != -1) &&
+            (asset->model->boneMatrices != NULL)) {
+            rlEnableShader(material.shader.id);
+            rlSetUniformMatrices(material.shader.locs[SHADER_LOC_MATRIX_BONETRANSFORMS],
+                                 asset->model->boneMatrices,
+                                 asset->model->skeleton.boneCount);
+        }
+
+        DrawMesh(asset->model->meshes[i], material, model_transform);
+    }
+}
+
+RL_KEEP
+void rl_model_draw(rl_handle_t handle)
+{
+    rl_model_draw_pass(handle, RL_RENDER_PASS_OPAQUE_3D);
+    rl_model_draw_pass(handle, RL_RENDER_PASS_TRANSPARENT_3D);
 }
 
 bool rl_model_get_ray_collision_ex(rl_handle_t handle,

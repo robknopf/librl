@@ -95,6 +95,11 @@ Designed enough to implement when prioritized.
   - reuse cached model local bounds + sprite3d position/size for `FrustumContainsBox` / sphere tests against active camera
   - candidates: opt-in on `pick_group`; optional skip in `rl_model_draw` / `rl_sprite3d_draw`
   - raylib frustum helpers live outside core API (e.g. raylib-extras / rcamera discussion in [raylib#4114](https://github.com/raysan5/raylib/issues/4114)) — decide vendoring vs small internal helper
+- **Transparent pass optimization** — current scene transparent pass favors correctness over batching:
+  - today: mixed transparent `MODEL` / `SPRITE3D` ordering is enforced by flushing the active rlgl batch after each transparent item
+  - cache model mesh/material pass classification at asset-load time instead of scanning material alpha every draw
+  - explore a unified transparent submission path so mixed sprites/models can honor sort order without per-item `rlDrawRenderBatchActive()`
+  - if unified submission is not practical, evaluate cheaper compromises (sprite-immediate transparent path, per-type transparent buckets, or selective flushing only on sprite/model transitions)
 
 ### API consistency
 

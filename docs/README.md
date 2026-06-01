@@ -6,7 +6,7 @@
 | [BINDINGS.md](BINDINGS.md) | Binding authors | JS, Haxe, Nim, and Lua binding conventions |
 | [MAINTAINER.md](MAINTAINER.md) | Maintainers | Build matrix, repo conventions, gotchas, current architecture |
 | [ROADMAP.md](ROADMAP.md) | Maintainers | Work tracking — **now / next / backlog / research / parked / done** |
-| [design/rl_scene.md](design/rl_scene.md) | Maintainers / agents | **Design** — retained `rl_scene` layer (not implemented yet) |
+| [design/rl_scene.md](design/rl_scene.md) | Maintainers / agents | **Design / implementation notes** — retained `rl_scene` layer, layer ordering, and 3D pass behavior |
 
 Repo root [AGENTS.md](../AGENTS.md) defines the agent/editor contract (binding parity, API docs, commit policy).
 

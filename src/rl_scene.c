@@ -1,6 +1,8 @@
 #include "rl_scene.h"
 
+#include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include <raylib.h>
 
@@ -8,6 +10,7 @@
 #include "internal/rl_camera3d.h"
 #include "internal/rl_handle_pool.h"
 #include "internal/rl_model.h"
+#include "internal/rl_render_pass.h"
 #include "internal/rl_pick_scene.h"
 #include "internal/rl_scene.h"
 #include "internal/rl_sprite3d.h"
@@ -20,6 +23,9 @@
 #include "rl_sprite2d.h"
 #include "rl_sprite3d.h"
 #include "rl_text2d.h"
+
+#include <rlgl.h>
+
 
 #define MAX_SCENES 32
 #define MAX_SCENE_MEMBERS 128
@@ -34,11 +40,27 @@ typedef struct
 
 typedef struct
 {
+    rl_handle_t drawable;
+    rl_handle_kind_t kind;
+    uint32_t order;
+    float depth_key;
+} rl_scene_draw_item_t;
+
+typedef struct
+{
     bool in_use;
     rl_handle_t camera;
     rl_scene_member_t members[MAX_SCENE_MEMBERS];
     int member_count;
     uint32_t next_order;
+    bool order_dirty;
+    rl_scene_member_t sorted[MAX_SCENE_MEMBERS];
+    rl_scene_draw_item_t opaque3d[MAX_SCENE_MEMBERS];
+    int opaque3d_count;
+    rl_scene_draw_item_t transparent3d[MAX_SCENE_MEMBERS];
+    int transparent3d_count;
+    rl_scene_draw_item_t overlay2d[MAX_SCENE_MEMBERS];
+    int overlay2d_count;
 } rl_scene_instance_t;
 
 static rl_scene_instance_t rl_scenes[MAX_SCENES];
@@ -126,30 +148,148 @@ static void apply_scene_camera(rl_handle_t camera)
     }
 }
 
+static int compare_scene_members(const void *lhs_ptr, const void *rhs_ptr)
+{
+    const rl_scene_member_t *lhs = (const rl_scene_member_t *)lhs_ptr;
+    const rl_scene_member_t *rhs = (const rl_scene_member_t *)rhs_ptr;
+
+    if (lhs->layer != rhs->layer) {
+        return (lhs->layer < rhs->layer) ? -1 : 1;
+    }
+    if (lhs->order != rhs->order) {
+        return (lhs->order < rhs->order) ? -1 : 1;
+    }
+    return 0;
+}
+
 static void sort_scene_members(rl_scene_member_t *members, int count)
 {
-    int i = 0;
-    int j = 0;
-
-    for (i = 0; i < count - 1; i++) {
-        for (j = i + 1; j < count; j++) {
-            rl_scene_member_t tmp = {0};
-            bool swap = false;
-
-            if (members[j].layer < members[i].layer) {
-                swap = true;
-            } else if (members[j].layer == members[i].layer &&
-                       members[j].order < members[i].order) {
-                swap = true;
-            }
-
-            if (swap) {
-                tmp = members[i];
-                members[i] = members[j];
-                members[j] = tmp;
-            }
-        }
+    if (count <= 1) {
+        return;
     }
+    qsort(members, (size_t)count, sizeof(members[0]), compare_scene_members);
+}
+
+static void refresh_sorted_members(rl_scene_instance_t *scene)
+{
+    if (scene == NULL || !scene->order_dirty) {
+        return;
+    }
+
+    memcpy(scene->sorted, scene->members,
+           (size_t)scene->member_count * sizeof(scene->sorted[0]));
+    sort_scene_members(scene->sorted, scene->member_count);
+    scene->order_dirty = false;
+}
+
+static Vector3 scene_camera_forward(Camera3D camera)
+{
+    Vector3 forward = {
+        camera.target.x - camera.position.x,
+        camera.target.y - camera.position.y,
+        camera.target.z - camera.position.z
+    };
+    float length = sqrtf(forward.x * forward.x +
+                         forward.y * forward.y +
+                         forward.z * forward.z);
+
+    if (length <= 0.00001f) {
+        return (Vector3){0.0f, 0.0f, -1.0f};
+    }
+
+    forward.x /= length;
+    forward.y /= length;
+    forward.z /= length;
+    return forward;
+}
+
+static bool get_drawable_world_position(rl_handle_t drawable,
+                                        rl_handle_kind_t kind,
+                                        Vector3 *position)
+{
+    float position_x = 0.0f;
+    float position_y = 0.0f;
+    float position_z = 0.0f;
+    float rotation_x = 0.0f;
+    float rotation_y = 0.0f;
+    float rotation_z = 0.0f;
+    float scale_x = 1.0f;
+    float scale_y = 1.0f;
+    float scale_z = 1.0f;
+
+    if (position == NULL) {
+        return false;
+    }
+
+    switch (kind) {
+    case RL_HANDLE_KIND_MODEL:
+        if (!rl_model_get_transform(drawable,
+                                    &position_x, &position_y, &position_z,
+                                    &scale_x, &scale_y, &scale_z,
+                                    &rotation_x, &rotation_y, &rotation_z)) {
+            return false;
+        }
+        break;
+    case RL_HANDLE_KIND_SPRITE3D:
+        if (!rl_sprite3d_get_transform(drawable,
+                                       &position_x, &position_y, &position_z,
+                                       &rotation_x, &rotation_y, &rotation_z,
+                                       &scale_x, &scale_y, &scale_z)) {
+            return false;
+        }
+        break;
+    default:
+        return false;
+    }
+
+    *position = (Vector3){position_x, position_y, position_z};
+    return true;
+}
+
+static float compute_transparent_depth_key(Camera3D camera,
+                                           Vector3 camera_forward,
+                                           rl_handle_t drawable,
+                                           rl_handle_kind_t kind)
+{
+    Vector3 position = {0};
+    Vector3 offset = {0};
+
+    if (!get_drawable_world_position(drawable, kind, &position)) {
+        return 0.0f;
+    }
+
+    offset.x = position.x - camera.position.x;
+    offset.y = position.y - camera.position.y;
+    offset.z = position.z - camera.position.z;
+
+    return offset.x * camera_forward.x +
+           offset.y * camera_forward.y +
+           offset.z * camera_forward.z;
+}
+
+static int compare_transparent_draw_items(const void *lhs_ptr, const void *rhs_ptr)
+{
+    const rl_scene_draw_item_t *lhs = (const rl_scene_draw_item_t *)lhs_ptr;
+    const rl_scene_draw_item_t *rhs = (const rl_scene_draw_item_t *)rhs_ptr;
+
+    if (lhs->depth_key > rhs->depth_key) {
+        return -1;
+    }
+    if (lhs->depth_key < rhs->depth_key) {
+        return 1;
+    }
+    if (lhs->order != rhs->order) {
+        return (lhs->order < rhs->order) ? -1 : 1;
+    }
+    return 0;
+}
+
+static void sort_transparent_draw_items(rl_scene_draw_item_t *items, int count)
+{
+    if (count <= 1) {
+        return;
+    }
+    qsort(items, (size_t)count, sizeof(items[0]), compare_transparent_draw_items);
 }
 
 static void draw_scene_member(rl_handle_t drawable, rl_handle_kind_t kind)
@@ -166,6 +306,22 @@ static void draw_scene_member(rl_handle_t drawable, rl_handle_kind_t kind)
         break;
     case RL_HANDLE_KIND_TEXT2D:
         rl_text2d_draw(drawable);
+        break;
+    default:
+        break;
+    }
+}
+
+static void draw_scene_member_pass(rl_handle_t drawable,
+                                   rl_handle_kind_t kind,
+                                   rl_render_pass_t pass)
+{
+    switch (kind) {
+    case RL_HANDLE_KIND_MODEL:
+        rl_model_draw_pass(drawable, pass);
+        break;
+    case RL_HANDLE_KIND_SPRITE3D:
+        rl_sprite3d_draw_pass(drawable, pass);
         break;
     default:
         break;
@@ -208,6 +364,10 @@ rl_handle_t rl_scene_create(void)
     rl_scenes[index].camera = 0;
     rl_scenes[index].member_count = 0;
     rl_scenes[index].next_order = 0;
+    rl_scenes[index].order_dirty = false;
+    rl_scenes[index].opaque3d_count = 0;
+    rl_scenes[index].transparent3d_count = 0;
+    rl_scenes[index].overlay2d_count = 0;
     rl_scenes[index].in_use = true;
     return handle;
 }
@@ -224,6 +384,10 @@ void rl_scene_destroy(rl_handle_t scene)
     instance->camera = 0;
     instance->member_count = 0;
     instance->next_order = 0;
+    instance->order_dirty = false;
+    instance->opaque3d_count = 0;
+    instance->transparent3d_count = 0;
+    instance->overlay2d_count = 0;
     instance->in_use = false;
     rl_handle_pool_free(&rl_scene_pool, scene);
 }
@@ -260,6 +424,7 @@ bool rl_scene_add(rl_handle_t scene, rl_handle_t drawable, int layer)
     member->kind = kind;
     member->layer = layer;
     member->order = instance->next_order++;
+    instance->order_dirty = true;
     return true;
 }
 
@@ -279,6 +444,7 @@ bool rl_scene_set_layer(rl_handle_t scene, rl_handle_t drawable, int layer)
     }
 
     instance->members[index].layer = layer;
+    instance->order_dirty = true;
     return true;
 }
 
@@ -301,6 +467,7 @@ bool rl_scene_remove(rl_handle_t scene, rl_handle_t drawable)
     if (index < instance->member_count) {
         instance->members[index] = instance->members[instance->member_count];
     }
+    instance->order_dirty = true;
     return true;
 }
 
@@ -315,6 +482,10 @@ void rl_scene_clear(rl_handle_t scene)
 
     instance->member_count = 0;
     instance->next_order = 0;
+    instance->order_dirty = false;
+    instance->opaque3d_count = 0;
+    instance->transparent3d_count = 0;
+    instance->overlay2d_count = 0;
 }
 
 RL_KEEP
@@ -333,8 +504,9 @@ RL_KEEP
 void rl_scene_draw(rl_handle_t scene)
 {
     rl_scene_instance_t *instance = resolve_scene_instance(scene);
-    rl_scene_member_t sorted[MAX_SCENE_MEMBERS];
     rl_handle_t camera = 0;
+    Camera3D camera_data = {0};
+    Vector3 camera_forward = {0.0f, 0.0f, -1.0f};
     int i = 0;
     bool has_3d = false;
     bool has_2d = false;
@@ -347,59 +519,142 @@ void rl_scene_draw(rl_handle_t scene)
         return;
     }
 
-    memcpy(sorted, instance->members,
-           (size_t)instance->member_count * sizeof(sorted[0]));
-    sort_scene_members(sorted, instance->member_count);
+    refresh_sorted_members(instance);
 
     camera = resolve_scene_camera_handle(instance, 0);
     apply_scene_camera(camera);
+    if (has_3d || instance->member_count > 0) {
+        (void)rl_camera3d_get_active_camera(&camera_data);
+        camera_forward = scene_camera_forward(camera_data);
+    }
+
+    instance->overlay2d_count = 0;
 
     for (i = 0; i < instance->member_count; i++) {
-        if (!is_drawable_visible(sorted[i].drawable, sorted[i].kind)) {
+        rl_scene_member_t *member = &instance->sorted[i];
+        rl_scene_draw_item_t item = {0};
+
+        if (!is_drawable_visible(member->drawable, member->kind)) {
             continue;
         }
-        if (!is_drawable_handle_valid(sorted[i].drawable, sorted[i].kind)) {
+        if (!is_drawable_handle_valid(member->drawable, member->kind)) {
             continue;
         }
-        if (sorted[i].kind == RL_HANDLE_KIND_MODEL ||
-            sorted[i].kind == RL_HANDLE_KIND_SPRITE3D) {
+
+        item.drawable = member->drawable;
+        item.kind = member->kind;
+        item.order = member->order;
+        item.depth_key = 0.0f;
+
+        if (member->kind == RL_HANDLE_KIND_MODEL ||
+            member->kind == RL_HANDLE_KIND_SPRITE3D) {
             has_3d = true;
         } else {
             has_2d = true;
+            instance->overlay2d[instance->overlay2d_count++] = item;
         }
     }
 
     if (has_3d) {
+        int start = 0;
         rl_render_begin_mode_3d();
-        for (i = 0; i < instance->member_count; i++) {
-            if (sorted[i].kind != RL_HANDLE_KIND_MODEL &&
-                sorted[i].kind != RL_HANDLE_KIND_SPRITE3D) {
-                continue;
+
+        while (start < instance->member_count) {
+            int current_layer = 0;
+            int end = 0;
+
+            while (start < instance->member_count) {
+                rl_scene_member_t *member = &instance->sorted[start];
+
+                if (!is_drawable_visible(member->drawable, member->kind) ||
+                    !is_drawable_handle_valid(member->drawable, member->kind) ||
+                    (member->kind != RL_HANDLE_KIND_MODEL &&
+                     member->kind != RL_HANDLE_KIND_SPRITE3D)) {
+                    start++;
+                    continue;
+                }
+
+                current_layer = member->layer;
+                break;
             }
-            if (!is_drawable_visible(sorted[i].drawable, sorted[i].kind)) {
-                continue;
+
+            if (start >= instance->member_count) {
+                break;
             }
-            if (!is_drawable_handle_valid(sorted[i].drawable, sorted[i].kind)) {
-                continue;
+
+            instance->opaque3d_count = 0;
+            instance->transparent3d_count = 0;
+            end = start;
+
+            while (end < instance->member_count &&
+                   instance->sorted[end].layer == current_layer) {
+                rl_scene_member_t *member = &instance->sorted[end];
+                rl_scene_draw_item_t item = {0};
+
+                if (is_drawable_visible(member->drawable, member->kind) &&
+                    is_drawable_handle_valid(member->drawable, member->kind) &&
+                    (member->kind == RL_HANDLE_KIND_MODEL ||
+                     member->kind == RL_HANDLE_KIND_SPRITE3D)) {
+                    item.drawable = member->drawable;
+                    item.kind = member->kind;
+                    item.order = member->order;
+                    item.depth_key = 0.0f;
+
+                    if ((member->kind == RL_HANDLE_KIND_MODEL &&
+                         rl_model_has_render_pass(member->drawable, RL_RENDER_PASS_OPAQUE_3D)) ||
+                        (member->kind == RL_HANDLE_KIND_SPRITE3D &&
+                         rl_sprite3d_has_render_pass(member->drawable, RL_RENDER_PASS_OPAQUE_3D))) {
+                        instance->opaque3d[instance->opaque3d_count++] = item;
+                    }
+
+                    if ((member->kind == RL_HANDLE_KIND_MODEL &&
+                         rl_model_has_render_pass(member->drawable, RL_RENDER_PASS_TRANSPARENT_3D)) ||
+                        (member->kind == RL_HANDLE_KIND_SPRITE3D &&
+                         rl_sprite3d_has_render_pass(member->drawable, RL_RENDER_PASS_TRANSPARENT_3D))) {
+                        item.depth_key = compute_transparent_depth_key(camera_data,
+                                                                       camera_forward,
+                                                                       member->drawable,
+                                                                       member->kind);
+                        instance->transparent3d[instance->transparent3d_count++] = item;
+                    }
+                }
+
+                end++;
             }
-            draw_scene_member(sorted[i].drawable, sorted[i].kind);
+
+            for (i = 0; i < instance->opaque3d_count; i++) {
+                draw_scene_member_pass(instance->opaque3d[i].drawable,
+                                       instance->opaque3d[i].kind,
+                                       RL_RENDER_PASS_OPAQUE_3D);
+            }
+
+            if (instance->transparent3d_count > 0) {
+                sort_transparent_draw_items(instance->transparent3d,
+                                            instance->transparent3d_count);
+                rlDisableDepthMask();
+                for (i = 0; i < instance->transparent3d_count; i++) {
+                    draw_scene_member_pass(instance->transparent3d[i].drawable,
+                                           instance->transparent3d[i].kind,
+                                           RL_RENDER_PASS_TRANSPARENT_3D);
+                    /* TODO: This per-item flush preserves mixed Sprite3d/Model transparent order,
+                     * but it defeats batching. Replace with a cheaper unified transparent
+                     * submission strategy once model/sprite pass behavior settles. */
+                    rlDrawRenderBatchActive();
+                }
+                rlDrawRenderBatchActive();
+                rlEnableDepthMask();
+            }
+
+            start = end;
         }
+
         rl_render_end_mode_3d();
     }
 
     if (has_2d) {
-        for (i = 0; i < instance->member_count; i++) {
-            if (sorted[i].kind != RL_HANDLE_KIND_SPRITE2D &&
-                sorted[i].kind != RL_HANDLE_KIND_TEXT2D) {
-                continue;
-            }
-            if (!is_drawable_visible(sorted[i].drawable, sorted[i].kind)) {
-                continue;
-            }
-            if (!is_drawable_handle_valid(sorted[i].drawable, sorted[i].kind)) {
-                continue;
-            }
-            draw_scene_member(sorted[i].drawable, sorted[i].kind);
+        for (i = 0; i < instance->overlay2d_count; i++) {
+            draw_scene_member(instance->overlay2d[i].drawable,
+                              instance->overlay2d[i].kind);
         }
     }
 }

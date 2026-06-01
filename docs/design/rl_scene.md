@@ -128,11 +128,13 @@ rl_pick_result_t rl_scene_pick(rl_handle_t scene,
 
 1. Resolve scene; set active camera from scene (or current if scene camera is `0`).
 2. `rl_render_begin` / clear as today.
-3. 3D kinds (`MODEL`, `SPRITE3D`): `rl_render_begin_mode_3d`, draw each member whose instance is visible, in layer order, `rl_render_end_mode_3d`.
+3. 3D kinds (`MODEL`, `SPRITE3D`): `rl_render_begin_mode_3d`, then for each **scene layer**:
+   - draw opaque 3D contributions first
+   - draw transparent 3D contributions second
 4. 2D kinds (`SPRITE2D`, `TEXT2D`): draw each member whose instance is visible, in layer order (no 3D mode).
 5. `rl_render_end`.
 
-Layers ascending; stable order within layer (transparency-sensitive).
+Layers ascend first; stable insertion order is the base tie-breaker within a layer. Transparent 3D items are additionally depth-sorted just before their pass. `SPRITE3D` contributes only to the transparent pass; `MODEL` may contribute to both passes based on per-mesh material alpha.
 
 **Pick:** `rl_scene_pick` tests only **model** and **sprite3d** members whose instance **`pickable`** is true. Closest hit wins. Camera argument: explicit handle, or **`0` → currently active camera** (same rule for scene draw when scene has no camera set). *Note:* per-handle `rl_pick_model` / `rl_pick_sprite3d` today require a valid camera handle and do **not** fall back to active — scene pick adds that fallback.
 
@@ -206,9 +208,17 @@ Port order: **`examples/c-simple` first**, then **`examples/nim-simple`**, then 
 
 ---
 
-## Implemented: per-member layer
+## Implemented: per-member layer + scene pass scheduling
 
 `bool rl_scene_set_layer(rl_handle_t scene, rl_handle_t drawable, int layer)` updates the member’s **paint-order bucket** without remove/re-add. **`scene` + `drawable`** disambiguates when a drawable could theoretically appear in multiple scenes. Returns `false` if `drawable` is not a member of `scene`. Stable insertion order within a layer is preserved (tie-breaker after `layer` in `rl_scene_draw`).
+
+`rl_scene_draw` now treats **layer** as grouping/z-order only. For each layer it runs:
+
+1. opaque 3D pass
+2. transparent 3D pass
+3. final 2D pass after all 3D layers complete
+
+The current transparent pass uses per-drawable camera-depth sorting with stable insertion order as the fallback tie-breaker. `Sprite3d` participates only in the transparent pass. `Model` can participate in both passes by splitting meshes/materials internally.
 
 ---
 

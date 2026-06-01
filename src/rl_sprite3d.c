@@ -9,6 +9,7 @@
 #include "internal/rl_camera3d.h"
 #include "internal/rl_color.h"
 #include "internal/rl_handle_pool.h"
+#include "internal/rl_render_pass.h"
 #include "internal/rl_sprite3d.h"
 #include "rl_texture.h"
 #include "internal/rl_scene.h"
@@ -342,11 +343,31 @@ bool rl_sprite3d_is_pickable(rl_handle_t handle)
 }
 
 RL_KEEP
-void rl_sprite3d_draw(rl_handle_t handle)
+bool rl_sprite3d_has_render_pass(rl_handle_t handle, rl_render_pass_t pass)
+{
+    rl_sprite3d_instance_t *sprite = resolve_sprite3d_instance(handle);
+
+    if (sprite == NULL) {
+        return handle != 0 && pass == RL_RENDER_PASS_TRANSPARENT_3D;
+    }
+    if (!sprite->visible) {
+        return false;
+    }
+    if (sprite->texture == 0) {
+        return false;
+    }
+    return pass == RL_RENDER_PASS_TRANSPARENT_3D;
+}
+
+RL_KEEP
+void rl_sprite3d_draw_pass(rl_handle_t handle, rl_render_pass_t pass)
 {
     rl_sprite3d_instance_t *sprite = resolve_sprite3d_instance(handle);
     Texture2D *texture = NULL;
     Camera3D camera = {0};
+    if (pass != RL_RENDER_PASS_TRANSPARENT_3D) {
+        return;
+    }
     if (sprite == NULL)
     {
         if (handle != 0 && rl_camera3d_get_active_camera(&camera)) {
@@ -403,6 +424,12 @@ void rl_sprite3d_draw(rl_handle_t handle)
             break;
         }
     }
+}
+
+RL_KEEP
+void rl_sprite3d_draw(rl_handle_t handle)
+{
+    rl_sprite3d_draw_pass(handle, RL_RENDER_PASS_TRANSPARENT_3D);
 }
 
 RL_KEEP

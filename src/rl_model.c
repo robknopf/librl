@@ -1031,6 +1031,23 @@ void rl_model_draw_pass(rl_handle_t handle, rl_render_pass_t pass)
     model_transform = MatrixMultiply(asset->model->transform, mat_transform);
     tint = rl_color_get(instance->tint_handle);
 
+    /* GPU skinning: recompute bone matrices for this instance immediately before
+     * drawing so each instance uploads its own pose, not whoever animated last. */
+    if (instance->animation_playing &&
+        instance->selected_animation >= 0 &&
+        instance->selected_animation < asset->animation_count &&
+        asset->model->boneMatrices != NULL) {
+        int anim_frame_count = asset->animations[instance->selected_animation].keyframeCount;
+        if (anim_frame_count > 0) {
+            int anim_frame = (int)floorf(instance->animation_time);
+            if (anim_frame < 0) anim_frame = 0;
+            if (anim_frame >= anim_frame_count) anim_frame = anim_frame_count - 1;
+            UpdateModelAnimation(*(asset->model),
+                                 asset->animations[instance->selected_animation],
+                                 anim_frame);
+        }
+    }
+
     for (i = 0; i < asset->model->meshCount; i++) {
         int material_index = asset->model->meshMaterial[i];
         Material material = {0};

@@ -1217,6 +1217,14 @@ const shape = {
             [positionX, positionY, positionZ, width, height, length, color]
         );
     },
+    drawCircle3d: (centerX, centerY, centerZ, radius, rotationAxisX, rotationAxisY, rotationAxisZ, rotationAngle, color) => {
+        return reqModule().ccall(
+            'rl_shape_draw_circle_3d',
+            null,
+            ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'],
+            [centerX, centerY, centerZ, radius, rotationAxisX, rotationAxisY, rotationAxisZ, rotationAngle, color >>> 0]
+        );
+    },
     drawRectangle: (x, y, width, height, color) => {
         return reqModule().ccall(
             'rl_shape_draw_rectangle',

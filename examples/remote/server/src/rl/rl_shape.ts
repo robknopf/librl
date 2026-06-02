@@ -12,6 +12,20 @@ export function rl_shape_draw_rectangle(
   // The remote frame protocol does not yet expose a rectangle command.
 }
 
+export function rl_shape_draw_circle_3d(
+  _center_x: number,
+  _center_y: number,
+  _center_z: number,
+  _radius: number,
+  _rotation_axis_x: number,
+  _rotation_axis_y: number,
+  _rotation_axis_z: number,
+  _rotation_angle: number,
+  _color: number,
+): void {
+  // The remote frame protocol does not yet expose a circle_3d command.
+}
+
 export function rl_shape_draw_cube(
   position_x: number,
   position_y: number,

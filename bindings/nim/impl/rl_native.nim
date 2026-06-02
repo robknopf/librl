@@ -532,6 +532,13 @@ proc rl_shape_draw_cube*(
   width: cfloat, height: cfloat, length: cfloat,
   color: RLHandle
 ) {.importc, cdecl, header: "rl.h".}
+proc rl_shape_draw_circle_3d*(
+  centerX: cfloat, centerY: cfloat, centerZ: cfloat,
+  radius: cfloat,
+  rotationAxisX: cfloat, rotationAxisY: cfloat, rotationAxisZ: cfloat,
+  rotationAngle: cfloat,
+  color: RLHandle
+) {.importc, cdecl, header: "rl_shape.h".}
 proc rl_shape_draw_rectangle*(x: cint, y: cint, width: cint, height: cint,
                               color: RLHandle) {.importc, cdecl, header: "rl_shape.h".}
 proc rl_render_clear_background*(color: RLHandle) {.importc, cdecl, header: "rl.h".}
@@ -780,6 +787,21 @@ proc rl_shape_draw_cube*(
     positionX.cfloat, positionY.cfloat, positionZ.cfloat,
     width.cfloat, height.cfloat, length.cfloat,
     tint
+  )
+
+proc rl_shape_draw_circle_3d*(
+  centerX, centerY, centerZ,
+  radius,
+  rotationAxisX, rotationAxisY, rotationAxisZ,
+  rotationAngle: float,
+  color: RLHandle
+) {.inline.} =
+  rl_shape_draw_circle_3d(
+    centerX.cfloat, centerY.cfloat, centerZ.cfloat,
+    radius.cfloat,
+    rotationAxisX.cfloat, rotationAxisY.cfloat, rotationAxisZ.cfloat,
+    rotationAngle.cfloat,
+    color
   )
 
 proc rl_shape_draw_rectangle*(x, y, width, height: int, color: RLHandle) {.inline.} =

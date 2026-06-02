@@ -545,7 +545,14 @@ Immediate-mode primitive drawing.
 void rl_shape_draw_rectangle(int x, int y, int width, int height, rl_handle_t color);
 void rl_shape_draw_cube(float position_x, float position_y, float position_z,
                         float width, float height, float length, rl_handle_t color);
+void rl_shape_draw_circle_3d(float center_x, float center_y, float center_z,
+                              float radius,
+                              float rotation_axis_x, float rotation_axis_y, float rotation_axis_z,
+                              float rotation_angle,
+                              rl_handle_t color);
 ```
+
+`rl_shape_draw_circle_3d` wraps raylib's `DrawCircle3D`. To draw a ring flat on the ground (XZ plane), use rotation axis `(1, 0, 0)` with `rotation_angle = 90`.
 
 ---
 

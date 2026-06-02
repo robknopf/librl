@@ -14,4 +14,8 @@ class Shape {
 	public static function drawCube(positionX:Float, positionY:Float, positionZ:Float, width:Float, height:Float, length:Float, color:RLHandle):Void {
 		rl.impl.RLImpl.shapeDrawCube(positionX, positionY, positionZ, width, height, length, color);
 	}
+
+	public static function drawCircle3d(centerX:Float, centerY:Float, centerZ:Float, radius:Float, rotationAxisX:Float, rotationAxisY:Float, rotationAxisZ:Float, rotationAngle:Float, color:RLHandle):Void {
+		rl.impl.RLImpl.shapeDrawCircle3d(centerX, centerY, centerZ, radius, rotationAxisX, rotationAxisY, rotationAxisZ, rotationAngle, color);
+	}
 }

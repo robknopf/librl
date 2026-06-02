@@ -167,6 +167,7 @@ Notes:
   - This applies to `createFont`, `createModel`, `createMusic`, `createSound`, `createTexture`, `createSprite3d`, and `createSprite2d`.
 - JS shape/debug/logger helpers:
   - `drawRectangle(x, y, width, height, color)` → `rl_shape_draw_rectangle`
+  - `drawCircle3d(centerX, centerY, centerZ, radius, rotationAxisX, rotationAxisY, rotationAxisZ, rotationAngle, color)` → `rl_shape_draw_circle_3d`
   - `debugEnableFps(x, y, fontSize, [font])` / `debugDisable()` → `rl_debug_*` (`font` is an `rl_handle_t`, `0` for default)
   - `loggerMessage(level, message)` / `loggerMessageSource(level, sourceFile, sourceLine, message)` / `loggerSetLevel(level)`
   - Logger levels exposed as `LOGGER_LEVEL_*`; window flags as `FLAG_*` (including all `RL_WINDOW_FLAG_*` values)

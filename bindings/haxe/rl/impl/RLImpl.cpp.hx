@@ -534,6 +534,15 @@ private extern class RLExterns {
     color: RLHandle
   ): Void;
 
+  @:native("rl_shape_draw_circle_3d")
+  static function shapeDrawCircle3d(
+    centerX: Float, centerY: Float, centerZ: Float,
+    radius: Float,
+    rotationAxisX: Float, rotationAxisY: Float, rotationAxisZ: Float,
+    rotationAngle: Float,
+    color: RLHandle
+  ): Void;
+
   @:native("rl_debug_enable_fps")
   static function debugEnableFps(x: Int, y: Int, fontSize: Int, font: RLHandle): Void;
 
@@ -1252,6 +1261,7 @@ abstract RLImpl(RLExterns) {
   public static function textureGetDefault(): RLHandle { return RLExterns.textureGetDefault(); }
   public static function shapeDrawRectangle(x: Int, y: Int, width: Int, height: Int, color: RLHandle): Void { RLExterns.shapeDrawRectangle(x, y, width, height, color); }
   public static function shapeDrawCube(positionX: Float, positionY: Float, positionZ: Float, width: Float, height: Float, length: Float, color: RLHandle): Void { RLExterns.shapeDrawCube(positionX, positionY, positionZ, width, height, length, color); }
+  public static function shapeDrawCircle3d(centerX: Float, centerY: Float, centerZ: Float, radius: Float, rotationAxisX: Float, rotationAxisY: Float, rotationAxisZ: Float, rotationAngle: Float, color: RLHandle): Void { RLExterns.shapeDrawCircle3d(centerX, centerY, centerZ, radius, rotationAxisX, rotationAxisY, rotationAxisZ, rotationAngle, color); }
   public static function debugEnableFps(x: Int, y: Int, fontSize: Int, font: RLHandle): Void { RLExterns.debugEnableFps(x, y, fontSize, font); }
   public static function debugDisable(): Void { RLExterns.debugDisable(); }
   public static function eventOn(eventName: String, callback: Dynamic->Void): Int {

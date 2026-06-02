@@ -713,6 +713,11 @@ class RLImpl {
 			binding.shape.drawCube(positionX, positionY, positionZ, width, height, length, color);
 	}
 
+	public static function shapeDrawCircle3d(centerX:Float, centerY:Float, centerZ:Float, radius:Float, rotationAxisX:Float, rotationAxisY:Float, rotationAxisZ:Float, rotationAngle:Float, color:RLHandle):Void {
+		if (binding != null)
+			binding.shape.drawCircle3d(centerX, centerY, centerZ, radius, rotationAxisX, rotationAxisY, rotationAxisZ, rotationAngle, color);
+	}
+
 	public static function debugEnableFps(x:Int, y:Int, fontSize:Int, font:RLHandle):Void {
 		if (binding != null)
 			binding.debug.enableFps(x, y, fontSize, font);

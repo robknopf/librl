@@ -194,6 +194,7 @@ export interface RLCamera3d {
 }
 export interface RLShape {
     drawCube(positionX: number, positionY: number, positionZ: number, width: number, height: number, length: number, color: RLHandle): void;
+    drawCircle3d(centerX: number, centerY: number, centerZ: number, radius: number, rotationAxisX: number, rotationAxisY: number, rotationAxisZ: number, rotationAngle: number, color: RLHandle): void;
     drawRectangle(x: number, y: number, width: number, height: number, color: RLHandle): void;
 }
 export interface RLDebug {

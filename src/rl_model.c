@@ -94,7 +94,7 @@ static void log_invalid_details(const char *filename, Model model)
     log_error("  model.materialCount: %d", model.materialCount);
 }
 
-static void log_model_material_details(const char *filename, const Model *model)
+static void __attribute__((unused)) log_model_material_details(const char *filename, const Model *model)
 {
     if (filename == NULL || model == NULL) {
         return;

@@ -366,7 +366,7 @@ OUT_WASM_ARCHIVE ?= $(OUT_LIB_DIR)/$(LIBRL_BASENAME)$(DEV_SUFFIX).wasm.a
 OUT_DESKTOP ?= $(OUT_LIB_DIR)/$(LIBRL_BASENAME)$(DEV_SUFFIX).a
 
 # Default target
-all: ensure_deps wasm wasm_archive desktop shared
+all: ensure_deps wasm wasm_archive desktop shared rl_lua
 
 LIBLUA_REPO ?= git@github.com:robknopf/liblua-builder.git
 LIBLUA_ROOT ?= $(LIBRL_ROOT)/deps/liblua
@@ -545,6 +545,7 @@ rl_lua: binding-version shared ensure_out_dir
 		$(LUA_BINDINGS_SRC) \
 		$(INCLUDES) -I$(LIBRL_ROOT)/bindings/lua -I$(LIBLUA_INC) \
 		-L$(OUT_LIB_DIR) -lrl \
+		$(WGUTILS_DESKTOP_ARCHIVE) \
 		-Wl,-rpath,'$$ORIGIN' \
 		-lm -lpthread -ldl
 	@echo "Built: $(RL_LUA_MODULE_SO)"

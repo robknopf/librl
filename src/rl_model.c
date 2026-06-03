@@ -814,7 +814,7 @@ bool rl_model_animate(rl_handle_t handle, float delta_seconds)
     if (!instance->animation_playing) {
         return false;
     }
-    if (instance->animation_speed <= 0.0f || delta_seconds <= 0.0f) {
+    if (instance->animation_speed == 0.0f || delta_seconds <= 0.0f) {
         return false;
     }
 

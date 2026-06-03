@@ -10,7 +10,7 @@
 typedef struct
 {
     int code;
-    char *data;
+    unsigned char *data;
     size_t size;
 } fetch_url_stub_response_t;
 
@@ -57,7 +57,7 @@ void fetch_url_stub_set_response(int code, const char *data, size_t size)
 
     if (data != NULL && size > 0)
     {
-        g_response_data = (char *)malloc(size);
+        g_response_data = (unsigned char *)malloc(size);
         if (g_response_data != NULL)
         {
             memcpy(g_response_data, data, size);
@@ -82,7 +82,7 @@ void fetch_url_stub_enqueue_response(int code, const char *data, size_t size)
 
     if (data != NULL && size > 0)
     {
-        response->data = (char *)malloc(size);
+        response->data = (unsigned char *)malloc(size);
         if (response->data != NULL)
         {
             memcpy(response->data, data, size);
@@ -177,7 +177,7 @@ int fetch_url_with_path_sync(const char *host_url,
         result->code = response->code;
         if (response->code == 200 && response->data != NULL && response->size > 0)
         {
-            result->data = (char *)malloc(response->size);
+            result->data = (unsigned char *)malloc(response->size);
             if (result->data != NULL)
             {
                 memcpy(result->data, response->data, response->size);
@@ -194,7 +194,7 @@ int fetch_url_with_path_sync(const char *host_url,
     result->code = g_response_code;
     if (g_response_code == 200 && g_response_data != NULL && g_response_size > 0)
     {
-        result->data = (char *)malloc(g_response_size);
+        result->data = (unsigned char *)malloc(g_response_size);
         if (result->data != NULL)
         {
             memcpy(result->data, g_response_data, g_response_size);
@@ -260,7 +260,7 @@ fetch_url_op_t *fetch_url_with_path_async(const char *host_url,
         op->result.code = response->code;
         if (response->code == 200 && response->data != NULL && response->size > 0)
         {
-            op->result.data = (char *)malloc(response->size);
+            op->result.data = (unsigned char *)malloc(response->size);
             if (op->result.data != NULL)
             {
                 memcpy(op->result.data, response->data, response->size);
@@ -284,7 +284,7 @@ fetch_url_op_t *fetch_url_with_path_async(const char *host_url,
         g_response_data != NULL &&
         g_response_size > 0)
     {
-        op->result.data = (char *)malloc(g_response_size);
+        op->result.data = (unsigned char *)malloc(g_response_size);
         if (op->result.data != NULL)
         {
             memcpy(op->result.data, g_response_data, g_response_size);

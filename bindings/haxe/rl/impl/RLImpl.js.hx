@@ -119,7 +119,7 @@ class RLImpl {
 
 	/** Page-relative default so subpath deploys (e.g. `/testbed/librl/`) resolve correctly. */
 	private static function defaultBindingsPath():String {
-		return cast js.Syntax.code("new URL('bindings/js/dist/rl.js', document.baseURI).href");
+		return cast js.Syntax.code("new URL('js/rl.js', document.baseURI).href");
 	}
 
 	@async
@@ -136,13 +136,19 @@ class RLImpl {
 		}
 
 		var bootOptions = buildBootOptions(config);
+		trace(bootOptions);
 		var bindingsPath = maybeCacheBustBindingsPath(optionString(bootOptions, "bindingsPath", defaultBindingsPath()));
+		
+		// ensure import() gets an absolute URL
+		bindingsPath = cast js.Syntax.code("new URL({0}, document.baseURI).href", bindingsPath);
+
+		trace('Bindings path: ${bindingsPath}');
 
 		bootPromise = cast js.Syntax.code("(async () => {
         try {
           const lib = await import( /* @vite-ignore */ {0});
           const rl = lib.rl;
-          if (!rl || typeof rl.boot !== 'function') throw new Error('bindings/js/rl.js missing named rl export');
+          if (!rl || typeof rl.boot !== 'function') throw new Error('{0} missing named rl export');
           {1} = rl;
           const rc = await rl.boot({2});
           return rc | 0;
@@ -701,7 +707,7 @@ class RLImpl {
 		return binding == null ? 0 : cast binding.sprite3d.getDefaultTexture();
 
 	public static function sprite3dGetTransform(sprite:RLHandle):RLSprite3dTransform
-		return binding == null ? sprite3dTransform() : toSprite3dTransform(binding.sprite3d.getTransform(sprite));
+		return binding == null ? sprite3dTransformIdentity() : toSprite3dTransform(binding.sprite3d.getTransform(sprite));
 
 	public static function shapeDrawRectangle(x:Int, y:Int, width:Int, height:Int, color:RLHandle):Void {
 		if (binding != null)
@@ -1271,19 +1277,26 @@ class RLImpl {
 		return out;
 	}
 
-	static inline function sprite3dTransform():RLSprite3dTransform {
-		return {positionX: 0.0, positionY: 0.0, positionZ: 0.0, size: 0.0};
+	
+	static inline function sprite3dTransformIdentity():RLSprite3dTransform {
+		return {positionX: 0.0, positionY: 0.0, positionZ: 0.0, rotationX: 0.0, rotationY: 0.0, rotationZ: 0.0, scaleX: 0.0, scaleY: 0.0,scaleZ: 1.0 };
 	}
+	
 
 	static function toSprite3dTransform(value:Dynamic):RLSprite3dTransform {
 		if (value == null) {
-			return sprite3dTransform();
+			return sprite3dTransformIdentity();
 		}
 		return {
 			positionX: value.positionX,
 			positionY: value.positionY,
 			positionZ: value.positionZ,
-			size: value.size
+			rotationX: value.rotationX,
+			rotationY: value.rotationY,
+			rotationZ: value.rotationZ,			
+			scaleX: value.scaleX,
+			scaleY: value.scaleY,
+			scaleZ: value.scaleZ,
 		};
 	}
 

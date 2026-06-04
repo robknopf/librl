@@ -19,6 +19,7 @@ type
     z*: cfloat
   RLPickResult* {.importc: "rl_pick_result_t", header: "rl_pick.h", bycopy.} = object
     hit*: bool
+    handle*: RLHandle
     distance*: cfloat
     point*: Vec3
     normal*: Vec3
@@ -614,7 +615,6 @@ proc rl_scene_pick*(
   camera: RLHandle,
   mouseX: cfloat,
   mouseY: cfloat,
-  outHandle: ptr RLHandle,
 ): RLPickResult {.importc, cdecl, header: "rl_scene.h".}
 proc rl_music_create*(filename: cstring): RLHandle {.importc, cdecl, header: "rl_music.h".}
 proc rl_music_destroy*(music: RLHandle) {.importc, cdecl, header: "rl_music.h".}

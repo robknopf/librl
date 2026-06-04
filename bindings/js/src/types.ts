@@ -53,6 +53,7 @@ export interface RLTouchpoint {
 
 export interface RLPickResult {
   hit: boolean;
+  handle: RLHandle;
   distance: number;
   point: RLVector3;
   normal: RLVector3;
@@ -322,7 +323,6 @@ export interface RLPickResult {
 }
 
 export interface RLScenePickResult extends RLPickResult {
-  handle: RLHandle;
 }
 
 export interface RLScene {

@@ -1018,17 +1018,7 @@ class RLImpl {
 	}
 
 	public static function scenePick(scene:RLHandle, camera:RLHandle, mouseX:Float, mouseY:Float):RLScenePickResult {
-		if (binding == null) {
-			return {hit: false, handle: 0, distance: -1.0, point: {x: 0, y: 0, z: 0}, normal: {x: 0, y: 0, z: 0}};
-		}
-		var value = binding.scene.pick(scene, camera, mouseX, mouseY);
-		return {
-			hit: value.hit,
-			handle: value.handle,
-			distance: value.distance,
-			point: {x: value.point.x, y: value.point.y, z: value.point.z},
-			normal: {x: value.normal.x, y: value.normal.y, z: value.normal.z},
-		};
+		return binding == null ? pickResult() : toPickResult(binding.scene.pick(scene, camera, mouseX, mouseY));
 	}
 
 	@async
@@ -1241,6 +1231,7 @@ class RLImpl {
 	static inline function pickResult():RLPickResult {
 		return {
 			hit: false,
+			handle: 0,
 			distance: 0.0,
 			point: {x: 0.0, y: 0.0, z: 0.0},
 			normal: {x: 0.0, y: 0.0, z: 0.0}
@@ -1376,6 +1367,7 @@ class RLImpl {
 		}
 		return {
 			hit: value.hit,
+			handle: value.handle != null ? value.handle : 0,
 			distance: value.distance,
 			point: {
 				x: value.point != null ? value.point.x : 0.0,

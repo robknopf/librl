@@ -563,6 +563,7 @@ Ray-cast picking from screen-space mouse coordinates.
 ```c
 typedef struct {
     bool    hit;
+    rl_handle_t handle;
     float   distance;
     vec3_t  point;    // local/object space
     vec3_t  normal;   // local/object space
@@ -609,8 +610,7 @@ void rl_scene_draw(rl_handle_t scene);
 rl_pick_result_t rl_scene_pick(rl_handle_t scene,
                                rl_handle_t camera,
                                float mouse_x,
-                               float mouse_y,
-                               rl_handle_t *out_handle);
+                               float mouse_y);
 ```
 
 Notes:
@@ -628,7 +628,7 @@ Notes:
 - Direct `rl_model_draw` / `rl_sprite3d_draw` calls still work outside `rl_scene`, but they bypass scene-level pass orchestration and cross-drawable transparent sorting.
 - Destroying a drawable auto-removes it from every scene. Stale handles are skipped during draw/pick.
 - `rl_scene_pick`: `camera == 0` uses the scene camera when set, otherwise the current active camera. Resolves the camera and mouse ray once, then for each **model** / **sprite3d** member that is drawable-valid and **pickable**, runs **scene-level broadphase** (world AABB for models with cached asset bounds; bounding sphere for sprite3d billboards). Members that fail broadphase skip narrow picking; survivors use the same narrow paths as `rl_pick_model` / `rl_pick_sprite3d`. Models without cached local bounds are always narrow-tested. Closest hit wins. Pick stats (`rl_pick_reset_stats` / `rl_pick_get_*`) count only work done inside those narrow paths (members culled at the scene layer do not increment per-handle broadphase counters).
-- `rl_scene_pick_to_scratch` is an internal wasm bridge (JS binding); stores the picked handle in scratch vector2.x.
+- `rl_scene_pick_to_scratch` is an internal wasm bridge (JS binding); stores the full `rl_pick_result_t` in scratch.
 
 ---
 

@@ -16,6 +16,7 @@ static rl_pick_result_t make_empty_pick_result(void)
 {
     rl_pick_result_t result = {0};
     result.hit = false;
+    result.handle = 0;
     result.distance = -1.0f;
     result.point = (vec3_t){0.0f, 0.0f, 0.0f};
     result.normal = (vec3_t){0.0f, 0.0f, 0.0f};
@@ -204,7 +205,11 @@ rl_pick_result_t rl_pick_model(rl_handle_t camera,
     }
 
     ray = GetMouseRay((Vector2){mouse_x, mouse_y}, camera_data);
-    return rl_pick_model_with_camera_ray(camera_data, ray, model);
+    rl_pick_result_t result = rl_pick_model_with_camera_ray(camera_data, ray, model);
+    if (result.hit) {
+        result.handle = model;
+    }
+    return result;
 }
 
 RL_KEEP
@@ -215,8 +220,7 @@ bool rl_pick_model_to_scratch(rl_handle_t camera,
 {
     rl_pick_result_t result = rl_pick_model(camera, model, mouse_x, mouse_y);
 
-    rl_scratch_set_vector3(result.point.x, result.point.y, result.point.z);
-    rl_scratch_set_vector4(result.normal.x, result.normal.y, result.normal.z, result.distance);
+    rl_scratch_set_pick_result(result);
     return result.hit;
 }
 
@@ -234,7 +238,11 @@ rl_pick_result_t rl_pick_sprite3d(rl_handle_t camera,
     }
 
     ray = GetMouseRay((Vector2){mouse_x, mouse_y}, camera_data);
-    return rl_pick_sprite3d_with_camera_ray(camera_data, ray, sprite3d);
+    rl_pick_result_t result = rl_pick_sprite3d_with_camera_ray(camera_data, ray, sprite3d);
+    if (result.hit) {
+        result.handle = sprite3d;
+    }
+    return result;
 }
 
 RL_KEEP
@@ -245,8 +253,7 @@ bool rl_pick_sprite3d_to_scratch(rl_handle_t camera,
 {
     rl_pick_result_t result = rl_pick_sprite3d(camera, sprite3d, mouse_x, mouse_y);
 
-    rl_scratch_set_vector3(result.point.x, result.point.y, result.point.z);
-    rl_scratch_set_vector4(result.normal.x, result.normal.y, result.normal.z, result.distance);
+    rl_scratch_set_pick_result(result);
     return result.hit;
 }
 

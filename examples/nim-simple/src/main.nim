@@ -293,12 +293,11 @@ proc onTick(hostDt: float): int =
           msg = fmt"Sprite pick: Mouse position (mouse.x:{mouse.x}, mouse.y:{mouse.y}) pick result y: {pickResult.point.y}"
   else:
     if ctx.scene != 0:
-      var picked: RLHandle = 0
-      let scenePick = rl_scene_pick(ctx.scene, 0, mouse.x.float, mouse.y.float, addr picked)
+      let scenePick = rl_scene_pick(ctx.scene, 0, mouse.x.float, mouse.y.float)
       if scenePick.hit:
-        if picked == ctx.gumshoe:
+        if scenePick.handle == ctx.gumshoe:
           msg = fmt"Model pick: Mouse position (mouse.x:{mouse.x}, mouse.y:{mouse.y}) pick result y: {scenePick.point.y}"
-        elif picked == ctx.sprite:
+        elif scenePick.handle == ctx.sprite:
           msg = fmt"Sprite pick: Mouse position (mouse.x:{mouse.x}, mouse.y:{mouse.y}) pick result y: {scenePick.point.y}"
     else:
       if ctx.gumshoe != 0:

@@ -8,6 +8,7 @@ extern "C" {
 #include <string.h>
 #include <stdint.h>
 #include "rl_types.h"
+#include "rl_pick.h"
 
 #define RL_SCRATCH_MAX_NUM_TOUCH_POINTS 16
 #define RL_SCRATCH_MAX_NUM_MOUSE_BUTTONS 3
@@ -65,6 +66,7 @@ typedef struct
     float quaternion[4];
     int color[4];
     int rect[4];
+    rl_pick_result_t pick_result;
 
     rl_mouse_t mouse;
 
@@ -89,6 +91,14 @@ typedef struct
     size_t quaternion;
     size_t color;
     size_t rect;
+    struct
+    {
+        size_t hit;
+        size_t handle;
+        size_t distance;
+        size_t point;
+        size_t normal;
+    } pick_result;
     struct
     {
         size_t x;
@@ -143,6 +153,7 @@ void rl_scratch_set_matrix(float m[16]);
 void rl_scratch_set_quaternion(float x, float y, float z, float w);
 void rl_scratch_set_color(int r, int g, int b, int a);
 void rl_scratch_set_rect(int x, int y, int width, int height);
+void rl_scratch_set_pick_result(rl_pick_result_t result);
 void rl_scratch_set_mouse(int x, int y, int wheel, int left, int right, int middle);
 void rl_scratch_set_keyboard_key(int key, int state);
 
@@ -160,6 +171,7 @@ matrix_t rl_scratch_get_matrix();
 quat_t rl_scratch_get_quaternion();
 color_t rl_scratch_get_color();
 rect_t rl_scratch_get_rect();
+rl_pick_result_t rl_scratch_get_pick_result();
 rl_mouse_t rl_scratch_get_mouse();
 rl_keyboard_t rl_scratch_get_keyboard();
 rl_gamepads_t rl_scratch_get_gamepads();

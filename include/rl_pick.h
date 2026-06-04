@@ -11,6 +11,7 @@ extern "C" {
 typedef struct
 {
     bool hit;
+    rl_handle_t handle;
     float distance;
     vec3_t point;
     vec3_t normal;

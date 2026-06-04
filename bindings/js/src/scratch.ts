@@ -7,6 +7,13 @@ export interface ScratchAreaOffsets {
   quaternion: number;
   color: number;
   rectangle: number;
+  pickResult: {
+    hit: number;
+    handle: number;
+    distance: number;
+    point: number;
+    normal: number;
+  };
   mouse: {
     x: number;
     y: number;

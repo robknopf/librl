@@ -663,20 +663,14 @@ RL_KEEP
 rl_pick_result_t rl_scene_pick(rl_handle_t scene,
                                rl_handle_t camera,
                                float mouse_x,
-                               float mouse_y,
-                               rl_handle_t *out_handle)
+                               float mouse_y)
 {
     rl_scene_instance_t *instance = resolve_scene_instance(scene);
     rl_pick_result_t best = {0};
-    rl_handle_t best_handle = 0;
     rl_handle_t pick_camera = 0;
     Camera3D camera_data = {0};
     Ray ray = {0};
     int i = 0;
-
-    if (out_handle != NULL) {
-        *out_handle = 0;
-    }
 
     if (instance == NULL) {
         return best;
@@ -729,12 +723,8 @@ rl_pick_result_t rl_scene_pick(rl_handle_t scene,
         }
         if (!best.hit || result.distance < best.distance) {
             best = result;
-            best_handle = member->drawable;
+            best.handle = member->drawable;
         }
-    }
-
-    if (out_handle != NULL && best.hit) {
-        *out_handle = best_handle;
     }
 
     return best;
@@ -746,14 +736,10 @@ bool rl_scene_pick_to_scratch(rl_handle_t scene,
                               float mouse_x,
                               float mouse_y)
 {
-    rl_handle_t picked = 0;
     rl_pick_result_t result =
-        rl_scene_pick(scene, camera, mouse_x, mouse_y, &picked);
+        rl_scene_pick(scene, camera, mouse_x, mouse_y);
 
-    rl_scratch_set_vector3(result.point.x, result.point.y, result.point.z);
-    rl_scratch_set_vector4(result.normal.x, result.normal.y, result.normal.z,
-                           result.distance);
-    rl_scratch_set_vector2((float)picked, 0.0f);
+    rl_scratch_set_pick_result(result);
     return result.hit;
 }
 

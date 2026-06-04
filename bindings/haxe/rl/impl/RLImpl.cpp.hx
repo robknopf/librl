@@ -733,8 +733,7 @@ private extern class RLExterns {
   static function sceneDraw(scene: RLHandle): Void;
 
   @:native("rl_scene_pick")
-  static function scenePickNative(scene: RLHandle, camera: RLHandle, mouseX: Float, mouseY: Float,
-                                  outHandle: cpp.RawPointer<cpp.UInt32>): RLPickResultNative;
+  static function scenePickNative(scene: RLHandle, camera: RLHandle, mouseX: Float, mouseY: Float): RLPickResultNative;
 }
 
 @:include("rl_types.h")
@@ -759,6 +758,7 @@ extern class RLVec3Native {
 @:structAccess
 extern class RLPickResultNative {
   var hit: Bool;
+  var handle: RLHandle;
   var distance: Float;
   var point: RLVec3Native;
   var normal: RLVec3Native;
@@ -1333,12 +1333,12 @@ abstract RLImpl(RLExterns) {
 
   public static function pickModel(camera: RLHandle, model: RLHandle, mouseX: Float, mouseY: Float): RLPickResult {
     var n: RLPickResultNative = cast RLExterns.pickModel(camera, model, mouseX, mouseY);
-    return {hit: n.hit, distance: n.distance, point: {x: n.point.x, y: n.point.y, z: n.point.z}, normal: {x: n.normal.x, y: n.normal.y, z: n.normal.z}};
+    return {hit: n.hit, handle: n.handle, distance: n.distance, point: {x: n.point.x, y: n.point.y, z: n.point.z}, normal: {x: n.normal.x, y: n.normal.y, z: n.normal.z}};
   }
 
   public static function pickSprite3d(camera: RLHandle, sprite3d: RLHandle, mouseX: Float, mouseY: Float): RLPickResult {
     var n: RLPickResultNative = cast RLExterns.pickSprite3d(camera, sprite3d, mouseX, mouseY);
-    return {hit: n.hit, distance: n.distance, point: {x: n.point.x, y: n.point.y, z: n.point.z}, normal: {x: n.normal.x, y: n.normal.y, z: n.normal.z}};
+    return {hit: n.hit, handle: n.handle, distance: n.distance, point: {x: n.point.x, y: n.point.y, z: n.point.z}, normal: {x: n.normal.x, y: n.normal.y, z: n.normal.z}};
   }
 
   public static function pickResetStats(): Void { RLExterns.pickResetStats(); }
@@ -1364,12 +1364,10 @@ abstract RLImpl(RLExterns) {
   }
   public static function sceneDraw(scene: RLHandle): Void { RLExterns.sceneDraw(scene); }
   public static function scenePick(scene: RLHandle, camera: RLHandle, mouseX: Float, mouseY: Float): RLScenePickResult {
-    var picked: cpp.UInt32 = 0;
-    var outHandle = cpp.RawPointer.addressOf(picked);
-    var n: RLPickResultNative = RLExterns.scenePickNative(scene, camera, mouseX, mouseY, outHandle);
+    var n: RLPickResultNative = RLExterns.scenePickNative(scene, camera, mouseX, mouseY);
     return {
       hit: n.hit,
-      handle: picked,
+      handle: n.handle,
       distance: n.distance,
       point: {x: n.point.x, y: n.point.y, z: n.point.z},
       normal: {x: n.normal.x, y: n.normal.y, z: n.normal.z},

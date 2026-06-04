@@ -1,5 +1,5 @@
 /** Minimal Emscripten module surface used by the RL binding wrapper. */
-import type { RLGamepadState, RLKeyboardState, RLTouchpoint } from "./types.js";
+import type { RLGamepadState, RLKeyboardState, RLPickResult, RLTouchpoint } from "./types.js";
 
 export interface EmscriptenModule {
   HEAP32: Int32Array;
@@ -46,7 +46,7 @@ export interface EmscriptenModule {
   getGamepad: (index: number) => RLGamepadState | null;
   getTouchpoints?: () => RLTouchpoint[];
   getTouchpoint: (index: number) => RLTouchpoint | null;
-  getPickResult: () => Record<string, unknown>;
+  getPickResult: () => RLPickResult;
   getSprite3dTransform: () => Record<string, unknown> | null;
   [key: string]: unknown;
 }

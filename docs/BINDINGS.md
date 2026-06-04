@@ -72,9 +72,9 @@ Wasm-only scratch bridge table (maintainer reference; JS callers use the right-h
 | `rl_window_get_monitor_position_to_scratch` | C → scratch | `getMonitorPosition(monitor?)` | `vector2` |
 | `rl_input_get_mouse_position_to_scratch` | C → scratch | `getMousePosition()` | `vector2` |
 | `rl_text_measure_ex_to_scratch` | C → scratch | `measureTextEx(font, text, fontSize, spacing?)` | `vector2` (width/height) |
-| `rl_pick_model_to_scratch` | C → scratch | `pickModel(camera, model, mouseX, mouseY)` | `vector3` (point), `vector4` (normal xyz + distance w) |
-| `rl_pick_sprite3d_to_scratch` | C → scratch | `pickSprite3d(camera, sprite3d, mouseX, mouseY)` | `vector3` (point), `vector4` (normal xyz + distance w) |
-| `rl_scene_pick_to_scratch` | C → scratch | `scene.pick(scene, camera, mouseX, mouseY)` | `vector3` (point), `vector4` (normal xyz + distance w), `vector2.x` (picked handle) |
+| `rl_pick_model_to_scratch` | C → scratch | `pickModel(camera, model, mouseX, mouseY)` | `pick_result` |
+| `rl_pick_sprite3d_to_scratch` | C → scratch | `pickSprite3d(camera, sprite3d, mouseX, mouseY)` | `pick_result` |
+| `rl_scene_pick_to_scratch` | C → scratch | `scene.pick(scene, camera, mouseX, mouseY)` | `pick_result` |
 | `rl_asset_ensure_many_from_scratch_async` | scratch → C | `RL.asset.ensureGroupAsync(filenames)` | JS writes string table via internal `writeScratchStringTable()` first |
 
 Direct scratch reads (no `*_to_scratch` call; require `refreshScratch()` or `tick()` first so C has populated the snapshot):

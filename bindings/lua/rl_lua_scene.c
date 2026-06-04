@@ -7,14 +7,14 @@
 #include "rl_lua_scene.h"
 
 
-static void rl_lua_push_pick_result(lua_State *L, rl_pick_result_t result, rl_handle_t handle)
+static void rl_lua_push_pick_result(lua_State *L, rl_pick_result_t result)
 {
     lua_newtable(L);
 
     lua_pushboolean(L, result.hit ? 1 : 0);
     lua_setfield(L, -2, "hit");
 
-    lua_pushinteger(L, (lua_Integer)handle);
+    lua_pushinteger(L, (lua_Integer)result.handle);
     lua_setfield(L, -2, "handle");
 
     lua_pushnumber(L, result.distance);
@@ -106,9 +106,8 @@ static int rl_scene_pick_lua(lua_State *L)
     rl_handle_t camera = (rl_handle_t)luaL_optinteger(L, 2, 0);
     float mouse_x = (float)luaL_checknumber(L, 3);
     float mouse_y = (float)luaL_checknumber(L, 4);
-    rl_handle_t picked = 0;
-    rl_pick_result_t result = rl_scene_pick(scene, camera, mouse_x, mouse_y, &picked);
-    rl_lua_push_pick_result(L, result, picked);
+    rl_pick_result_t result = rl_scene_pick(scene, camera, mouse_x, mouse_y);
+    rl_lua_push_pick_result(L, result);
     return 1;
 }
 

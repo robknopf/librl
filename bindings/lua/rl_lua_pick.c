@@ -13,6 +13,9 @@ static void rl_push_pick_result(lua_State *L, rl_pick_result_t result)
     lua_pushboolean(L, result.hit ? 1 : 0);
     lua_setfield(L, -2, "hit");
 
+    lua_pushinteger(L, (lua_Integer)result.handle);
+    lua_setfield(L, -2, "handle");
+
     lua_pushnumber(L, result.distance);
     lua_setfield(L, -2, "distance");
 

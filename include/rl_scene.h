@@ -24,8 +24,7 @@ void rl_scene_draw(rl_handle_t scene);
 rl_pick_result_t rl_scene_pick(rl_handle_t scene,
                                rl_handle_t camera,
                                float mouse_x,
-                               float mouse_y,
-                               rl_handle_t *out_handle);
+                               float mouse_y);
 
 bool rl_scene_pick_to_scratch(rl_handle_t scene,
                               rl_handle_t camera,

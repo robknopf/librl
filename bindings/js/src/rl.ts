@@ -27,6 +27,7 @@ import type {
     RLLogger,
     RLModel,
     RLMusic,
+    RLPickResult,
     RLPick,
     RLRender,
     RLScene,
@@ -154,43 +155,50 @@ const installScratchHelpers = () => {
                 quaternion: HEAP32[scratchAreaOffsetsPtr + 4],
                 color: HEAP32[scratchAreaOffsetsPtr + 5],
                 rectangle: HEAP32[scratchAreaOffsetsPtr + 6],
+                pickResult: {
+                    hit: HEAP32[scratchAreaOffsetsPtr + 7],
+                    handle: HEAP32[scratchAreaOffsetsPtr + 8],
+                    distance: HEAP32[scratchAreaOffsetsPtr + 9],
+                    point: HEAP32[scratchAreaOffsetsPtr + 10],
+                    normal: HEAP32[scratchAreaOffsetsPtr + 11],
+                },
                 mouse: {
-                    x: HEAP32[scratchAreaOffsetsPtr + 7],
-                    y: HEAP32[scratchAreaOffsetsPtr + 8],
-                    wheel: HEAP32[scratchAreaOffsetsPtr + 9],
-                    buttons: HEAP32[scratchAreaOffsetsPtr + 10],
+                    x: HEAP32[scratchAreaOffsetsPtr + 12],
+                    y: HEAP32[scratchAreaOffsetsPtr + 13],
+                    wheel: HEAP32[scratchAreaOffsetsPtr + 14],
+                    buttons: HEAP32[scratchAreaOffsetsPtr + 15],
                 },
                 keyboard: {
-                    max_num_keys: HEAP32[scratchAreaOffsetsPtr + 11],
-                    keys: HEAP32[scratchAreaOffsetsPtr + 12],
-                    pressed_key: HEAP32[scratchAreaOffsetsPtr + 13],
-                    pressed_char: HEAP32[scratchAreaOffsetsPtr + 14],
-                    num_pressed_keys: HEAP32[scratchAreaOffsetsPtr + 15],
-                    pressed_keys: HEAP32[scratchAreaOffsetsPtr + 16],
-                    num_pressed_chars: HEAP32[scratchAreaOffsetsPtr + 17],
-                    pressed_chars: HEAP32[scratchAreaOffsetsPtr + 18],
+                    max_num_keys: HEAP32[scratchAreaOffsetsPtr + 16],
+                    keys: HEAP32[scratchAreaOffsetsPtr + 17],
+                    pressed_key: HEAP32[scratchAreaOffsetsPtr + 18],
+                    pressed_char: HEAP32[scratchAreaOffsetsPtr + 19],
+                    num_pressed_keys: HEAP32[scratchAreaOffsetsPtr + 20],
+                    pressed_keys: HEAP32[scratchAreaOffsetsPtr + 21],
+                    num_pressed_chars: HEAP32[scratchAreaOffsetsPtr + 22],
+                    pressed_chars: HEAP32[scratchAreaOffsetsPtr + 23],
                 },
                 gamepads: {
-                    max_num_gamepads: HEAP32[scratchAreaOffsetsPtr + 19],
-                    gamepad: HEAP32[scratchAreaOffsetsPtr + 20],
-                    id: HEAP32[scratchAreaOffsetsPtr + 21],
-                    axis: HEAP32[scratchAreaOffsetsPtr + 22],
-                    buttons: HEAP32[scratchAreaOffsetsPtr + 23],
-                    stride: HEAP32[scratchAreaOffsetsPtr + 24] >> 2,
+                    max_num_gamepads: HEAP32[scratchAreaOffsetsPtr + 24],
+                    gamepad: HEAP32[scratchAreaOffsetsPtr + 25],
+                    id: HEAP32[scratchAreaOffsetsPtr + 26],
+                    axis: HEAP32[scratchAreaOffsetsPtr + 27],
+                    buttons: HEAP32[scratchAreaOffsetsPtr + 28],
+                    stride: HEAP32[scratchAreaOffsetsPtr + 29] >> 2,
                 },
                 touchpoints: {
-                    count: HEAP32[scratchAreaOffsetsPtr + 25],
-                    touchpoint: HEAP32[scratchAreaOffsetsPtr + 26],
-                    id: HEAP32[scratchAreaOffsetsPtr + 27],
-                    x: HEAP32[scratchAreaOffsetsPtr + 28],
-                    y: HEAP32[scratchAreaOffsetsPtr + 29],
-                    stride: HEAP32[scratchAreaOffsetsPtr + 30] >> 2,
+                    count: HEAP32[scratchAreaOffsetsPtr + 30],
+                    touchpoint: HEAP32[scratchAreaOffsetsPtr + 31],
+                    id: HEAP32[scratchAreaOffsetsPtr + 32],
+                    x: HEAP32[scratchAreaOffsetsPtr + 33],
+                    y: HEAP32[scratchAreaOffsetsPtr + 34],
+                    stride: HEAP32[scratchAreaOffsetsPtr + 35] >> 2,
                 },
                 stringTable: {
-                    offsets: HEAP32[scratchAreaOffsetsPtr + 31],
-                    bytes: HEAP32[scratchAreaOffsetsPtr + 32],
-                    maxEntries: HEAP32[scratchAreaOffsetsPtr + 33],
-                    maxBytes: HEAP32[scratchAreaOffsetsPtr + 34],
+                    offsets: HEAP32[scratchAreaOffsetsPtr + 36],
+                    bytes: HEAP32[scratchAreaOffsetsPtr + 37],
+                    maxEntries: HEAP32[scratchAreaOffsetsPtr + 38],
+                    maxBytes: HEAP32[scratchAreaOffsetsPtr + 39],
                 },
             };
         };
@@ -255,6 +263,29 @@ const installScratchHelpers = () => {
                 y: HEAP32[scratchAreaPtr + (scratchAreaOffsets.rectangle >> 2) + 1],
                 width: HEAP32[scratchAreaPtr + (scratchAreaOffsets.rectangle >> 2) + 2],
                 height: HEAP32[scratchAreaPtr + (scratchAreaOffsets.rectangle >> 2) + 3],
+            };
+        };
+
+        Module.getPickResult = (): RLPickResult => {
+            const HEAPU8 = Module.HEAPU8;
+            const HEAP32 = Module.HEAP32;
+            const HEAPF32 = Module.HEAPF32;
+            const pointOffset = scratchAreaPtr + (scratchAreaOffsets.pickResult.point >> 2);
+            const normalOffset = scratchAreaPtr + (scratchAreaOffsets.pickResult.normal >> 2);
+            return {
+                hit: HEAPU8[scratchAreaBytePtr + scratchAreaOffsets.pickResult.hit] !== 0,
+                handle: HEAP32[scratchAreaPtr + (scratchAreaOffsets.pickResult.handle >> 2)] >>> 0,
+                distance: HEAPF32[scratchAreaPtr + (scratchAreaOffsets.pickResult.distance >> 2)],
+                point: {
+                    x: HEAPF32[pointOffset],
+                    y: HEAPF32[pointOffset + 1],
+                    z: HEAPF32[pointOffset + 2],
+                },
+                normal: {
+                    x: HEAPF32[normalOffset],
+                    y: HEAPF32[normalOffset + 1],
+                    z: HEAPF32[normalOffset + 2],
+                },
             };
         };
 
@@ -1452,44 +1483,22 @@ const model = {
 
 const pick = {
     model: (camera, model, mouseX, mouseY) => {
-        const hit = reqModule().ccall(
+        reqModule().ccall(
             "rl_pick_model_to_scratch",
             "number",
             ["number", "number", "number", "number"],
             [camera, model, mouseX, mouseY]
-        ) !== 0;
-        const point = reqModule().getVector3();
-        const normalDistance = reqModule().getVector4();
-        return {
-            hit,
-            distance: normalDistance.w,
-            point,
-            normal: {
-                x: normalDistance.x,
-                y: normalDistance.y,
-                z: normalDistance.z
-            }
-        };
+        );
+        return reqModule().getPickResult();
     },
     sprite3d: (camera, sprite3d, mouseX, mouseY) => {
-        const hit = reqModule().ccall(
+        reqModule().ccall(
             "rl_pick_sprite3d_to_scratch",
             "number",
             ["number", "number", "number", "number"],
             [camera, sprite3d, mouseX, mouseY]
-        ) !== 0;
-        const point = reqModule().getVector3();
-        const normalDistance = reqModule().getVector4();
-        return {
-            hit,
-            distance: normalDistance.w,
-            point,
-            normal: {
-                x: normalDistance.x,
-                y: normalDistance.y,
-                z: normalDistance.z
-            }
-        };
+        );
+        return reqModule().getPickResult();
     },
     resetStats: () => {
         reqModule().ccall("rl_pick_reset_stats", null, [], []);
@@ -1520,26 +1529,13 @@ const scene = {
         "rl_scene_draw", null, ["number"], [sceneHandle]
     ),
     pick: (sceneHandle, camera, mouseX, mouseY) => {
-        const hit = reqModule().ccall(
+        reqModule().ccall(
             "rl_scene_pick_to_scratch",
             "number",
             ["number", "number", "number", "number"],
             [sceneHandle, camera, mouseX, mouseY]
-        ) !== 0;
-        const point = reqModule().getVector3();
-        const normalDistance = reqModule().getVector4();
-        const handleBits = reqModule().getVector2();
-        return {
-            hit,
-            handle: handleBits.x >>> 0,
-            distance: normalDistance.w,
-            point,
-            normal: {
-                x: normalDistance.x,
-                y: normalDistance.y,
-                z: normalDistance.z,
-            },
-        };
+        );
+        return reqModule().getPickResult();
     },
 } satisfies RLScene;
 

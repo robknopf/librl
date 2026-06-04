@@ -118,8 +118,7 @@ void rl_scene_draw(rl_handle_t scene);
 rl_pick_result_t rl_scene_pick(rl_handle_t scene,
                                rl_handle_t camera,  /* 0 → active camera */
                                float mouse_x,
-                               float mouse_y,
-                               rl_handle_t *out_handle);  /* optional; 0 if no hit */
+                               float mouse_y);
 ```
 
 **Membership record** (internal): drawable handle, kind (for validation), layer, stable insertion order. **Visibility** and **pickability** live on the drawable instances (`rl_model_set_visible`, `rl_sprite3d_set_visible`, etc.); `rl_scene_draw` / `rl_scene_pick` may early-out using those flags, while `rl_*_draw` and `rl_pick_*` enforce the same rules when called directly.

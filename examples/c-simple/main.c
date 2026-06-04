@@ -307,16 +307,15 @@ int rt_tick(float host_dt) {
 
   set_message(ctx, "Nothing picked!");
   if (ctx->scene != 0) {
-    rl_handle_t picked = 0;
     rl_pick_result_t pick =
-        rl_scene_pick(ctx->scene, 0, (float)mouse.x, (float)mouse.y, &picked);
+        rl_scene_pick(ctx->scene, 0, (float)mouse.x, (float)mouse.y);
     if (pick.hit) {
-      if (picked == ctx->gumshoe) {
+      if (pick.handle == ctx->gumshoe) {
         (void)snprintf(ctx->message, sizeof(ctx->message),
                        "Model pick: Mouse position (mouse.x:%d, mouse.y:%d) pick "
                        "result y: %f",
                        mouse.x, mouse.y, pick.point.y);
-      } else if (picked == ctx->sprite) {
+      } else if (pick.handle == ctx->sprite) {
         (void)snprintf(ctx->message, sizeof(ctx->message),
                        "Sprite pick: Mouse position (mouse.x:%d, mouse.y:%d) "
                        "pick result y: %f",

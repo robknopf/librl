@@ -21,6 +21,13 @@ const rl_scratch_offsets_t *rl_scratch_get_offsets(void)
         .quaternion = offsetof(rl_scratch_t, quaternion),
         .color = offsetof(rl_scratch_t, color),
         .rect = offsetof(rl_scratch_t, rect),
+        .pick_result = {
+            .hit = offsetof(rl_scratch_t, pick_result.hit),
+            .handle = offsetof(rl_scratch_t, pick_result.handle),
+            .distance = offsetof(rl_scratch_t, pick_result.distance),
+            .point = offsetof(rl_scratch_t, pick_result.point),
+            .normal = offsetof(rl_scratch_t, pick_result.normal),
+        },
         .mouse = {
             .x = offsetof(rl_scratch_t, mouse.x),
             .y = offsetof(rl_scratch_t, mouse.y),
@@ -112,6 +119,11 @@ void rl_scratch_set_rect(int x, int y, int width, int height)
     rl_scratch.rect[1] = y;
     rl_scratch.rect[2] = width;
     rl_scratch.rect[3] = height;
+}
+
+void rl_scratch_set_pick_result(rl_pick_result_t result)
+{
+    rl_scratch.pick_result = result;
 }
 
 void rl_scratch_set_mouse(int x, int y, int wheel, int left, int right, int middle)
@@ -428,6 +440,11 @@ rect_t rl_scratch_get_rect()
     r.width = rl_scratch.rect[2];
     r.height = rl_scratch.rect[3];
     return r;
+}
+
+rl_pick_result_t rl_scratch_get_pick_result()
+{
+    return rl_scratch.pick_result;
 }
 
 rl_mouse_t rl_scratch_get_mouse()

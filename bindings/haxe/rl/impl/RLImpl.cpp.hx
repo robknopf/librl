@@ -1263,7 +1263,7 @@ abstract RLImpl(RLExterns) {
   public static function shapeDrawCube(positionX: Float, positionY: Float, positionZ: Float, width: Float, height: Float, length: Float, color: RLHandle): Void { RLExterns.shapeDrawCube(positionX, positionY, positionZ, width, height, length, color); }
   public static function shapeDrawCircle3d(centerX: Float, centerY: Float, centerZ: Float, radius: Float, rotationAxisX: Float, rotationAxisY: Float, rotationAxisZ: Float, rotationAngle: Float, color: RLHandle): Void { RLExterns.shapeDrawCircle3d(centerX, centerY, centerZ, radius, rotationAxisX, rotationAxisY, rotationAxisZ, rotationAngle, color); }
   public static function debugEnableFps(x: Int, y: Int, fontSize: Int, font: RLHandle): Void { RLExterns.debugEnableFps(x, y, fontSize, font); }
-  public static function debugDisable(): Void { RLExterns.debugDisable(); }
+  public static function debugDisableFps(): Void { RLExterns.debugDisableFps(); }
   public static function eventOn(eventName: String, callback: Dynamic->Void): Int {
     var id = RLEventBridge.register(eventName, callback);
     return RLExterns.eventOnNative(eventName, RLEventBridge.ensureTrampoline(), untyped __cpp__('(void*)(intptr_t)id'));

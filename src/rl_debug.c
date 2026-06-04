@@ -25,7 +25,7 @@ void rl_debug_enable_fps(int x, int y, int font_size, rl_handle_t font) {
     rl_debug_state.fps_font = font;
 }
 
-void rl_debug_disable(void) {
+void rl_debug_disable_fps(void) {
     rl_debug_state.fps_enabled = false;
     rl_debug_state.fps_font = 0;
 }
@@ -35,7 +35,7 @@ void rl_debug_init(void) {
 }
 
 void rl_debug_deinit(void) {
-    rl_debug_disable();
+    rl_debug_disable_fps();
 }
 
 void rl_debug_draw(void) {

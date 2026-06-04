@@ -8,7 +8,7 @@ extern "C" {
 #include "rl_types.h"
 
 void rl_debug_enable_fps(int x, int y, int font_size, rl_handle_t font);
-void rl_debug_disable(void);
+void rl_debug_disable_fps(void);
 
 #ifdef __cplusplus
 }

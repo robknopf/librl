@@ -829,7 +829,7 @@ Optional overlay drawn automatically during `rl_render_end()`.
 
 ```c
 void rl_debug_enable_fps(int x, int y, int font_size, rl_handle_t font); // 0 for default font
-void rl_debug_disable(void);
+void rl_debug_disable_fps(void);
 ```
 
 Notes:

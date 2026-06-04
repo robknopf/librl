@@ -11,7 +11,7 @@ class Debug {
 		rl.impl.RLImpl.debugEnableFps(x, y, fontSize, font);
 	}
 
-	public static function disable():Void {
-		rl.impl.RLImpl.debugDisable();
+	public static function disableFps():Void {
+		rl.impl.RLImpl.debugDisableFps();
 	}
 }

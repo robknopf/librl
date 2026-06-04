@@ -28,7 +28,7 @@ WASM_COMMON_LDFLAGS ?= \
 	-s MODULARIZE=1 \
 	-s MIN_WEBGL_VERSION=2 \
 	-s MAX_WEBGL_VERSION=2 \
-		-s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "addFunction", "removeFunction", "stackSave", "stackAlloc", "stackRestore", "lengthBytesUTF8", "stringToUTF8", "stringToNewUTF8", "UTF8ToString"]' \
+		-s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "addFunction", "removeFunction", "stackSave", "stackAlloc", "stackRestore", "lengthBytesUTF8", "stringToUTF8", "stringToNewUTF8", "UTF8ToString", "HEAP32", "HEAPU32", "HEAPU8", "HEAPF32"]' \
 	-s ALLOW_MEMORY_GROWTH=1 \
 	-s ALLOW_TABLE_GROWTH=1
 
@@ -73,6 +73,8 @@ LDFLAGS_WASM = \
 	-s EXPORTED_FUNCTIONS='[ \
 	"_malloc", \
 	"_free", \
+	"_rl_debug_enable_fps", \
+	"_rl_debug_disable_fps", \
 	"_rl_init_values", \
 	"_rl_init_values_async", \
 	"_rl_is_initialized", \

@@ -544,7 +544,7 @@ proc rl_shape_draw_rectangle*(x: cint, y: cint, width: cint, height: cint,
 proc rl_render_clear_background*(color: RLHandle) {.importc, cdecl, header: "rl.h".}
 proc rl_set_target_fps*(fps: cint) {.importc, cdecl, header: "rl.h".}
 proc rl_debug_enable_fps*(x: cint, y: cint, fontSize: cint, font: RLHandle) {.importc, cdecl, header: "rl_debug.h".}
-proc rl_debug_disable*() {.importc, cdecl, header: "rl_debug.h".}
+proc rl_debug_disable_fps*() {.importc, cdecl, header: "rl_debug.h".}
 proc rl_text_draw_fps*(x: cint, y: cint) {.importc, cdecl, header: "rl_text.h".}
 proc rl_text_draw*(text: cstring, x: cint, y: cint, fontSize: cint, color: RLHandle) {.importc, cdecl, header: "rl.h".}
 proc rl_text_draw_ex*(font: RLHandle, text: cstring, x: cint, y: cint, fontSize: cfloat, spacing: cfloat, color: RLHandle) {.importc, cdecl, header: "rl.h".}

@@ -546,8 +546,8 @@ private extern class RLExterns {
   @:native("rl_debug_enable_fps")
   static function debugEnableFps(x: Int, y: Int, fontSize: Int, font: RLHandle): Void;
 
-  @:native("rl_debug_disable")
-  static function debugDisable(): Void;
+  @:native("rl_debug_disable_fps")
+  static function debugDisableFps(): Void;
 
   @:native("rl_event_on")
   static function eventOnNative(

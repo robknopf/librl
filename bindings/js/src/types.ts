@@ -228,7 +228,7 @@ export interface RLShape {
 
 export interface RLDebug {
   enableFps(x: number, y: number, fontSize: number, font?: RLHandle): void;
-  disable(): void;
+  disableFps(): void;
 }
 
 export interface RLText {

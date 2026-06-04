@@ -24,7 +24,7 @@
 #include "internal/exports.h"
 #include "internal/rl_handle_pool.h"
 
-#ifdef EMSCRIPTEN
+#ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #endif
 
@@ -60,7 +60,7 @@ static uint16_t rl_asset_task_generations[RL_FILEIO_MAX_TASK_HANDLES];
 static unsigned char rl_asset_task_occupied[RL_FILEIO_MAX_TASK_HANDLES];
 static bool rl_asset_task_pool_ready = false;
 
-#ifdef EMSCRIPTEN
+#ifdef __EMSCRIPTEN__
 EM_ASYNC_JS(int, rl_fs_wait_for_idbfs_sync_js, (int timeout_ms), {
     const start = (typeof performance !== "undefined" && performance.now)
         ? performance.now()
@@ -425,7 +425,7 @@ static bool poll_restore_barrier(void)
     return true;
 }
 
-#ifdef EMSCRIPTEN
+#ifdef __EMSCRIPTEN__
 static void expire_restore_barrier(void)
 {
     if (rl_fs_restore_barrier != NULL) {
@@ -446,7 +446,7 @@ static int wait_until_fileio_ready(void)
         return 0;
     }
 
-#ifdef EMSCRIPTEN
+#ifdef __EMSCRIPTEN__
     if (rl_fs_wait_for_idbfs_sync_js(RL_FILEIO_RESTORE_TIMEOUT_MS) != 0) {
         expire_restore_barrier();
         return 0;
@@ -475,7 +475,7 @@ static void flush_fileio_before_deinit(void)
         return;
     }
 
-#ifdef EMSCRIPTEN
+#ifdef __EMSCRIPTEN__
     if (rl_fs_wait_for_idbfs_sync_js(RL_FILEIO_FLUSH_TIMEOUT_MS) != 0) {
         log_warn("rl_fileio: fileio flush timed out after %d ms during deinit",
                  RL_FILEIO_FLUSH_TIMEOUT_MS);
@@ -1933,7 +1933,7 @@ int rl_fs_flush(void)
         return -1;
     }
 
-#ifdef EMSCRIPTEN
+#ifdef __EMSCRIPTEN__
     if (rl_fs_wait_for_idbfs_sync_js(RL_FILEIO_FLUSH_TIMEOUT_MS) != 0) {
         fileio_sync_op_free(flush_op);
         return -1;

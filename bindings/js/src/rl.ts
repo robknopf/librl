@@ -1244,8 +1244,8 @@ const debug = {
             [x | 0, y | 0, fontSize | 0, font >>> 0]
         );
     },
-    disable: () => {
-        return reqModule().ccall('rl_debug_disable', null, [], []);
+    disableFps: () => {
+        return reqModule().ccall('rl_debug_disable_fps', null, [], []);
     }
 } satisfies RLDebug;
 

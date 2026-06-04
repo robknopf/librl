@@ -295,6 +295,8 @@ async function __rlEnsureBindings(bindingsPath) {
 
   proc rl_tick*(): int =
     {.emit: "return __gRl.tick();".}
+  proc rl_debug_enable_fps*(x: cint, y: cint, fontSize: cint, font: RLHandle) {.importjs: "__gRl.debug.enableFps(#, #, #, #)".}
+  proc rl_debug_disable_fps*() {.importjs: "__gRl.debug.disableFps()".}
   proc rl_set_target_fps*(fps: int) {.importjs: "__gRl.setTargetFPS(#)".}
   proc rl_get_time*(): float {.importjs: "__gRl.getTime()".}
   proc rl_get_delta_time*(): float {.importjs: "__gRl.getDeltaTime()".}

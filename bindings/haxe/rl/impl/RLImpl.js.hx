@@ -729,9 +729,9 @@ class RLImpl {
 			binding.debug.enableFps(x, y, fontSize, font);
 	}
 
-	public static function debugDisable():Void {
+	public static function debugDisableFps():Void {
 		if (binding != null)
-			binding.debug.disable();
+			binding.debug.disableFps();
 	}
 
 	public static function eventOn(eventName:String, callback:Dynamic->Void):Int

@@ -78,6 +78,7 @@ class RLImpl {
 	public static inline var HANDLE_KIND_MUSIC:Int = 10;
 	public static inline var HANDLE_KIND_TEXT2D:Int = 11;
 	public static inline var HANDLE_KIND_SCENE:Int = 12;
+	public static inline var HANDLE_KIND_SHAPE:Int = 13;
 	public static inline var HANDLE_KIND_ASSET_TASK:Int = 32;
 
 	public static var COLOR_DEFAULT:RLHandle = 0;
@@ -712,6 +713,34 @@ class RLImpl {
 	public static function shapeDrawRectangle(x:Int, y:Int, width:Int, height:Int, color:RLHandle):Void {
 		if (binding != null)
 			binding.shape.drawRectangle(x, y, width, height, color);
+	}
+
+	public static function shapeCreate():RLHandle
+		return binding == null ? 0 : cast binding.shape.create();
+
+	public static function shapeDestroy(shape:RLHandle):Void {
+		if (binding != null)
+			binding.shape.destroy(shape);
+	}
+
+	public static function shapeSetVisible(shape:RLHandle, visible:Bool):Bool
+		return binding != null && cast binding.shape.setVisible(shape, visible);
+
+	public static function shapeIsVisible(shape:RLHandle):Bool
+		return binding != null && cast binding.shape.isVisible(shape);
+
+	public static function shapeSetStrokeColor(shape:RLHandle, color:RLHandle):Bool
+		return binding != null && cast binding.shape.setStrokeColor(shape, color);
+
+	public static function shapeSetLine3d(shape:RLHandle, startX:Float, startY:Float, startZ:Float, endX:Float, endY:Float, endZ:Float):Bool
+		return binding != null && cast binding.shape.setLine3d(shape, startX, startY, startZ, endX, endY, endZ);
+
+	public static function shapeSetLineStrip3d(shape:RLHandle, points:Array<Float>):Bool
+		return binding != null && cast binding.shape.setLineStrip3d(shape, points);
+
+	public static function shapeDraw(shape:RLHandle):Void {
+		if (binding != null)
+			binding.shape.draw(shape);
 	}
 
 	public static function shapeDrawCube(positionX:Float, positionY:Float, positionZ:Float, width:Float, height:Float, length:Float, color:RLHandle):Void {

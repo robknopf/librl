@@ -455,6 +455,8 @@ int luaopen_rl(lua_State *L)
     lua_setfield(L, -2, "HANDLE_KIND_TEXT2D");
     lua_pushinteger(L, RL_HANDLE_KIND_SCENE);
     lua_setfield(L, -2, "HANDLE_KIND_SCENE");
+    lua_pushinteger(L, RL_HANDLE_KIND_SHAPE);
+    lua_setfield(L, -2, "HANDLE_KIND_SHAPE");
     lua_pushinteger(L, RL_HANDLE_KIND_ASSET_TASK);
     lua_setfield(L, -2, "HANDLE_KIND_ASSET_TASK");
     rl_register_camera3d_bindings(L);

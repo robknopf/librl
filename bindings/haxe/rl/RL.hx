@@ -169,6 +169,11 @@ class RL {
 	static inline function get_HANDLE_KIND_TEXT2D():Int
 		return rl.impl.RLImpl.HANDLE_KIND_TEXT2D;
 
+	public static var HANDLE_KIND_SHAPE(get, never):Int;
+
+	static inline function get_HANDLE_KIND_SHAPE():Int
+		return rl.impl.RLImpl.HANDLE_KIND_SHAPE;
+
 	public static var HANDLE_KIND_SCENE(get, never):Int;
 
 	static inline function get_HANDLE_KIND_SCENE():Int

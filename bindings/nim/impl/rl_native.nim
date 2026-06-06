@@ -150,6 +150,7 @@ const
   RL_HANDLE_KIND_MUSIC* = 10
   RL_HANDLE_KIND_TEXT2D* = 11
   RL_HANDLE_KIND_SCENE* = 12
+  RL_HANDLE_KIND_SHAPE* = 13
   RL_HANDLE_KIND_ASSET_TASK* = 32
 proc rl_init_values_raw(windowWidth: cint, windowHeight: cint, windowTitle: cstring,
                         windowFlags: RLWindowFlags, assetHost: cstring,
@@ -533,6 +534,20 @@ proc rl_shape_draw_cube*(
   width: cfloat, height: cfloat, length: cfloat,
   color: RLHandle
 ) {.importc, cdecl, header: "rl.h".}
+proc rl_shape_create*(): RLHandle {.importc, cdecl, header: "rl_shape.h".}
+proc rl_shape_destroy*(shape: RLHandle) {.importc, cdecl, header: "rl_shape.h".}
+proc rl_shape_set_visible*(shape: RLHandle, visible: bool): bool {.importc, cdecl, header: "rl_shape.h".}
+proc rl_shape_is_visible*(shape: RLHandle): bool {.importc, cdecl, header: "rl_shape.h".}
+proc rl_shape_set_stroke_color*(shape: RLHandle, color: RLHandle): bool {.importc, cdecl, header: "rl_shape.h".}
+proc rl_shape_set_line_3d_c*(
+  shape: RLHandle,
+  startX: cfloat, startY: cfloat, startZ: cfloat,
+  endX: cfloat, endY: cfloat, endZ: cfloat
+): bool {.importc: "rl_shape_set_line_3d", cdecl, header: "rl_shape.h".}
+proc rl_shape_set_line_strip_3d_c*(
+  shape: RLHandle, points: pointer, pointCount: cint
+): bool {.importc: "rl_shape_set_line_strip_3d", cdecl, header: "rl_shape.h".}
+proc rl_shape_draw*(shape: RLHandle) {.importc, cdecl, header: "rl_shape.h".}
 proc rl_shape_draw_circle_3d*(
   centerX: cfloat, centerY: cfloat, centerZ: cfloat,
   radius: cfloat,
@@ -826,10 +841,27 @@ proc rl_shape_draw_line_3d*(
     color
   )
 
-proc rl_shape_draw_line_strip_3d*(points: openArray[float], color: RLHandle) {.inline.} =
-  rl_shape_draw_line_strip_3d_c(
-    points[0].unsafeAddr, points.len.cint, color
+proc rl_shape_set_line_3d*(shape: RLHandle, startX, startY, startZ, endX, endY, endZ: float): bool {.inline.} =
+  rl_shape_set_line_3d_c(
+    shape,
+    startX.cfloat, startY.cfloat, startZ.cfloat,
+    endX.cfloat, endY.cfloat, endZ.cfloat
   )
+
+proc rl_shape_set_line_strip_3d*(shape: RLHandle, points: openArray[float]): bool {.inline.} =
+  rl_shape_set_line_strip_3d_c(
+    shape,
+    (if points.len == 0: nil else: points[0].unsafeAddr),
+    (points.len div 3).cint
+  )
+
+proc rl_shape_draw_line_strip_3d*(points: openArray[float], color: RLHandle) {.inline.} =
+  if points.len == 0:
+    discard
+  else:
+    rl_shape_draw_line_strip_3d_c(
+      points[0].unsafeAddr, (points.len div 3).cint, color
+    )
 
 proc rl_set_target_fps*(fps: int) {.inline.} =
   rl_set_target_fps(fps.cint)

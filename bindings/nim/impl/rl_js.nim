@@ -120,6 +120,7 @@ when defined(js):
     RL_HANDLE_KIND_MUSIC* = 10
     RL_HANDLE_KIND_TEXT2D* = 11
     RL_HANDLE_KIND_SCENE* = 12
+    RL_HANDLE_KIND_SHAPE* = 13
     RL_HANDLE_KIND_ASSET_TASK* = 32
 
   # Color handles — zero until rl_boot() succeeds (rl.js patches them after boot)
@@ -373,6 +374,16 @@ async function __rlEnsureBindings(bindingsPath) {
   proc rl_shape_draw_cube*(positionX, positionY, positionZ,
                           width, height, length: float,
                           color: RLHandle) {.importjs: "__gRl.shape.drawCube(#,#,#,#,#,#,#)".}
+  proc rl_shape_create*(): RLHandle {.importjs: "__gRl.shape.create()".}
+  proc rl_shape_destroy*(shape: RLHandle) {.importjs: "__gRl.shape.destroy(#)".}
+  proc rl_shape_set_visible*(shape: RLHandle, visible: bool): bool {.importjs: "__gRl.shape.setVisible(#,#)".}
+  proc rl_shape_is_visible*(shape: RLHandle): bool {.importjs: "__gRl.shape.isVisible(#)".}
+  proc rl_shape_set_stroke_color*(shape: RLHandle, color: RLHandle): bool {.importjs: "__gRl.shape.setStrokeColor(#,#)".}
+  proc rl_shape_set_line_3d*(shape: RLHandle, startX, startY, startZ, endX, endY, endZ: float): bool {.
+    importjs: "__gRl.shape.setLine3d(#,#,#,#,#,#,#)".}
+  proc rl_shape_set_line_strip_3d*(shape: RLHandle, points: openArray[float]): bool {.
+    importjs: "__gRl.shape.setLineStrip3d(#,#)".}
+  proc rl_shape_draw*(shape: RLHandle) {.importjs: "__gRl.shape.draw(#)".}
   proc rl_shape_draw_circle_3d*(centerX, centerY, centerZ, radius,
                                 rotationAxisX, rotationAxisY, rotationAxisZ,
                                 rotationAngle: float,

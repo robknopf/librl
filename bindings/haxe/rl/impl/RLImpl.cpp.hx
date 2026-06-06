@@ -528,6 +528,30 @@ private extern class RLExterns {
   @:native("rl_shape_draw_rectangle")
   static function shapeDrawRectangle(x: Int, y: Int, width: Int, height: Int, color: RLHandle): Void;
 
+  @:native("rl_shape_create")
+  static function shapeCreate(): RLHandle;
+
+  @:native("rl_shape_destroy")
+  static function shapeDestroy(shape: RLHandle): Void;
+
+  @:native("rl_shape_set_visible")
+  static function shapeSetVisible(shape: RLHandle, visible: Bool): Bool;
+
+  @:native("rl_shape_is_visible")
+  static function shapeIsVisible(shape: RLHandle): Bool;
+
+  @:native("rl_shape_set_stroke_color")
+  static function shapeSetStrokeColor(shape: RLHandle, color: RLHandle): Bool;
+
+  @:native("rl_shape_set_line_3d")
+  static function shapeSetLine3d(shape: RLHandle, startX: Float, startY: Float, startZ: Float, endX: Float, endY: Float, endZ: Float): Bool;
+
+  @:native("rl_shape_set_line_strip_3d")
+  static function shapeSetLineStrip3dNative(shape: RLHandle, points: cpp.Star<Float>, pointCount: Int): Bool;
+
+  @:native("rl_shape_draw")
+  static function shapeDraw(shape: RLHandle): Void;
+
   @:native("rl_shape_draw_cube")
   static function shapeDrawCube(
     positionX: Float, positionY: Float, positionZ: Float,
@@ -1077,6 +1101,7 @@ abstract RLImpl(RLExterns) {
   public static inline var HANDLE_KIND_MUSIC: Int = 10;
   public static inline var HANDLE_KIND_TEXT2D: Int = 11;
   public static inline var HANDLE_KIND_SCENE: Int = 12;
+  public static inline var HANDLE_KIND_SHAPE: Int = 13;
   public static inline var HANDLE_KIND_ASSET_TASK: Int = 32;
   public static var COLOR_DEFAULT(get, never): RLHandle; static function get_COLOR_DEFAULT() return RLExterns.COLOR_DEFAULT;
   public static var COLOR_LIGHTGRAY(get, never): RLHandle; static function get_COLOR_LIGHTGRAY() return RLExterns.COLOR_LIGHTGRAY;
@@ -1270,6 +1295,26 @@ abstract RLImpl(RLExterns) {
   public static function textureCreate(filename: String): RLHandle { return RLExterns.textureCreate(filename); }
   public static function textureDestroy(texture: RLHandle): Void { RLExterns.textureDestroy(texture); }
   public static function textureGetDefault(): RLHandle { return RLExterns.textureGetDefault(); }
+  public static function shapeCreate(): RLHandle { return RLExterns.shapeCreate(); }
+  public static function shapeDestroy(shape: RLHandle): Void { RLExterns.shapeDestroy(shape); }
+  public static function shapeSetVisible(shape: RLHandle, visible: Bool): Bool { return RLExterns.shapeSetVisible(shape, visible); }
+  public static function shapeIsVisible(shape: RLHandle): Bool { return RLExterns.shapeIsVisible(shape); }
+  public static function shapeSetStrokeColor(shape: RLHandle, color: RLHandle): Bool { return RLExterns.shapeSetStrokeColor(shape, color); }
+  public static function shapeSetLine3d(shape: RLHandle, startX: Float, startY: Float, startZ: Float, endX: Float, endY: Float, endZ: Float): Bool {
+    return RLExterns.shapeSetLine3d(shape, startX, startY, startZ, endX, endY, endZ);
+  }
+  @:functionCode('
+    if (points == null() || points->length == 0) {
+      return rl_shape_set_line_strip_3d(shape, NULL, 0);
+    }
+    int n = points->length;
+    int pointCount = n / 3;
+    float* buf = (float*)alloca(n * sizeof(float));
+    for (int i = 0; i < n; i++) buf[i] = (float)points->__get(i);
+    return rl_shape_set_line_strip_3d(shape, buf, pointCount);
+  ')
+  public static function shapeSetLineStrip3d(shape: RLHandle, points: Array<Float>): Bool { return false; }
+  public static function shapeDraw(shape: RLHandle): Void { RLExterns.shapeDraw(shape); }
   public static function shapeDrawRectangle(x: Int, y: Int, width: Int, height: Int, color: RLHandle): Void { RLExterns.shapeDrawRectangle(x, y, width, height, color); }
   public static function shapeDrawCube(positionX: Float, positionY: Float, positionZ: Float, width: Float, height: Float, length: Float, color: RLHandle): Void { RLExterns.shapeDrawCube(positionX, positionY, positionZ, width, height, length, color); }
   public static function shapeDrawCircle3d(centerX: Float, centerY: Float, centerZ: Float, radius: Float, rotationAxisX: Float, rotationAxisY: Float, rotationAxisZ: Float, rotationAngle: Float, color: RLHandle): Void { RLExterns.shapeDrawCircle3d(centerX, centerY, centerZ, radius, rotationAxisX, rotationAxisY, rotationAxisZ, rotationAngle, color); }

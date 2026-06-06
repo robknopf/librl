@@ -13,6 +13,7 @@
 #include "internal/rl_render_pass.h"
 #include "internal/rl_pick_scene.h"
 #include "internal/rl_scene.h"
+#include "internal/rl_shape.h"
 #include "internal/rl_sprite3d.h"
 #include "rl_camera3d.h"
 #include "rl_handle.h"
@@ -93,6 +94,7 @@ static bool is_drawable_kind(rl_handle_kind_t kind)
     case RL_HANDLE_KIND_SPRITE3D:
     case RL_HANDLE_KIND_SPRITE2D:
     case RL_HANDLE_KIND_TEXT2D:
+    case RL_HANDLE_KIND_SHAPE:
         return true;
     default:
         return false;
@@ -108,6 +110,8 @@ static bool is_drawable_handle_valid(rl_handle_t drawable, rl_handle_kind_t kind
     case RL_HANDLE_KIND_SPRITE2D:
     case RL_HANDLE_KIND_TEXT2D:
         return true;
+    case RL_HANDLE_KIND_SHAPE:
+        return rl_shape_is_valid(drawable);
     default:
         return false;
     }
@@ -307,6 +311,9 @@ static void draw_scene_member(rl_handle_t drawable, rl_handle_kind_t kind)
     case RL_HANDLE_KIND_TEXT2D:
         rl_text2d_draw(drawable);
         break;
+    case RL_HANDLE_KIND_SHAPE:
+        rl_shape_draw(drawable);
+        break;
     default:
         break;
     }
@@ -322,6 +329,9 @@ static void draw_scene_member_pass(rl_handle_t drawable,
         break;
     case RL_HANDLE_KIND_SPRITE3D:
         rl_sprite3d_draw_pass(drawable, pass);
+        break;
+    case RL_HANDLE_KIND_SHAPE:
+        rl_shape_draw_pass(drawable, pass);
         break;
     default:
         break;
@@ -344,6 +354,8 @@ static bool is_drawable_visible(rl_handle_t drawable, rl_handle_kind_t kind)
         return rl_sprite2d_is_visible(drawable);
     case RL_HANDLE_KIND_TEXT2D:
         return rl_text2d_is_visible(drawable);
+    case RL_HANDLE_KIND_SHAPE:
+        return rl_shape_is_visible(drawable);
     default:
         return false;
     }
@@ -547,7 +559,8 @@ void rl_scene_draw(rl_handle_t scene)
         item.depth_key = 0.0f;
 
         if (member->kind == RL_HANDLE_KIND_MODEL ||
-            member->kind == RL_HANDLE_KIND_SPRITE3D) {
+            member->kind == RL_HANDLE_KIND_SPRITE3D ||
+            member->kind == RL_HANDLE_KIND_SHAPE) {
             has_3d = true;
         } else {
             has_2d = true;
@@ -569,7 +582,8 @@ void rl_scene_draw(rl_handle_t scene)
                 if (!is_drawable_visible(member->drawable, member->kind) ||
                     !is_drawable_handle_valid(member->drawable, member->kind) ||
                     (member->kind != RL_HANDLE_KIND_MODEL &&
-                     member->kind != RL_HANDLE_KIND_SPRITE3D)) {
+                     member->kind != RL_HANDLE_KIND_SPRITE3D &&
+                     member->kind != RL_HANDLE_KIND_SHAPE)) {
                     start++;
                     continue;
                 }
@@ -594,7 +608,8 @@ void rl_scene_draw(rl_handle_t scene)
                 if (is_drawable_visible(member->drawable, member->kind) &&
                     is_drawable_handle_valid(member->drawable, member->kind) &&
                     (member->kind == RL_HANDLE_KIND_MODEL ||
-                     member->kind == RL_HANDLE_KIND_SPRITE3D)) {
+                     member->kind == RL_HANDLE_KIND_SPRITE3D ||
+                     member->kind == RL_HANDLE_KIND_SHAPE)) {
                     item.drawable = member->drawable;
                     item.kind = member->kind;
                     item.order = member->order;
@@ -603,7 +618,9 @@ void rl_scene_draw(rl_handle_t scene)
                     if ((member->kind == RL_HANDLE_KIND_MODEL &&
                          rl_model_has_render_pass(member->drawable, RL_RENDER_PASS_OPAQUE_3D)) ||
                         (member->kind == RL_HANDLE_KIND_SPRITE3D &&
-                         rl_sprite3d_has_render_pass(member->drawable, RL_RENDER_PASS_OPAQUE_3D))) {
+                         rl_sprite3d_has_render_pass(member->drawable, RL_RENDER_PASS_OPAQUE_3D)) ||
+                        (member->kind == RL_HANDLE_KIND_SHAPE &&
+                         rl_shape_has_render_pass(member->drawable, RL_RENDER_PASS_OPAQUE_3D))) {
                         instance->opaque3d[instance->opaque3d_count++] = item;
                     }
 

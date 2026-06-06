@@ -222,6 +222,14 @@ export interface RLCamera3d {
 }
 
 export interface RLShape {
+  create(): RLHandle;
+  destroy(shape: RLHandle): void;
+  setVisible(shape: RLHandle, visible: boolean): boolean;
+  isVisible(shape: RLHandle): boolean;
+  setStrokeColor(shape: RLHandle, color: RLHandle): boolean;
+  setLine3d(shape: RLHandle, startX: number, startY: number, startZ: number, endX: number, endY: number, endZ: number): boolean;
+  setLineStrip3d(shape: RLHandle, points: Float32Array | number[]): boolean;
+  draw(shape: RLHandle): void;
   drawCube(positionX: number, positionY: number, positionZ: number, width: number, height: number, length: number, color: RLHandle): void;
   drawCircle3d(centerX: number, centerY: number, centerZ: number, radius: number, rotationAxisX: number, rotationAxisY: number, rotationAxisZ: number, rotationAngle: number, color: RLHandle): void;
   drawRectangle(x: number, y: number, width: number, height: number, color: RLHandle): void;
@@ -513,6 +521,7 @@ export interface RLApi {
   HANDLE_KIND_MUSIC: number;
   HANDLE_KIND_TEXT2D: number;
   HANDLE_KIND_SCENE: number;
+  HANDLE_KIND_SHAPE: number;
   HANDLE_KIND_ASSET_TASK: number;
   fs: RLFs;
   asset: RLAsset;

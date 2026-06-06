@@ -123,9 +123,19 @@ LDFLAGS_WASM = \
 	"_rl_is_lighting_enabled", \
 	"_rl_set_light_direction", \
 	"_rl_set_light_ambient", \
+	"_rl_shape_create", \
+	"_rl_shape_destroy", \
+	"_rl_shape_set_visible", \
+	"_rl_shape_is_visible", \
+	"_rl_shape_set_stroke_color", \
+	"_rl_shape_set_line_3d", \
+	"_rl_shape_set_line_strip_3d", \
+	"_rl_shape_draw", \
 	"_rl_shape_draw_cube", \
 	"_rl_shape_draw_circle_3d", \
 	"_rl_shape_draw_rectangle", \
+	"_rl_shape_draw_line_3d", \
+	"_rl_shape_draw_line_strip_3d", \
 	"_rl_color_create", \
 	"_rl_color_destroy", \
 	"_rl_text_draw", \

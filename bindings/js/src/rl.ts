@@ -784,6 +784,7 @@ const rlCore = {
     HANDLE_KIND_MUSIC: 10,
     HANDLE_KIND_TEXT2D: 11,
     HANDLE_KIND_SCENE: 12,
+    HANDLE_KIND_SHAPE: 13,
     HANDLE_KIND_ASSET_TASK: 32,
 };
 
@@ -1240,6 +1241,59 @@ const camera3d = {
 } satisfies RLCamera3d;
 
 const shape = {
+    create: () => ccHandle("rl_shape_create"),
+    destroy: (shapeHandle) => reqModule().ccall(
+        "rl_shape_destroy", null, ["number"], [shapeHandle >>> 0]
+    ),
+    setVisible: (shapeHandle, visible) => reqModule().ccall(
+        "rl_shape_set_visible", "number", ["number", "number"], [shapeHandle >>> 0, visible ? 1 : 0]
+    ) !== 0,
+    isVisible: (shapeHandle) => reqModule().ccall(
+        "rl_shape_is_visible", "number", ["number"], [shapeHandle >>> 0]
+    ) !== 0,
+    setStrokeColor: (shapeHandle, color) => reqModule().ccall(
+        "rl_shape_set_stroke_color", "number", ["number", "number"], [shapeHandle >>> 0, color >>> 0]
+    ) !== 0,
+    setLine3d: (shapeHandle, startX, startY, startZ, endX, endY, endZ) => reqModule().ccall(
+        "rl_shape_set_line_3d",
+        "number",
+        ["number", "number", "number", "number", "number", "number", "number"],
+        [shapeHandle >>> 0, startX, startY, startZ, endX, endY, endZ]
+    ) !== 0,
+    setLineStrip3d: (shapeHandle, points) => {
+        const module = reqModule();
+        const floats = points instanceof Float32Array ? points : new Float32Array(points);
+        const numPoints = (floats.length / 3) | 0;
+        const bytesNeeded = floats.length * 4;
+        let ptr = 0;
+        if (bytesNeeded > 0) {
+            ptr = module._malloc(bytesNeeded);
+            if (!ptr) throw new Error("Failed to allocate memory for retained line strip");
+        }
+        try {
+            if (ptr) {
+                module.HEAPF32.set(floats, ptr >> 2);
+            }
+            return module.ccall(
+                "rl_shape_set_line_strip_3d",
+                "number",
+                ["number", "number", "number"],
+                [shapeHandle >>> 0, ptr, numPoints]
+            ) !== 0;
+        } finally {
+            if (ptr) {
+                module._free(ptr);
+            }
+        }
+    },
+    draw: (shapeHandle) => {
+        return reqModule().ccall(
+            "rl_shape_draw",
+            null,
+            ["number"],
+            [shapeHandle >>> 0]
+        );
+    },
     drawCube: (positionX, positionY, positionZ, width, height, length, color) => {
         return reqModule().ccall(
             'rl_shape_draw_cube',

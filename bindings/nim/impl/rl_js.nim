@@ -379,6 +379,10 @@ async function __rlEnsureBindings(bindingsPath) {
                                 color: RLHandle) {.importjs: "__gRl.shape.drawCircle3d(#,#,#,#,#,#,#,#,#)".}
   proc rl_shape_draw_rectangle*(x, y, width, height: int, color: RLHandle) {.
     importjs: "__gRl.shape.drawRectangle(#,#,#,#,#)".}
+  proc rl_shape_draw_line_3d*(startX, startY, startZ, endX, endY, endZ: float,
+                              color: RLHandle) {.importjs: "__gRl.shape.drawLine3d(#,#,#,#,#,#,#)".}
+  proc rl_shape_draw_line_strip_3d*(points: openArray[float], color: RLHandle) {.
+    importjs: "__gRl.shape.drawLineStrip3d(#,#)".}
   proc rl_text_draw_fps*(x, y: int) {.importjs: "__gRl.text.drawFps(#,#)".}
   proc rl_text_draw_fps_ex*(font: RLHandle, x, y: int, fontSize: float, color: RLHandle) {.
     importjs: "__gRl.text.drawFpsEx(#,#,#,#,#)".}

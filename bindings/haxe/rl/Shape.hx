@@ -18,4 +18,12 @@ class Shape {
 	public static function drawCircle3d(centerX:Float, centerY:Float, centerZ:Float, radius:Float, rotationAxisX:Float, rotationAxisY:Float, rotationAxisZ:Float, rotationAngle:Float, color:RLHandle):Void {
 		rl.impl.RLImpl.shapeDrawCircle3d(centerX, centerY, centerZ, radius, rotationAxisX, rotationAxisY, rotationAxisZ, rotationAngle, color);
 	}
+
+	public static function drawLine3d(startX:Float, startY:Float, startZ:Float, endX:Float, endY:Float, endZ:Float, color:RLHandle):Void {
+		rl.impl.RLImpl.shapeDrawLine3d(startX, startY, startZ, endX, endY, endZ, color);
+	}
+
+	public static function drawLineStrip3d(points:Array<Float>, color:RLHandle):Void {
+		rl.impl.RLImpl.shapeDrawLineStrip3d(points, color);
+	}
 }

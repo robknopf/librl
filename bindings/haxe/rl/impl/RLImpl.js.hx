@@ -724,6 +724,16 @@ class RLImpl {
 			binding.shape.drawCircle3d(centerX, centerY, centerZ, radius, rotationAxisX, rotationAxisY, rotationAxisZ, rotationAngle, color);
 	}
 
+	public static function shapeDrawLine3d(startX:Float, startY:Float, startZ:Float, endX:Float, endY:Float, endZ:Float, color:RLHandle):Void {
+		if (binding != null)
+			binding.shape.drawLine3d(startX, startY, startZ, endX, endY, endZ, color);
+	}
+
+	public static function shapeDrawLineStrip3d(points:Array<Float>, color:RLHandle):Void {
+		if (binding != null)
+			binding.shape.drawLineStrip3d(points, color);
+	}
+
 	public static function debugEnableFps(x:Int, y:Int, fontSize:Int, font:RLHandle):Void {
 		if (binding != null)
 			binding.debug.enableFps(x, y, fontSize, font);

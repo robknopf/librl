@@ -18,6 +18,13 @@ void rl_shape_draw_circle_3d(float center_x, float center_y, float center_z,
                               float rotation_angle,
                               rl_handle_t color);
 
+void rl_shape_draw_line_3d(float start_x, float start_y, float start_z,
+                           float end_x, float end_y, float end_z,
+                           rl_handle_t color);
+
+void rl_shape_draw_line_strip_3d(const float* points, int point_count,
+                                 rl_handle_t color);
+
 #ifdef __cplusplus
 }
 #endif

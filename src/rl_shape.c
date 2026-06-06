@@ -35,3 +35,29 @@ void rl_shape_draw_circle_3d(float center_x, float center_y, float center_z,
         c
     );
 }
+
+RL_KEEP
+void rl_shape_draw_line_3d(float start_x, float start_y, float start_z,
+                           float end_x, float end_y, float end_z,
+                           rl_handle_t color)
+{
+    Color c = rl_color_get(color);
+    DrawLine3D(
+        (Vector3){start_x, start_y, start_z},
+        (Vector3){end_x, end_y, end_z},
+        c
+    );
+}
+
+RL_KEEP
+void rl_shape_draw_line_strip_3d(const float* points, int point_count,
+                                 rl_handle_t color)
+{
+    if (point_count < 2) return;
+    Color c = rl_color_get(color);
+    for (int i = 0; i < point_count - 1; i++) {
+        Vector3 start = { points[i*3], points[i*3+1], points[i*3+2] };
+        Vector3 end   = { points[(i+1)*3], points[(i+1)*3+1], points[(i+1)*3+2] };
+        DrawLine3D(start, end, c);
+    }
+}

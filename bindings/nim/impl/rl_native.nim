@@ -542,6 +542,14 @@ proc rl_shape_draw_circle_3d*(
 ) {.importc, cdecl, header: "rl_shape.h".}
 proc rl_shape_draw_rectangle*(x: cint, y: cint, width: cint, height: cint,
                               color: RLHandle) {.importc, cdecl, header: "rl_shape.h".}
+proc rl_shape_draw_line_3d_c*(
+  startX: cfloat, startY: cfloat, startZ: cfloat,
+  endX: cfloat, endY: cfloat, endZ: cfloat,
+  color: RLHandle
+) {.importc: "rl_shape_draw_line_3d", cdecl, header: "rl_shape.h".}
+proc rl_shape_draw_line_strip_3d_c*(
+  points: pointer, pointCount: cint, color: RLHandle
+) {.importc: "rl_shape_draw_line_strip_3d", cdecl, header: "rl_shape.h".}
 proc rl_render_clear_background*(color: RLHandle) {.importc, cdecl, header: "rl.h".}
 proc rl_set_target_fps*(fps: cint) {.importc, cdecl, header: "rl.h".}
 proc rl_debug_enable_fps*(x: cint, y: cint, fontSize: cint, font: RLHandle) {.importc, cdecl, header: "rl_debug.h".}
@@ -806,6 +814,22 @@ proc rl_shape_draw_circle_3d*(
 
 proc rl_shape_draw_rectangle*(x, y, width, height: int, color: RLHandle) {.inline.} =
   rl_shape_draw_rectangle(x.cint, y.cint, width.cint, height.cint, color)
+
+proc rl_shape_draw_line_3d*(
+  startX, startY, startZ,
+  endX, endY, endZ: float,
+  color: RLHandle
+) {.inline.} =
+  rl_shape_draw_line_3d_c(
+    startX.cfloat, startY.cfloat, startZ.cfloat,
+    endX.cfloat, endY.cfloat, endZ.cfloat,
+    color
+  )
+
+proc rl_shape_draw_line_strip_3d*(points: openArray[float], color: RLHandle) {.inline.} =
+  rl_shape_draw_line_strip_3d_c(
+    points[0].unsafeAddr, points.len.cint, color
+  )
 
 proc rl_set_target_fps*(fps: int) {.inline.} =
   rl_set_target_fps(fps.cint)

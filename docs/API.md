@@ -550,9 +550,18 @@ void rl_shape_draw_circle_3d(float center_x, float center_y, float center_z,
                               float rotation_axis_x, float rotation_axis_y, float rotation_axis_z,
                               float rotation_angle,
                               rl_handle_t color);
+void rl_shape_draw_line_3d(float start_x, float start_y, float start_z,
+                           float end_x, float end_y, float end_z,
+                           rl_handle_t color);
+void rl_shape_draw_line_strip_3d(const float* points, int point_count,
+                                 rl_handle_t color);
 ```
 
 `rl_shape_draw_circle_3d` wraps raylib's `DrawCircle3D`. To draw a ring flat on the ground (XZ plane), use rotation axis `(1, 0, 0)` with `rotation_angle = 90`.
+
+`rl_shape_draw_line_3d` draws a single line segment between two 3D points using raylib's `DrawLine3D`.
+
+`rl_shape_draw_line_strip_3d` draws a connected line strip. `points` is a flat array of `[x1,y1,z1, x2,y2,z2, ...]` and `point_count` is the number of vertices (not the array length). Useful for debug visualization of polygons and navigation meshes.
 
 ---
 

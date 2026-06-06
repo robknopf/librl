@@ -1263,6 +1263,32 @@ const shape = {
             ['number', 'number', 'number', 'number', 'number'],
             [x | 0, y | 0, width | 0, height | 0, color >>> 0]
         );
+    },
+    drawLine3d: (startX, startY, startZ, endX, endY, endZ, color) => {
+        return reqModule().ccall(
+            'rl_shape_draw_line_3d',
+            null,
+            ['number', 'number', 'number', 'number', 'number', 'number', 'number'],
+            [startX, startY, startZ, endX, endY, endZ, color >>> 0]
+        );
+    },
+    drawLineStrip3d: (points, color) => {
+        const module = reqModule();
+        const numPoints = points.length / 3;
+        const bytesNeeded = points.length * 4; // 4 bytes per float
+        const ptr = module._malloc(bytesNeeded);
+        if (!ptr) throw new Error('Failed to allocate memory for line strip');
+        try {
+            module.HEAPF32.set(points instanceof Float32Array ? points : new Float32Array(points), ptr >> 2);
+            module.ccall(
+                'rl_shape_draw_line_strip_3d',
+                null,
+                ['number', 'number', 'number'],
+                [ptr, numPoints, color >>> 0]
+            );
+        } finally {
+            module._free(ptr);
+        }
     }
 } satisfies RLShape;
 

@@ -2,9 +2,14 @@
 
 #include <lua.h>
 #include <lauxlib.h>
+#include <stdlib.h>
 
 #include "rl.h"
 #include "rl_lua_shape.h"
+
+#if LUA_VERSION_NUM < 502
+#define lua_rawlen lua_objlen
+#endif
 
 static int rl_shape_draw_rectangle_lua(lua_State *L)
 {
@@ -47,6 +52,45 @@ static int rl_shape_draw_circle_3d_lua(lua_State *L)
     return 0;
 }
 
+static int rl_shape_draw_line_3d_lua(lua_State *L)
+{
+    float start_x = (float)luaL_checknumber(L, 1);
+    float start_y = (float)luaL_checknumber(L, 2);
+    float start_z = (float)luaL_checknumber(L, 3);
+    float end_x   = (float)luaL_checknumber(L, 4);
+    float end_y   = (float)luaL_checknumber(L, 5);
+    float end_z   = (float)luaL_checknumber(L, 6);
+    rl_handle_t color = (rl_handle_t)luaL_checkinteger(L, 7);
+    rl_shape_draw_line_3d(start_x, start_y, start_z, end_x, end_y, end_z, color);
+    return 0;
+}
+
+static int rl_shape_draw_line_strip_3d_lua(lua_State *L)
+{
+    luaL_checktype(L, 1, LUA_TTABLE);
+    rl_handle_t color = (rl_handle_t)luaL_checkinteger(L, 2);
+
+    int n = (int)lua_rawlen(L, 1);
+    if (n % 3 != 0) {
+        return luaL_error(L, "Point array length must be multiple of 3 (x,y,z)");
+    }
+
+    float* points = (float*)malloc(n * sizeof(float));
+    if (!points) {
+        return luaL_error(L, "Failed to allocate memory for points");
+    }
+
+    for (int i = 0; i < n; i++) {
+        lua_rawgeti(L, 1, i + 1);
+        points[i] = (float)luaL_checknumber(L, -1);
+        lua_pop(L, 1);
+    }
+
+    rl_shape_draw_line_strip_3d(points, n / 3, color);
+    free(points);
+    return 0;
+}
+
 void rl_register_shape_bindings(lua_State *L)
 {
     lua_pushcfunction(L, rl_shape_draw_rectangle_lua);
@@ -57,4 +101,10 @@ void rl_register_shape_bindings(lua_State *L)
 
     lua_pushcfunction(L, rl_shape_draw_circle_3d_lua);
     lua_setfield(L, -2, "shape_draw_circle_3d");
+
+    lua_pushcfunction(L, rl_shape_draw_line_3d_lua);
+    lua_setfield(L, -2, "shape_draw_line_3d");
+
+    lua_pushcfunction(L, rl_shape_draw_line_strip_3d_lua);
+    lua_setfield(L, -2, "shape_draw_line_strip_3d");
 }

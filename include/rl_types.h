@@ -30,6 +30,8 @@ typedef struct
     int right;
     int middle;
     int buttons[3];
+    int dx;
+    int dy;
 } rl_mouse_state_t;
 
 #define RL_KEYBOARD_MAX_KEYS 512

@@ -84,6 +84,8 @@ typedef RLMouseState = {
 	var left:Int;
 	var right:Int;
 	var middle:Int;
+	var dx:Int;
+	var dy:Int;
 }
 
 typedef RLGamepad = {

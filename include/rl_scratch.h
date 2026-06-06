@@ -25,6 +25,8 @@ typedef struct
     int y;
     int wheel;
     int buttons[3]; // left, right, middle
+    int dx;
+    int dy;
 } rl_mouse_t;
 
 typedef rl_keyboard_state_t rl_keyboard_t;
@@ -105,6 +107,8 @@ typedef struct
         size_t y;
         size_t wheel;
         size_t buttons;
+        size_t dx;
+        size_t dy;
     } mouse;
     struct
     {
@@ -154,7 +158,7 @@ void rl_scratch_set_quaternion(float x, float y, float z, float w);
 void rl_scratch_set_color(int r, int g, int b, int a);
 void rl_scratch_set_rect(int x, int y, int width, int height);
 void rl_scratch_set_pick_result(rl_pick_result_t result);
-void rl_scratch_set_mouse(int x, int y, int wheel, int left, int right, int middle);
+void rl_scratch_set_mouse(int x, int y, int wheel, int left, int right, int middle, int dx, int dy);
 void rl_scratch_set_keyboard_key(int key, int state);
 
 void rl_scratch_set_gamepad_axis(int id, int axis, float value);

@@ -1235,7 +1235,9 @@ class RLImpl {
 			wheel: 0,
 			left: 0,
 			right: 0,
-			middle: 0
+			middle: 0,
+			dx: 0,
+			dy: 0
 		};
 	}
 
@@ -1297,7 +1299,9 @@ class RLImpl {
 			wheel: Std.int(value.wheel),
 			left: Std.int(value.left),
 			right: Std.int(value.right),
-			middle: Std.int(value.middle)
+			middle: Std.int(value.middle),
+			dx: Std.int(value.dx),
+			dy: Std.int(value.dy)
 		};
 	}
 

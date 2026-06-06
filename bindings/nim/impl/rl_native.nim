@@ -30,6 +30,9 @@ type
     left*: cint
     right*: cint
     middle*: cint
+    buttons*: array[3, cint]
+    dx*: cint
+    dy*: cint
   RLKeyboardState* {.importc: "rl_keyboard_state_t", header: "rl.h", bycopy.} = object
     max_num_keys*: cint
     keys*: array[512, cint]

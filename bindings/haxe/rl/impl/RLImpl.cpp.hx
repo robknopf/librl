@@ -815,6 +815,8 @@ extern class RLMouseStateNative {
   public var left: Int;
   public var right: Int;
   public var middle: Int;
+  public var dx: Int;
+  public var dy: Int;
 }
 
 @:headerInclude("rl_logger.h")
@@ -1383,7 +1385,7 @@ abstract RLImpl(RLExterns) {
   public static function inputGetMouseButton(button: Int): Int { return RLExterns.inputGetMouseButton(button); }
   public static function inputGetMouseState(): RLMouseState {
     var n: RLMouseStateNative = cast RLExterns.inputGetMouseState();
-    return {x: n.x, y: n.y, wheel: n.wheel, left: n.left, right: n.right, middle: n.middle};
+    return {x: n.x, y: n.y, wheel: n.wheel, left: n.left, right: n.right, middle: n.middle, dx: n.dx, dy: n.dy};
   }
   public static function inputGetKeyboardState(): RLKeyboardState {
     return RLKeyboardBridge.getState();

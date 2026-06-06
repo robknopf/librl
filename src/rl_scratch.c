@@ -32,7 +32,9 @@ const rl_scratch_offsets_t *rl_scratch_get_offsets(void)
             .x = offsetof(rl_scratch_t, mouse.x),
             .y = offsetof(rl_scratch_t, mouse.y),
             .wheel = offsetof(rl_scratch_t, mouse.wheel),
-            .buttons = offsetof(rl_scratch_t, mouse.buttons)},
+            .buttons = offsetof(rl_scratch_t, mouse.buttons),
+            .dx = offsetof(rl_scratch_t, mouse.dx),
+            .dy = offsetof(rl_scratch_t, mouse.dy)},
         .keyboard = {
             .max_num_keys = offsetof(rl_scratch_t, keyboard.max_num_keys), 
             .keys = offsetof(rl_scratch_t, keyboard.keys), 
@@ -126,7 +128,7 @@ void rl_scratch_set_pick_result(rl_pick_result_t result)
     rl_scratch.pick_result = result;
 }
 
-void rl_scratch_set_mouse(int x, int y, int wheel, int left, int right, int middle)
+void rl_scratch_set_mouse(int x, int y, int wheel, int left, int right, int middle, int dx, int dy)
 {
     rl_scratch.mouse.x = x;
     rl_scratch.mouse.y = y;
@@ -134,6 +136,8 @@ void rl_scratch_set_mouse(int x, int y, int wheel, int left, int right, int midd
     rl_scratch.mouse.buttons[0] = left;
     rl_scratch.mouse.buttons[1] = right;
     rl_scratch.mouse.buttons[2] = middle;
+    rl_scratch.mouse.dx = dx;
+    rl_scratch.mouse.dy = dy;
 }
 
 void rl_scratch_set_touchpoint(int index, int x, int y, int id)
@@ -194,6 +198,8 @@ void rl_scratch_refresh()
     rl_scratch.mouse.y = 0;
     rl_scratch.mouse.wheel = 0;
     memset(rl_scratch.mouse.buttons, 0, sizeof(rl_scratch.mouse.buttons));
+    rl_scratch.mouse.dx = 0;
+    rl_scratch.mouse.dy = 0;
 
     rl_scratch.keyboard.pressed_key = 0;
     rl_scratch.keyboard.pressed_char = 0;
@@ -255,7 +261,8 @@ void rl_scratch_refresh()
         mouse_button_status_2 = RL_BUTTON_DOWN;
     }
 
-    rl_scratch_set_mouse(GetMouseX(), GetMouseY(), GetMouseWheelMove(), mouse_button_status_0, mouse_button_status_1, mouse_button_status_2);
+    Vector2 mouse_delta = GetMouseDelta();
+    rl_scratch_set_mouse(GetMouseX(), GetMouseY(), GetMouseWheelMove(), mouse_button_status_0, mouse_button_status_1, mouse_button_status_2, (int)mouse_delta.x, (int)mouse_delta.y);
 
     // keyboard
     rl_scratch.keyboard.pressed_key = 0;

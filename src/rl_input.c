@@ -58,6 +58,7 @@ RL_KEEP
 rl_mouse_state_t rl_input_get_mouse_state(void)
 {
     vec2_t pos = rl_input_get_mouse_position();
+    Vector2 delta = GetMouseDelta();
     rl_mouse_state_t state = {0};
     state.x = (int)pos.x;
     state.y = (int)pos.y;
@@ -68,6 +69,8 @@ rl_mouse_state_t rl_input_get_mouse_state(void)
     state.buttons[0] = state.left;
     state.buttons[1] = state.right;
     state.buttons[2] = state.middle;
+    state.dx = (int)delta.x;
+    state.dy = (int)delta.y;
     return state;
 }
 

@@ -40,6 +40,8 @@ export interface EmscriptenModule {
     y: number;
     wheel: number;
     buttons: Int32Array;
+    dx: number;
+    dy: number;
   };
   getKeyboard: () => RLKeyboardState;
   getGamepads?: () => RLGamepadState[];

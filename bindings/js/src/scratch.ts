@@ -19,6 +19,8 @@ export interface ScratchAreaOffsets {
     y: number;
     wheel: number;
     buttons: number;
+    dx: number;
+    dy: number;
   };
   keyboard: {
     max_num_keys: number;

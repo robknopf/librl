@@ -27,6 +27,8 @@ export interface RLMouseState {
     right: number;
     middle: number;
     buttons: Int32Array;
+    dx: number;
+    dy: number;
 }
 export interface RLKeyboardState {
     max_num_keys: number;

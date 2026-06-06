@@ -63,6 +63,7 @@ typedef struct {
     int x, y, wheel;
     int left, right, middle;
     int buttons[3];
+    int dx, dy;
 } rl_mouse_state_t;
 
 typedef struct {
@@ -241,6 +242,7 @@ Notes:
 - Mouse button values: `RL_BUTTON_UP=0`, `RL_BUTTON_PRESSED=1`, `RL_BUTTON_DOWN=2`, `RL_BUTTON_RELEASED=3`.
 - `keyboard.keys[keycode]` holds the held state; `pressed_keys[]` / `pressed_chars[]` drain the per-frame event queues.
 - `rl_input_capture_cursor()` hides the cursor and locks it to the window (wraps `DisableCursor()`). `rl_input_release_cursor()` shows and unlocks the cursor (wraps `EnableCursor()`).
+- `rl_mouse_state_t.dx` / `.dy` — per-frame mouse delta in integer pixels (wraps `GetMouseDelta()`). Always 0 when the mouse did not move this frame.
 
 ---
 

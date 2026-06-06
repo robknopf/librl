@@ -30,6 +30,12 @@ static void rl_push_mouse_state(lua_State *L, rl_mouse_state_t state)
     lua_pushinteger(L, state.middle);
     lua_setfield(L, -2, "middle");
 
+    lua_pushinteger(L, state.dx);
+    lua_setfield(L, -2, "dx");
+
+    lua_pushinteger(L, state.dy);
+    lua_setfield(L, -2, "dy");
+
     lua_newtable(L);
     for (i = 0; i < 3; i++) {
         lua_pushinteger(L, state.buttons[i]);

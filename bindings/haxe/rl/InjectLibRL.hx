@@ -14,6 +14,8 @@ package rl;
       <error value="Missing LIBRL_ROOT (-D LIBRL_ROOT=/path/to/librl_root_directory)" unless="LIBRL_ROOT" />
       <echo value="LIBRL_ROOT: ${LIBRL_ROOT}" />
       <compilerflag value="-I${LIBRL_ROOT}/include" />
+      <compilerflag value="-I${WGUTILS_ROOT}/include" if="WGUTILS_ROOT"/>
+	    <compilerflag value="-I${LIBRL_ROOT}/deps/wgutils/include" unless="WGUTILS_ROOT" />
       <compilerflag value="-DPLATFORM_WEB" if="emscripten" />
       <compilerflag value="-Wno-incompatible-function-pointer-types" />
     </files>
@@ -38,6 +40,10 @@ package rl;
       <lib name="-lz" />
       <lib name="-lssl" />
       <lib name="-lcrypto" />
+      <lib name="-lrt" />
+      <lib name="-lGL" />
+      <lib name="-lX11" />
+      <lib name="-lXrandr" />
     </target>
 
     <!-- WASM linking -->

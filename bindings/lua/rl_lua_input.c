@@ -88,6 +88,20 @@ static int rl_input_poll_events_lua(lua_State *L)
     return 0;
 }
 
+static int rl_input_capture_cursor_lua(lua_State *L)
+{
+    (void)L;
+    rl_input_capture_cursor();
+    return 0;
+}
+
+static int rl_input_release_cursor_lua(lua_State *L)
+{
+    (void)L;
+    rl_input_release_cursor();
+    return 0;
+}
+
 static int rl_input_get_mouse_position_lua(lua_State *L)
 {
     vec2_t mouse = rl_input_get_mouse_position();
@@ -138,6 +152,12 @@ void rl_register_input_bindings(lua_State *L)
 
     lua_pushcfunction(L, rl_input_poll_events_lua);
     lua_setfield(L, -2, "input_poll_events");
+
+    lua_pushcfunction(L, rl_input_capture_cursor_lua);
+    lua_setfield(L, -2, "input_capture_cursor");
+
+    lua_pushcfunction(L, rl_input_release_cursor_lua);
+    lua_setfield(L, -2, "input_release_cursor");
 
     lua_pushcfunction(L, rl_input_get_mouse_position_lua);
     lua_setfield(L, -2, "input_get_mouse_position");

@@ -948,6 +948,16 @@ class RLImpl {
 			binding.input.pollEvents();
 	}
 
+	public static function inputCaptureCursor():Void {
+		if (binding != null)
+			binding.input.captureCursor();
+	}
+
+	public static function inputReleaseCursor():Void {
+		if (binding != null)
+			binding.input.releaseCursor();
+	}
+
 	public static function inputGetMousePosition():RLVec2
 		return binding == null ? vec2() : cast binding.input.getMousePosition();
 

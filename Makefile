@@ -103,6 +103,8 @@ LDFLAGS_WASM = \
 	"_rl_window_get_position_to_scratch", \
 	"_rl_input_get_mouse_position_to_scratch", \
 	"_rl_input_poll_events", \
+	"_rl_input_capture_cursor", \
+	"_rl_input_release_cursor", \
 	"_rl_window_get_screen_size_to_scratch", \
 	"_rl_set_target_fps", \
 	"_rl_render_begin", \

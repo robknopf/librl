@@ -229,6 +229,8 @@ export interface RLTexture {
 }
 export interface RLInput {
     pollEvents(): void;
+    captureCursor(): void;
+    releaseCursor(): void;
     getMouseWheel(): number;
     getMouseButton(button: number): number;
     getMouseState(): RLMouseState;

@@ -707,6 +707,12 @@ private extern class RLExterns {
   @:native("rl_input_poll_events")
   static function inputPollEvents(): Void;
 
+  @:native("rl_input_capture_cursor")
+  static function inputCaptureCursor(): Void;
+
+  @:native("rl_input_release_cursor")
+  static function inputReleaseCursor(): Void;
+
   @:native("rl_input_get_mouse_position")
   static function inputGetMousePosition(): RLVec2;
 
@@ -1367,6 +1373,8 @@ abstract RLImpl(RLExterns) {
   public static function textureDrawEx(texture: RLHandle, x: Float, y: Float, scale: Float, rotation: Float, tint: RLHandle): Void { RLExterns.textureDrawEx(texture, x, y, scale, rotation, tint); }
   public static function textureDrawGround(texture: RLHandle, positionX: Float, positionY: Float, positionZ: Float, width: Float, length: Float, tint: RLHandle): Void { RLExterns.textureDrawGround(texture, positionX, positionY, positionZ, width, length, tint); }
   public static function inputPollEvents(): Void { RLExterns.inputPollEvents(); }
+  public static function inputCaptureCursor(): Void { RLExterns.inputCaptureCursor(); }
+  public static function inputReleaseCursor(): Void { RLExterns.inputReleaseCursor(); }
   public static function inputGetMousePosition(): RLVec2 {
     var n: RLVec2Native = cast RLExterns.inputGetMousePosition();
     return {x: n.x, y: n.y};

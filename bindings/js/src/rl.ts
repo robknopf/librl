@@ -1401,6 +1401,12 @@ const input = {
     pollEvents: () => {
         return reqModule().ccall('rl_input_poll_events', null, [], []);
     },
+    captureCursor: () => {
+        return reqModule().ccall('rl_input_capture_cursor', null, [], []);
+    },
+    releaseCursor: () => {
+        return reqModule().ccall('rl_input_release_cursor', null, [], []);
+    },
     getMouseWheel: () => {
         return ccNum('rl_input_get_mouse_wheel', [], []);
     },

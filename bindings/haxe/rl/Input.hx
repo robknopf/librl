@@ -20,6 +20,14 @@ class Input {
 		rl.impl.RLImpl.inputPollEvents();
 	}
 
+	public static function captureCursor():Void {
+		rl.impl.RLImpl.inputCaptureCursor();
+	}
+
+	public static function releaseCursor():Void {
+		rl.impl.RLImpl.inputReleaseCursor();
+	}
+
 	public static function getMousePosition():RLVec2 {
 		return rl.impl.RLImpl.inputGetMousePosition();
 	}

@@ -10,6 +10,16 @@ void rl_input_poll_events(void) {
     PollInputEvents();
 }
 
+RL_KEEP
+void rl_input_capture_cursor(void) {
+    DisableCursor();
+}
+
+RL_KEEP
+void rl_input_release_cursor(void) {
+    EnableCursor();
+}
+
 // RL_KEEP is emscripten export, and we dont export this function for wasm
 vec2_t rl_input_get_mouse_position() {
     const Vector2 pos = GetMousePosition();

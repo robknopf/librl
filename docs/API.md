@@ -227,6 +227,8 @@ Notes:
 
 ```c
 void               rl_input_poll_events(void);
+void               rl_input_capture_cursor(void);
+void               rl_input_release_cursor(void);
 vec2_t             rl_input_get_mouse_position(void);
 int                rl_input_get_mouse_wheel(void);
 int                rl_input_get_mouse_button(int button);   // returns rl_button_state_t
@@ -238,6 +240,7 @@ Notes:
 - `rl_input_get_mouse_state()` and `rl_input_get_keyboard_state()` return snapshot structs — call once per frame and cache the result.
 - Mouse button values: `RL_BUTTON_UP=0`, `RL_BUTTON_PRESSED=1`, `RL_BUTTON_DOWN=2`, `RL_BUTTON_RELEASED=3`.
 - `keyboard.keys[keycode]` holds the held state; `pressed_keys[]` / `pressed_chars[]` drain the per-frame event queues.
+- `rl_input_capture_cursor()` hides the cursor and locks it to the window (wraps `DisableCursor()`). `rl_input_release_cursor()` shows and unlocks the cursor (wraps `EnableCursor()`).
 
 ---
 

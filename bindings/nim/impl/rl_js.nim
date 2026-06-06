@@ -345,6 +345,7 @@ async function __rlEnsureBindings(bindingsPath) {
   proc rl_input_capture_cursor*() {.importjs: "__gRl.input.captureCursor()".}
   proc rl_input_release_cursor*() {.importjs: "__gRl.input.releaseCursor()".}
   proc rl_input_get_mouse_position*(): Vec2 {.importjs: "__gRl.input.getMousePosition()".}
+  proc rl_input_get_mouse_delta*(): Vec2 {.importjs: "__gRl.input.getMouseDelta()".}
   proc rl_input_get_mouse_wheel*(): int {.importjs: "__gRl.input.getMouseWheel()".}
   proc rl_input_get_mouse_button*(button: int): int {.importjs: "__gRl.input.getMouseButton(#)".}
   proc rl_input_get_mouse_state*(): RLMouseState {.importjs: "__gRl.input.getMouseState()".}

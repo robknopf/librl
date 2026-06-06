@@ -961,6 +961,9 @@ class RLImpl {
 	public static function inputGetMousePosition():RLVec2
 		return binding == null ? vec2() : cast binding.input.getMousePosition();
 
+	public static function inputGetMouseDelta():RLVec2
+		return binding == null ? vec2() : cast binding.input.getMouseDelta();
+
 	public static function inputGetMouseWheel():Int
 		return binding == null ? 0 : cast binding.input.getMouseWheel();
 

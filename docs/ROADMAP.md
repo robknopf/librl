@@ -18,7 +18,7 @@ Committed near-term work — pick up when Now is clear.
 
 ### Bindings and docs
 
-- **Binding parity** — 220 public C functions in `docs/API.md`; JS/Haxe/Nim/Lua 220/220. Re-run `python3 tools/audit_binding_parity.py` after C API or binding changes.
+- **Binding parity** — 221 public C functions in `docs/API.md`; JS/Haxe/Nim/Lua 221/221. Re-run `python3 tools/audit_binding_parity.py` after C API or binding changes.
 
 - Binding tooling for agents/maintainers — see `docs/MAINTAINER.md` § Tools (Python-first policy; generators, parity audit, `make binding-types` / `binding-version`).
 - remove scratch/ABI bindings from non-JS bindings — done for `scratch_refresh` / `scratchRefresh` / `rl_scratch_refresh` (commented in sources; see `docs/BINDINGS.md`); audit for any other `*_to_scratch` / `*_from_scratch` if added later

@@ -274,6 +274,7 @@ export interface RLInput {
   getTouchpoints(): RLTouchpoint[];
   getTouchpoint(id: number): RLTouchpoint | null;
   getMousePosition(): RLVector2;
+  getMouseDelta(): RLVector2;
 }
 
 export type RLColorPreset =

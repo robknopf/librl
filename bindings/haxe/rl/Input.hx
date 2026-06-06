@@ -32,6 +32,10 @@ class Input {
 		return rl.impl.RLImpl.inputGetMousePosition();
 	}
 
+	public static function getMouseDelta():RLVec2 {
+		return rl.impl.RLImpl.inputGetMouseDelta();
+	}
+
 	public static function getMouseWheel():Int {
 		return rl.impl.RLImpl.inputGetMouseWheel();
 	}

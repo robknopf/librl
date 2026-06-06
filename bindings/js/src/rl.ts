@@ -1468,8 +1468,18 @@ const input = {
         return mod.getTouchpoint(id | 0) as RLTouchpoint | null;
     },
     getMousePosition: () => {
-        reqModule().ccall('rl_input_get_mouse_position_to_scratch', null, [], []);
-        return reqModule().getVector2();
+        const HEAP32 = reqModule().HEAP32;
+        return {
+            x: HEAP32[scratchAreaPtr + (scratchAreaOffsets.mouse.x >> 2)],
+            y: HEAP32[scratchAreaPtr + (scratchAreaOffsets.mouse.y >> 2)],
+        };
+    },
+    getMouseDelta: () => {
+        const HEAP32 = reqModule().HEAP32;
+        return {
+            x: HEAP32[scratchAreaPtr + (scratchAreaOffsets.mouse.dx >> 2)],
+            y: HEAP32[scratchAreaPtr + (scratchAreaOffsets.mouse.dy >> 2)],
+        };
     }
 } satisfies RLInput;
 

@@ -470,6 +470,7 @@ proc rl_input_poll_events*() {.importc, cdecl, header: "rl.h".}
 proc rl_input_capture_cursor*() {.importc, cdecl, header: "rl.h".}
 proc rl_input_release_cursor*() {.importc, cdecl, header: "rl.h".}
 proc rl_input_get_mouse_position*(): Vec2 {.importc, cdecl, header: "rl.h".}
+proc rl_input_get_mouse_delta*(): Vec2 {.importc, cdecl, header: "rl.h".}
 proc rl_input_get_mouse_wheel*(): cint {.importc, cdecl, header: "rl.h".}
 proc rl_input_get_mouse_button*(button: cint): cint {.importc, cdecl, header: "rl.h".}
 proc rl_input_get_mouse_state*(): RLMouseState {.importc, cdecl, header: "rl.h".}

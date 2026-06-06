@@ -26,6 +26,12 @@ vec2_t rl_input_get_mouse_position() {
     return (vec2_t){pos.x, pos.y};
 }
 
+// RL_KEEP is emscripten export, and we dont export this function for wasm
+vec2_t rl_input_get_mouse_delta() {
+    const Vector2 delta = GetMouseDelta();
+    return (vec2_t){delta.x, delta.y};
+}
+
 RL_KEEP
 void rl_input_get_mouse_position_to_scratch() {
     vec2_t pos = rl_input_get_mouse_position();

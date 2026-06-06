@@ -116,6 +116,14 @@ static int rl_input_get_mouse_position_lua(lua_State *L)
     return 2;
 }
 
+static int rl_input_get_mouse_delta_lua(lua_State *L)
+{
+    vec2_t delta = rl_input_get_mouse_delta();
+    lua_pushnumber(L, delta.x);
+    lua_pushnumber(L, delta.y);
+    return 2;
+}
+
 static int rl_input_get_mouse_wheel_lua(lua_State *L)
 {
     (void)L;
@@ -167,6 +175,9 @@ void rl_register_input_bindings(lua_State *L)
 
     lua_pushcfunction(L, rl_input_get_mouse_position_lua);
     lua_setfield(L, -2, "input_get_mouse_position");
+
+    lua_pushcfunction(L, rl_input_get_mouse_delta_lua);
+    lua_setfield(L, -2, "input_get_mouse_delta");
 
     lua_pushcfunction(L, rl_input_get_mouse_wheel_lua);
     lua_setfield(L, -2, "input_get_mouse_wheel");

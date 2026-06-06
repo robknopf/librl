@@ -101,7 +101,6 @@ LDFLAGS_WASM = \
 	"_rl_window_get_monitor_height", \
 	"_rl_window_set_position", \
 	"_rl_window_get_position_to_scratch", \
-	"_rl_input_get_mouse_position_to_scratch", \
 	"_rl_input_poll_events", \
 	"_rl_input_capture_cursor", \
 	"_rl_input_release_cursor", \

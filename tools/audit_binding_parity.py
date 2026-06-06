@@ -16,7 +16,6 @@ JS_SCRATCH_BRIDGE_TO_C = {
     "rl_window_get_screen_size_to_scratch": "rl_window_get_screen_size",
     "rl_window_get_position_to_scratch": "rl_window_get_position",
     "rl_window_get_monitor_position_to_scratch": "rl_window_get_monitor_position",
-    "rl_input_get_mouse_position_to_scratch": "rl_input_get_mouse_position",
     "rl_text_measure_ex_to_scratch": "rl_text_measure_ex",
     "rl_pick_model_to_scratch": "rl_pick_model",
     "rl_pick_sprite3d_to_scratch": "rl_pick_sprite3d",
@@ -127,11 +126,15 @@ def parse_js_bindings() -> set[str]:
     if "rl_init_values_async" in text:
         covered.add("rl_init_values_async")
 
-    # Scratch-backed input snapshots (documented in BINDINGS.md).
+    # Scratch-backed input reads — JS reads directly from scratch area (documented in BINDINGS.md).
     if re.search(r"\bgetMouseState\s*:", text):
         covered.add("rl_input_get_mouse_state")
     if re.search(r"\bgetKeyboardState\s*:", text):
         covered.add("rl_input_get_keyboard_state")
+    if re.search(r"\bgetMousePosition\s*:", text):
+        covered.add("rl_input_get_mouse_position")
+    if re.search(r"\bgetMouseDelta\s*:", text):
+        covered.add("rl_input_get_mouse_delta")
 
     return covered
 

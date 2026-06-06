@@ -716,6 +716,9 @@ private extern class RLExterns {
   @:native("rl_input_get_mouse_position")
   static function inputGetMousePosition(): RLVec2;
 
+  @:native("rl_input_get_mouse_delta")
+  static function inputGetMouseDelta(): RLVec2;
+
   @:native("rl_input_get_mouse_wheel")
   static function inputGetMouseWheel(): Int;
 
@@ -1379,6 +1382,10 @@ abstract RLImpl(RLExterns) {
   public static function inputReleaseCursor(): Void { RLExterns.inputReleaseCursor(); }
   public static function inputGetMousePosition(): RLVec2 {
     var n: RLVec2Native = cast RLExterns.inputGetMousePosition();
+    return {x: n.x, y: n.y};
+  }
+  public static function inputGetMouseDelta(): RLVec2 {
+    var n: RLVec2Native = cast RLExterns.inputGetMouseDelta();
     return {x: n.x, y: n.y};
   }
   public static function inputGetMouseWheel(): Int { return RLExterns.inputGetMouseWheel(); }

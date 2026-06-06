@@ -6,6 +6,7 @@
 package rl.impl;
 
 #if cpp
+import cpp.Pointer;
 import haxe.ds.StringMap;
 import rl.InjectLibRL;
 import rl.Types.RLHandle;
@@ -551,7 +552,7 @@ private extern class RLExterns {
   ): Void;
 
   @:native("rl_shape_draw_line_strip_3d")
-  static function shapeDrawLineStrip3d(points: Array<Float>, pointCount: Int, color: RLHandle): Void;
+  static function shapeDrawLineStrip3d(points: cpp.Star<Float>, pointCount: Int, color: RLHandle): Void;
 
   @:native("rl_debug_enable_fps")
   static function debugEnableFps(x: Int, y: Int, fontSize: Int, font: RLHandle): Void;
@@ -1273,7 +1274,15 @@ abstract RLImpl(RLExterns) {
   public static function shapeDrawCube(positionX: Float, positionY: Float, positionZ: Float, width: Float, height: Float, length: Float, color: RLHandle): Void { RLExterns.shapeDrawCube(positionX, positionY, positionZ, width, height, length, color); }
   public static function shapeDrawCircle3d(centerX: Float, centerY: Float, centerZ: Float, radius: Float, rotationAxisX: Float, rotationAxisY: Float, rotationAxisZ: Float, rotationAngle: Float, color: RLHandle): Void { RLExterns.shapeDrawCircle3d(centerX, centerY, centerZ, radius, rotationAxisX, rotationAxisY, rotationAxisZ, rotationAngle, color); }
   public static function shapeDrawLine3d(startX: Float, startY: Float, startZ: Float, endX: Float, endY: Float, endZ: Float, color: RLHandle): Void { RLExterns.shapeDrawLine3d(startX, startY, startZ, endX, endY, endZ, color); }
-  public static function shapeDrawLineStrip3d(points: Array<Float>, color: RLHandle): Void { RLExterns.shapeDrawLineStrip3d(points, points.length, color); }
+  @:functionCode('
+    if (points == null() || points->length == 0) return;
+    int n = points->length;
+    int pointCount = n / 3;
+    float* buf = (float*)alloca(n * sizeof(float));
+    for (int i = 0; i < n; i++) buf[i] = (float)points->__get(i);
+    rl_shape_draw_line_strip_3d(buf, pointCount, color);
+  ')
+  public static function shapeDrawLineStrip3d(points: Array<Float>, color: RLHandle): Void {}
   public static function debugEnableFps(x: Int, y: Int, fontSize: Int, font: RLHandle): Void { RLExterns.debugEnableFps(x, y, fontSize, font); }
   public static function debugDisableFps(): Void { RLExterns.debugDisableFps(); }
   public static function eventOn(eventName: String, callback: Dynamic->Void): Int {

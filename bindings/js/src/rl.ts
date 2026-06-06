@@ -1412,10 +1412,10 @@ const input = {
         return reqModule().ccall('rl_input_release_cursor', null, [], []);
     },
     getMouseWheel: () => {
-        return ccNum('rl_input_get_mouse_wheel', [], []);
+        return reqModule().HEAP32[scratchAreaPtr + (scratchAreaOffsets.mouse.wheel >> 2)];
     },
-    getMouseButton: (button) => {
-        return ccNum('rl_input_get_mouse_button', ['number'], [button]);
+    getMouseButton: (button: number) => {
+        return reqModule().HEAP32[scratchAreaPtr + (scratchAreaOffsets.mouse.buttons >> 2) + button];
     },
 
     // Begin Scratch-backed wrappers

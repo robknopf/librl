@@ -135,6 +135,10 @@ def parse_js_bindings() -> set[str]:
         covered.add("rl_input_get_mouse_position")
     if re.search(r"\bgetMouseDelta\s*:", text):
         covered.add("rl_input_get_mouse_delta")
+    if re.search(r"\bgetMouseWheel\s*:", text):
+        covered.add("rl_input_get_mouse_wheel")
+    if re.search(r"\bgetMouseButton\s*:", text):
+        covered.add("rl_input_get_mouse_button")
 
     return covered
 

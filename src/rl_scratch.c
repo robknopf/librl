@@ -1,8 +1,6 @@
 #include <string.h>
 #include "raylib.h"
 #include "internal/exports.h"
-//#include <stdlib.h>
-#include <stdio.h>
 #include "rl_scratch.h"
 #include <stddef.h>
 #include "logger/logger.h"

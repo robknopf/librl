@@ -553,6 +553,10 @@ typedef enum rl_shape_kind_t {
     RL_SHAPE_KIND_NONE = 0,
     RL_SHAPE_KIND_LINE_3D = 1,
     RL_SHAPE_KIND_LINE_STRIP_3D = 2,
+    RL_SHAPE_KIND_RECTANGLE_3D = 3,
+    RL_SHAPE_KIND_CUBE = 4,
+    RL_SHAPE_KIND_CIRCLE_3D = 5,
+    RL_SHAPE_KIND_SPHERE = 6,
 } rl_shape_kind_t;
 
 rl_handle_t rl_shape_create(void);
@@ -566,11 +570,34 @@ bool rl_shape_set_line_3d(rl_handle_t shape,
 bool rl_shape_set_line_strip_3d(rl_handle_t shape,
                                 const float* points,
                                 int point_count);
+bool rl_shape_set_rectangle_3d(rl_handle_t shape,
+                               float center_x, float center_y, float center_z,
+                               float width, float height,
+                               float rotation_axis_x, float rotation_axis_y, float rotation_axis_z,
+                               float rotation_angle);
+bool rl_shape_set_cube(rl_handle_t shape,
+                       float position_x, float position_y, float position_z,
+                       float width, float height, float length);
+bool rl_shape_set_circle_3d(rl_handle_t shape,
+                             float center_x, float center_y, float center_z,
+                             float radius,
+                             float rotation_axis_x, float rotation_axis_y, float rotation_axis_z,
+                             float rotation_angle);
+bool rl_shape_set_sphere(rl_handle_t shape,
+                         float center_x, float center_y, float center_z,
+                         float radius);
 void rl_shape_draw(rl_handle_t shape);
 
 void rl_shape_draw_rectangle(int x, int y, int width, int height, rl_handle_t color);
+void rl_shape_draw_rectangle_3d(float center_x, float center_y, float center_z,
+                                float width, float height,
+                                float rotation_axis_x, float rotation_axis_y, float rotation_axis_z,
+                                float rotation_angle,
+                                rl_handle_t color);
 void rl_shape_draw_cube(float position_x, float position_y, float position_z,
                         float width, float height, float length, rl_handle_t color);
+void rl_shape_draw_sphere(float center_x, float center_y, float center_z,
+                          float radius, rl_handle_t color);
 void rl_shape_draw_circle_3d(float center_x, float center_y, float center_z,
                               float radius,
                               float rotation_axis_x, float rotation_axis_y, float rotation_axis_z,
@@ -583,11 +610,23 @@ void rl_shape_draw_line_strip_3d(const float* points, int point_count,
                                  rl_handle_t color);
 ```
 
-`rl_shape_create()` returns a retained drawable handle (`RL_HANDLE_KIND_SHAPE`) that can be added to a scene. The first retained slice supports `RL_SHAPE_KIND_LINE_3D` and `RL_SHAPE_KIND_LINE_STRIP_3D`.
+`rl_shape_create()` returns a retained drawable handle (`RL_HANDLE_KIND_SHAPE`) that can be added to a scene. Retained kinds: `RL_SHAPE_KIND_LINE_3D`, `RL_SHAPE_KIND_LINE_STRIP_3D`, `RL_SHAPE_KIND_RECTANGLE_3D`, `RL_SHAPE_KIND_CUBE`, `RL_SHAPE_KIND_CIRCLE_3D`, `RL_SHAPE_KIND_SPHERE`.
 
 `rl_shape_set_stroke_color()` sets the current line color. `0` uses the same fallback as other color-taking APIs (`WHITE`).
 
 `rl_shape_set_line_strip_3d()` copies `point_count` vertices from a flat `[x1,y1,z1, x2,y2,z2, ...]` array, so callers may free or reuse their source array immediately after the call.
+
+`rl_shape_set_rectangle_3d()` stores a 3D rectangle outline (4 lines) centered at the given position. `rotation_axis` and `rotation_angle` (degrees) orient the plane, matching the `circle_3d` convention. To draw flat on the XZ ground plane, use axis `(1, 0, 0)` with `rotation_angle = 90`.
+
+`rl_shape_set_cube()` stores a 3D axis-aligned cube centered at `(position_x, position_y, position_z)` with the given dimensions.
+
+`rl_shape_set_circle_3d()` stores a 3D circle. `rotation_axis` and `rotation_angle` orient the circle plane. To draw flat on the XZ ground plane, use axis `(1, 0, 0)` with `rotation_angle = 90`.
+
+`rl_shape_set_sphere()` stores a sphere centered at `(center_x, center_y, center_z)` with the given radius.
+
+`rl_shape_draw_rectangle_3d()` immediate-mode 3D rectangle outline — same parameters and orientation convention as `rl_shape_set_rectangle_3d`.
+
+`rl_shape_draw_sphere()` immediate-mode sphere draw wrapping raylib's `DrawSphere`.
 
 `rl_shape_draw_circle_3d` wraps raylib's `DrawCircle3D`. To draw a ring flat on the ground (XZ plane), use rotation axis `(1, 0, 0)` with `rotation_angle = 90`.
 

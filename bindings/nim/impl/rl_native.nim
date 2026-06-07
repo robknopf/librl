@@ -553,6 +553,42 @@ proc rl_shape_set_line_3d_c*(
 proc rl_shape_set_line_strip_3d_c*(
   shape: RLHandle, points: pointer, pointCount: cint
 ): bool {.importc: "rl_shape_set_line_strip_3d", cdecl, header: "rl_shape.h".}
+proc rl_shape_set_rectangle_3d_c*(
+  shape: RLHandle,
+  centerX: cfloat, centerY: cfloat, centerZ: cfloat,
+  width: cfloat, height: cfloat,
+  rotationAxisX: cfloat, rotationAxisY: cfloat, rotationAxisZ: cfloat,
+  rotationAngle: cfloat
+): bool {.importc: "rl_shape_set_rectangle_3d", cdecl, header: "rl_shape.h".}
+proc rl_shape_draw_rectangle_3d_c*(
+  centerX: cfloat, centerY: cfloat, centerZ: cfloat,
+  width: cfloat, height: cfloat,
+  rotationAxisX: cfloat, rotationAxisY: cfloat, rotationAxisZ: cfloat,
+  rotationAngle: cfloat,
+  color: RLHandle
+) {.importc: "rl_shape_draw_rectangle_3d", cdecl, header: "rl_shape.h".}
+proc rl_shape_set_cube_c*(
+  shape: RLHandle,
+  positionX: cfloat, positionY: cfloat, positionZ: cfloat,
+  width: cfloat, height: cfloat, length: cfloat
+): bool {.importc: "rl_shape_set_cube", cdecl, header: "rl_shape.h".}
+proc rl_shape_set_circle_3d_c*(
+  shape: RLHandle,
+  centerX: cfloat, centerY: cfloat, centerZ: cfloat,
+  radius: cfloat,
+  rotationAxisX: cfloat, rotationAxisY: cfloat, rotationAxisZ: cfloat,
+  rotationAngle: cfloat
+): bool {.importc: "rl_shape_set_circle_3d", cdecl, header: "rl_shape.h".}
+proc rl_shape_set_sphere_c*(
+  shape: RLHandle,
+  centerX: cfloat, centerY: cfloat, centerZ: cfloat,
+  radius: cfloat
+): bool {.importc: "rl_shape_set_sphere", cdecl, header: "rl_shape.h".}
+proc rl_shape_draw_sphere_c*(
+  centerX: cfloat, centerY: cfloat, centerZ: cfloat,
+  radius: cfloat,
+  color: RLHandle
+) {.importc: "rl_shape_draw_sphere", cdecl, header: "rl_shape.h".}
 proc rl_shape_draw*(shape: RLHandle) {.importc, cdecl, header: "rl_shape.h".}
 proc rl_shape_draw_circle_3d*(
   centerX: cfloat, centerY: cfloat, centerZ: cfloat,
@@ -868,6 +904,84 @@ proc rl_shape_draw_line_strip_3d*(points: openArray[float], color: RLHandle) {.i
     rl_shape_draw_line_strip_3d_c(
       points[0].unsafeAddr, (points.len div 3).cint, color
     )
+
+proc rl_shape_set_rectangle_3d*(
+  shape: RLHandle,
+  centerX, centerY, centerZ,
+  width, height,
+  rotationAxisX, rotationAxisY, rotationAxisZ,
+  rotationAngle: float
+): bool {.inline.} =
+  rl_shape_set_rectangle_3d_c(
+    shape,
+    centerX.cfloat, centerY.cfloat, centerZ.cfloat,
+    width.cfloat, height.cfloat,
+    rotationAxisX.cfloat, rotationAxisY.cfloat, rotationAxisZ.cfloat,
+    rotationAngle.cfloat
+  )
+
+proc rl_shape_draw_rectangle_3d*(
+  centerX, centerY, centerZ,
+  width, height,
+  rotationAxisX, rotationAxisY, rotationAxisZ,
+  rotationAngle: float,
+  color: RLHandle
+) {.inline.} =
+  rl_shape_draw_rectangle_3d_c(
+    centerX.cfloat, centerY.cfloat, centerZ.cfloat,
+    width.cfloat, height.cfloat,
+    rotationAxisX.cfloat, rotationAxisY.cfloat, rotationAxisZ.cfloat,
+    rotationAngle.cfloat,
+    color
+  )
+
+proc rl_shape_set_cube*(
+  shape: RLHandle,
+  positionX, positionY, positionZ,
+  width, height, length: float
+): bool {.inline.} =
+  rl_shape_set_cube_c(
+    shape,
+    positionX.cfloat, positionY.cfloat, positionZ.cfloat,
+    width.cfloat, height.cfloat, length.cfloat
+  )
+
+proc rl_shape_set_circle_3d*(
+  shape: RLHandle,
+  centerX, centerY, centerZ,
+  radius,
+  rotationAxisX, rotationAxisY, rotationAxisZ,
+  rotationAngle: float
+): bool {.inline.} =
+  rl_shape_set_circle_3d_c(
+    shape,
+    centerX.cfloat, centerY.cfloat, centerZ.cfloat,
+    radius.cfloat,
+    rotationAxisX.cfloat, rotationAxisY.cfloat, rotationAxisZ.cfloat,
+    rotationAngle.cfloat
+  )
+
+proc rl_shape_set_sphere*(
+  shape: RLHandle,
+  centerX, centerY, centerZ,
+  radius: float
+): bool {.inline.} =
+  rl_shape_set_sphere_c(
+    shape,
+    centerX.cfloat, centerY.cfloat, centerZ.cfloat,
+    radius.cfloat
+  )
+
+proc rl_shape_draw_sphere*(
+  centerX, centerY, centerZ,
+  radius: float,
+  color: RLHandle
+) {.inline.} =
+  rl_shape_draw_sphere_c(
+    centerX.cfloat, centerY.cfloat, centerZ.cfloat,
+    radius.cfloat,
+    color
+  )
 
 proc rl_set_target_fps*(fps: int) {.inline.} =
   rl_set_target_fps(fps.cint)

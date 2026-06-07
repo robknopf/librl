@@ -89,6 +89,97 @@ static int rl_shape_set_line_strip_3d_lua(lua_State *L)
     return 1;
 }
 
+static int rl_shape_set_rectangle_3d_lua(lua_State *L)
+{
+    rl_handle_t shape = (rl_handle_t)luaL_checkinteger(L, 1);
+    float center_x = (float)luaL_checknumber(L, 2);
+    float center_y = (float)luaL_checknumber(L, 3);
+    float center_z = (float)luaL_checknumber(L, 4);
+    float width = (float)luaL_checknumber(L, 5);
+    float height = (float)luaL_checknumber(L, 6);
+    float rot_axis_x = (float)luaL_checknumber(L, 7);
+    float rot_axis_y = (float)luaL_checknumber(L, 8);
+    float rot_axis_z = (float)luaL_checknumber(L, 9);
+    float rot_angle = (float)luaL_checknumber(L, 10);
+    lua_pushboolean(L, rl_shape_set_rectangle_3d(shape, center_x, center_y, center_z,
+                                                  width, height,
+                                                  rot_axis_x, rot_axis_y, rot_axis_z,
+                                                  rot_angle));
+    return 1;
+}
+
+static int rl_shape_draw_rectangle_3d_lua(lua_State *L)
+{
+    float center_x = (float)luaL_checknumber(L, 1);
+    float center_y = (float)luaL_checknumber(L, 2);
+    float center_z = (float)luaL_checknumber(L, 3);
+    float width = (float)luaL_checknumber(L, 4);
+    float height = (float)luaL_checknumber(L, 5);
+    float rot_axis_x = (float)luaL_checknumber(L, 6);
+    float rot_axis_y = (float)luaL_checknumber(L, 7);
+    float rot_axis_z = (float)luaL_checknumber(L, 8);
+    float rot_angle = (float)luaL_checknumber(L, 9);
+    rl_handle_t color = (rl_handle_t)luaL_checkinteger(L, 10);
+    rl_shape_draw_rectangle_3d(center_x, center_y, center_z, width, height,
+                               rot_axis_x, rot_axis_y, rot_axis_z, rot_angle,
+                               color);
+    return 0;
+}
+
+static int rl_shape_set_cube_lua(lua_State *L)
+{
+    rl_handle_t shape = (rl_handle_t)luaL_checkinteger(L, 1);
+    float position_x = (float)luaL_checknumber(L, 2);
+    float position_y = (float)luaL_checknumber(L, 3);
+    float position_z = (float)luaL_checknumber(L, 4);
+    float width = (float)luaL_checknumber(L, 5);
+    float height = (float)luaL_checknumber(L, 6);
+    float length = (float)luaL_checknumber(L, 7);
+    lua_pushboolean(L, rl_shape_set_cube(shape, position_x, position_y, position_z,
+                                         width, height, length));
+    return 1;
+}
+
+static int rl_shape_set_circle_3d_lua(lua_State *L)
+{
+    rl_handle_t shape = (rl_handle_t)luaL_checkinteger(L, 1);
+    float center_x = (float)luaL_checknumber(L, 2);
+    float center_y = (float)luaL_checknumber(L, 3);
+    float center_z = (float)luaL_checknumber(L, 4);
+    float radius = (float)luaL_checknumber(L, 5);
+    float rot_axis_x = (float)luaL_checknumber(L, 6);
+    float rot_axis_y = (float)luaL_checknumber(L, 7);
+    float rot_axis_z = (float)luaL_checknumber(L, 8);
+    float rot_angle = (float)luaL_checknumber(L, 9);
+    lua_pushboolean(L, rl_shape_set_circle_3d(shape, center_x, center_y, center_z,
+                                               radius,
+                                               rot_axis_x, rot_axis_y, rot_axis_z,
+                                               rot_angle));
+    return 1;
+}
+
+static int rl_shape_set_sphere_lua(lua_State *L)
+{
+    rl_handle_t shape = (rl_handle_t)luaL_checkinteger(L, 1);
+    float center_x = (float)luaL_checknumber(L, 2);
+    float center_y = (float)luaL_checknumber(L, 3);
+    float center_z = (float)luaL_checknumber(L, 4);
+    float radius = (float)luaL_checknumber(L, 5);
+    lua_pushboolean(L, rl_shape_set_sphere(shape, center_x, center_y, center_z, radius));
+    return 1;
+}
+
+static int rl_shape_draw_sphere_lua(lua_State *L)
+{
+    float center_x = (float)luaL_checknumber(L, 1);
+    float center_y = (float)luaL_checknumber(L, 2);
+    float center_z = (float)luaL_checknumber(L, 3);
+    float radius = (float)luaL_checknumber(L, 4);
+    rl_handle_t color = (rl_handle_t)luaL_checkinteger(L, 5);
+    rl_shape_draw_sphere(center_x, center_y, center_z, radius, color);
+    return 0;
+}
+
 static int rl_shape_draw_lua(lua_State *L)
 {
     rl_handle_t shape = (rl_handle_t)luaL_checkinteger(L, 1);
@@ -202,6 +293,21 @@ void rl_register_shape_bindings(lua_State *L)
     lua_pushcfunction(L, rl_shape_set_line_strip_3d_lua);
     lua_setfield(L, -2, "shape_set_line_strip_3d");
 
+    lua_pushcfunction(L, rl_shape_set_rectangle_3d_lua);
+    lua_setfield(L, -2, "shape_set_rectangle_3d");
+
+    lua_pushcfunction(L, rl_shape_draw_rectangle_3d_lua);
+    lua_setfield(L, -2, "shape_draw_rectangle_3d");
+
+    lua_pushcfunction(L, rl_shape_set_cube_lua);
+    lua_setfield(L, -2, "shape_set_cube");
+
+    lua_pushcfunction(L, rl_shape_set_circle_3d_lua);
+    lua_setfield(L, -2, "shape_set_circle_3d");
+
+    lua_pushcfunction(L, rl_shape_set_sphere_lua);
+    lua_setfield(L, -2, "shape_set_sphere");
+
     lua_pushcfunction(L, rl_shape_draw_lua);
     lua_setfield(L, -2, "shape_draw");
 
@@ -210,6 +316,9 @@ void rl_register_shape_bindings(lua_State *L)
 
     lua_pushcfunction(L, rl_shape_draw_cube_lua);
     lua_setfield(L, -2, "shape_draw_cube");
+
+    lua_pushcfunction(L, rl_shape_draw_sphere_lua);
+    lua_setfield(L, -2, "shape_draw_sphere");
 
     lua_pushcfunction(L, rl_shape_draw_circle_3d_lua);
     lua_setfield(L, -2, "shape_draw_circle_3d");

@@ -738,6 +738,28 @@ class RLImpl {
 	public static function shapeSetLineStrip3d(shape:RLHandle, points:Array<Float>):Bool
 		return binding != null && cast binding.shape.setLineStrip3d(shape, points);
 
+	public static function shapeSetRectangle3d(shape:RLHandle, centerX:Float, centerY:Float, centerZ:Float, width:Float, height:Float, rotationAxisX:Float, rotationAxisY:Float, rotationAxisZ:Float, rotationAngle:Float):Bool
+		return binding != null && cast binding.shape.setRectangle3d(shape, centerX, centerY, centerZ, width, height, rotationAxisX, rotationAxisY, rotationAxisZ, rotationAngle);
+
+	public static function shapeDrawRectangle3d(centerX:Float, centerY:Float, centerZ:Float, width:Float, height:Float, rotationAxisX:Float, rotationAxisY:Float, rotationAxisZ:Float, rotationAngle:Float, color:RLHandle):Void {
+		if (binding != null)
+			binding.shape.drawRectangle3d(centerX, centerY, centerZ, width, height, rotationAxisX, rotationAxisY, rotationAxisZ, rotationAngle, color);
+	}
+
+	public static function shapeSetCube(shape:RLHandle, positionX:Float, positionY:Float, positionZ:Float, width:Float, height:Float, length:Float):Bool
+		return binding != null && cast binding.shape.setCube(shape, positionX, positionY, positionZ, width, height, length);
+
+	public static function shapeSetCircle3d(shape:RLHandle, centerX:Float, centerY:Float, centerZ:Float, radius:Float, rotationAxisX:Float, rotationAxisY:Float, rotationAxisZ:Float, rotationAngle:Float):Bool
+		return binding != null && cast binding.shape.setCircle3d(shape, centerX, centerY, centerZ, radius, rotationAxisX, rotationAxisY, rotationAxisZ, rotationAngle);
+
+	public static function shapeSetSphere(shape:RLHandle, centerX:Float, centerY:Float, centerZ:Float, radius:Float):Bool
+		return binding != null && cast binding.shape.setSphere(shape, centerX, centerY, centerZ, radius);
+
+	public static function shapeDrawSphere(centerX:Float, centerY:Float, centerZ:Float, radius:Float, color:RLHandle):Void {
+		if (binding != null)
+			binding.shape.drawSphere(centerX, centerY, centerZ, radius, color);
+	}
+
 	public static function shapeDraw(shape:RLHandle):Void {
 		if (binding != null)
 			binding.shape.draw(shape);

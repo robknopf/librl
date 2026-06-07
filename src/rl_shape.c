@@ -10,6 +10,7 @@
 #include "internal/rl_scene.h"
 #include "internal/rl_shape.h"
 #include "raylib.h"
+#include "raymath.h"
 
 #define MAX_SHAPES 256
 
@@ -29,10 +30,57 @@ typedef struct
     int point_count;
 } rl_shape_line_strip_3d_t;
 
+typedef struct
+{
+    float center_x;
+    float center_y;
+    float center_z;
+    float width;
+    float height;
+    float rotation_axis_x;
+    float rotation_axis_y;
+    float rotation_axis_z;
+    float rotation_angle;
+} rl_shape_rectangle_3d_t;
+
+typedef struct
+{
+    float position_x;
+    float position_y;
+    float position_z;
+    float width;
+    float height;
+    float length;
+} rl_shape_cube_t;
+
+typedef struct
+{
+    float center_x;
+    float center_y;
+    float center_z;
+    float radius;
+    float rotation_axis_x;
+    float rotation_axis_y;
+    float rotation_axis_z;
+    float rotation_angle;
+} rl_shape_circle_3d_t;
+
+typedef struct
+{
+    float center_x;
+    float center_y;
+    float center_z;
+    float radius;
+} rl_shape_sphere_t;
+
 typedef union
 {
     rl_shape_line_3d_t line_3d;
     rl_shape_line_strip_3d_t line_strip_3d;
+    rl_shape_rectangle_3d_t rectangle_3d;
+    rl_shape_cube_t cube;
+    rl_shape_circle_3d_t circle_3d;
+    rl_shape_sphere_t sphere;
 } rl_shape_geometry_t;
 
 typedef struct
@@ -99,6 +147,36 @@ static void draw_line_strip_3d_points(const float *points, int point_count, Colo
     }
 }
 
+static void draw_rectangle_3d(float cx, float cy, float cz,
+                               float width, float height,
+                               float ax, float ay, float az,
+                               float angle, Color color)
+{
+    Vector3 center = {cx, cy, cz};
+    Vector3 axis = {ax, ay, az};
+    float hw = width * 0.5f;
+    float hh = height * 0.5f;
+    Vector3 corners[4] = {
+        {-hw, -hh, 0.0f},
+        { hw, -hh, 0.0f},
+        { hw,  hh, 0.0f},
+        {-hw,  hh, 0.0f}
+    };
+    int i = 0;
+
+    for (i = 0; i < 4; i++) {
+        corners[i] = Vector3Add(
+            Vector3RotateByAxisAngle(corners[i], axis, angle * DEG2RAD),
+            center
+        );
+    }
+
+    DrawLine3D(corners[0], corners[1], color);
+    DrawLine3D(corners[1], corners[2], color);
+    DrawLine3D(corners[2], corners[3], color);
+    DrawLine3D(corners[3], corners[0], color);
+}
+
 static void draw_shape_instance(const rl_shape_instance_t *instance)
 {
     Color color = {0};
@@ -129,6 +207,61 @@ static void draw_shape_instance(const rl_shape_instance_t *instance)
         draw_line_strip_3d_points(
             instance->geometry.line_strip_3d.points,
             instance->geometry.line_strip_3d.point_count,
+            color
+        );
+        break;
+    case RL_SHAPE_KIND_RECTANGLE_3D:
+        draw_rectangle_3d(
+            instance->geometry.rectangle_3d.center_x,
+            instance->geometry.rectangle_3d.center_y,
+            instance->geometry.rectangle_3d.center_z,
+            instance->geometry.rectangle_3d.width,
+            instance->geometry.rectangle_3d.height,
+            instance->geometry.rectangle_3d.rotation_axis_x,
+            instance->geometry.rectangle_3d.rotation_axis_y,
+            instance->geometry.rectangle_3d.rotation_axis_z,
+            instance->geometry.rectangle_3d.rotation_angle,
+            color
+        );
+        break;
+    case RL_SHAPE_KIND_CUBE:
+        DrawCube(
+            (Vector3){
+                instance->geometry.cube.position_x,
+                instance->geometry.cube.position_y,
+                instance->geometry.cube.position_z
+            },
+            instance->geometry.cube.width,
+            instance->geometry.cube.height,
+            instance->geometry.cube.length,
+            color
+        );
+        break;
+    case RL_SHAPE_KIND_CIRCLE_3D:
+        DrawCircle3D(
+            (Vector3){
+                instance->geometry.circle_3d.center_x,
+                instance->geometry.circle_3d.center_y,
+                instance->geometry.circle_3d.center_z
+            },
+            instance->geometry.circle_3d.radius,
+            (Vector3){
+                instance->geometry.circle_3d.rotation_axis_x,
+                instance->geometry.circle_3d.rotation_axis_y,
+                instance->geometry.circle_3d.rotation_axis_z
+            },
+            instance->geometry.circle_3d.rotation_angle,
+            color
+        );
+        break;
+    case RL_SHAPE_KIND_SPHERE:
+        DrawSphere(
+            (Vector3){
+                instance->geometry.sphere.center_x,
+                instance->geometry.sphere.center_y,
+                instance->geometry.sphere.center_z
+            },
+            instance->geometry.sphere.radius,
             color
         );
         break;
@@ -319,6 +452,101 @@ bool rl_shape_set_line_strip_3d(rl_handle_t shape,
 }
 
 RL_KEEP
+bool rl_shape_set_rectangle_3d(rl_handle_t shape,
+                               float center_x, float center_y, float center_z,
+                               float width, float height,
+                               float rotation_axis_x, float rotation_axis_y, float rotation_axis_z,
+                               float rotation_angle)
+{
+    rl_shape_instance_t *instance = resolve_shape_instance(shape);
+
+    if (instance == NULL) {
+        return false;
+    }
+
+    release_shape_geometry(instance);
+    instance->kind = RL_SHAPE_KIND_RECTANGLE_3D;
+    instance->geometry.rectangle_3d.center_x = center_x;
+    instance->geometry.rectangle_3d.center_y = center_y;
+    instance->geometry.rectangle_3d.center_z = center_z;
+    instance->geometry.rectangle_3d.width = width;
+    instance->geometry.rectangle_3d.height = height;
+    instance->geometry.rectangle_3d.rotation_axis_x = rotation_axis_x;
+    instance->geometry.rectangle_3d.rotation_axis_y = rotation_axis_y;
+    instance->geometry.rectangle_3d.rotation_axis_z = rotation_axis_z;
+    instance->geometry.rectangle_3d.rotation_angle = rotation_angle;
+    return true;
+}
+
+RL_KEEP
+bool rl_shape_set_cube(rl_handle_t shape,
+                       float position_x, float position_y, float position_z,
+                       float width, float height, float length)
+{
+    rl_shape_instance_t *instance = resolve_shape_instance(shape);
+
+    if (instance == NULL) {
+        return false;
+    }
+
+    release_shape_geometry(instance);
+    instance->kind = RL_SHAPE_KIND_CUBE;
+    instance->geometry.cube.position_x = position_x;
+    instance->geometry.cube.position_y = position_y;
+    instance->geometry.cube.position_z = position_z;
+    instance->geometry.cube.width = width;
+    instance->geometry.cube.height = height;
+    instance->geometry.cube.length = length;
+    return true;
+}
+
+RL_KEEP
+bool rl_shape_set_circle_3d(rl_handle_t shape,
+                             float center_x, float center_y, float center_z,
+                             float radius,
+                             float rotation_axis_x, float rotation_axis_y, float rotation_axis_z,
+                             float rotation_angle)
+{
+    rl_shape_instance_t *instance = resolve_shape_instance(shape);
+
+    if (instance == NULL) {
+        return false;
+    }
+
+    release_shape_geometry(instance);
+    instance->kind = RL_SHAPE_KIND_CIRCLE_3D;
+    instance->geometry.circle_3d.center_x = center_x;
+    instance->geometry.circle_3d.center_y = center_y;
+    instance->geometry.circle_3d.center_z = center_z;
+    instance->geometry.circle_3d.radius = radius;
+    instance->geometry.circle_3d.rotation_axis_x = rotation_axis_x;
+    instance->geometry.circle_3d.rotation_axis_y = rotation_axis_y;
+    instance->geometry.circle_3d.rotation_axis_z = rotation_axis_z;
+    instance->geometry.circle_3d.rotation_angle = rotation_angle;
+    return true;
+}
+
+RL_KEEP
+bool rl_shape_set_sphere(rl_handle_t shape,
+                         float center_x, float center_y, float center_z,
+                         float radius)
+{
+    rl_shape_instance_t *instance = resolve_shape_instance(shape);
+
+    if (instance == NULL) {
+        return false;
+    }
+
+    release_shape_geometry(instance);
+    instance->kind = RL_SHAPE_KIND_SPHERE;
+    instance->geometry.sphere.center_x = center_x;
+    instance->geometry.sphere.center_y = center_y;
+    instance->geometry.sphere.center_z = center_z;
+    instance->geometry.sphere.radius = radius;
+    return true;
+}
+
+RL_KEEP
 void rl_shape_draw(rl_handle_t shape)
 {
     draw_shape_instance(resolve_shape_instance(shape));
@@ -330,6 +558,18 @@ void rl_shape_draw_rectangle(int x, int y, int width, int height,
 {
     Color c = rl_color_get(color);
     DrawRectangle(x, y, width, height, c);
+}
+
+RL_KEEP
+void rl_shape_draw_rectangle_3d(float center_x, float center_y, float center_z,
+                                float width, float height,
+                                float rotation_axis_x, float rotation_axis_y, float rotation_axis_z,
+                                float rotation_angle,
+                                rl_handle_t color)
+{
+    draw_rectangle_3d(center_x, center_y, center_z, width, height,
+                      rotation_axis_x, rotation_axis_y, rotation_axis_z,
+                      rotation_angle, rl_color_get(color));
 }
 
 RL_KEEP
@@ -356,6 +596,15 @@ void rl_shape_draw_circle_3d(float center_x, float center_y, float center_z,
         rotation_angle,
         c
     );
+}
+
+RL_KEEP
+void rl_shape_draw_sphere(float center_x, float center_y, float center_z,
+                          float radius,
+                          rl_handle_t color)
+{
+    Color c = rl_color_get(color);
+    DrawSphere((Vector3){center_x, center_y, center_z}, radius, c);
 }
 
 RL_KEEP

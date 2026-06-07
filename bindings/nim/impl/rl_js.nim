@@ -386,6 +386,36 @@ async function __rlEnsureBindings(bindingsPath) {
     importjs: "__gRl.shape.setLine3d(#,#,#,#,#,#,#)".}
   proc rl_shape_set_line_strip_3d*(shape: RLHandle, points: openArray[float]): bool {.
     importjs: "__gRl.shape.setLineStrip3d(#,#)".}
+  proc rl_shape_set_rectangle_3d*(shape: RLHandle,
+                                   centerX, centerY, centerZ,
+                                   width, height,
+                                   rotationAxisX, rotationAxisY, rotationAxisZ,
+                                   rotationAngle: float): bool {.
+    importjs: "__gRl.shape.setRectangle3d(#,#,#,#,#,#,#,#,#,#)".}
+  proc rl_shape_draw_rectangle_3d*(centerX, centerY, centerZ,
+                                    width, height,
+                                    rotationAxisX, rotationAxisY, rotationAxisZ,
+                                    rotationAngle: float,
+                                    color: RLHandle) {.
+    importjs: "__gRl.shape.drawRectangle3d(#,#,#,#,#,#,#,#,#,#)".}
+  proc rl_shape_set_cube*(shape: RLHandle,
+                          positionX, positionY, positionZ,
+                          width, height, length: float): bool {.
+    importjs: "__gRl.shape.setCube(#,#,#,#,#,#,#)".}
+  proc rl_shape_set_circle_3d*(shape: RLHandle,
+                                centerX, centerY, centerZ,
+                                radius,
+                                rotationAxisX, rotationAxisY, rotationAxisZ,
+                                rotationAngle: float): bool {.
+    importjs: "__gRl.shape.setCircle3d(#,#,#,#,#,#,#,#,#)".}
+  proc rl_shape_set_sphere*(shape: RLHandle,
+                             centerX, centerY, centerZ,
+                             radius: float): bool {.
+    importjs: "__gRl.shape.setSphere(#,#,#,#,#)".}
+  proc rl_shape_draw_sphere*(centerX, centerY, centerZ,
+                              radius: float,
+                              color: RLHandle) {.
+    importjs: "__gRl.shape.drawSphere(#,#,#,#,#)".}
   proc rl_shape_draw*(shape: RLHandle) {.importjs: "__gRl.shape.draw(#)".}
   proc rl_shape_draw_circle_3d*(centerX, centerY, centerZ, radius,
                                 rotationAxisX, rotationAxisY, rotationAxisZ,

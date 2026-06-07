@@ -1290,6 +1290,30 @@ const shape = {
             }
         }
     },
+    setRectangle3d: (shapeHandle, centerX, centerY, centerZ, width, height, rotationAxisX, rotationAxisY, rotationAxisZ, rotationAngle) => reqModule().ccall(
+        "rl_shape_set_rectangle_3d",
+        "number",
+        ["number", "number", "number", "number", "number", "number", "number", "number", "number", "number"],
+        [shapeHandle >>> 0, centerX, centerY, centerZ, width, height, rotationAxisX, rotationAxisY, rotationAxisZ, rotationAngle]
+    ) !== 0,
+    setCube: (shapeHandle, positionX, positionY, positionZ, width, height, length) => reqModule().ccall(
+        "rl_shape_set_cube",
+        "number",
+        ["number", "number", "number", "number", "number", "number", "number"],
+        [shapeHandle >>> 0, positionX, positionY, positionZ, width, height, length]
+    ) !== 0,
+    setCircle3d: (shapeHandle, centerX, centerY, centerZ, radius, rotationAxisX, rotationAxisY, rotationAxisZ, rotationAngle) => reqModule().ccall(
+        "rl_shape_set_circle_3d",
+        "number",
+        ["number", "number", "number", "number", "number", "number", "number", "number", "number"],
+        [shapeHandle >>> 0, centerX, centerY, centerZ, radius, rotationAxisX, rotationAxisY, rotationAxisZ, rotationAngle]
+    ) !== 0,
+    setSphere: (shapeHandle, centerX, centerY, centerZ, radius) => reqModule().ccall(
+        "rl_shape_set_sphere",
+        "number",
+        ["number", "number", "number", "number", "number"],
+        [shapeHandle >>> 0, centerX, centerY, centerZ, radius]
+    ) !== 0,
     draw: (shapeHandle) => {
         return reqModule().ccall(
             "rl_shape_draw",
@@ -1314,12 +1338,28 @@ const shape = {
             [centerX, centerY, centerZ, radius, rotationAxisX, rotationAxisY, rotationAxisZ, rotationAngle, color >>> 0]
         );
     },
+    drawSphere: (centerX, centerY, centerZ, radius, color) => {
+        return reqModule().ccall(
+            'rl_shape_draw_sphere',
+            null,
+            ['number', 'number', 'number', 'number', 'number'],
+            [centerX, centerY, centerZ, radius, color >>> 0]
+        );
+    },
     drawRectangle: (x, y, width, height, color) => {
         return reqModule().ccall(
             'rl_shape_draw_rectangle',
             null,
             ['number', 'number', 'number', 'number', 'number'],
             [x | 0, y | 0, width | 0, height | 0, color >>> 0]
+        );
+    },
+    drawRectangle3d: (centerX, centerY, centerZ, width, height, rotationAxisX, rotationAxisY, rotationAxisZ, rotationAngle, color) => {
+        return reqModule().ccall(
+            'rl_shape_draw_rectangle_3d',
+            null,
+            ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'],
+            [centerX, centerY, centerZ, width, height, rotationAxisX, rotationAxisY, rotationAxisZ, rotationAngle, color >>> 0]
         );
     },
     drawLine3d: (startX, startY, startZ, endX, endY, endZ, color) => {

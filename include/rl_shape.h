@@ -12,6 +12,10 @@ typedef enum rl_shape_kind_t {
     RL_SHAPE_KIND_NONE = 0,
     RL_SHAPE_KIND_LINE_3D = 1,
     RL_SHAPE_KIND_LINE_STRIP_3D = 2,
+    RL_SHAPE_KIND_RECTANGLE_3D = 3,
+    RL_SHAPE_KIND_CUBE = 4,
+    RL_SHAPE_KIND_CIRCLE_3D = 5,
+    RL_SHAPE_KIND_SPHERE = 6,
 } rl_shape_kind_t;
 
 rl_handle_t rl_shape_create(void);
@@ -25,10 +29,31 @@ bool rl_shape_set_line_3d(rl_handle_t shape,
 bool rl_shape_set_line_strip_3d(rl_handle_t shape,
                                 const float* points,
                                 int point_count);
+bool rl_shape_set_rectangle_3d(rl_handle_t shape,
+                               float center_x, float center_y, float center_z,
+                               float width, float height,
+                               float rotation_axis_x, float rotation_axis_y, float rotation_axis_z,
+                               float rotation_angle);
+bool rl_shape_set_cube(rl_handle_t shape,
+                       float position_x, float position_y, float position_z,
+                       float width, float height, float length);
+bool rl_shape_set_circle_3d(rl_handle_t shape,
+                             float center_x, float center_y, float center_z,
+                             float radius,
+                             float rotation_axis_x, float rotation_axis_y, float rotation_axis_z,
+                             float rotation_angle);
+bool rl_shape_set_sphere(rl_handle_t shape,
+                         float center_x, float center_y, float center_z,
+                         float radius);
 void rl_shape_draw(rl_handle_t shape);
 
 void rl_shape_draw_rectangle(int x, int y, int width, int height,
                              rl_handle_t color);
+void rl_shape_draw_rectangle_3d(float center_x, float center_y, float center_z,
+                                float width, float height,
+                                float rotation_axis_x, float rotation_axis_y, float rotation_axis_z,
+                                float rotation_angle,
+                                rl_handle_t color);
 void rl_shape_draw_cube(float position_x, float position_y, float position_z,
                         float width, float height, float length,
                         rl_handle_t color);
@@ -37,6 +62,10 @@ void rl_shape_draw_circle_3d(float center_x, float center_y, float center_z,
                              float rotation_axis_x, float rotation_axis_y, float rotation_axis_z,
                              float rotation_angle,
                              rl_handle_t color);
+
+void rl_shape_draw_sphere(float center_x, float center_y, float center_z,
+                          float radius,
+                          rl_handle_t color);
 
 void rl_shape_draw_line_3d(float start_x, float start_y, float start_z,
                            float end_x, float end_y, float end_z,

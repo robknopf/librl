@@ -567,6 +567,9 @@ private extern class RLExterns {
   @:native("rl_shape_draw_sphere")
   static function shapeDrawSphere(centerX: Float, centerY: Float, centerZ: Float, radius: Float, color: RLHandle): Void;
 
+  @:native("rl_shape_set_transform")
+  static function shapeSetTransform(shape: RLHandle, positionX: Float, positionY: Float, positionZ: Float, rotationX: Float, rotationY: Float, rotationZ: Float, scaleX: Float, scaleY: Float, scaleZ: Float): Bool;
+
   @:native("rl_shape_draw")
   static function shapeDraw(shape: RLHandle): Void;
 
@@ -1350,6 +1353,7 @@ abstract RLImpl(RLExterns) {
   public static function shapeSetCircle3d(shape: RLHandle, centerX: Float, centerY: Float, centerZ: Float, radius: Float, rotationAxisX: Float, rotationAxisY: Float, rotationAxisZ: Float, rotationAngle: Float): Bool { return RLExterns.shapeSetCircle3d(shape, centerX, centerY, centerZ, radius, rotationAxisX, rotationAxisY, rotationAxisZ, rotationAngle); }
   public static function shapeSetSphere(shape: RLHandle, centerX: Float, centerY: Float, centerZ: Float, radius: Float): Bool { return RLExterns.shapeSetSphere(shape, centerX, centerY, centerZ, radius); }
   public static function shapeDrawSphere(centerX: Float, centerY: Float, centerZ: Float, radius: Float, color: RLHandle): Void { RLExterns.shapeDrawSphere(centerX, centerY, centerZ, radius, color); }
+  public static function shapeSetTransform(shape: RLHandle, positionX: Float, positionY: Float, positionZ: Float, rotationX: Float, rotationY: Float, rotationZ: Float, scaleX: Float, scaleY: Float, scaleZ: Float): Bool { return RLExterns.shapeSetTransform(shape, positionX, positionY, positionZ, rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ); }
   public static function shapeDrawRectangle(x: Int, y: Int, width: Int, height: Int, color: RLHandle): Void { RLExterns.shapeDrawRectangle(x, y, width, height, color); }
   public static function shapeDrawCube(positionX: Float, positionY: Float, positionZ: Float, width: Float, height: Float, length: Float, color: RLHandle): Void { RLExterns.shapeDrawCube(positionX, positionY, positionZ, width, height, length, color); }
   public static function shapeDrawCircle3d(centerX: Float, centerY: Float, centerZ: Float, radius: Float, rotationAxisX: Float, rotationAxisY: Float, rotationAxisZ: Float, rotationAngle: Float, color: RLHandle): Void { RLExterns.shapeDrawCircle3d(centerX, centerY, centerZ, radius, rotationAxisX, rotationAxisY, rotationAxisZ, rotationAngle, color); }

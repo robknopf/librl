@@ -50,6 +50,10 @@ class Shape {
 		return rl.impl.RLImpl.shapeSetSphere(shape, centerX, centerY, centerZ, radius);
 	}
 
+	public static function setTransform(shape:RLHandle, positionX:Float, positionY:Float, positionZ:Float, rotationX:Float, rotationY:Float, rotationZ:Float, scaleX:Float, scaleY:Float, scaleZ:Float):Bool {
+		return rl.impl.RLImpl.shapeSetTransform(shape, positionX, positionY, positionZ, rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ);
+	}
+
 	public static function draw(shape:RLHandle):Void {
 		rl.impl.RLImpl.shapeDraw(shape);
 	}

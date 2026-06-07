@@ -180,6 +180,24 @@ static int rl_shape_draw_sphere_lua(lua_State *L)
     return 0;
 }
 
+static int rl_shape_set_transform_lua(lua_State *L)
+{
+    rl_handle_t shape = (rl_handle_t)luaL_checkinteger(L, 1);
+    float position_x = (float)luaL_checknumber(L, 2);
+    float position_y = (float)luaL_checknumber(L, 3);
+    float position_z = (float)luaL_checknumber(L, 4);
+    float rotation_x = (float)luaL_checknumber(L, 5);
+    float rotation_y = (float)luaL_checknumber(L, 6);
+    float rotation_z = (float)luaL_checknumber(L, 7);
+    float scale_x = (float)luaL_checknumber(L, 8);
+    float scale_y = (float)luaL_checknumber(L, 9);
+    float scale_z = (float)luaL_checknumber(L, 10);
+    lua_pushboolean(L, rl_shape_set_transform(shape, position_x, position_y, position_z,
+                                               rotation_x, rotation_y, rotation_z,
+                                               scale_x, scale_y, scale_z));
+    return 1;
+}
+
 static int rl_shape_draw_lua(lua_State *L)
 {
     rl_handle_t shape = (rl_handle_t)luaL_checkinteger(L, 1);
@@ -307,6 +325,9 @@ void rl_register_shape_bindings(lua_State *L)
 
     lua_pushcfunction(L, rl_shape_set_sphere_lua);
     lua_setfield(L, -2, "shape_set_sphere");
+
+    lua_pushcfunction(L, rl_shape_set_transform_lua);
+    lua_setfield(L, -2, "shape_set_transform");
 
     lua_pushcfunction(L, rl_shape_draw_lua);
     lua_setfield(L, -2, "shape_draw");

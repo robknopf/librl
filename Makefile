@@ -127,6 +127,7 @@ LDFLAGS_WASM = \
 	"_rl_shape_create", \
 	"_rl_shape_destroy", \
 	"_rl_shape_set_visible", \
+	"_rl_shape_set_transform", \
 	"_rl_shape_is_visible", \
 	"_rl_shape_set_stroke_color", \
 	"_rl_shape_set_line_3d", \

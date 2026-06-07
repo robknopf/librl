@@ -381,6 +381,11 @@ async function __rlEnsureBindings(bindingsPath) {
   proc rl_shape_destroy*(shape: RLHandle) {.importjs: "__gRl.shape.destroy(#)".}
   proc rl_shape_set_visible*(shape: RLHandle, visible: bool): bool {.importjs: "__gRl.shape.setVisible(#,#)".}
   proc rl_shape_is_visible*(shape: RLHandle): bool {.importjs: "__gRl.shape.isVisible(#)".}
+  proc rl_shape_set_transform*(shape: RLHandle,
+                                positionX, positionY, positionZ,
+                                rotationX, rotationY, rotationZ,
+                                scaleX, scaleY, scaleZ: float): bool {.
+    importjs: "__gRl.shape.setTransform(#,#,#,#,#,#,#,#,#,#)".}
   proc rl_shape_set_stroke_color*(shape: RLHandle, color: RLHandle): bool {.importjs: "__gRl.shape.setStrokeColor(#,#)".}
   proc rl_shape_set_line_3d*(shape: RLHandle, startX, startY, startZ, endX, endY, endZ: float): bool {.
     importjs: "__gRl.shape.setLine3d(#,#,#,#,#,#,#)".}

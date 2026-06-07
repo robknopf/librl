@@ -11,6 +11,7 @@
 #include "internal/rl_shape.h"
 #include "raylib.h"
 #include "raymath.h"
+#include <rlgl.h>
 
 #define MAX_SHAPES 256
 
@@ -87,9 +88,13 @@ typedef struct
 {
     bool in_use;
     bool visible;
+    bool has_transform;
     rl_handle_t color;
     rl_shape_kind_t kind;
     rl_shape_geometry_t geometry;
+    float position_x, position_y, position_z;
+    float rotation_x, rotation_y, rotation_z;
+    float scale_x, scale_y, scale_z;
 } rl_shape_instance_t;
 
 static rl_shape_instance_t rl_shapes[MAX_SHAPES];
@@ -177,6 +182,21 @@ static void draw_rectangle_3d(float cx, float cy, float cz,
     DrawLine3D(corners[3], corners[0], color);
 }
 
+static void apply_transform(const rl_shape_instance_t *instance)
+{
+    Quaternion q = QuaternionFromEuler(instance->rotation_x,
+                                       instance->rotation_y,
+                                       instance->rotation_z);
+    Vector3 axis = {0};
+    float angle = 0.0f;
+
+    QuaternionToAxisAngle(q, &axis, &angle);
+    rlPushMatrix();
+    rlTranslatef(instance->position_x, instance->position_y, instance->position_z);
+    rlRotatef(angle * RAD2DEG, axis.x, axis.y, axis.z);
+    rlScalef(instance->scale_x, instance->scale_y, instance->scale_z);
+}
+
 static void draw_shape_instance(const rl_shape_instance_t *instance)
 {
     Color color = {0};
@@ -186,6 +206,10 @@ static void draw_shape_instance(const rl_shape_instance_t *instance)
     }
 
     color = rl_color_get(instance->color);
+
+    if (instance->has_transform) {
+        apply_transform(instance);
+    }
 
     switch (instance->kind) {
     case RL_SHAPE_KIND_LINE_3D:
@@ -268,6 +292,10 @@ static void draw_shape_instance(const rl_shape_instance_t *instance)
     default:
         break;
     }
+
+    if (instance->has_transform) {
+        rlPopMatrix();
+    }
 }
 
 void rl_shape_init(void)
@@ -339,6 +367,7 @@ rl_handle_t rl_shape_create(void)
     memset(&rl_shapes[index], 0, sizeof(rl_shapes[index]));
     rl_shapes[index].in_use = true;
     rl_shapes[index].visible = true;
+    rl_shapes[index].has_transform = false;
     rl_shapes[index].color = 0;
     rl_shapes[index].kind = RL_SHAPE_KIND_NONE;
     return handle;
@@ -382,6 +411,31 @@ bool rl_shape_is_visible(rl_handle_t shape)
     }
 
     return instance->visible;
+}
+
+RL_KEEP
+bool rl_shape_set_transform(rl_handle_t shape,
+                            float position_x, float position_y, float position_z,
+                            float rotation_x, float rotation_y, float rotation_z,
+                            float scale_x, float scale_y, float scale_z)
+{
+    rl_shape_instance_t *instance = resolve_shape_instance(shape);
+
+    if (instance == NULL) {
+        return false;
+    }
+
+    instance->has_transform = true;
+    instance->position_x = position_x;
+    instance->position_y = position_y;
+    instance->position_z = position_z;
+    instance->rotation_x = rotation_x;
+    instance->rotation_y = rotation_y;
+    instance->rotation_z = rotation_z;
+    instance->scale_x = scale_x;
+    instance->scale_y = scale_y;
+    instance->scale_z = scale_z;
+    return true;
 }
 
 RL_KEEP

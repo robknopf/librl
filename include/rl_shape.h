@@ -22,6 +22,10 @@ rl_handle_t rl_shape_create(void);
 void rl_shape_destroy(rl_handle_t shape);
 bool rl_shape_set_visible(rl_handle_t shape, bool visible);
 bool rl_shape_is_visible(rl_handle_t shape);
+bool rl_shape_set_transform(rl_handle_t shape,
+                            float position_x, float position_y, float position_z,
+                            float rotation_x, float rotation_y, float rotation_z,
+                            float scale_x, float scale_y, float scale_z);
 bool rl_shape_set_stroke_color(rl_handle_t shape, rl_handle_t color);
 bool rl_shape_set_line_3d(rl_handle_t shape,
                           float start_x, float start_y, float start_z,

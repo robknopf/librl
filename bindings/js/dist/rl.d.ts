@@ -200,6 +200,7 @@ export interface RLShape {
     destroy(shape: RLHandle): void;
     setVisible(shape: RLHandle, visible: boolean): boolean;
     isVisible(shape: RLHandle): boolean;
+    setTransform(shape: RLHandle, positionX: number, positionY: number, positionZ: number, rotationX: number, rotationY: number, rotationZ: number, scaleX: number, scaleY: number, scaleZ: number): boolean;
     setStrokeColor(shape: RLHandle, color: RLHandle): boolean;
     setLine3d(shape: RLHandle, startX: number, startY: number, startZ: number, endX: number, endY: number, endZ: number): boolean;
     setLineStrip3d(shape: RLHandle, points: Float32Array | number[]): boolean;

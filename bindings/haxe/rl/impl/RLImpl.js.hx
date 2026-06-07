@@ -760,6 +760,9 @@ class RLImpl {
 			binding.shape.drawSphere(centerX, centerY, centerZ, radius, color);
 	}
 
+	public static function shapeSetTransform(shape:RLHandle, positionX:Float, positionY:Float, positionZ:Float, rotationX:Float, rotationY:Float, rotationZ:Float, scaleX:Float, scaleY:Float, scaleZ:Float):Bool
+		return binding != null && cast binding.shape.setTransform(shape, positionX, positionY, positionZ, rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ);
+
 	public static function shapeDraw(shape:RLHandle):Void {
 		if (binding != null)
 			binding.shape.draw(shape);

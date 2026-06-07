@@ -586,6 +586,10 @@ bool rl_shape_set_circle_3d(rl_handle_t shape,
 bool rl_shape_set_sphere(rl_handle_t shape,
                          float center_x, float center_y, float center_z,
                          float radius);
+bool rl_shape_set_transform(rl_handle_t shape,
+                            float position_x, float position_y, float position_z,
+                            float rotation_x, float rotation_y, float rotation_z,
+                            float scale_x, float scale_y, float scale_z);
 void rl_shape_draw(rl_handle_t shape);
 
 void rl_shape_draw_rectangle(int x, int y, int width, int height, rl_handle_t color);
@@ -623,6 +627,8 @@ void rl_shape_draw_line_strip_3d(const float* points, int point_count,
 `rl_shape_set_circle_3d()` stores a 3D circle. `rotation_axis` and `rotation_angle` orient the circle plane. To draw flat on the XZ ground plane, use axis `(1, 0, 0)` with `rotation_angle = 90`.
 
 `rl_shape_set_sphere()` stores a sphere centered at `(center_x, center_y, center_z)` with the given radius.
+
+`rl_shape_set_transform()` applies a position/rotation/scale transform on top of the shape's own geometry when it is drawn. Rotation components are in radians using the same Euler-angle convention as `rl_model_set_transform`. Call with scale `(1, 1, 1)` and zero rotation/position to effectively clear any previously set transform.
 
 `rl_shape_draw_rectangle_3d()` immediate-mode 3D rectangle outline — same parameters and orientation convention as `rl_shape_set_rectangle_3d`.
 

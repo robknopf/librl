@@ -1255,6 +1255,12 @@ const shape = {
     isVisible: (shapeHandle) => reqModule().ccall(
         "rl_shape_is_visible", "number", ["number"], [shapeHandle >>> 0]
     ) !== 0,
+    setTransform: (shapeHandle, positionX, positionY, positionZ, rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ) => reqModule().ccall(
+        "rl_shape_set_transform",
+        "number",
+        ["number", "number", "number", "number", "number", "number", "number", "number", "number", "number"],
+        [shapeHandle >>> 0, positionX, positionY, positionZ, rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ]
+    ) !== 0,
     setStrokeColor: (shapeHandle, color) => reqModule().ccall(
         "rl_shape_set_stroke_color", "number", ["number", "number"], [shapeHandle >>> 0, color >>> 0]
     ) !== 0,

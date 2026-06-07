@@ -544,6 +544,12 @@ proc rl_shape_create*(): RLHandle {.importc, cdecl, header: "rl_shape.h".}
 proc rl_shape_destroy*(shape: RLHandle) {.importc, cdecl, header: "rl_shape.h".}
 proc rl_shape_set_visible*(shape: RLHandle, visible: bool): bool {.importc, cdecl, header: "rl_shape.h".}
 proc rl_shape_is_visible*(shape: RLHandle): bool {.importc, cdecl, header: "rl_shape.h".}
+proc rl_shape_set_transform_c*(
+  shape: RLHandle,
+  positionX: cfloat, positionY: cfloat, positionZ: cfloat,
+  rotationX: cfloat, rotationY: cfloat, rotationZ: cfloat,
+  scaleX: cfloat, scaleY: cfloat, scaleZ: cfloat
+): bool {.importc: "rl_shape_set_transform", cdecl, header: "rl_shape.h".}
 proc rl_shape_set_stroke_color*(shape: RLHandle, color: RLHandle): bool {.importc, cdecl, header: "rl_shape.h".}
 proc rl_shape_set_line_3d_c*(
   shape: RLHandle,
@@ -904,6 +910,19 @@ proc rl_shape_draw_line_strip_3d*(points: openArray[float], color: RLHandle) {.i
     rl_shape_draw_line_strip_3d_c(
       points[0].unsafeAddr, (points.len div 3).cint, color
     )
+
+proc rl_shape_set_transform*(
+  shape: RLHandle,
+  positionX, positionY, positionZ,
+  rotationX, rotationY, rotationZ,
+  scaleX, scaleY, scaleZ: float
+): bool {.inline.} =
+  rl_shape_set_transform_c(
+    shape,
+    positionX.cfloat, positionY.cfloat, positionZ.cfloat,
+    rotationX.cfloat, rotationY.cfloat, rotationZ.cfloat,
+    scaleX.cfloat, scaleY.cfloat, scaleZ.cfloat
+  )
 
 proc rl_shape_set_rectangle_3d*(
   shape: RLHandle,

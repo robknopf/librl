@@ -45,6 +45,8 @@ UNIT_TEST_LIB_SRCS := \
 	$(ROOT_DIR)/src/rl_text2d.c
 UNIT_TEST_DESKTOP_BIN := /tmp/librl_unit_tests
 UNIT_TEST_WASM_JS := /tmp/librl_unit_tests.js
+SHAPE_PICK_REGRESSION_SRC := $(ROOT_DIR)/tests/regressions/rl_shape_pick_regression.c
+SHAPE_PICK_REGRESSION_BIN := /tmp/rl_shape_pick_regression
 
 # `tests/unit/fetch_url_stub.c` provides test doubles for the same symbol names
 # as `libwgutils.a` (real fetch_url implementation). Link the stub objects before
@@ -66,15 +68,16 @@ WASM_COMMON_LDFLAGS ?= \
 CFLAGS ?= -Wall -Wextra -fdiagnostics-color=always -Isrc -O2
 INCLUDES := -I$(ROOT_DIR) -I$(ROOT_DIR)/include -I$(ROOT_DIR)/deps/libraylib/include -I$(ROOT_DIR)/src -I$(CORE_INC_DIR)
 
-.PHONY: test test_desktop test_wasm unit_test_desktop unit_test_wasm test_haxe_bindings test_nim_bindings test_js_bindings test_lua_bindings probe_idbfs_build probe_idbfs check_node check_chrome check_probe_python
+.PHONY: test test_desktop test_wasm unit_test_desktop unit_test_wasm shape_pick_regression_desktop test_haxe_bindings test_nim_bindings test_js_bindings test_lua_bindings probe_idbfs_build probe_idbfs check_node check_chrome check_probe_python
 
 test_desktop:
 	@$(MAKE) -C $(ROOT_DIR) desktop
 	@$(MAKE) unit_test_desktop
+	@$(MAKE) shape_pick_regression_desktop
 	@$(MAKE) test_haxe_bindings
 	@$(MAKE) test_nim_bindings
 	@$(MAKE) test_lua_bindings
-	@echo "Desktop smoke test passed (build + librl unit tests + haxe/nim/lua bindings)."
+	@echo "Desktop smoke test passed (build + librl unit tests + shape regression + haxe/nim/lua bindings)."
 
 test_wasm:
 	@$(MAKE) -C $(ROOT_DIR) wasm
@@ -109,6 +112,11 @@ unit_test_desktop:
 	$(CC_DESKTOP) $(CFLAGS) -DHEADLESS -I$(UNIT_TEST_DIR) $(INCLUDES) $(UNIT_TEST_MAIN) $(UNIT_TEST_SRCS) $(UNIT_TEST_LIB_SRCS) $(CORE_DESKTOP_ARCHIVE) $(UNIT_TEST_LINK_FLAGS) -lssl -lcrypto -lz -o $(UNIT_TEST_DESKTOP_BIN)
 	@$(UNIT_TEST_DESKTOP_BIN) > /tmp/librl_unit_tests_desktop.log 2>&1 || (cat /tmp/librl_unit_tests_desktop.log && exit 1)
 	@tail -n 1 /tmp/librl_unit_tests_desktop.log
+
+shape_pick_regression_desktop:
+	$(CC_DESKTOP) $(CFLAGS) -I$(ROOT_DIR)/deps/libraylib/src/src $(INCLUDES) $(SHAPE_PICK_REGRESSION_SRC) $(ROOT_DIR)/lib/librl.a -lcurl -lnghttp2 -lssl -lcrypto -lz -lm -lpthread -ldl -lX11 -lXrandr -lGL -o $(SHAPE_PICK_REGRESSION_BIN)
+	@$(SHAPE_PICK_REGRESSION_BIN) > /tmp/rl_shape_pick_regression.log 2>&1 || (cat /tmp/rl_shape_pick_regression.log && exit 1)
+	@tail -n 1 /tmp/rl_shape_pick_regression.log
 
 unit_test_wasm: check_node
 	@$(MAKE) -C $(ROOT_DIR)/deps/wgutils wasm

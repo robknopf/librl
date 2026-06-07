@@ -140,7 +140,7 @@ static Matrix build_shape_trs(const rl_shape_instance_t *instance)
                                instance->position_y,
                                instance->position_z);
     Matrix s = MatrixScale(instance->scale_x, instance->scale_y, instance->scale_z);
-    return MatrixMultiply(t, MatrixMultiply(r, s));
+    return MatrixMultiply(MatrixMultiply(s, r), t);
 }
 
 static float shape_max_scale(const rl_shape_instance_t *instance)
@@ -154,13 +154,21 @@ static float shape_max_scale(const rl_shape_instance_t *instance)
     return m;
 }
 
-static Vector3 rotate_normal_by_matrix(Matrix m, Vector3 n)
+static Vector3 transform_direction(Matrix transform, Vector3 direction)
 {
-    return Vector3Normalize((Vector3){
-        m.m0 * n.x + m.m4 * n.y + m.m8 * n.z,
-        m.m1 * n.x + m.m5 * n.y + m.m9 * n.z,
-        m.m2 * n.x + m.m6 * n.y + m.m10 * n.z
-    });
+    return (Vector3){
+        transform.m0 * direction.x + transform.m4 * direction.y + transform.m8 * direction.z,
+        transform.m1 * direction.x + transform.m5 * direction.y + transform.m9 * direction.z,
+        transform.m2 * direction.x + transform.m6 * direction.y + transform.m10 * direction.z
+    };
+}
+
+static Ray transform_ray(Matrix transform, Ray ray)
+{
+    Ray result = {0};
+    result.position = Vector3Transform(ray.position, transform);
+    result.direction = transform_direction(transform, ray.direction);
+    return result;
 }
 
 static RayCollision pick_sphere(const rl_shape_instance_t *instance, Ray ray)
@@ -171,12 +179,6 @@ static RayCollision pick_sphere(const rl_shape_instance_t *instance, Ray ray)
         instance->geometry.sphere.center_z
     };
     float radius = instance->geometry.sphere.radius;
-
-    if (instance->has_transform) {
-        Matrix m = build_shape_trs(instance);
-        center = Vector3Transform(center, m);
-        radius *= shape_max_scale(instance);
-    }
     return GetRayCollisionSphere(ray, center, radius);
 }
 
@@ -189,33 +191,6 @@ static RayCollision pick_cube(const rl_shape_instance_t *instance, Ray ray)
     float hh = instance->geometry.cube.height * 0.5f;
     float hl = instance->geometry.cube.length * 0.5f;
 
-    if (instance->has_transform) {
-        Matrix m = build_shape_trs(instance);
-        Vector3 corners[8] = {
-            {px - hw, py - hh, pz - hl},
-            {px + hw, py - hh, pz - hl},
-            {px - hw, py + hh, pz - hl},
-            {px + hw, py + hh, pz - hl},
-            {px - hw, py - hh, pz + hl},
-            {px + hw, py - hh, pz + hl},
-            {px - hw, py + hh, pz + hl},
-            {px + hw, py + hh, pz + hl},
-        };
-        Vector3 wc = Vector3Transform(corners[0], m);
-        BoundingBox box = {wc, wc};
-        int i = 0;
-
-        for (i = 1; i < 8; i++) {
-            wc = Vector3Transform(corners[i], m);
-            if (wc.x < box.min.x) box.min.x = wc.x;
-            if (wc.y < box.min.y) box.min.y = wc.y;
-            if (wc.z < box.min.z) box.min.z = wc.z;
-            if (wc.x > box.max.x) box.max.x = wc.x;
-            if (wc.y > box.max.y) box.max.y = wc.y;
-            if (wc.z > box.max.z) box.max.z = wc.z;
-        }
-        return GetRayCollisionBox(ray, box);
-    }
     return GetRayCollisionBox(ray, (BoundingBox){
         {px - hw, py - hh, pz - hl},
         {px + hw, py + hh, pz + hl}
@@ -243,14 +218,7 @@ static RayCollision pick_rectangle_3d(const rl_shape_instance_t *instance, Ray r
         Vector3Add(Vector3RotateByAxisAngle((Vector3){ hw,  hh, 0}, axis, angle * DEG2RAD), center),
         Vector3Add(Vector3RotateByAxisAngle((Vector3){-hw,  hh, 0}, axis, angle * DEG2RAD), center),
     };
-    int i = 0;
 
-    if (instance->has_transform) {
-        Matrix m = build_shape_trs(instance);
-        for (i = 0; i < 4; i++) {
-            corners[i] = Vector3Transform(corners[i], m);
-        }
-    }
     return GetRayCollisionQuad(ray, corners[0], corners[1], corners[2], corners[3]);
 }
 
@@ -275,13 +243,6 @@ static RayCollision pick_circle_3d(const rl_shape_instance_t *instance, Ray ray)
     float t = 0.0f;
     Vector3 hit = {0};
     RayCollision result = {0};
-
-    if (instance->has_transform) {
-        Matrix m = build_shape_trs(instance);
-        center = Vector3Transform(center, m);
-        disc_normal = rotate_normal_by_matrix(m, disc_normal);
-        radius *= shape_max_scale(instance);
-    }
 
     denom = Vector3DotProduct(disc_normal, ray.direction);
     if (fabsf(denom) < 1e-6f) {
@@ -397,12 +358,37 @@ bool rl_shape_scene_pick_broadphase(rl_handle_t handle, Ray ray)
 RayCollision rl_shape_get_ray_collision(rl_handle_t handle, Ray ray)
 {
     rl_shape_instance_t *instance = resolve_shape_instance(handle);
+    Ray local_ray = ray;
+    Matrix transform = MatrixIdentity();
+    Vector3 world_point = {0};
+    float local_dir_length = 0.0f;
+    RayCollision collision = {0};
 
     if (instance == NULL || !instance->pickable) {
         return (RayCollision){0};
     }
 
-    return shape_get_ray_collision_impl(instance, ray);
+    if (instance->has_transform) {
+        transform = build_shape_trs(instance);
+        local_ray = transform_ray(MatrixInvert(transform), ray);
+    }
+
+    local_dir_length = Vector3Length(local_ray.direction);
+    if (local_dir_length <= 1e-6f) {
+        return (RayCollision){0};
+    }
+    local_ray.direction = Vector3Scale(local_ray.direction, 1.0f/local_dir_length);
+
+    collision = shape_get_ray_collision_impl(instance, local_ray);
+    if (!collision.hit) {
+        return collision;
+    }
+
+    world_point = instance->has_transform
+        ? Vector3Transform(collision.point, transform)
+        : collision.point;
+    collision.distance = Vector3Distance(ray.position, world_point);
+    return collision;
 }
 
 static void draw_line_strip_3d_points(const float *points, int point_count, Color color)

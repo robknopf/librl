@@ -618,21 +618,23 @@ void rl_shape_draw_line_strip_3d(const float* points, int point_count,
 
 `rl_shape_create()` returns a retained drawable handle (`RL_HANDLE_KIND_SHAPE`) that can be added to a scene. Retained kinds: `RL_SHAPE_KIND_LINE_3D`, `RL_SHAPE_KIND_LINE_STRIP_3D`, `RL_SHAPE_KIND_RECTANGLE_3D`, `RL_SHAPE_KIND_CUBE`, `RL_SHAPE_KIND_CIRCLE_3D`, `RL_SHAPE_KIND_SPHERE`.
 
+Retained shape geometry is authored in the shape's local/object space. `rl_shape_set_transform()` then places, rotates, and scales that local geometry in world space when drawing and picking. With the default identity transform, local coordinates are also world coordinates.
+
 `rl_shape_set_pickable()` enables ray-cast picking for the shape (default: `false`). Supported for `SPHERE`, `CUBE`, `RECTANGLE_3D`, and `CIRCLE_3D`; line kinds are never hit. Use `rl_pick_shape()` for individual picks or add to a scene for `rl_scene_pick()` to include shapes automatically.
 
 `rl_shape_set_stroke_color()` sets the current line color. `0` uses the same fallback as other color-taking APIs (`WHITE`).
 
 `rl_shape_set_line_strip_3d()` copies `point_count` vertices from a flat `[x1,y1,z1, x2,y2,z2, ...]` array, so callers may free or reuse their source array immediately after the call.
 
-`rl_shape_set_rectangle_3d()` stores a 3D rectangle outline (4 lines) centered at the given position. `rotation_axis` and `rotation_angle` (degrees) orient the plane, matching the `circle_3d` convention. To draw flat on the XZ ground plane, use axis `(1, 0, 0)` with `rotation_angle = 90`.
+`rl_shape_set_rectangle_3d()` stores a local-space 3D rectangle outline (4 lines) centered at the given local point. `rotation_axis` and `rotation_angle` (degrees) orient the plane, matching the `circle_3d` convention. To draw flat on the XZ ground plane, use axis `(1, 0, 0)` with `rotation_angle = 90`.
 
-`rl_shape_set_cube()` stores a 3D axis-aligned cube centered at `(position_x, position_y, position_z)` with the given dimensions.
+`rl_shape_set_cube()` stores a local-space axis-aligned cube centered at `(position_x, position_y, position_z)` with the given dimensions.
 
-`rl_shape_set_circle_3d()` stores a 3D circle. `rotation_axis` and `rotation_angle` orient the circle plane. To draw flat on the XZ ground plane, use axis `(1, 0, 0)` with `rotation_angle = 90`.
+`rl_shape_set_circle_3d()` stores a local-space 3D circle. `rotation_axis` and `rotation_angle` orient the circle plane. To draw flat on the XZ ground plane, use axis `(1, 0, 0)` with `rotation_angle = 90`.
 
-`rl_shape_set_sphere()` stores a sphere centered at `(center_x, center_y, center_z)` with the given radius.
+`rl_shape_set_sphere()` stores a local-space sphere centered at `(center_x, center_y, center_z)` with the given radius.
 
-`rl_shape_set_transform()` applies a position/rotation/scale transform on top of the shape's own geometry when it is drawn. Rotation components are in radians using the same Euler-angle convention as `rl_model_set_transform`. Call with scale `(1, 1, 1)` and zero rotation/position to effectively clear any previously set transform.
+`rl_shape_set_transform()` applies the instance position/rotation/scale on top of the retained shape's local geometry when it is drawn or picked. Rotation components are in radians using the same Euler-angle convention as `rl_model_set_transform`. Call with scale `(1, 1, 1)` and zero rotation/position to effectively clear any previously set transform.
 
 `rl_shape_draw_rectangle_3d()` immediate-mode 3D rectangle outline — same parameters and orientation convention as `rl_shape_set_rectangle_3d`.
 
@@ -678,7 +680,7 @@ Notes:
 - Picking reads the stored transform from the model/sprite/shape instance; no explicit position arguments are needed.
 - Internally uses broad-phase culling before narrow-phase testing.
 - Each pick function returns no hit when the target instance’s **`pickable`** flag is `false`.
-- **Shape pick geometry:** `SPHERE` → exact sphere test; `CUBE` → AABB expanded from 8 corners; `RECTANGLE_3D` → quad (4 corners after axis-angle rotation); `CIRCLE_3D` → ray-plane intersection + disc radius check. `LINE_3D` and `LINE_STRIP_3D` are not pickable.
+- **Shape pick geometry:** `SPHERE`, `CUBE`, `RECTANGLE_3D`, and `CIRCLE_3D` are tested against their retained local-space geometry after inverse-transforming the ray into object space, so the hit point and normal stay in local/object space and transformed cube/rectangle/circle picks match the drawn shape. `LINE_3D` and `LINE_STRIP_3D` are not pickable.
 - `rl_pick_model_to_scratch` / `rl_pick_sprite3d_to_scratch` / `rl_pick_shape_to_scratch` are internal wasm bridge functions used by the JS binding; consumers call `RL.pick.model()` / `RL.pick.sprite3d()` / `RL.pick.shape()` which handle the scratch read transparently.
 
 ---

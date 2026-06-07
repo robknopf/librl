@@ -40,6 +40,7 @@ make -C tests test_wasm
 ## Individual Targets
 
 - `unit_test_desktop`: runs librl desktop unit tests.
+- `shape_pick_regression_desktop`: retained-shape scaled-pick regression against the real desktop archive.
 - `unit_test_wasm`: runs librl wasm unit tests under Node.
 - `tests/bindings/js`: boot/namespace/init smoke + version stamp tests (`make -C tests/bindings/js test`).
 - `probe_idbfs_build`: builds headless IDBFS probe wasm/js.

@@ -5,6 +5,7 @@
 #include "internal/exports.h"
 #include "internal/rl_camera3d.h"
 #include "internal/rl_model.h"
+#include "internal/rl_shape.h"
 #include "internal/rl_sprite3d.h"
 #include "rl_model.h"
 #include "rl_scratch.h"
@@ -252,6 +253,60 @@ bool rl_pick_sprite3d_to_scratch(rl_handle_t camera,
                                  float mouse_y)
 {
     rl_pick_result_t result = rl_pick_sprite3d(camera, sprite3d, mouse_x, mouse_y);
+
+    rl_scratch_set_pick_result(result);
+    return result.hit;
+}
+
+RL_KEEP
+rl_pick_result_t rl_pick_shape_with_camera_ray(Camera3D camera_data,
+                                               Ray ray,
+                                               rl_handle_t shape)
+{
+    RayCollision collision = {0};
+    (void)camera_data;
+
+    if (!rl_shape_is_pickable(shape)) {
+        return make_empty_pick_result();
+    }
+
+    rl_pick_stats.narrowphase_tests++;
+    collision = rl_shape_get_ray_collision(shape, ray);
+    if (collision.hit) {
+        rl_pick_stats.narrowphase_hits++;
+    }
+
+    return pick_result_from_ray_collision(collision);
+}
+
+RL_KEEP
+rl_pick_result_t rl_pick_shape(rl_handle_t camera,
+                               rl_handle_t shape,
+                               float mouse_x,
+                               float mouse_y)
+{
+    Camera3D camera_data = {0};
+    Ray ray = {0};
+
+    if (!rl_camera3d_get_camera(camera, &camera_data)) {
+        return make_empty_pick_result();
+    }
+
+    ray = GetMouseRay((Vector2){mouse_x, mouse_y}, camera_data);
+    rl_pick_result_t result = rl_pick_shape_with_camera_ray(camera_data, ray, shape);
+    if (result.hit) {
+        result.handle = shape;
+    }
+    return result;
+}
+
+RL_KEEP
+bool rl_pick_shape_to_scratch(rl_handle_t camera,
+                              rl_handle_t shape,
+                              float mouse_x,
+                              float mouse_y)
+{
+    rl_pick_result_t result = rl_pick_shape(camera, shape, mouse_x, mouse_y);
 
     rl_scratch_set_pick_result(result);
     return result.hit;

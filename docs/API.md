@@ -563,6 +563,8 @@ rl_handle_t rl_shape_create(void);
 void rl_shape_destroy(rl_handle_t shape);
 bool rl_shape_set_visible(rl_handle_t shape, bool visible);
 bool rl_shape_is_visible(rl_handle_t shape);
+bool rl_shape_set_pickable(rl_handle_t shape, bool pickable);
+bool rl_shape_is_pickable(rl_handle_t shape);
 bool rl_shape_set_stroke_color(rl_handle_t shape, rl_handle_t color);
 bool rl_shape_set_line_3d(rl_handle_t shape,
                           float start_x, float start_y, float start_z,
@@ -616,6 +618,8 @@ void rl_shape_draw_line_strip_3d(const float* points, int point_count,
 
 `rl_shape_create()` returns a retained drawable handle (`RL_HANDLE_KIND_SHAPE`) that can be added to a scene. Retained kinds: `RL_SHAPE_KIND_LINE_3D`, `RL_SHAPE_KIND_LINE_STRIP_3D`, `RL_SHAPE_KIND_RECTANGLE_3D`, `RL_SHAPE_KIND_CUBE`, `RL_SHAPE_KIND_CIRCLE_3D`, `RL_SHAPE_KIND_SPHERE`.
 
+`rl_shape_set_pickable()` enables ray-cast picking for the shape (default: `false`). Supported for `SPHERE`, `CUBE`, `RECTANGLE_3D`, and `CIRCLE_3D`; line kinds are never hit. Use `rl_pick_shape()` for individual picks or add to a scene for `rl_scene_pick()` to include shapes automatically.
+
 `rl_shape_set_stroke_color()` sets the current line color. `0` uses the same fallback as other color-taking APIs (`WHITE`).
 
 `rl_shape_set_line_strip_3d()` copies `point_count` vertices from a flat `[x1,y1,z1, x2,y2,z2, ...]` array, so callers may free or reuse their source array immediately after the call.
@@ -659,6 +663,8 @@ rl_pick_result_t rl_pick_model(rl_handle_t camera, rl_handle_t model,
                                float mouse_x, float mouse_y);
 rl_pick_result_t rl_pick_sprite3d(rl_handle_t camera, rl_handle_t sprite3d,
                                   float mouse_x, float mouse_y);
+rl_pick_result_t rl_pick_shape(rl_handle_t camera, rl_handle_t shape,
+                               float mouse_x, float mouse_y);
 
 // Telemetry
 void rl_pick_reset_stats(void);
@@ -669,10 +675,11 @@ int  rl_pick_get_narrowphase_hits(void);
 ```
 
 Notes:
-- Picking reads the stored transform from the model/sprite instance; no explicit position arguments are needed.
+- Picking reads the stored transform from the model/sprite/shape instance; no explicit position arguments are needed.
 - Internally uses broad-phase culling before narrow-phase testing.
-- `rl_pick_model` / `rl_pick_sprite3d` (and the shared `*_with_camera_ray` helpers) return no hit when the target instance’s **`pickable`** flag is `false`.
-- `rl_pick_model_to_scratch` / `rl_pick_sprite3d_to_scratch` are internal wasm bridge functions used by the JS binding; consumers call `RL.pickModel()` / `RL.pickSprite3d()` which handle the scratch read transparently.
+- Each pick function returns no hit when the target instance’s **`pickable`** flag is `false`.
+- **Shape pick geometry:** `SPHERE` → exact sphere test; `CUBE` → AABB expanded from 8 corners; `RECTANGLE_3D` → quad (4 corners after axis-angle rotation); `CIRCLE_3D` → ray-plane intersection + disc radius check. `LINE_3D` and `LINE_STRIP_3D` are not pickable.
+- `rl_pick_model_to_scratch` / `rl_pick_sprite3d_to_scratch` / `rl_pick_shape_to_scratch` are internal wasm bridge functions used by the JS binding; consumers call `RL.pick.model()` / `RL.pick.sprite3d()` / `RL.pick.shape()` which handle the scratch read transparently.
 
 ---
 
@@ -700,7 +707,7 @@ rl_pick_result_t rl_scene_pick(rl_handle_t scene,
 ```
 
 Notes:
-- **Visibility** and **pickability** are stored on each drawable instance (`rl_model_set_visible` / `rl_sprite3d_set_visible` / `rl_sprite2d_set_visible` / `rl_text2d_set_visible`, and the corresponding `*_set_pickable`). Defaults: **`visible`** is `true` for all; **`pickable`** is `true` for new **model** and **sprite3d** instances, **`false`** for new **sprite2d** and **text2d** (narrow pick exists only for model/sprite3d today).
+- **Visibility** and **pickability** are stored on each drawable instance (`rl_model_set_visible` / `rl_sprite3d_set_visible` / `rl_sprite2d_set_visible` / `rl_text2d_set_visible` / `rl_shape_set_visible`, and the corresponding `*_set_pickable`). Defaults: **`visible`** is `true` for all; **`pickable`** is `true` for new **model** and **sprite3d** instances, **`false`** for new **sprite2d**, **text2d**, and **shape** instances.
 - `rl_scene_draw` skips members whose instance **`visible`** is `false` (early-out before calling `rl_*_draw`; individual `rl_*_draw` also no-op when invisible so direct draws match scene behavior).
 - `rl_scene_pick` only considers **model** and **sprite3d** members; each must pass that instance’s **`pickable`** check and scene broadphase before narrow pick (same narrow paths as `rl_pick_model` / `rl_pick_sprite3d`).
 - `rl_scene_set_layer` updates a member’s layer in place (returns `false` if the drawable is not in that scene). Stable order within a layer is unchanged (original insertion order).

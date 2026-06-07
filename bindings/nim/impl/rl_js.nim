@@ -381,6 +381,8 @@ async function __rlEnsureBindings(bindingsPath) {
   proc rl_shape_destroy*(shape: RLHandle) {.importjs: "__gRl.shape.destroy(#)".}
   proc rl_shape_set_visible*(shape: RLHandle, visible: bool): bool {.importjs: "__gRl.shape.setVisible(#,#)".}
   proc rl_shape_is_visible*(shape: RLHandle): bool {.importjs: "__gRl.shape.isVisible(#)".}
+  proc rl_shape_set_pickable*(shape: RLHandle, pickable: bool): bool {.importjs: "__gRl.shape.setPickable(#,#)".}
+  proc rl_shape_is_pickable*(shape: RLHandle): bool {.importjs: "__gRl.shape.isPickable(#)".}
   proc rl_shape_set_transform*(shape: RLHandle,
                                 positionX, positionY, positionZ,
                                 rotationX, rotationY, rotationZ,
@@ -568,6 +570,8 @@ async function __rlEnsureBindings(bindingsPath) {
   proc rl_sprite3d_destroy*(sprite: RLHandle) {.importjs: "__gRl.sprite3d.destroy(#)".}
   proc rl_pick_sprite3d*(camera, sprite3d: RLHandle, mouseX, mouseY: float): RLPickResult {.
     importjs: "__gRl.pick.sprite3d(#,#,#,#)".}
+  proc rl_pick_shape*(camera, shape: RLHandle, mouseX, mouseY: float): RLPickResult {.
+    importjs: "__gRl.pick.shape(#,#,#,#)".}
 
   # Sprite2D
   proc rl_sprite2d_create*(texture: RLHandle): RLHandle {.importjs: "__gRl.sprite2d.create(#)".}

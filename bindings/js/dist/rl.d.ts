@@ -200,6 +200,8 @@ export interface RLShape {
     destroy(shape: RLHandle): void;
     setVisible(shape: RLHandle, visible: boolean): boolean;
     isVisible(shape: RLHandle): boolean;
+    setPickable(shape: RLHandle, pickable: boolean): boolean;
+    isPickable(shape: RLHandle): boolean;
     setTransform(shape: RLHandle, positionX: number, positionY: number, positionZ: number, rotationX: number, rotationY: number, rotationZ: number, scaleX: number, scaleY: number, scaleZ: number): boolean;
     setStrokeColor(shape: RLHandle, color: RLHandle): boolean;
     setLine3d(shape: RLHandle, startX: number, startY: number, startZ: number, endX: number, endY: number, endZ: number): boolean;
@@ -319,6 +321,7 @@ export interface RLScene {
 export interface RLPick {
     model(camera: RLHandle, model: RLHandle, mouseX: number, mouseY: number): RLPickResult;
     sprite3d(camera: RLHandle, sprite3d: RLHandle, mouseX: number, mouseY: number): RLPickResult;
+    shape(camera: RLHandle, shape: RLHandle, mouseX: number, mouseY: number): RLPickResult;
     resetStats(): void;
 }
 export interface RLMusic {

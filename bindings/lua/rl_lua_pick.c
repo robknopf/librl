@@ -60,6 +60,17 @@ static int rl_pick_sprite3d_lua(lua_State *L)
     return 1;
 }
 
+static int rl_pick_shape_lua(lua_State *L)
+{
+    rl_handle_t camera = (rl_handle_t)luaL_checkinteger(L, 1);
+    rl_handle_t shape = (rl_handle_t)luaL_checkinteger(L, 2);
+    float mouse_x = (float)luaL_checknumber(L, 3);
+    float mouse_y = (float)luaL_checknumber(L, 4);
+    rl_pick_result_t result = rl_pick_shape(camera, shape, mouse_x, mouse_y);
+    rl_push_pick_result(L, result);
+    return 1;
+}
+
 static int rl_pick_reset_stats_lua(lua_State *L)
 {
     (void)L;
@@ -102,6 +113,9 @@ void rl_register_pick_bindings(lua_State *L)
 
     lua_pushcfunction(L, rl_pick_sprite3d_lua);
     lua_setfield(L, -2, "pick_sprite3d");
+
+    lua_pushcfunction(L, rl_pick_shape_lua);
+    lua_setfield(L, -2, "pick_shape");
 
     lua_pushcfunction(L, rl_pick_reset_stats_lua);
     lua_setfield(L, -2, "pick_reset_stats");

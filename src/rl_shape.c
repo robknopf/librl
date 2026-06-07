@@ -88,6 +88,7 @@ typedef struct
 {
     bool in_use;
     bool visible;
+    bool pickable;
     bool has_transform;
     rl_handle_t color;
     rl_shape_kind_t kind;
@@ -127,6 +128,281 @@ static void release_shape_geometry(rl_shape_instance_t *instance)
         instance->geometry.line_strip_3d.points = NULL;
         instance->geometry.line_strip_3d.point_count = 0;
     }
+}
+
+static Matrix build_shape_trs(const rl_shape_instance_t *instance)
+{
+    Quaternion q = QuaternionFromEuler(instance->rotation_x,
+                                       instance->rotation_y,
+                                       instance->rotation_z);
+    Matrix r = QuaternionToMatrix(q);
+    Matrix t = MatrixTranslate(instance->position_x,
+                               instance->position_y,
+                               instance->position_z);
+    Matrix s = MatrixScale(instance->scale_x, instance->scale_y, instance->scale_z);
+    return MatrixMultiply(t, MatrixMultiply(r, s));
+}
+
+static float shape_max_scale(const rl_shape_instance_t *instance)
+{
+    float sx = fabsf(instance->scale_x);
+    float sy = fabsf(instance->scale_y);
+    float sz = fabsf(instance->scale_z);
+    float m = sx;
+    if (sy > m) m = sy;
+    if (sz > m) m = sz;
+    return m;
+}
+
+static Vector3 rotate_normal_by_matrix(Matrix m, Vector3 n)
+{
+    return Vector3Normalize((Vector3){
+        m.m0 * n.x + m.m4 * n.y + m.m8 * n.z,
+        m.m1 * n.x + m.m5 * n.y + m.m9 * n.z,
+        m.m2 * n.x + m.m6 * n.y + m.m10 * n.z
+    });
+}
+
+static RayCollision pick_sphere(const rl_shape_instance_t *instance, Ray ray)
+{
+    Vector3 center = {
+        instance->geometry.sphere.center_x,
+        instance->geometry.sphere.center_y,
+        instance->geometry.sphere.center_z
+    };
+    float radius = instance->geometry.sphere.radius;
+
+    if (instance->has_transform) {
+        Matrix m = build_shape_trs(instance);
+        center = Vector3Transform(center, m);
+        radius *= shape_max_scale(instance);
+    }
+    return GetRayCollisionSphere(ray, center, radius);
+}
+
+static RayCollision pick_cube(const rl_shape_instance_t *instance, Ray ray)
+{
+    float px = instance->geometry.cube.position_x;
+    float py = instance->geometry.cube.position_y;
+    float pz = instance->geometry.cube.position_z;
+    float hw = instance->geometry.cube.width * 0.5f;
+    float hh = instance->geometry.cube.height * 0.5f;
+    float hl = instance->geometry.cube.length * 0.5f;
+
+    if (instance->has_transform) {
+        Matrix m = build_shape_trs(instance);
+        Vector3 corners[8] = {
+            {px - hw, py - hh, pz - hl},
+            {px + hw, py - hh, pz - hl},
+            {px - hw, py + hh, pz - hl},
+            {px + hw, py + hh, pz - hl},
+            {px - hw, py - hh, pz + hl},
+            {px + hw, py - hh, pz + hl},
+            {px - hw, py + hh, pz + hl},
+            {px + hw, py + hh, pz + hl},
+        };
+        Vector3 wc = Vector3Transform(corners[0], m);
+        BoundingBox box = {wc, wc};
+        int i = 0;
+
+        for (i = 1; i < 8; i++) {
+            wc = Vector3Transform(corners[i], m);
+            if (wc.x < box.min.x) box.min.x = wc.x;
+            if (wc.y < box.min.y) box.min.y = wc.y;
+            if (wc.z < box.min.z) box.min.z = wc.z;
+            if (wc.x > box.max.x) box.max.x = wc.x;
+            if (wc.y > box.max.y) box.max.y = wc.y;
+            if (wc.z > box.max.z) box.max.z = wc.z;
+        }
+        return GetRayCollisionBox(ray, box);
+    }
+    return GetRayCollisionBox(ray, (BoundingBox){
+        {px - hw, py - hh, pz - hl},
+        {px + hw, py + hh, pz + hl}
+    });
+}
+
+static RayCollision pick_rectangle_3d(const rl_shape_instance_t *instance, Ray ray)
+{
+    Vector3 center = {
+        instance->geometry.rectangle_3d.center_x,
+        instance->geometry.rectangle_3d.center_y,
+        instance->geometry.rectangle_3d.center_z
+    };
+    Vector3 axis = {
+        instance->geometry.rectangle_3d.rotation_axis_x,
+        instance->geometry.rectangle_3d.rotation_axis_y,
+        instance->geometry.rectangle_3d.rotation_axis_z
+    };
+    float angle = instance->geometry.rectangle_3d.rotation_angle;
+    float hw = instance->geometry.rectangle_3d.width * 0.5f;
+    float hh = instance->geometry.rectangle_3d.height * 0.5f;
+    Vector3 corners[4] = {
+        Vector3Add(Vector3RotateByAxisAngle((Vector3){-hw, -hh, 0}, axis, angle * DEG2RAD), center),
+        Vector3Add(Vector3RotateByAxisAngle((Vector3){ hw, -hh, 0}, axis, angle * DEG2RAD), center),
+        Vector3Add(Vector3RotateByAxisAngle((Vector3){ hw,  hh, 0}, axis, angle * DEG2RAD), center),
+        Vector3Add(Vector3RotateByAxisAngle((Vector3){-hw,  hh, 0}, axis, angle * DEG2RAD), center),
+    };
+    int i = 0;
+
+    if (instance->has_transform) {
+        Matrix m = build_shape_trs(instance);
+        for (i = 0; i < 4; i++) {
+            corners[i] = Vector3Transform(corners[i], m);
+        }
+    }
+    return GetRayCollisionQuad(ray, corners[0], corners[1], corners[2], corners[3]);
+}
+
+static RayCollision pick_circle_3d(const rl_shape_instance_t *instance, Ray ray)
+{
+    Vector3 center = {
+        instance->geometry.circle_3d.center_x,
+        instance->geometry.circle_3d.center_y,
+        instance->geometry.circle_3d.center_z
+    };
+    float radius = instance->geometry.circle_3d.radius;
+    Vector3 axis = {
+        instance->geometry.circle_3d.rotation_axis_x,
+        instance->geometry.circle_3d.rotation_axis_y,
+        instance->geometry.circle_3d.rotation_axis_z
+    };
+    float angle = instance->geometry.circle_3d.rotation_angle;
+    /* DrawCircle3D draws in the XZ plane (normal = +Y) then rotates by angle around axis */
+    Vector3 disc_normal = Vector3RotateByAxisAngle((Vector3){0, 1, 0}, axis, angle * DEG2RAD);
+    disc_normal = Vector3Normalize(disc_normal);
+    float denom = 0.0f;
+    float t = 0.0f;
+    Vector3 hit = {0};
+    RayCollision result = {0};
+
+    if (instance->has_transform) {
+        Matrix m = build_shape_trs(instance);
+        center = Vector3Transform(center, m);
+        disc_normal = rotate_normal_by_matrix(m, disc_normal);
+        radius *= shape_max_scale(instance);
+    }
+
+    denom = Vector3DotProduct(disc_normal, ray.direction);
+    if (fabsf(denom) < 1e-6f) {
+        return result;
+    }
+
+    t = Vector3DotProduct(Vector3Subtract(center, ray.position), disc_normal) / denom;
+    if (t < 0.0f) {
+        return result;
+    }
+
+    hit = Vector3Add(ray.position, Vector3Scale(ray.direction, t));
+    if (Vector3LengthSqr(Vector3Subtract(hit, center)) > radius * radius) {
+        return result;
+    }
+
+    result.hit = true;
+    result.distance = t;
+    result.point = hit;
+    result.normal = disc_normal;
+    return result;
+}
+
+static RayCollision shape_get_ray_collision_impl(const rl_shape_instance_t *instance, Ray ray)
+{
+    switch (instance->kind) {
+    case RL_SHAPE_KIND_SPHERE:       return pick_sphere(instance, ray);
+    case RL_SHAPE_KIND_CUBE:         return pick_cube(instance, ray);
+    case RL_SHAPE_KIND_RECTANGLE_3D: return pick_rectangle_3d(instance, ray);
+    case RL_SHAPE_KIND_CIRCLE_3D:    return pick_circle_3d(instance, ray);
+    default:                         return (RayCollision){0};
+    }
+}
+
+static Vector3 shape_bounding_sphere_center(const rl_shape_instance_t *instance)
+{
+    switch (instance->kind) {
+    case RL_SHAPE_KIND_SPHERE:
+        return (Vector3){instance->geometry.sphere.center_x,
+                         instance->geometry.sphere.center_y,
+                         instance->geometry.sphere.center_z};
+    case RL_SHAPE_KIND_CUBE:
+        return (Vector3){instance->geometry.cube.position_x,
+                         instance->geometry.cube.position_y,
+                         instance->geometry.cube.position_z};
+    case RL_SHAPE_KIND_RECTANGLE_3D:
+        return (Vector3){instance->geometry.rectangle_3d.center_x,
+                         instance->geometry.rectangle_3d.center_y,
+                         instance->geometry.rectangle_3d.center_z};
+    case RL_SHAPE_KIND_CIRCLE_3D:
+        return (Vector3){instance->geometry.circle_3d.center_x,
+                         instance->geometry.circle_3d.center_y,
+                         instance->geometry.circle_3d.center_z};
+    default:
+        return (Vector3){0, 0, 0};
+    }
+}
+
+static float shape_bounding_sphere_radius(const rl_shape_instance_t *instance)
+{
+    switch (instance->kind) {
+    case RL_SHAPE_KIND_SPHERE:
+        return instance->geometry.sphere.radius;
+    case RL_SHAPE_KIND_CUBE: {
+        float hw = instance->geometry.cube.width * 0.5f;
+        float hh = instance->geometry.cube.height * 0.5f;
+        float hl = instance->geometry.cube.length * 0.5f;
+        return sqrtf(hw * hw + hh * hh + hl * hl);
+    }
+    case RL_SHAPE_KIND_RECTANGLE_3D: {
+        float hw = instance->geometry.rectangle_3d.width * 0.5f;
+        float hh = instance->geometry.rectangle_3d.height * 0.5f;
+        return sqrtf(hw * hw + hh * hh);
+    }
+    case RL_SHAPE_KIND_CIRCLE_3D:
+        return instance->geometry.circle_3d.radius;
+    default:
+        return 0.0f;
+    }
+}
+
+bool rl_shape_is_pickable(rl_handle_t handle)
+{
+    rl_shape_instance_t *instance = resolve_shape_instance(handle);
+    return instance != NULL && instance->pickable;
+}
+
+bool rl_shape_scene_pick_broadphase(rl_handle_t handle, Ray ray)
+{
+    rl_shape_instance_t *instance = resolve_shape_instance(handle);
+    Vector3 center = {0};
+    float radius = 0.0f;
+
+    if (instance == NULL || !instance->pickable) {
+        return false;
+    }
+
+    center = shape_bounding_sphere_center(instance);
+    radius = shape_bounding_sphere_radius(instance);
+
+    if (radius == 0.0f) {
+        return false;
+    }
+
+    if (instance->has_transform) {
+        center = Vector3Transform(center, build_shape_trs(instance));
+        radius *= shape_max_scale(instance);
+    }
+
+    return GetRayCollisionSphere(ray, center, radius).hit;
+}
+
+RayCollision rl_shape_get_ray_collision(rl_handle_t handle, Ray ray)
+{
+    rl_shape_instance_t *instance = resolve_shape_instance(handle);
+
+    if (instance == NULL || !instance->pickable) {
+        return (RayCollision){0};
+    }
+
+    return shape_get_ray_collision_impl(instance, ray);
 }
 
 static void draw_line_strip_3d_points(const float *points, int point_count, Color color)
@@ -435,6 +711,19 @@ bool rl_shape_set_transform(rl_handle_t shape,
     instance->scale_x = scale_x;
     instance->scale_y = scale_y;
     instance->scale_z = scale_z;
+    return true;
+}
+
+RL_KEEP
+bool rl_shape_set_pickable(rl_handle_t shape, bool pickable)
+{
+    rl_shape_instance_t *instance = resolve_shape_instance(shape);
+
+    if (instance == NULL) {
+        return false;
+    }
+
+    instance->pickable = pickable;
     return true;
 }
 

@@ -540,6 +540,12 @@ private extern class RLExterns {
   @:native("rl_shape_is_visible")
   static function shapeIsVisible(shape: RLHandle): Bool;
 
+  @:native("rl_shape_set_pickable")
+  static function shapeSetPickable(shape: RLHandle, pickable: Bool): Bool;
+
+  @:native("rl_shape_is_pickable")
+  static function shapeIsPickable(shape: RLHandle): Bool;
+
   @:native("rl_shape_set_stroke_color")
   static function shapeSetStrokeColor(shape: RLHandle, color: RLHandle): Bool;
 
@@ -757,6 +763,9 @@ private extern class RLExterns {
 
   @:native("rl_pick_sprite3d")
   static function pickSprite3d(camera: RLHandle, sprite3d: RLHandle, mouseX: Float, mouseY: Float): RLPickResult;
+
+  @:native("rl_pick_shape")
+  static function pickShape(camera: RLHandle, shape: RLHandle, mouseX: Float, mouseY: Float): RLPickResult;
 
   @:native("rl_pick_reset_stats")
   static function pickResetStats(): Void;
@@ -1331,6 +1340,8 @@ abstract RLImpl(RLExterns) {
   public static function shapeDestroy(shape: RLHandle): Void { RLExterns.shapeDestroy(shape); }
   public static function shapeSetVisible(shape: RLHandle, visible: Bool): Bool { return RLExterns.shapeSetVisible(shape, visible); }
   public static function shapeIsVisible(shape: RLHandle): Bool { return RLExterns.shapeIsVisible(shape); }
+  public static function shapeSetPickable(shape: RLHandle, pickable: Bool): Bool { return RLExterns.shapeSetPickable(shape, pickable); }
+  public static function shapeIsPickable(shape: RLHandle): Bool { return RLExterns.shapeIsPickable(shape); }
   public static function shapeSetStrokeColor(shape: RLHandle, color: RLHandle): Bool { return RLExterns.shapeSetStrokeColor(shape, color); }
   public static function shapeSetLine3d(shape: RLHandle, startX: Float, startY: Float, startZ: Float, endX: Float, endY: Float, endZ: Float): Bool {
     return RLExterns.shapeSetLine3d(shape, startX, startY, startZ, endX, endY, endZ);
@@ -1449,6 +1460,11 @@ abstract RLImpl(RLExterns) {
 
   public static function pickSprite3d(camera: RLHandle, sprite3d: RLHandle, mouseX: Float, mouseY: Float): RLPickResult {
     var n: RLPickResultNative = cast RLExterns.pickSprite3d(camera, sprite3d, mouseX, mouseY);
+    return {hit: n.hit, handle: n.handle, distance: n.distance, point: {x: n.point.x, y: n.point.y, z: n.point.z}, normal: {x: n.normal.x, y: n.normal.y, z: n.normal.z}};
+  }
+
+  public static function pickShape(camera: RLHandle, shape: RLHandle, mouseX: Float, mouseY: Float): RLPickResult {
+    var n: RLPickResultNative = cast RLExterns.pickShape(camera, shape, mouseX, mouseY);
     return {hit: n.hit, handle: n.handle, distance: n.distance, point: {x: n.point.x, y: n.point.y, z: n.point.z}, normal: {x: n.normal.x, y: n.normal.y, z: n.normal.z}};
   }
 

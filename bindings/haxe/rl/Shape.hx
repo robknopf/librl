@@ -22,6 +22,14 @@ class Shape {
 		return rl.impl.RLImpl.shapeIsVisible(shape);
 	}
 
+	public static function setPickable(shape:RLHandle, pickable:Bool):Bool {
+		return rl.impl.RLImpl.shapeSetPickable(shape, pickable);
+	}
+
+	public static function isPickable(shape:RLHandle):Bool {
+		return rl.impl.RLImpl.shapeIsPickable(shape);
+	}
+
 	public static function setStrokeColor(shape:RLHandle, color:RLHandle):Bool {
 		return rl.impl.RLImpl.shapeSetStrokeColor(shape, color);
 	}

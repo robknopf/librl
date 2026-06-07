@@ -16,6 +16,10 @@ class Pick {
 		return rl.impl.RLImpl.pickSprite3d(camera, sprite3d, mouseX, mouseY);
 	}
 
+	public static function shape(camera:RLHandle, shape:RLHandle, mouseX:Float, mouseY:Float):RLPickResult {
+		return rl.impl.RLImpl.pickShape(camera, shape, mouseX, mouseY);
+	}
+
 	public static function resetStats():Void {
 		rl.impl.RLImpl.pickResetStats();
 	}

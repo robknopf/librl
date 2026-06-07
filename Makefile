@@ -127,8 +127,10 @@ LDFLAGS_WASM = \
 	"_rl_shape_create", \
 	"_rl_shape_destroy", \
 	"_rl_shape_set_visible", \
-	"_rl_shape_set_transform", \
 	"_rl_shape_is_visible", \
+	"_rl_shape_set_pickable", \
+	"_rl_shape_is_pickable", \
+	"_rl_shape_set_transform", \
 	"_rl_shape_set_stroke_color", \
 	"_rl_shape_set_line_3d", \
 	"_rl_shape_set_line_strip_3d", \
@@ -179,6 +181,8 @@ LDFLAGS_WASM = \
 	"_rl_pick_model_to_scratch", \
 	"_rl_pick_sprite3d", \
 	"_rl_pick_sprite3d_to_scratch", \
+	"_rl_pick_shape", \
+	"_rl_pick_shape_to_scratch", \
 	"_rl_pick_reset_stats", \
 	"_rl_pick_get_broadphase_tests", \
 	"_rl_pick_get_broadphase_rejects", \

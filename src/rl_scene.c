@@ -340,7 +340,9 @@ static void draw_scene_member_pass(rl_handle_t drawable,
 
 static bool is_kind_narrow_pickable(rl_handle_kind_t kind)
 {
-    return kind == RL_HANDLE_KIND_MODEL || kind == RL_HANDLE_KIND_SPRITE3D;
+    return kind == RL_HANDLE_KIND_MODEL ||
+           kind == RL_HANDLE_KIND_SPRITE3D ||
+           kind == RL_HANDLE_KIND_SHAPE;
 }
 
 static bool is_drawable_visible(rl_handle_t drawable, rl_handle_kind_t kind)
@@ -733,6 +735,14 @@ rl_pick_result_t rl_scene_pick(rl_handle_t scene,
                 continue;
             }
             result = rl_pick_sprite3d_with_camera_ray(camera_data, ray, member->drawable);
+        } else if (member->kind == RL_HANDLE_KIND_SHAPE) {
+            if (!rl_shape_is_pickable(member->drawable)) {
+                continue;
+            }
+            if (!rl_shape_scene_pick_broadphase(member->drawable, ray)) {
+                continue;
+            }
+            result = rl_pick_shape_with_camera_ray(camera_data, ray, member->drawable);
         }
 
         if (!result.hit) {

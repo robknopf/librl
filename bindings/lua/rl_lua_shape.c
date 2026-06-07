@@ -39,6 +39,21 @@ static int rl_shape_is_visible_lua(lua_State *L)
     return 1;
 }
 
+static int rl_shape_set_pickable_lua(lua_State *L)
+{
+    rl_handle_t shape = (rl_handle_t)luaL_checkinteger(L, 1);
+    int pickable = lua_toboolean(L, 2);
+    lua_pushboolean(L, rl_shape_set_pickable(shape, pickable != 0));
+    return 1;
+}
+
+static int rl_shape_is_pickable_lua(lua_State *L)
+{
+    rl_handle_t shape = (rl_handle_t)luaL_checkinteger(L, 1);
+    lua_pushboolean(L, rl_shape_is_pickable(shape));
+    return 1;
+}
+
 static int rl_shape_set_stroke_color_lua(lua_State *L)
 {
     rl_handle_t shape = (rl_handle_t)luaL_checkinteger(L, 1);
@@ -301,6 +316,12 @@ void rl_register_shape_bindings(lua_State *L)
 
     lua_pushcfunction(L, rl_shape_is_visible_lua);
     lua_setfield(L, -2, "shape_is_visible");
+
+    lua_pushcfunction(L, rl_shape_set_pickable_lua);
+    lua_setfield(L, -2, "shape_set_pickable");
+
+    lua_pushcfunction(L, rl_shape_is_pickable_lua);
+    lua_setfield(L, -2, "shape_is_pickable");
 
     lua_pushcfunction(L, rl_shape_set_stroke_color_lua);
     lua_setfield(L, -2, "shape_set_stroke_color");

@@ -1255,6 +1255,12 @@ const shape = {
     isVisible: (shapeHandle) => reqModule().ccall(
         "rl_shape_is_visible", "number", ["number"], [shapeHandle >>> 0]
     ) !== 0,
+    setPickable: (shapeHandle, pickable) => reqModule().ccall(
+        "rl_shape_set_pickable", "number", ["number", "number"], [shapeHandle >>> 0, pickable ? 1 : 0]
+    ) !== 0,
+    isPickable: (shapeHandle) => reqModule().ccall(
+        "rl_shape_is_pickable", "number", ["number"], [shapeHandle >>> 0]
+    ) !== 0,
     setTransform: (shapeHandle, positionX, positionY, positionZ, rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ) => reqModule().ccall(
         "rl_shape_set_transform",
         "number",
@@ -1645,6 +1651,15 @@ const pick = {
             "number",
             ["number", "number", "number", "number"],
             [camera, sprite3d, mouseX, mouseY]
+        );
+        return reqModule().getPickResult();
+    },
+    shape: (camera, shape, mouseX, mouseY) => {
+        reqModule().ccall(
+            "rl_pick_shape_to_scratch",
+            "number",
+            ["number", "number", "number", "number"],
+            [camera, shape, mouseX, mouseY]
         );
         return reqModule().getPickResult();
     },

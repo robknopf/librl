@@ -729,6 +729,12 @@ class RLImpl {
 	public static function shapeIsVisible(shape:RLHandle):Bool
 		return binding != null && cast binding.shape.isVisible(shape);
 
+	public static function shapeSetPickable(shape:RLHandle, pickable:Bool):Bool
+		return binding != null && cast binding.shape.setPickable(shape, pickable);
+
+	public static function shapeIsPickable(shape:RLHandle):Bool
+		return binding != null && cast binding.shape.isPickable(shape);
+
 	public static function shapeSetStrokeColor(shape:RLHandle, color:RLHandle):Bool
 		return binding != null && cast binding.shape.setStrokeColor(shape, color);
 
@@ -1044,6 +1050,9 @@ class RLImpl {
 
 	public static function pickSprite3d(camera:RLHandle, sprite3d:RLHandle, mouseX:Float, mouseY:Float):RLPickResult
 		return binding == null ? pickResult() : toPickResult(binding.pick.sprite3d(camera, sprite3d, mouseX, mouseY));
+
+	public static function pickShape(camera:RLHandle, shape:RLHandle, mouseX:Float, mouseY:Float):RLPickResult
+		return binding == null ? pickResult() : toPickResult(binding.pick.shape(camera, shape, mouseX, mouseY));
 
 	public static function pickResetStats():Void {
 		if (binding != null)

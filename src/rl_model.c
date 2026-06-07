@@ -11,6 +11,7 @@
 #include <rlgl.h>
 
 #include "internal/exports.h"
+#include "internal/rl_camera3d.h"
 #include "internal/rl_color.h"
 #include "internal/rl_handle_pool.h"
 #include "internal/rl_model.h"
@@ -1071,9 +1072,26 @@ void rl_model_draw_pass(rl_handle_t handle, rl_render_pass_t pass)
         material.maps[MATERIAL_MAP_DIFFUSE].color.b = (unsigned char)(((int)diffuse.b * (int)tint.b) / 255);
         material.maps[MATERIAL_MAP_DIFFUSE].color.a = (unsigned char)(((int)diffuse.a * (int)tint.a) / 255);
 
-        if ((material.shader.locs != NULL) &&
-            (material.shader.locs[SHADER_LOC_MATRIX_BONETRANSFORMS] != -1) &&
-            (asset->model->boneMatrices != NULL)) {
+        bool is_gpu_skinned = (material.shader.locs != NULL) &&
+                              (material.shader.locs[SHADER_LOC_MATRIX_BONETRANSFORMS] != -1) &&
+                              (asset->model->boneMatrices != NULL);
+
+        Shader lighting_shader = {0};
+        bool use_lighting = is_gpu_skinned
+            ? rl_camera3d_get_skinned_lighting_shader(&lighting_shader)
+            : rl_camera3d_get_lighting_shader(&lighting_shader);
+
+        if (use_lighting) {
+            if (is_gpu_skinned &&
+                lighting_shader.locs != NULL &&
+                lighting_shader.locs[SHADER_LOC_MATRIX_BONETRANSFORMS] != -1) {
+                rlEnableShader(lighting_shader.id);
+                rlSetUniformMatrices(lighting_shader.locs[SHADER_LOC_MATRIX_BONETRANSFORMS],
+                                     asset->model->boneMatrices,
+                                     asset->model->skeleton.boneCount);
+            }
+            material.shader = lighting_shader;
+        } else if (is_gpu_skinned) {
             rlEnableShader(material.shader.id);
             rlSetUniformMatrices(material.shader.locs[SHADER_LOC_MATRIX_BONETRANSFORMS],
                                  asset->model->boneMatrices,

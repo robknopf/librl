@@ -17,7 +17,10 @@ static bool rl_lighting_ready = false;
 static Shader rl_lighting_shader = {0};
 static int rl_light_dir_loc = -1;
 static int rl_light_ambient_loc = -1;
-static int rl_light_tint_loc = -1;
+static bool rl_skinned_lighting_ready = false;
+static Shader rl_skinned_lighting_shader = {0};
+static int rl_skinned_light_dir_loc = -1;
+static int rl_skinned_light_ambient_loc = -1;
 static Vector3 rl_light_direction = {-0.6f, -1.0f, -0.5f};
 static float rl_light_ambient = 0.25f;
 static Camera3D rl_active_camera = {0};
@@ -98,52 +101,66 @@ static bool try_init_lighting(void)
 #if defined(PLATFORM_WEB)
     const char *vertex_shader_source =
         "attribute vec3 vertexPosition;\n"
+        "attribute vec2 vertexTexCoord;\n"
         "attribute vec3 vertexNormal;\n"
         "uniform mat4 mvp;\n"
+        "uniform mat4 matModel;\n"
+        "varying vec2 fragTexCoord;\n"
         "varying vec3 fragNormal;\n"
         "void main() {\n"
-        "  fragNormal = normalize(vertexNormal);\n"
+        "  fragTexCoord = vertexTexCoord;\n"
+        "  fragNormal = normalize(mat3(matModel) * vertexNormal);\n"
         "  gl_Position = mvp * vec4(vertexPosition, 1.0);\n"
         "}\n";
 
     const char *fragment_shader_source =
         "precision mediump float;\n"
+        "varying vec2 fragTexCoord;\n"
         "varying vec3 fragNormal;\n"
+        "uniform sampler2D texture0;\n"
+        "uniform vec4 colDiffuse;\n"
         "uniform vec3 lightDirection;\n"
         "uniform float ambient;\n"
-        "uniform vec4 tintColor;\n"
         "void main() {\n"
+        "  vec4 texColor = texture2D(texture0, fragTexCoord);\n"
         "  vec3 n = normalize(fragNormal);\n"
         "  vec3 l = normalize(-lightDirection);\n"
         "  float diffuse = max(dot(n, l), 0.0);\n"
         "  float intensity = clamp(ambient + diffuse, 0.0, 1.0);\n"
-        "  gl_FragColor = vec4(tintColor.rgb * intensity, tintColor.a);\n"
+        "  gl_FragColor = vec4(texColor.rgb * colDiffuse.rgb * intensity, texColor.a * colDiffuse.a);\n"
         "}\n";
 #else
     const char *vertex_shader_source =
         "#version 330\n"
         "in vec3 vertexPosition;\n"
+        "in vec2 vertexTexCoord;\n"
         "in vec3 vertexNormal;\n"
         "uniform mat4 mvp;\n"
+        "uniform mat4 matModel;\n"
+        "out vec2 fragTexCoord;\n"
         "out vec3 fragNormal;\n"
         "void main() {\n"
-        "  fragNormal = normalize(vertexNormal);\n"
+        "  fragTexCoord = vertexTexCoord;\n"
+        "  fragNormal = normalize(mat3(matModel) * vertexNormal);\n"
         "  gl_Position = mvp * vec4(vertexPosition, 1.0);\n"
         "}\n";
 
     const char *fragment_shader_source =
         "#version 330\n"
+        "in vec2 fragTexCoord;\n"
         "in vec3 fragNormal;\n"
+        "uniform sampler2D texture0;\n"
+        "uniform vec4 colDiffuse;\n"
         "uniform vec3 lightDirection;\n"
         "uniform float ambient;\n"
-        "uniform vec4 tintColor;\n"
         "out vec4 finalColor;\n"
         "void main() {\n"
+        "  vec4 texColor = texture(texture0, fragTexCoord);\n"
         "  vec3 n = normalize(fragNormal);\n"
         "  vec3 l = normalize(-lightDirection);\n"
         "  float diffuse = max(dot(n, l), 0.0);\n"
         "  float intensity = clamp(ambient + diffuse, 0.0, 1.0);\n"
-        "  finalColor = vec4(tintColor.rgb * intensity, tintColor.a);\n"
+        "  finalColor = vec4(texColor.rgb * colDiffuse.rgb * intensity, texColor.a * colDiffuse.a);\n"
         "}\n";
 #endif
 
@@ -154,15 +171,173 @@ static bool try_init_lighting(void)
 
     rl_light_dir_loc = GetShaderLocation(rl_lighting_shader, "lightDirection");
     rl_light_ambient_loc = GetShaderLocation(rl_lighting_shader, "ambient");
-    rl_light_tint_loc = GetShaderLocation(rl_lighting_shader, "tintColor");
-    rl_lighting_ready = (rl_light_dir_loc >= 0 && rl_light_ambient_loc >= 0 && rl_light_tint_loc >= 0);
+    rl_lighting_ready = (rl_light_dir_loc >= 0 && rl_light_ambient_loc >= 0);
 
     if (!rl_lighting_ready) {
         UnloadShader(rl_lighting_shader);
         rl_lighting_shader = (Shader){0};
         rl_light_dir_loc = -1;
         rl_light_ambient_loc = -1;
-        rl_light_tint_loc = -1;
+        return false;
+    }
+
+    return true;
+}
+
+static bool try_init_skinned_lighting(void)
+{
+    if (rl_skinned_lighting_ready) {
+        return true;
+    }
+    if (!IsWindowReady()) {
+        return false;
+    }
+
+#if defined(PLATFORM_WEB)
+    const char *vertex_shader_source =
+        "#version 100\n"
+        "#define MAX_BONE_NUM 64\n"
+        "attribute vec3 vertexPosition;\n"
+        "attribute vec2 vertexTexCoord;\n"
+        "attribute vec3 vertexNormal;\n"
+        "attribute vec4 vertexBoneIndices;\n"
+        "attribute vec4 vertexBoneWeights;\n"
+        "uniform mat4 mvp;\n"
+        "uniform mat4 matModel;\n"
+        "uniform mat4 boneMatrices[MAX_BONE_NUM];\n"
+        "varying vec2 fragTexCoord;\n"
+        "varying vec3 fragNormal;\n"
+        /* Extract upper-left 3x3 of transposed bone matrix for normal skinning. */
+        /* Matrices are row-major on ES 2.0 (transpose not applied by driver). */
+        "mat3 boneRot(mat4 m) {\n"
+        "  return mat3(\n"
+        "    vec3(m[0].x, m[1].x, m[2].x),\n"
+        "    vec3(m[0].y, m[1].y, m[2].y),\n"
+        "    vec3(m[0].z, m[1].z, m[2].z));\n"
+        "}\n"
+        "void main() {\n"
+        "  int i0 = int(vertexBoneIndices.x);\n"
+        "  int i1 = int(vertexBoneIndices.y);\n"
+        "  int i2 = int(vertexBoneIndices.z);\n"
+        "  int i3 = int(vertexBoneIndices.w);\n"
+        "  mat4 t0 = mat4(\n"
+        "    vec4(boneMatrices[i0][0].x, boneMatrices[i0][1].x, boneMatrices[i0][2].x, boneMatrices[i0][3].x),\n"
+        "    vec4(boneMatrices[i0][0].y, boneMatrices[i0][1].y, boneMatrices[i0][2].y, boneMatrices[i0][3].y),\n"
+        "    vec4(boneMatrices[i0][0].z, boneMatrices[i0][1].z, boneMatrices[i0][2].z, boneMatrices[i0][3].z),\n"
+        "    vec4(boneMatrices[i0][0].w, boneMatrices[i0][1].w, boneMatrices[i0][2].w, boneMatrices[i0][3].w));\n"
+        "  mat4 t1 = mat4(\n"
+        "    vec4(boneMatrices[i1][0].x, boneMatrices[i1][1].x, boneMatrices[i1][2].x, boneMatrices[i1][3].x),\n"
+        "    vec4(boneMatrices[i1][0].y, boneMatrices[i1][1].y, boneMatrices[i1][2].y, boneMatrices[i1][3].y),\n"
+        "    vec4(boneMatrices[i1][0].z, boneMatrices[i1][1].z, boneMatrices[i1][2].z, boneMatrices[i1][3].z),\n"
+        "    vec4(boneMatrices[i1][0].w, boneMatrices[i1][1].w, boneMatrices[i1][2].w, boneMatrices[i1][3].w));\n"
+        "  mat4 t2 = mat4(\n"
+        "    vec4(boneMatrices[i2][0].x, boneMatrices[i2][1].x, boneMatrices[i2][2].x, boneMatrices[i2][3].x),\n"
+        "    vec4(boneMatrices[i2][0].y, boneMatrices[i2][1].y, boneMatrices[i2][2].y, boneMatrices[i2][3].y),\n"
+        "    vec4(boneMatrices[i2][0].z, boneMatrices[i2][1].z, boneMatrices[i2][2].z, boneMatrices[i2][3].z),\n"
+        "    vec4(boneMatrices[i2][0].w, boneMatrices[i2][1].w, boneMatrices[i2][2].w, boneMatrices[i2][3].w));\n"
+        "  mat4 t3 = mat4(\n"
+        "    vec4(boneMatrices[i3][0].x, boneMatrices[i3][1].x, boneMatrices[i3][2].x, boneMatrices[i3][3].x),\n"
+        "    vec4(boneMatrices[i3][0].y, boneMatrices[i3][1].y, boneMatrices[i3][2].y, boneMatrices[i3][3].y),\n"
+        "    vec4(boneMatrices[i3][0].z, boneMatrices[i3][1].z, boneMatrices[i3][2].z, boneMatrices[i3][3].z),\n"
+        "    vec4(boneMatrices[i3][0].w, boneMatrices[i3][1].w, boneMatrices[i3][2].w, boneMatrices[i3][3].w));\n"
+        "  vec4 skinnedPosition =\n"
+        "    vertexBoneWeights.x*(t0*vec4(vertexPosition, 1.0)) +\n"
+        "    vertexBoneWeights.y*(t1*vec4(vertexPosition, 1.0)) +\n"
+        "    vertexBoneWeights.z*(t2*vec4(vertexPosition, 1.0)) +\n"
+        "    vertexBoneWeights.w*(t3*vec4(vertexPosition, 1.0));\n"
+        "  vec3 skinnedNormal =\n"
+        "    vertexBoneWeights.x*(boneRot(t0)*vertexNormal) +\n"
+        "    vertexBoneWeights.y*(boneRot(t1)*vertexNormal) +\n"
+        "    vertexBoneWeights.z*(boneRot(t2)*vertexNormal) +\n"
+        "    vertexBoneWeights.w*(boneRot(t3)*vertexNormal);\n"
+        "  fragTexCoord = vertexTexCoord;\n"
+        "  fragNormal = normalize(mat3(matModel) * skinnedNormal);\n"
+        "  gl_Position = mvp * skinnedPosition;\n"
+        "}\n";
+
+    const char *fragment_shader_source =
+        "precision mediump float;\n"
+        "varying vec2 fragTexCoord;\n"
+        "varying vec3 fragNormal;\n"
+        "uniform sampler2D texture0;\n"
+        "uniform vec4 colDiffuse;\n"
+        "uniform vec3 lightDirection;\n"
+        "uniform float ambient;\n"
+        "void main() {\n"
+        "  vec4 texColor = texture2D(texture0, fragTexCoord);\n"
+        "  vec3 n = normalize(fragNormal);\n"
+        "  vec3 l = normalize(-lightDirection);\n"
+        "  float diffuse = max(dot(n, l), 0.0);\n"
+        "  float intensity = clamp(ambient + diffuse, 0.0, 1.0);\n"
+        "  gl_FragColor = vec4(texColor.rgb * colDiffuse.rgb * intensity, texColor.a * colDiffuse.a);\n"
+        "}\n";
+#else
+    const char *vertex_shader_source =
+        "#version 330\n"
+        "#define MAX_BONE_NUM 128\n"
+        "in vec3 vertexPosition;\n"
+        "in vec2 vertexTexCoord;\n"
+        "in vec3 vertexNormal;\n"
+        "in vec4 vertexBoneIndices;\n"
+        "in vec4 vertexBoneWeights;\n"
+        "uniform mat4 mvp;\n"
+        "uniform mat4 matModel;\n"
+        "uniform mat4 boneMatrices[MAX_BONE_NUM];\n"
+        "out vec2 fragTexCoord;\n"
+        "out vec3 fragNormal;\n"
+        "void main() {\n"
+        "  int i0 = int(vertexBoneIndices.x);\n"
+        "  int i1 = int(vertexBoneIndices.y);\n"
+        "  int i2 = int(vertexBoneIndices.z);\n"
+        "  int i3 = int(vertexBoneIndices.w);\n"
+        "  vec4 skinnedPosition =\n"
+        "    vertexBoneWeights.x*(boneMatrices[i0]*vec4(vertexPosition, 1.0)) +\n"
+        "    vertexBoneWeights.y*(boneMatrices[i1]*vec4(vertexPosition, 1.0)) +\n"
+        "    vertexBoneWeights.z*(boneMatrices[i2]*vec4(vertexPosition, 1.0)) +\n"
+        "    vertexBoneWeights.w*(boneMatrices[i3]*vec4(vertexPosition, 1.0));\n"
+        "  vec3 skinnedNormal =\n"
+        "    vertexBoneWeights.x*(boneMatrices[i0]*vec4(vertexNormal, 0.0)).xyz +\n"
+        "    vertexBoneWeights.y*(boneMatrices[i1]*vec4(vertexNormal, 0.0)).xyz +\n"
+        "    vertexBoneWeights.z*(boneMatrices[i2]*vec4(vertexNormal, 0.0)).xyz +\n"
+        "    vertexBoneWeights.w*(boneMatrices[i3]*vec4(vertexNormal, 0.0)).xyz;\n"
+        "  fragTexCoord = vertexTexCoord;\n"
+        "  fragNormal = normalize(mat3(matModel) * skinnedNormal);\n"
+        "  gl_Position = mvp * skinnedPosition;\n"
+        "}\n";
+
+    const char *fragment_shader_source =
+        "#version 330\n"
+        "in vec2 fragTexCoord;\n"
+        "in vec3 fragNormal;\n"
+        "uniform sampler2D texture0;\n"
+        "uniform vec4 colDiffuse;\n"
+        "uniform vec3 lightDirection;\n"
+        "uniform float ambient;\n"
+        "out vec4 finalColor;\n"
+        "void main() {\n"
+        "  vec4 texColor = texture(texture0, fragTexCoord);\n"
+        "  vec3 n = normalize(fragNormal);\n"
+        "  vec3 l = normalize(-lightDirection);\n"
+        "  float diffuse = max(dot(n, l), 0.0);\n"
+        "  float intensity = clamp(ambient + diffuse, 0.0, 1.0);\n"
+        "  finalColor = vec4(texColor.rgb * colDiffuse.rgb * intensity, texColor.a * colDiffuse.a);\n"
+        "}\n";
+#endif
+
+    rl_skinned_lighting_shader = LoadShaderFromMemory(vertex_shader_source, fragment_shader_source);
+    if (rl_skinned_lighting_shader.id == 0) {
+        return false;
+    }
+
+    rl_skinned_light_dir_loc = GetShaderLocation(rl_skinned_lighting_shader, "lightDirection");
+    rl_skinned_light_ambient_loc = GetShaderLocation(rl_skinned_lighting_shader, "ambient");
+    rl_skinned_lighting_ready = (rl_skinned_light_dir_loc >= 0 && rl_skinned_light_ambient_loc >= 0);
+
+    if (!rl_skinned_lighting_ready) {
+        UnloadShader(rl_skinned_lighting_shader);
+        rl_skinned_lighting_shader = (Shader){0};
+        rl_skinned_light_dir_loc = -1;
+        rl_skinned_light_ambient_loc = -1;
         return false;
     }
 
@@ -311,6 +486,7 @@ void rl_enable_lighting(void)
 {
     rl_lighting_enabled = true;
     try_init_lighting();
+    try_init_skinned_lighting();
 }
 
 RL_KEEP
@@ -343,6 +519,32 @@ void rl_set_light_ambient(float ambient)
     rl_light_ambient = ambient;
 }
 
+bool rl_camera3d_get_lighting_shader(Shader *out)
+{
+    if (!rl_lighting_enabled || !rl_lighting_ready || out == NULL) {
+        return false;
+    }
+    SetShaderValue(rl_lighting_shader, rl_light_dir_loc,
+                   &rl_light_direction, SHADER_UNIFORM_VEC3);
+    SetShaderValue(rl_lighting_shader, rl_light_ambient_loc,
+                   &rl_light_ambient, SHADER_UNIFORM_FLOAT);
+    *out = rl_lighting_shader;
+    return true;
+}
+
+bool rl_camera3d_get_skinned_lighting_shader(Shader *out)
+{
+    if (!rl_lighting_enabled || !rl_skinned_lighting_ready || out == NULL) {
+        return false;
+    }
+    SetShaderValue(rl_skinned_lighting_shader, rl_skinned_light_dir_loc,
+                   &rl_light_direction, SHADER_UNIFORM_VEC3);
+    SetShaderValue(rl_skinned_lighting_shader, rl_skinned_light_ambient_loc,
+                   &rl_light_ambient, SHADER_UNIFORM_FLOAT);
+    *out = rl_skinned_lighting_shader;
+    return true;
+}
+
 void rl_camera3d_init(void)
 {
     // Reset to deterministic defaults so repeated rl_init/rl_deinit cycles are safe.
@@ -351,7 +553,10 @@ void rl_camera3d_init(void)
     rl_lighting_shader = (Shader){0};
     rl_light_dir_loc = -1;
     rl_light_ambient_loc = -1;
-    rl_light_tint_loc = -1;
+    rl_skinned_lighting_ready = false;
+    rl_skinned_lighting_shader = (Shader){0};
+    rl_skinned_light_dir_loc = -1;
+    rl_skinned_light_ambient_loc = -1;
     rl_light_direction = (Vector3){-0.6f, -1.0f, -0.5f};
     rl_light_ambient = 0.25f;
     clear_active_camera();
@@ -389,16 +594,22 @@ void rl_camera3d_init(void)
 
 void rl_camera3d_deinit(void)
 {
-    // Shader is owned here and must be released before global teardown finishes.
+    // Shaders are owned here and must be released before global teardown finishes.
     if (rl_lighting_ready) {
         UnloadShader(rl_lighting_shader);
+    }
+    if (rl_skinned_lighting_ready) {
+        UnloadShader(rl_skinned_lighting_shader);
     }
     rl_lighting_enabled = false;
     rl_lighting_ready = false;
     rl_lighting_shader = (Shader){0};
     rl_light_dir_loc = -1;
     rl_light_ambient_loc = -1;
-    rl_light_tint_loc = -1;
+    rl_skinned_lighting_ready = false;
+    rl_skinned_lighting_shader = (Shader){0};
+    rl_skinned_light_dir_loc = -1;
+    rl_skinned_light_ambient_loc = -1;
     clear_active_camera();
 
     for (int i = 0; i < MAX_CAMERAS; i++) {

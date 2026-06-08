@@ -1072,9 +1072,13 @@ void rl_model_draw_pass(rl_handle_t handle, rl_render_pass_t pass)
         material.maps[MATERIAL_MAP_DIFFUSE].color.b = (unsigned char)(((int)diffuse.b * (int)tint.b) / 255);
         material.maps[MATERIAL_MAP_DIFFUSE].color.a = (unsigned char)(((int)diffuse.a * (int)tint.a) / 255);
 
-        bool is_gpu_skinned = (material.shader.locs != NULL) &&
-                              (material.shader.locs[SHADER_LOC_MATRIX_BONETRANSFORMS] != -1) &&
-                              (asset->model->boneMatrices != NULL);
+        Mesh *current_mesh = &asset->model->meshes[i];
+        bool is_gpu_skinned = (asset->model->boneMatrices != NULL) &&
+                              (current_mesh->boneIndices != NULL) &&
+                              (current_mesh->animVertices == NULL);
+
+        // testing: disable the gpu skin shader
+        //is_gpu_skinned = false;                      
 
         Shader lighting_shader = {0};
         bool use_lighting = is_gpu_skinned

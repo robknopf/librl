@@ -15,6 +15,7 @@
 #include "internal/rl_scene.h"
 #include "internal/rl_shape.h"
 #include "internal/rl_sprite3d.h"
+#include "internal/rl_text3d.h"
 #include "rl_camera3d.h"
 #include "rl_handle.h"
 #include "rl_model.h"
@@ -24,6 +25,7 @@
 #include "rl_sprite2d.h"
 #include "rl_sprite3d.h"
 #include "rl_text2d.h"
+#include "rl_text3d.h"
 
 #include <rlgl.h>
 
@@ -95,6 +97,7 @@ static bool is_drawable_kind(rl_handle_kind_t kind)
     case RL_HANDLE_KIND_SPRITE2D:
     case RL_HANDLE_KIND_TEXT2D:
     case RL_HANDLE_KIND_SHAPE:
+    case RL_HANDLE_KIND_TEXT3D:
         return true;
     default:
         return false;
@@ -112,6 +115,8 @@ static bool is_drawable_handle_valid(rl_handle_t drawable, rl_handle_kind_t kind
         return true;
     case RL_HANDLE_KIND_SHAPE:
         return rl_shape_is_valid(drawable);
+    case RL_HANDLE_KIND_TEXT3D:
+        return rl_text3d_is_valid(drawable);
     default:
         return false;
     }
@@ -242,6 +247,11 @@ static bool get_drawable_world_position(rl_handle_t drawable,
             return false;
         }
         break;
+    case RL_HANDLE_KIND_TEXT3D:
+        if (!rl_text3d_get_position(drawable, &position_x, &position_y, &position_z)) {
+            return false;
+        }
+        break;
     default:
         return false;
     }
@@ -333,6 +343,9 @@ static void draw_scene_member_pass(rl_handle_t drawable,
     case RL_HANDLE_KIND_SHAPE:
         rl_shape_draw_pass(drawable, pass);
         break;
+    case RL_HANDLE_KIND_TEXT3D:
+        rl_text3d_draw_pass(drawable, pass);
+        break;
     default:
         break;
     }
@@ -342,7 +355,8 @@ static bool is_kind_narrow_pickable(rl_handle_kind_t kind)
 {
     return kind == RL_HANDLE_KIND_MODEL ||
            kind == RL_HANDLE_KIND_SPRITE3D ||
-           kind == RL_HANDLE_KIND_SHAPE;
+           kind == RL_HANDLE_KIND_SHAPE ||
+           kind == RL_HANDLE_KIND_TEXT3D;
 }
 
 static bool is_drawable_visible(rl_handle_t drawable, rl_handle_kind_t kind)
@@ -358,6 +372,8 @@ static bool is_drawable_visible(rl_handle_t drawable, rl_handle_kind_t kind)
         return rl_text2d_is_visible(drawable);
     case RL_HANDLE_KIND_SHAPE:
         return rl_shape_is_visible(drawable);
+    case RL_HANDLE_KIND_TEXT3D:
+        return rl_text3d_is_visible(drawable);
     default:
         return false;
     }
@@ -562,7 +578,8 @@ void rl_scene_draw(rl_handle_t scene)
 
         if (member->kind == RL_HANDLE_KIND_MODEL ||
             member->kind == RL_HANDLE_KIND_SPRITE3D ||
-            member->kind == RL_HANDLE_KIND_SHAPE) {
+            member->kind == RL_HANDLE_KIND_SHAPE ||
+            member->kind == RL_HANDLE_KIND_TEXT3D) {
             has_3d = true;
         } else {
             has_2d = true;
@@ -585,7 +602,8 @@ void rl_scene_draw(rl_handle_t scene)
                     !is_drawable_handle_valid(member->drawable, member->kind) ||
                     (member->kind != RL_HANDLE_KIND_MODEL &&
                      member->kind != RL_HANDLE_KIND_SPRITE3D &&
-                     member->kind != RL_HANDLE_KIND_SHAPE)) {
+                     member->kind != RL_HANDLE_KIND_SHAPE &&
+                     member->kind != RL_HANDLE_KIND_TEXT3D)) {
                     start++;
                     continue;
                 }
@@ -611,7 +629,8 @@ void rl_scene_draw(rl_handle_t scene)
                     is_drawable_handle_valid(member->drawable, member->kind) &&
                     (member->kind == RL_HANDLE_KIND_MODEL ||
                      member->kind == RL_HANDLE_KIND_SPRITE3D ||
-                     member->kind == RL_HANDLE_KIND_SHAPE)) {
+                     member->kind == RL_HANDLE_KIND_SHAPE ||
+                     member->kind == RL_HANDLE_KIND_TEXT3D)) {
                     item.drawable = member->drawable;
                     item.kind = member->kind;
                     item.order = member->order;
@@ -629,7 +648,9 @@ void rl_scene_draw(rl_handle_t scene)
                     if ((member->kind == RL_HANDLE_KIND_MODEL &&
                          rl_model_has_render_pass(member->drawable, RL_RENDER_PASS_TRANSPARENT_3D)) ||
                         (member->kind == RL_HANDLE_KIND_SPRITE3D &&
-                         rl_sprite3d_has_render_pass(member->drawable, RL_RENDER_PASS_TRANSPARENT_3D))) {
+                         rl_sprite3d_has_render_pass(member->drawable, RL_RENDER_PASS_TRANSPARENT_3D)) ||
+                        (member->kind == RL_HANDLE_KIND_TEXT3D &&
+                         rl_text3d_has_render_pass(member->drawable, RL_RENDER_PASS_TRANSPARENT_3D))) {
                         item.depth_key = compute_transparent_depth_key(camera_data,
                                                                        camera_forward,
                                                                        member->drawable,
@@ -743,6 +764,14 @@ rl_pick_result_t rl_scene_pick(rl_handle_t scene,
                 continue;
             }
             result = rl_pick_shape_with_camera_ray(camera_data, ray, member->drawable);
+        } else if (member->kind == RL_HANDLE_KIND_TEXT3D) {
+            if (!rl_text3d_is_pickable_internal(member->drawable)) {
+                continue;
+            }
+            if (!rl_text3d_scene_pick_broadphase(member->drawable, ray)) {
+                continue;
+            }
+            result = rl_pick_text3d_with_camera_ray(camera_data, ray, member->drawable);
         }
 
         if (!result.hit) {

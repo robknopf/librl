@@ -22,6 +22,12 @@ when defined(js):
     RLHandle* = uint32
     RLWindowFlags* = uint32
 
+    RLFacing* {.pure.} = enum
+      CAMERA = 0
+      CAMERA_FIXED_Y = 1
+      Y_UP = 2
+      FREE = 3
+
     Vec2* = object
       x*, y*: float32
 
@@ -572,6 +578,8 @@ async function __rlEnsureBindings(bindingsPath) {
     importjs: "__gRl.pick.sprite3d(#,#,#,#)".}
   proc rl_pick_shape*(camera, shape: RLHandle, mouseX, mouseY: float): RLPickResult {.
     importjs: "__gRl.pick.shape(#,#,#,#)".}
+  proc rl_pick_text3d*(camera, text3d: RLHandle, mouseX, mouseY: float): RLPickResult {.
+    importjs: "__gRl.pick.text3d(#,#,#,#)".}
 
   # Sprite2D
   proc rl_sprite2d_create*(texture: RLHandle): RLHandle {.importjs: "__gRl.sprite2d.create(#)".}
@@ -611,6 +619,28 @@ async function __rlEnsureBindings(bindingsPath) {
     importjs: "__gRl.text2d.isPickable(#)".}
   proc rl_text2d_draw*(handle: RLHandle) {.importjs: "__gRl.text2d.draw(#)".}
   proc rl_text2d_destroy*(handle: RLHandle) {.importjs: "__gRl.text2d.destroy(#)".}
+
+  # Text3D
+  proc rl_text3d_create*(font: RLHandle, size: float): RLHandle {.importjs: "__gRl.text3d.create(#,#)".}
+  proc rl_text3d_set_font*(handle: RLHandle, font: RLHandle) {.importjs: "__gRl.text3d.setFont(#,#)".}
+  proc rl_text3d_set_size*(handle: RLHandle, size: float) {.importjs: "__gRl.text3d.setSize(#,#)".}
+  proc rl_text3d_set_content_impl(handle: RLHandle, content: cstring) {.importjs: "__gRl.text3d.setContent(#,#)".}
+  proc rl_text3d_set_content*(handle: RLHandle, content: string) {.inline.} = rl_text3d_set_content_impl(handle, content.cstring)
+  proc rl_text3d_set_transform*(handle: RLHandle, x, y, z, rx, ry, rz: float): bool {.
+    importjs: "__gRl.text3d.setTransform(#,#,#,#,#,#,#)".}
+  proc rl_text3d_set_color*(handle: RLHandle, color: RLHandle) {.importjs: "__gRl.text3d.setColor(#,#)".}
+  proc rl_text3d_set_facing*(handle: RLHandle, facing: cint): bool {.importjs: "__gRl.text3d.setFacing(#,#)".}
+  proc rl_text3d_set_visible*(handle: RLHandle, visible: bool): bool {.importjs: "__gRl.text3d.setVisible(#,#)".}
+  proc rl_text3d_set_pickable*(handle: RLHandle, pickable: bool): bool {.importjs: "__gRl.text3d.setPickable(#,#)".}
+  proc rl_text3d_is_visible*(handle: RLHandle): bool {.importjs: "__gRl.text3d.isVisible(#)".}
+  proc rl_text3d_is_pickable*(handle: RLHandle): bool {.importjs: "__gRl.text3d.isPickable(#)".}
+  proc rl_text3d_get_bounds*(handle: RLHandle): RLVector2 {.importjs: "__gRl.text3d.getBounds(#)".}
+  proc rl_text3d_draw*(handle: RLHandle) {.importjs: "__gRl.text3d.draw(#)".}
+  proc rl_text3d_draw_text_impl(text: cstring, font: RLHandle, x, y, z, size: float, color: RLHandle) {.
+    importjs: "__gRl.text3d.drawText(#,#,#,#,#,#,#)".}
+  proc rl_text3d_draw_text*(text: string, font: RLHandle, x, y, z, size: float, color: RLHandle) {.inline.} =
+    rl_text3d_draw_text_impl(text.cstring, font, x, y, z, size, color)
+  proc rl_text3d_destroy*(handle: RLHandle) {.importjs: "__gRl.text3d.destroy(#)".}
 
   # Music
   proc rl_music_create*(filename: cstring): RLHandle {.importjs: "__gRl.music.create(#)".}

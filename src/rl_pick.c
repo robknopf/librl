@@ -7,6 +7,7 @@
 #include "internal/rl_model.h"
 #include "internal/rl_shape.h"
 #include "internal/rl_sprite3d.h"
+#include "internal/rl_text3d.h"
 #include "rl_model.h"
 #include "rl_scratch.h"
 #include "rl_sprite3d.h"
@@ -307,6 +308,65 @@ bool rl_pick_shape_to_scratch(rl_handle_t camera,
                               float mouse_y)
 {
     rl_pick_result_t result = rl_pick_shape(camera, shape, mouse_x, mouse_y);
+
+    rl_scratch_set_pick_result(result);
+    return result.hit;
+}
+
+RL_KEEP
+rl_pick_result_t rl_pick_text3d_with_camera_ray(Camera3D camera_data,
+                                                Ray ray,
+                                                rl_handle_t text3d)
+{
+    RayCollision collision = {0};
+
+    if (!rl_text3d_is_pickable_internal(text3d)) {
+        return make_empty_pick_result();
+    }
+
+    rl_pick_stats.broadphase_tests++;
+    if (!rl_text3d_scene_pick_broadphase(text3d, ray)) {
+        rl_pick_stats.broadphase_rejects++;
+        return make_empty_pick_result();
+    }
+
+    rl_pick_stats.narrowphase_tests++;
+    collision = rl_text3d_get_ray_collision(text3d, camera_data, ray);
+    if (collision.hit) {
+        rl_pick_stats.narrowphase_hits++;
+    }
+
+    return pick_result_from_ray_collision(collision);
+}
+
+RL_KEEP
+rl_pick_result_t rl_pick_text3d(rl_handle_t camera,
+                                rl_handle_t text3d,
+                                float mouse_x,
+                                float mouse_y)
+{
+    Camera3D camera_data = {0};
+    Ray ray = {0};
+
+    if (!rl_camera3d_get_camera(camera, &camera_data)) {
+        return make_empty_pick_result();
+    }
+
+    ray = GetMouseRay((Vector2){mouse_x, mouse_y}, camera_data);
+    rl_pick_result_t result = rl_pick_text3d_with_camera_ray(camera_data, ray, text3d);
+    if (result.hit) {
+        result.handle = text3d;
+    }
+    return result;
+}
+
+RL_KEEP
+bool rl_pick_text3d_to_scratch(rl_handle_t camera,
+                               rl_handle_t text3d,
+                               float mouse_x,
+                               float mouse_y)
+{
+    rl_pick_result_t result = rl_pick_text3d(camera, text3d, mouse_x, mouse_y);
 
     rl_scratch_set_pick_result(result);
     return result.hit;

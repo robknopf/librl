@@ -40,6 +40,7 @@ import type {
     RLTaskGroupTaskCallback,
     RLText,
     RLText2d,
+    RLText3d,
     RLTexture,
     RLWindow,
     RLHandle,
@@ -1663,6 +1664,15 @@ const pick = {
         );
         return reqModule().getPickResult();
     },
+    text3d: (camera, text3d, mouseX, mouseY) => {
+        reqModule().ccall(
+            "rl_pick_text3d_to_scratch",
+            "number",
+            ["number", "number", "number", "number"],
+            [camera, text3d, mouseX, mouseY]
+        );
+        return reqModule().getPickResult();
+    },
     resetStats: () => {
         reqModule().ccall("rl_pick_reset_stats", null, [], []);
     }
@@ -1921,6 +1931,53 @@ const text2d = {
     )
 } satisfies RLText2d;
 
+const text3d = {
+    create: (font: RLHandle, size: number) => ccHandle("rl_text3d_create", ["number", "number"], [font, size]),
+    setFont: (handle, font) => reqModule().ccall(
+        "rl_text3d_set_font", null, ["number", "number"], [handle, font]
+    ),
+    setSize: (handle, size) => reqModule().ccall(
+        "rl_text3d_set_size", null, ["number", "number"], [handle, size]
+    ),
+    setContent: (handle, content) => reqModule().ccall(
+        "rl_text3d_set_content", null, ["number", "string"], [handle, content]
+    ),
+    setTransform: (handle, x, y, z, rx, ry, rz) => reqModule().ccall(
+        "rl_text3d_set_transform", "number", ["number", "number", "number", "number", "number", "number", "number"], [handle, x, y, z, rx, ry, rz]
+    ) !== 0,
+    setColor: (handle, color) => reqModule().ccall(
+        "rl_text3d_set_color", null, ["number", "number"], [handle, color]
+    ),
+    setFacing: (handle, facing) => reqModule().ccall(
+        "rl_text3d_set_facing", "number", ["number", "number"], [handle, facing]
+    ) !== 0,
+    setVisible: (handle, visible) => reqModule().ccall(
+        "rl_text3d_set_visible", "number", ["number", "number"], [handle, visible ? 1 : 0]
+    ) !== 0,
+    setPickable: (handle, pickable) => reqModule().ccall(
+        "rl_text3d_set_pickable", "number", ["number", "number"], [handle, pickable ? 1 : 0]
+    ) !== 0,
+    isVisible: (handle) => reqModule().ccall(
+        "rl_text3d_is_visible", "number", ["number"], [handle]
+    ) !== 0,
+    isPickable: (handle) => reqModule().ccall(
+        "rl_text3d_is_pickable", "number", ["number"], [handle]
+    ) !== 0,
+    getBounds: (handle) => {
+        reqModule().ccall("rl_text3d_get_bounds_to_scratch", "number", ["number"], [handle]);
+        return reqModule().getVector2();
+    },
+    draw: (handle) => reqModule().ccall(
+        "rl_text3d_draw", null, ["number"], [handle]
+    ),
+    drawText: (text, font, x, y, z, size, color) => reqModule().ccall(
+        "rl_text3d_draw_text", null, ["string", "number", "number", "number", "number", "number", "number"], [text, font, x, y, z, size, color]
+    ),
+    destroy: (handle) => reqModule().ccall(
+        "rl_text3d_destroy", null, ["number"], [handle]
+    )
+} satisfies RLText3d;
+
 const logger = {
     message: (level, message) => reqModule().ccall(
         "rl_logger_message", null, ["number", "string"], [level, String(message ?? "").replaceAll("%", "%%")]
@@ -2096,7 +2153,7 @@ const helpers = {
 
 export const rl = {
     ...rlCore,
-    fs, asset, event, window, render, camera3d, shape, debug, text, texture, input, color, font, model, pick, scene, music, sound, sprite3d, sprite2d, text2d, logger, helpers,
+    fs, asset, event, window, render, camera3d, shape, debug, text, texture, input, color, font, model, pick, scene, music, sound, sprite3d, sprite2d, text2d, text3d, logger, helpers,
 } satisfies RLApi;
 
 export default rl;

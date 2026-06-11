@@ -11,7 +11,7 @@ import rl.Types.RLKeyboardState;
 import rl.Types.RLMouseState;
 import rl.Types.RLPickResult;
 import rl.Types.RLScenePickResult;
-import rl.Types.RLSprite3dFacing;
+import rl.Types.RLFacing;
 import rl.Types.RLSprite3dTransform;
 import rl.Types.RLTouchpoint;
 import rl.Types.RLVec2;
@@ -849,7 +849,7 @@ class RLImpl {
 	public static function sprite3dSetSize(sprite:RLHandle, size:Float):Bool
 		return binding != null && cast binding.sprite3d.setSize(sprite, size);
 
-	public static function sprite3dSetFacing(sprite:RLHandle, facing:RLSprite3dFacing):Bool
+	public static function sprite3dSetFacing(sprite:RLHandle, facing:RLFacing):Bool
 		return binding != null && cast binding.sprite3d.setFacing(sprite, facing);
 
 	public static function sprite3dSetTint(sprite:RLHandle, color:RLHandle = 0):Bool
@@ -955,6 +955,65 @@ class RLImpl {
 			binding.text2d.destroy(handle);
 	}
 
+	public static function text3dCreate(font:RLHandle, size:Float):RLHandle
+		return binding == null ? 0 : cast binding.text3d.create(font, size);
+
+	public static function text3dSetFont(handle:RLHandle, font:RLHandle):Void {
+		if (binding != null)
+			binding.text3d.setFont(handle, font);
+	}
+
+	public static function text3dSetSize(handle:RLHandle, size:Float):Void {
+		if (binding != null)
+			binding.text3d.setSize(handle, size);
+	}
+
+	public static function text3dSetContent(handle:RLHandle, content:String):Void {
+		if (binding != null)
+			binding.text3d.setContent(handle, content);
+	}
+
+	public static function text3dSetTransform(handle:RLHandle, x:Float, y:Float, z:Float, rx:Float, ry:Float, rz:Float):Bool
+		return binding != null && cast binding.text3d.setTransform(handle, x, y, z, rx, ry, rz);
+
+	public static function text3dSetColor(handle:RLHandle, color:RLHandle):Void {
+		if (binding != null)
+			binding.text3d.setColor(handle, color);
+	}
+
+	public static function text3dSetFacing(handle:RLHandle, facing:Int):Bool
+		return binding != null && cast binding.text3d.setFacing(handle, facing);
+
+	public static function text3dSetVisible(handle:RLHandle, visible:Bool):Bool
+		return binding != null && cast binding.text3d.setVisible(handle, visible);
+
+	public static function text3dSetPickable(handle:RLHandle, pickable:Bool):Bool
+		return binding != null && cast binding.text3d.setPickable(handle, pickable);
+
+	public static function text3dIsVisible(handle:RLHandle):Bool
+		return binding == null ? false : cast binding.text3d.isVisible(handle);
+
+	public static function text3dIsPickable(handle:RLHandle):Bool
+		return binding == null ? false : cast binding.text3d.isPickable(handle);
+
+	public static function text3dGetBounds(handle:RLHandle):RLVec2
+		return binding == null ? vec2() : cast binding.text3d.getBounds(handle);
+
+	public static function text3dDraw(handle:RLHandle):Void {
+		if (binding != null)
+			binding.text3d.draw(handle);
+	}
+
+	public static function text3dDrawText(text:String, font:RLHandle, x:Float, y:Float, z:Float, size:Float, color:RLHandle):Void {
+		if (binding != null)
+			binding.text3d.drawText(text, font, x, y, z, size, color);
+	}
+
+	public static function text3dDestroy(handle:RLHandle):Void {
+		if (binding != null)
+			binding.text3d.destroy(handle);
+	}
+
 	public static function textureCreate(filename:String):RLHandle
 		return binding == null ? 0 : cast binding.texture.create(filename);
 
@@ -1053,6 +1112,9 @@ class RLImpl {
 
 	public static function pickShape(camera:RLHandle, shape:RLHandle, mouseX:Float, mouseY:Float):RLPickResult
 		return binding == null ? pickResult() : toPickResult(binding.pick.shape(camera, shape, mouseX, mouseY));
+
+	public static function pickText3d(camera:RLHandle, text3d:RLHandle, mouseX:Float, mouseY:Float):RLPickResult
+		return binding == null ? pickResult() : toPickResult(binding.pick.text3d(camera, text3d, mouseX, mouseY));
 
 	public static function pickResetStats():Void {
 		if (binding != null)

@@ -201,4 +201,49 @@ rl.text2d_destroy(label)
 rl.deinit()
 print("OK: text2d API available and lifecycle works")
 
+-- Test text3d API availability
+print("\n=== Text3D API Test ===")
+local text3d_fns = {"text3d_create","text3d_set_font","text3d_set_size","text3d_set_content","text3d_set_transform","text3d_set_color","text3d_set_facing","text3d_set_visible","text3d_set_pickable","text3d_is_visible","text3d_is_pickable","text3d_get_bounds","text3d_draw","text3d_draw_text","text3d_destroy"}
+for _, fn in ipairs(text3d_fns) do
+    if type(rl[fn]) ~= "function" then
+        print("FAIL: expected rl." .. fn .. " to be a function")
+        os.exit(1)
+    end
+end
+if rl.boot() ~= rl.BOOT_OK then
+    print("FAIL: rl.boot() failed before text3d lifecycle test")
+    os.exit(1)
+end
+if rl.init() ~= rl.INIT_OK then
+    print("FAIL: rl.init() failed before text3d lifecycle test")
+    os.exit(1)
+end
+local t3 = rl.text3d_create(rl.font_get_default(), 1.0)
+if t3 == 0 then
+    print("FAIL: text3d_create returned 0")
+    rl.deinit()
+    os.exit(1)
+end
+rl.text3d_set_content(t3, "hello 3d")
+rl.text3d_set_transform(t3, 0, 1, 0, 0, 0, 0)
+rl.text3d_set_color(t3, 0)
+rl.text3d_set_size(t3, 2.0)
+rl.text3d_set_font(t3, rl.font_get_default())
+rl.text3d_set_facing(t3, 0)
+rl.text3d_set_visible(t3, true)
+rl.text3d_set_pickable(t3, true)
+if not rl.text3d_is_visible(t3) then
+    print("FAIL: text3d_is_visible should be true")
+    rl.deinit()
+    os.exit(1)
+end
+if not rl.text3d_is_pickable(t3) then
+    print("FAIL: text3d_is_pickable should be true")
+    rl.deinit()
+    os.exit(1)
+end
+rl.text3d_destroy(t3)
+rl.deinit()
+print("OK: text3d API available and lifecycle works")
+
 print("\n=== All Tests Passed ===")

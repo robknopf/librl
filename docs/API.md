@@ -480,6 +480,44 @@ Notes:
 
 ---
 
+## Text3D (`include/rl_text3d.h`)
+
+World-space billboard text. Text faces the camera (or a fixed axis) and is centered on its transform position. Always rendered in the transparent 3D pass.
+
+```c
+rl_handle_t rl_text3d_create(rl_handle_t font, float size);
+void        rl_text3d_set_font(rl_handle_t handle, rl_handle_t font);
+void        rl_text3d_set_size(rl_handle_t handle, float size);
+void        rl_text3d_set_content(rl_handle_t handle, const char *content);
+bool        rl_text3d_set_transform(rl_handle_t handle,
+                float x, float y, float z,
+                float rx, float ry, float rz);
+void        rl_text3d_set_color(rl_handle_t handle, rl_handle_t color);
+bool        rl_text3d_set_facing(rl_handle_t handle, int facing);
+bool        rl_text3d_set_visible(rl_handle_t handle, bool visible);
+bool        rl_text3d_set_pickable(rl_handle_t handle, bool pickable);
+bool        rl_text3d_is_visible(rl_handle_t handle);
+bool        rl_text3d_is_pickable(rl_handle_t handle);
+vec2_t      rl_text3d_get_bounds(rl_handle_t handle);   // width, height in world units
+bool        rl_text3d_get_bounds_to_scratch(rl_handle_t handle);
+
+void rl_text3d_draw(rl_handle_t handle);
+void rl_text3d_draw_text(const char *text, rl_handle_t font,
+                         float x, float y, float z,
+                         float size, rl_handle_t color);
+void rl_text3d_destroy(rl_handle_t handle);
+```
+
+Notes:
+- `facing` uses `rl_sprite3d_facing_t` values: `0`=CAMERA, `1`=CAMERA_FIXED_Y, `2`=Y_UP, `3`=FREE.
+- Transform position is the **center** of the rendered text quad.
+- `rl_text3d_get_bounds` returns the cached `MeasureTextEx` result (width × height in world units at `size`). Bounds are recalculated lazily when content, font, or size changes.
+- `rl_text3d_draw_text` is immediate-mode: no retained state, no picking, draws at `(x, y, z)` without billboard transform.
+- New instances default to **`visible == true`**, **`pickable == false`**.
+- `rl_text3d_get_bounds_to_scratch` is an internal wasm bridge; JS consumers use `RL.text3d.getBounds()`.
+
+---
+
 ## Model (`include/rl_model.h`)
 
 3D model with instance-owned transform and animation state. Assets and instances are separate — load
@@ -667,6 +705,8 @@ rl_pick_result_t rl_pick_sprite3d(rl_handle_t camera, rl_handle_t sprite3d,
                                   float mouse_x, float mouse_y);
 rl_pick_result_t rl_pick_shape(rl_handle_t camera, rl_handle_t shape,
                                float mouse_x, float mouse_y);
+rl_pick_result_t rl_pick_text3d(rl_handle_t camera, rl_handle_t text3d,
+                                float mouse_x, float mouse_y);
 
 // Telemetry
 void rl_pick_reset_stats(void);
@@ -681,7 +721,7 @@ Notes:
 - Internally uses broad-phase culling before narrow-phase testing.
 - Each pick function returns no hit when the target instance’s **`pickable`** flag is `false`.
 - **Shape pick geometry:** `SPHERE`, `CUBE`, `RECTANGLE_3D`, and `CIRCLE_3D` are tested against their retained local-space geometry after inverse-transforming the ray into object space, so the hit point and normal stay in local/object space and transformed cube/rectangle/circle picks match the drawn shape. `LINE_3D` and `LINE_STRIP_3D` are not pickable.
-- `rl_pick_model_to_scratch` / `rl_pick_sprite3d_to_scratch` / `rl_pick_shape_to_scratch` are internal wasm bridge functions used by the JS binding; consumers call `RL.pick.model()` / `RL.pick.sprite3d()` / `RL.pick.shape()` which handle the scratch read transparently.
+- `rl_pick_model_to_scratch` / `rl_pick_sprite3d_to_scratch` / `rl_pick_shape_to_scratch` / `rl_pick_text3d_to_scratch` are internal wasm bridge functions used by the JS binding; consumers call `RL.pick.model()` / `RL.pick.sprite3d()` / `RL.pick.shape()` / `RL.pick.text3d()` which handle the scratch read transparently.
 
 ---
 

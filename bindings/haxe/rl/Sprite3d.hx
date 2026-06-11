@@ -2,15 +2,15 @@
 package rl;
 
 import rl.Types.RLHandle;
-import rl.Types.RLSprite3dFacing;
+import rl.Types.RLFacing;
 import rl.Types.RLSprite3dTransform;
 
 @:keep
 class Sprite3d {
-	public static inline var FACING_CAMERA:RLSprite3dFacing = RLSprite3dFacing.CAMERA;
-	public static inline var FACING_CAMERA_FIXED_Y:RLSprite3dFacing = RLSprite3dFacing.CAMERA_FIXED_Y;
-	public static inline var FACING_Y_UP:RLSprite3dFacing = RLSprite3dFacing.Y_UP;
-	public static inline var FACING_FREE:RLSprite3dFacing = RLSprite3dFacing.FREE;
+	public static inline var FACING_CAMERA:RLFacing = RLFacing.CAMERA;
+	public static inline var FACING_CAMERA_FIXED_Y:RLFacing = RLFacing.CAMERA_FIXED_Y;
+	public static inline var FACING_Y_UP:RLFacing = RLFacing.Y_UP;
+	public static inline var FACING_FREE:RLFacing = RLFacing.FREE;
 
 
 
@@ -54,7 +54,7 @@ class Sprite3d {
 		return rl.impl.RLImpl.sprite3dSetSize(sprite, size);
 	}
 
-	public static function setFacing(sprite:RLHandle, facing:RLSprite3dFacing):Bool {
+	public static function setFacing(sprite:RLHandle, facing:RLFacing):Bool {
 		return rl.impl.RLImpl.sprite3dSetFacing(sprite, facing);
 	}
 

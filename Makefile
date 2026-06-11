@@ -187,6 +187,8 @@ LDFLAGS_WASM = \
 	"_rl_pick_sprite3d_to_scratch", \
 	"_rl_pick_shape", \
 	"_rl_pick_shape_to_scratch", \
+	"_rl_pick_text3d", \
+	"_rl_pick_text3d_to_scratch", \
 	"_rl_pick_reset_stats", \
 	"_rl_pick_get_broadphase_tests", \
 	"_rl_pick_get_broadphase_rejects", \
@@ -250,6 +252,22 @@ LDFLAGS_WASM = \
 	"_rl_text2d_is_pickable", \
 	"_rl_text2d_draw", \
 	"_rl_text2d_destroy", \
+	"_rl_text3d_create", \
+	"_rl_text3d_set_font", \
+	"_rl_text3d_set_size", \
+	"_rl_text3d_set_content", \
+	"_rl_text3d_set_transform", \
+	"_rl_text3d_set_color", \
+	"_rl_text3d_set_facing", \
+	"_rl_text3d_set_visible", \
+	"_rl_text3d_set_pickable", \
+	"_rl_text3d_is_visible", \
+	"_rl_text3d_is_pickable", \
+	"_rl_text3d_get_bounds", \
+	"_rl_text3d_get_bounds_to_scratch", \
+	"_rl_text3d_draw", \
+	"_rl_text3d_draw_text", \
+	"_rl_text3d_destroy", \
 	"_rl_sprite3d_get_default_texture", \
 	"_rl_sprite3d_create", \
 	"_rl_sprite3d_create_from_file", \

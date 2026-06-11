@@ -23,7 +23,8 @@ typedef enum rl_handle_kind_t {
     RL_HANDLE_KIND_TEXT2D = 11,
     RL_HANDLE_KIND_SCENE = 12,
     RL_HANDLE_KIND_SHAPE = 13,
-    /* 14-31 reserved for future drawable / presentation kinds */
+    RL_HANDLE_KIND_TEXT3D = 14,
+    /* 15-31 reserved for future drawable / presentation kinds */
     RL_HANDLE_KIND_ASSET_TASK = 32,
 } rl_handle_kind_t;
 

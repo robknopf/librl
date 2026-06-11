@@ -17,4 +17,8 @@ rl_pick_result_t rl_pick_shape_with_camera_ray(Camera3D camera_data,
                                                Ray ray,
                                                rl_handle_t shape);
 
+rl_pick_result_t rl_pick_text3d_with_camera_ray(Camera3D camera_data,
+                                                Ray ray,
+                                                rl_handle_t text3d);
+
 #endif // RL_INTERNAL_PICK_SCENE_H

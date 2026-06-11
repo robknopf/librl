@@ -28,7 +28,7 @@ typedef RLSprite3dTransform = {
 	var scaleZ:Float;
 }
 
-enum abstract RLSprite3dFacing(Int) from Int to Int {
+enum abstract RLFacing(Int) from Int to Int {
 	var CAMERA = 0;
 	var CAMERA_FIXED_Y = 1;
 	var Y_UP = 2;

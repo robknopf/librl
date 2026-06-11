@@ -55,6 +55,16 @@ bool rl_pick_shape_to_scratch(rl_handle_t camera,
                               float mouse_x,
                               float mouse_y);
 
+rl_pick_result_t rl_pick_text3d(rl_handle_t camera,
+                                rl_handle_t text3d,
+                                float mouse_x,
+                                float mouse_y);
+
+bool rl_pick_text3d_to_scratch(rl_handle_t camera,
+                               rl_handle_t text3d,
+                               float mouse_x,
+                               float mouse_y);
+
 void rl_pick_reset_stats(void);
 int rl_pick_get_broadphase_tests(void);
 int rl_pick_get_broadphase_rejects(void);

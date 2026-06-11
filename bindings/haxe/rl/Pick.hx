@@ -20,6 +20,10 @@ class Pick {
 		return rl.impl.RLImpl.pickShape(camera, shape, mouseX, mouseY);
 	}
 
+	public static function text3d(camera:RLHandle, text3d:RLHandle, mouseX:Float, mouseY:Float):RLPickResult {
+		return rl.impl.RLImpl.pickText3d(camera, text3d, mouseX, mouseY);
+	}
+
 	public static function resetStats():Void {
 		rl.impl.RLImpl.pickResetStats();
 	}

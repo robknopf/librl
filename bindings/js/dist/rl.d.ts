@@ -68,7 +68,7 @@ export interface RLSprite3dTransform {
     scaleY: number;
     scaleZ: number;
 }
-export type RLSprite3dFacing = 0 | 1 | 2 | 3;
+export type RLFacing = 0 | 1 | 2 | 3;
 export interface RLPickStats {
     broadphaseTests: number;
     broadphaseRejects: number;
@@ -322,6 +322,7 @@ export interface RLPick {
     model(camera: RLHandle, model: RLHandle, mouseX: number, mouseY: number): RLPickResult;
     sprite3d(camera: RLHandle, sprite3d: RLHandle, mouseX: number, mouseY: number): RLPickResult;
     shape(camera: RLHandle, shape: RLHandle, mouseX: number, mouseY: number): RLPickResult;
+    text3d(camera: RLHandle, text3d: RLHandle, mouseX: number, mouseY: number): RLPickResult;
     resetStats(): void;
 }
 export interface RLMusic {
@@ -354,7 +355,7 @@ export interface RLSprite3d {
     setTexture(sprite: RLHandle, texture: RLHandle): boolean;
     setTransform(sprite: RLHandle, positionX: number, positionY: number, positionZ: number, rotationX: number, rotationY: number, rotationZ: number, scaleX: number, scaleY: number, scaleZ: number): boolean;
     setSize(sprite: RLHandle, size: number): boolean;
-    setFacing(sprite: RLHandle, facing: RLSprite3dFacing): boolean;
+    setFacing(sprite: RLHandle, facing: RLFacing): boolean;
     setVisible(sprite: RLHandle, visible: boolean): boolean;
     setPickable(sprite: RLHandle, pickable: boolean): boolean;
     isVisible(sprite: RLHandle): boolean;
@@ -391,6 +392,23 @@ export interface RLText2d {
     isVisible(handle: RLHandle): boolean;
     isPickable(handle: RLHandle): boolean;
     draw(handle: RLHandle): void;
+    destroy(handle: RLHandle): void;
+}
+export interface RLText3d {
+    create(font: RLHandle, size: number): RLHandle;
+    setFont(handle: RLHandle, font: RLHandle): void;
+    setSize(handle: RLHandle, size: number): void;
+    setContent(handle: RLHandle, content: string): void;
+    setTransform(handle: RLHandle, x: number, y: number, z: number, rx: number, ry: number, rz: number): boolean;
+    setColor(handle: RLHandle, color: RLHandle): void;
+    setFacing(handle: RLHandle, facing: RLFacing): boolean;
+    setVisible(handle: RLHandle, visible: boolean): boolean;
+    setPickable(handle: RLHandle, pickable: boolean): boolean;
+    isVisible(handle: RLHandle): boolean;
+    isPickable(handle: RLHandle): boolean;
+    getBounds(handle: RLHandle): RLVector2;
+    draw(handle: RLHandle): void;
+    drawText(text: string, font: RLHandle, x: number, y: number, z: number, size: number, color: RLHandle): void;
     destroy(handle: RLHandle): void;
 }
 export interface RLLogger {
@@ -504,6 +522,7 @@ export interface RLApi {
     sprite3d: RLSprite3d;
     sprite2d: RLSprite2d;
     text2d: RLText2d;
+    text3d: RLText3d;
     logger: RLLogger;
     helpers: RLHelpers;
 }

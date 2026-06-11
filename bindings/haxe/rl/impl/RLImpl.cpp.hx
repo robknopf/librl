@@ -20,7 +20,7 @@ import rl.Types.RLScenePickResult;
 import rl.Types.RLMouseState;
 import rl.Types.RLKeyboardState;
 import rl.Types.RLGamepad;
-import rl.Types.RLSprite3dFacing;
+import rl.Types.RLFacing;
 import rl.Types.RLSprite3dTransform;
 import rl.Types.RLTouchpoint;
 import rl.gen.RLVersion;
@@ -717,6 +717,51 @@ private extern class RLExterns {
   @:native("rl_text2d_destroy")
   static function text2dDestroy(handle: RLHandle): Void;
 
+  @:native("rl_text3d_create")
+  static function text3dCreate(font: RLHandle, size: Float): RLHandle;
+
+  @:native("rl_text3d_set_font")
+  static function text3dSetFont(handle: RLHandle, font: RLHandle): Void;
+
+  @:native("rl_text3d_set_size")
+  static function text3dSetSize(handle: RLHandle, size: Float): Void;
+
+  @:native("rl_text3d_set_content")
+  static function text3dSetContent(handle: RLHandle, content: String): Void;
+
+  @:native("rl_text3d_set_transform")
+  static function text3dSetTransform(handle: RLHandle, x: Float, y: Float, z: Float, rx: Float, ry: Float, rz: Float): Bool;
+
+  @:native("rl_text3d_set_color")
+  static function text3dSetColor(handle: RLHandle, color: RLHandle): Void;
+
+  @:native("rl_text3d_set_facing")
+  static function text3dSetFacing(handle: RLHandle, facing: Int): Bool;
+
+  @:native("rl_text3d_set_visible")
+  static function text3dSetVisible(handle: RLHandle, visible: Bool): Bool;
+
+  @:native("rl_text3d_set_pickable")
+  static function text3dSetPickable(handle: RLHandle, pickable: Bool): Bool;
+
+  @:native("rl_text3d_is_visible")
+  static function text3dIsVisible(handle: RLHandle): Bool;
+
+  @:native("rl_text3d_is_pickable")
+  static function text3dIsPickable(handle: RLHandle): Bool;
+
+  @:native("rl_text3d_get_bounds")
+  static function text3dGetBoundsNative(handle: RLHandle): RLVec2Native;
+
+  @:native("rl_text3d_draw")
+  static function text3dDraw(handle: RLHandle): Void;
+
+  @:native("rl_text3d_draw_text")
+  static function text3dDrawText(text: String, font: RLHandle, x: Float, y: Float, z: Float, size: Float, color: RLHandle): Void;
+
+  @:native("rl_text3d_destroy")
+  static function text3dDestroy(handle: RLHandle): Void;
+
   @:native("rl_texture_create")
   static function textureCreate(filename: String): RLHandle;
 
@@ -766,6 +811,9 @@ private extern class RLExterns {
 
   @:native("rl_pick_shape")
   static function pickShape(camera: RLHandle, shape: RLHandle, mouseX: Float, mouseY: Float): RLPickResult;
+
+  @:native("rl_pick_text3d")
+  static function pickText3d(camera: RLHandle, text3d: RLHandle, mouseX: Float, mouseY: Float): RLPickResult;
 
   @:native("rl_pick_reset_stats")
   static function pickResetStats(): Void;
@@ -1290,7 +1338,7 @@ abstract RLImpl(RLExterns) {
   public static function sprite3dIsVisible(sprite: RLHandle): Bool { return RLExterns.sprite3dIsVisible(sprite); }
   public static function sprite3dIsPickable(sprite: RLHandle): Bool { return RLExterns.sprite3dIsPickable(sprite); }
   public static function sprite3dSetSize(sprite: RLHandle, size: Float): Bool { return RLExterns.sprite3dSetSize(sprite, size); }
-  public static function sprite3dSetFacing(sprite: RLHandle, facing: RLSprite3dFacing): Bool { return RLExterns.sprite3dSetFacing(sprite, cast facing); }
+  public static function sprite3dSetFacing(sprite: RLHandle, facing: RLFacing): Bool { return RLExterns.sprite3dSetFacing(sprite, cast facing); }
   public static function sprite3dSetTint(sprite: RLHandle, color: RLHandle = 0): Bool { return RLExterns.sprite3dSetTint(sprite, color); }
   public static function sprite3dDraw(sprite: RLHandle): Void { RLExterns.sprite3dDraw(sprite); }
   public static function sprite3dDestroy(sprite: RLHandle): Void { RLExterns.sprite3dDestroy(sprite); }
@@ -1333,6 +1381,24 @@ abstract RLImpl(RLExterns) {
   public static function text2dIsPickable(handle: RLHandle): Bool { return RLExterns.text2dIsPickable(handle); }
   public static function text2dDraw(handle: RLHandle): Void { RLExterns.text2dDraw(handle); }
   public static function text2dDestroy(handle: RLHandle): Void { RLExterns.text2dDestroy(handle); }
+  public static function text3dCreate(font: RLHandle, size: Float): RLHandle { return RLExterns.text3dCreate(font, size); }
+  public static function text3dSetFont(handle: RLHandle, font: RLHandle): Void { RLExterns.text3dSetFont(handle, font); }
+  public static function text3dSetSize(handle: RLHandle, size: Float): Void { RLExterns.text3dSetSize(handle, size); }
+  public static function text3dSetContent(handle: RLHandle, content: String): Void { RLExterns.text3dSetContent(handle, content); }
+  public static function text3dSetTransform(handle: RLHandle, x: Float, y: Float, z: Float, rx: Float, ry: Float, rz: Float): Bool { return RLExterns.text3dSetTransform(handle, x, y, z, rx, ry, rz); }
+  public static function text3dSetColor(handle: RLHandle, color: RLHandle): Void { RLExterns.text3dSetColor(handle, color); }
+  public static function text3dSetFacing(handle: RLHandle, facing: Int): Bool { return RLExterns.text3dSetFacing(handle, facing); }
+  public static function text3dSetVisible(handle: RLHandle, visible: Bool): Bool { return RLExterns.text3dSetVisible(handle, visible); }
+  public static function text3dSetPickable(handle: RLHandle, pickable: Bool): Bool { return RLExterns.text3dSetPickable(handle, pickable); }
+  public static function text3dIsVisible(handle: RLHandle): Bool { return RLExterns.text3dIsVisible(handle); }
+  public static function text3dIsPickable(handle: RLHandle): Bool { return RLExterns.text3dIsPickable(handle); }
+  public static function text3dGetBounds(handle: RLHandle): RLVec2 {
+    var n: RLVec2Native = cast RLExterns.text3dGetBoundsNative(handle);
+    return {x: n.x, y: n.y};
+  }
+  public static function text3dDraw(handle: RLHandle): Void { RLExterns.text3dDraw(handle); }
+  public static function text3dDrawText(text: String, font: RLHandle, x: Float, y: Float, z: Float, size: Float, color: RLHandle): Void { RLExterns.text3dDrawText(text, font, x, y, z, size, color); }
+  public static function text3dDestroy(handle: RLHandle): Void { RLExterns.text3dDestroy(handle); }
   public static function textureCreate(filename: String): RLHandle { return RLExterns.textureCreate(filename); }
   public static function textureDestroy(texture: RLHandle): Void { RLExterns.textureDestroy(texture); }
   public static function textureGetDefault(): RLHandle { return RLExterns.textureGetDefault(); }
@@ -1465,6 +1531,11 @@ abstract RLImpl(RLExterns) {
 
   public static function pickShape(camera: RLHandle, shape: RLHandle, mouseX: Float, mouseY: Float): RLPickResult {
     var n: RLPickResultNative = cast RLExterns.pickShape(camera, shape, mouseX, mouseY);
+    return {hit: n.hit, handle: n.handle, distance: n.distance, point: {x: n.point.x, y: n.point.y, z: n.point.z}, normal: {x: n.normal.x, y: n.normal.y, z: n.normal.z}};
+  }
+
+  public static function pickText3d(camera: RLHandle, text3d: RLHandle, mouseX: Float, mouseY: Float): RLPickResult {
+    var n: RLPickResultNative = cast RLExterns.pickText3d(camera, text3d, mouseX, mouseY);
     return {hit: n.hit, handle: n.handle, distance: n.distance, point: {x: n.point.x, y: n.point.y, z: n.point.z}, normal: {x: n.normal.x, y: n.normal.y, z: n.normal.z}};
   }
 

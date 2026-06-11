@@ -119,3 +119,21 @@ suite "rl bindings":
     rl_text2d_set_font(label, 0)
     rl_text2d_destroy(label)
     rl_deinit()
+
+  test "text3d lifecycle":
+    check rl_boot() == RL_BOOT_OK
+    check rl_init() == RL_INIT_OK
+    let t = rl_text3d_create(0, 1.0)
+    check t != 0.RLHandle
+    rl_text3d_set_content(t, "hello 3d")
+    check rl_text3d_set_transform(t, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0)
+    rl_text3d_set_color(t, 0)
+    rl_text3d_set_size(t, 2.0)
+    rl_text3d_set_font(t, 0)
+    check rl_text3d_set_facing(t, 0)
+    check rl_text3d_set_visible(t, true)
+    check rl_text3d_set_pickable(t, true)
+    check rl_text3d_is_visible(t)
+    check rl_text3d_is_pickable(t)
+    rl_text3d_destroy(t)
+    rl_deinit()

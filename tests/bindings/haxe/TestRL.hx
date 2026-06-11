@@ -9,6 +9,7 @@ import rl.Render;
 import rl.Asset;
 import rl.Input;
 import rl.Text2d;
+import rl.Text3d;
 import rl.gen.RLVersion;
 
 class TestRL extends utest.Test {
@@ -148,6 +149,24 @@ class TestRL extends utest.Test {
     Text2d.setSize(label, 24.0);
     Text2d.setFont(label, 0);
     Text2d.destroy(label);
+    RL.deinit();
+  }
+
+  public function testText3dCreateDestroy() {
+    Assert.equals(0, RL.init());
+    var t = Text3d.create(0, 1.0);
+    Assert.notEquals(0, t, "text3d handle should be non-zero");
+    Text3d.setContent(t, "hello 3d");
+    Text3d.setTransform(t, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0);
+    Text3d.setColor(t, 0);
+    Text3d.setSize(t, 2.0);
+    Text3d.setFont(t, 0);
+    Text3d.setFacing(t, 0);
+    Text3d.setVisible(t, true);
+    Text3d.setPickable(t, true);
+    Assert.isTrue(Text3d.isVisible(t));
+    Assert.isTrue(Text3d.isPickable(t));
+    Text3d.destroy(t);
     RL.deinit();
   }
   #end

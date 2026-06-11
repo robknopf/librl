@@ -57,6 +57,7 @@ when defined(js):
   type
     RLLogCallback* = proc(message: string)
     RLLocateFileCallback* = proc(path: string, prefix: string): string
+    RLFileioClosureCallback* = proc(path: string) {.closure.}
 
   type RLBootConfig* = object
     bindingsPath*: string
@@ -321,7 +322,8 @@ async function __rlEnsureBindings(bindingsPath) {
   # proc rl_scratch_refresh*() {.importjs: "__gRl.refreshScratch()".}
   proc rl_asset_set_host_impl(assetHost: cstring): int {.importjs: "__gRl.asset.setHost(#)".}
   proc rl_asset_set_host*(assetHost: string): int {.inline.} = rl_asset_set_host_impl(assetHost.cstring)
-  proc rl_asset_get_host*(): cstring {.importjs: "__gRl.asset.getHost()".}
+  proc rl_asset_get_host_impl*(): cstring {.importjs: "__gRl.asset.getHost()".}
+  proc rl_asset_get_host*(): string {.inline.} = $rl_asset_get_host_impl()
 
   # Window
   proc rl_window_close_requested*(): bool {.importjs: "__gRl.window.isCloseRequested()".}
@@ -543,8 +545,8 @@ async function __rlEnsureBindings(bindingsPath) {
     hit*: bool
     handle*: RLHandle
     distance*: float
-    point*: RLVec3
-    normal*: RLVec3
+    point*: Vec3
+    normal*: Vec3
   proc rl_scene_pick*(scene, camera: RLHandle, mouseX, mouseY: float): RLScenePickResult {.
     importjs: "__gRl.scene.pick(#,#,#,#)".}
 
@@ -634,7 +636,7 @@ async function __rlEnsureBindings(bindingsPath) {
   proc rl_text3d_set_pickable*(handle: RLHandle, pickable: bool): bool {.importjs: "__gRl.text3d.setPickable(#,#)".}
   proc rl_text3d_is_visible*(handle: RLHandle): bool {.importjs: "__gRl.text3d.isVisible(#)".}
   proc rl_text3d_is_pickable*(handle: RLHandle): bool {.importjs: "__gRl.text3d.isPickable(#)".}
-  proc rl_text3d_get_bounds*(handle: RLHandle): RLVector2 {.importjs: "__gRl.text3d.getBounds(#)".}
+  proc rl_text3d_get_bounds*(handle: RLHandle): Vec2 {.importjs: "__gRl.text3d.getBounds(#)".}
   proc rl_text3d_draw*(handle: RLHandle) {.importjs: "__gRl.text3d.draw(#)".}
   proc rl_text3d_draw_text_impl(text: cstring, font: RLHandle, x, y, z, size: float, color: RLHandle) {.
     importjs: "__gRl.text3d.drawText(#,#,#,#,#,#,#)".}
@@ -689,13 +691,41 @@ async function __rlEnsureBindings(bindingsPath) {
   proc rl_asset_ensure_async*(localPath: string, src: string = ""): RLHandle {.inline.} =
     let srcPtr = if src.len == 0: cstring(nil) else: src.cstring
     rl_asset_ensure_async(localPath.cstring, srcPtr)
+  proc rl_asset_ensure_many_async_impl(filenames: seq[string]): RLHandle {.importjs: "__gRl.asset.ensureGroupAsync(#)".}
+  proc rl_asset_ensure_many_async*(filenames: openArray[string]): RLHandle =
+    if filenames.len == 0:
+      return 0.RLHandle
+    var paths = newSeq[string](filenames.len)
+    for idx, path in filenames:
+      paths[idx] = path
+    rl_asset_ensure_many_async_impl(paths)
   proc rl_asset_poll_task*(task: RLHandle): bool {.importjs: "__gRl.asset.pollTask(#)".}
   proc rl_asset_finish_task*(task: RLHandle): int {.importjs: "__gRl.asset.finishTask(#)".}
-  proc rl_asset_get_task_path*(task: RLHandle): cstring {.importjs: "__gRl.asset.getTaskPath(#)".}
+  proc rl_asset_get_task_path_impl*(task: RLHandle): cstring {.importjs: "__gRl.asset.getTaskPath(#)".}
+  proc rl_asset_get_task_path*(task: RLHandle): string {.inline.} = $rl_asset_get_task_path_impl(task)
   proc rl_asset_free_task*(task: RLHandle) {.importjs: "__gRl.asset.freeTask(#)".}
+  proc rl_asset_add_task_impl(task: RLHandle,
+                              onSuccess: RLFileioClosureCallback,
+                              onFailure: RLFileioClosureCallback): int {.
+    importjs: """(function(task, onSuccess, onFailure) {
+      var wrap = function(cb) {
+        if (cb == null) return null;
+        return function(path) {
+          cb(cstrToNimstr(path || ""));
+        };
+      };
+      return __gRl.asset.addTask(task, wrap(onSuccess), wrap(onFailure));
+    })(#, #, #)""".}
+  proc rl_asset_add_task*(task: RLHandle,
+                          onSuccess: RLFileioClosureCallback = nil,
+                          onFailure: RLFileioClosureCallback = nil): int =
+    rl_asset_add_task_impl(task, onSuccess, onFailure)
   proc rl_asset_tick*() {.importjs: "__gRl.asset.tick()".}
   proc rl_asset_ping_host*(assetHost: cstring): float {.importjs: "__gRl.asset.pingHost(#)".}
   proc rl_asset_ping_host*(assetHost: string = ""): float {.inline.} =
+    let hostPtr = if assetHost.len == 0: cstring(nil) else: assetHost.cstring
+    rl_asset_ping_host(hostPtr)
+  proc assetPingHost*(assetHost = ""): float =
     let hostPtr = if assetHost.len == 0: cstring(nil) else: assetHost.cstring
     rl_asset_ping_host(hostPtr)
 
@@ -717,7 +747,6 @@ async function __rlEnsureBindings(bindingsPath) {
   # ---------------------------------------------------------------------------
 
   type
-    RLFileioClosureCallback* = proc(path: string) {.closure.}
     RLTaskGroupTaskCallback*[T] = proc(path: string, ctx: var T) {.closure.}
     RLTaskGroupCallback*[T] = proc(group: RLTaskGroup[T], ctx: var T) {.closure.}
     RLTaskGroupEntry[T] = object

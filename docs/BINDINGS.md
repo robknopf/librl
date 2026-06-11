@@ -245,10 +245,11 @@ Notes:
   - `rl_fs_restore_async()` → `RLHandle`
   - `rl_asset_ensure_async(localPath, src?)` → `RLHandle`
   - `rl_asset_ensure(localPath, src?)` → `int` (`0` success)
-  - `rl_asset_ensure_many_async(filenames, count)` → `RLHandle`
+  - `rl_asset_ensure_many_async(filenames)` → `RLHandle`
   - `rl_asset_poll_task(task)` → `bool`
   - `rl_asset_finish_task(task)` → `int`
   - `rl_asset_free_task(task)`
+  - `rl_asset_add_task(task, onSuccess?, onFailure?)` → `int`
   - `rl_fs_exists(filename)` → `bool`
   - `rl_fs_remove(filename)` → `int`
   - `rl_fs_clear()` → `int`

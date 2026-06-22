@@ -6,6 +6,8 @@ obj/
 lib/
 out/
 examples/c-lua/deps/*
+deps/*
+!deps/.gitkeep
 .vscode/
 .emcache
 .well-known/

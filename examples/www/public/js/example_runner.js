@@ -22,7 +22,9 @@ function createOutputLog() {
 async function loadModuleFactory(moduleUrl, maxAttempts = 120, delayMs = 500) {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      const mod = await import(/* @vite-ignore */ `${moduleUrl}?t=${Date.now()}`);
+     // const mod = await import(/* @vite-ignore */ `${moduleUrl}?t=${Date.now()}`);
+     const mod = await import(/* @vite-ignore */ `${moduleUrl}`);
+     
       return mod.default ?? mod;
     } catch (err) {
       if (attempt === maxAttempts) throw err;

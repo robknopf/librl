@@ -120,7 +120,7 @@ class RLImpl {
 
 	/** Page-relative default so subpath deploys (e.g. `/testbed/librl/`) resolve correctly. */
 	private static function defaultBindingsPath():String {
-		return cast js.Syntax.code("new URL('js/rl.js', document.baseURI).href");
+		return cast js.Syntax.code("new URL('bindings/js/dist/rl.js', document.baseURI).href");
 	}
 
 	@async

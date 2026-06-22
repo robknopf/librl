@@ -8,6 +8,7 @@ WASM_PLATFORM_CFLAGS ?= -DPLATFORM_WEB
 WASM_COMMON_LDFLAGS ?= \
 	-s WASM=1 \
 	-lidbfs.js \
+	-lwebsocket.js \
 	-s USE_GLFW=3 \
 	-s FETCH=1 \
 	-s EXPORT_ES6=1 \
@@ -44,7 +45,7 @@ LIBLUA_WASM_ARCHIVE := $(LIBLUA_ROOT)/lib/liblua.wasm.a
 INCLUDES := -I$(ROOT)/include -I$(ROOT)/bindings/lua -I$(ROOT)/deps/wgutils/include -I$(ROOT)/deps/libraylib/include -I$(LIBLUA_INC)
 RL_STATIC_LIB := $(ROOT)/lib/librl.a
 RL_WASM_ARCHIVE := $(ROOT)/lib/librl.wasm.a
-DESKTOP_LIBS := $(LIBLUA_DESKTOP_ARCHIVE) $(RL_STATIC_LIB) -lnghttp2 -lssl -lcrypto -lz -lm -lpthread -ldl -lX11
+DESKTOP_LIBS := $(LIBLUA_DESKTOP_ARCHIVE) $(RL_STATIC_LIB) -lnghttp2 -lssl -lcrypto -lz -lm -lpthread -ldl -lX11 -lrt -lGL -lXrandr
 WASM_LIBS := $(LIBLUA_WASM_ARCHIVE) $(RL_WASM_ARCHIVE) -lm
 
 .PHONY: all deps ensure_deps desktop run wasm wasm-debug clean
@@ -81,16 +82,16 @@ $(LIBLUA_WASM_ARCHIVE): ensure_deps
 		$(MAKE) -C "$(LIBLUA_ROOT)" wasm; \
 	fi
 
-$(BIN): $(SRC) $(LUA_BINDINGS_SRC) $(LIBLUA_DESKTOP_ARCHIVE) | $(OUT_DIR)
+$(BIN): $(SRC) $(LUA_BINDINGS_SRC) $(LIBLUA_DESKTOP_ARCHIVE) $(RL_STATIC_LIB) | $(OUT_DIR)
 	@$(MAKE) -C $(ROOT) desktop
 	$(CC) $(CFLAGS) $(INCLUDES) $(SRC) $(LUA_BINDINGS_SRC) $(DESKTOP_LIBS) -o $(BIN)
 
-$(WASM_JS): $(SRC) $(LUA_BINDINGS_SRC) $(LIBLUA_WASM_ARCHIVE) | $(OUT_DIR)
+$(WASM_JS): $(SRC) $(LUA_BINDINGS_SRC) $(LIBLUA_WASM_ARCHIVE) $(RL_WASM_ARCHIVE) | $(OUT_DIR)
 	@$(MAKE) -C $(ROOT) wasm_archive
 	@mkdir -p "$(EM_CACHE_DIR)"
 	$(EM_ENV) $(CC_WASM) $(CFLAGS_WASM) $(CFLAGS) $(INCLUDES) $(SRC) $(LUA_BINDINGS_SRC) $(WASM_LIBS) $(LDFLAGS_WASM) -o $(WASM_JS)
 
-$(WASM_DEBUG_JS): $(SRC) $(LUA_BINDINGS_SRC) $(LIBLUA_WASM_ARCHIVE) | $(OUT_DIR)
+$(WASM_DEBUG_JS): $(SRC) $(LUA_BINDINGS_SRC) $(LIBLUA_WASM_ARCHIVE) $(RL_WASM_ARCHIVE) | $(OUT_DIR)
 	@$(MAKE) -C $(ROOT) wasm_archive
 	@mkdir -p "$(EM_CACHE_DIR)"
 	$(EM_ENV) $(CC_WASM) $(DEBUG_CFLAGS_WASM) $(INCLUDES) $(SRC) $(LUA_BINDINGS_SRC) $(WASM_LIBS) $(DEBUG_SOURCEMAP_LDFLAGS_WASM) -o $(WASM_DEBUG_JS)

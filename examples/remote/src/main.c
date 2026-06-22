@@ -156,7 +156,7 @@ void rt_shutdown(void) {
     context->ws_client = NULL;
   }
 
-  rl_debug_disable();
+  rl_debug_disable_fps();
 
   if (context->debug_font != 0) {
     rl_font_destroy(context->debug_font);

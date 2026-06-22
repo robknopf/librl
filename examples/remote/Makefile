@@ -35,8 +35,9 @@ WASM_OBJS := $(patsubst $(SRC_DIR)/%.c,$(OUT_DIR)/%.wasm.o,$(SRC))
 
 INCLUDES := -Iinclude -I$(ROOT)/include -I$(ROOT)/deps/wgutils/include -I$(ROOT)/deps/libraylib/include 
 RL_STATIC_LIB := $(ROOT)/lib/librl.a
+RL_WASM_ARCHIVE := $(ROOT)/lib/librl.wasm.a
 LIBS := $(RL_STATIC_LIB) -lnghttp2 -lssl -lcrypto -lz -lm -lpthread -ldl -lX11
-WASM_LIBS := $(ROOT)/lib/librl.wasm.a -lm
+WASM_LIBS := $(RL_WASM_ARCHIVE) -lm
 
 .PHONY: all desktop wasm clean
 
@@ -55,11 +56,11 @@ $(OUT_DIR)/%.o: $(SRC_DIR)/%.c | $(OUT_DIR)
 $(OUT_DIR)/%.wasm.o: $(SRC_DIR)/%.c | $(OUT_DIR)
 	$(EM_ENV) $(CC_WASM) $(CFLAGS_WASM) $(INCLUDES) -c $< -o $@
 
-$(BIN): $(OBJS)
+$(BIN): $(OBJS) $(RL_STATIC_LIB)
 	$(CC) $(OBJS) $(LIBS) -o $@
 	@echo "Built desktop remote client: $@"
 
-$(WASM_JS): $(WASM_OBJS)
+$(WASM_JS): $(WASM_OBJS) $(RL_WASM_ARCHIVE)
 	$(EM_ENV) $(CC_WASM) $(WASM_OBJS) $(WASM_LIBS) $(LDFLAGS_WASM) -o $@
 	@echo "Built WASM remote client: $@"
 

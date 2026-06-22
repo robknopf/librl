@@ -36,7 +36,7 @@ SRC := main.c
 
 INCLUDES := -I$(ROOT)/include
 RL_STATIC_LIB := $(ROOT)/lib/librl.a
-LIBS := $(RL_STATIC_LIB) -lnghttp2 -lssl -lcrypto -lz -lm -lpthread -ldl -lX11
+LIBS := $(RL_STATIC_LIB) -lnghttp2 -lssl -lcrypto -lz -lm -lpthread -ldl -lX11 -lrt -lGL -lXrandr
 WASM_LIBS := $(ROOT)/lib/librl.wasm.a -lm
 
 .PHONY: all desktop run wasm wasm-debug clean
@@ -48,16 +48,18 @@ desktop: $(BIN)
 wasm: $(WASM_JS)
 wasm-debug: $(WASM_DEBUG_JS)
 
-$(BIN): $(SRC) | $(OUT_DIR)
+WASM_STATIC_LIB := $(ROOT)/lib/librl.wasm.a
+
+$(BIN): $(SRC) $(RL_STATIC_LIB) | $(OUT_DIR)
 	@$(MAKE) -C $(ROOT) desktop
 	$(CC) $(CFLAGS) $(INCLUDES) $(SRC) $(LIBS) -o $(BIN)
 
-$(WASM_JS): $(SRC) | $(OUT_DIR)
+$(WASM_JS): $(SRC) $(WASM_STATIC_LIB) | $(OUT_DIR)
 	@$(MAKE) -C $(ROOT) wasm_archive
 	@mkdir -p "$(EM_CACHE_DIR)"
 	$(EM_ENV) $(CC_WASM) $(CFLAGS_WASM) $(CFLAGS) $(INCLUDES) $(SRC) $(WASM_LIBS) $(LDFLAGS_WASM) -o $(WASM_JS)
 
-$(WASM_DEBUG_JS): $(SRC) | $(OUT_DIR)
+$(WASM_DEBUG_JS): $(SRC) $(WASM_STATIC_LIB) | $(OUT_DIR)
 	@$(MAKE) -C $(ROOT) wasm_archive
 	@mkdir -p "$(EM_CACHE_DIR)"
 	$(EM_ENV) $(CC_WASM) $(DEBUG_CFLAGS_WASM) $(INCLUDES) $(SRC) $(WASM_LIBS) $(DEBUG_SOURCEMAP_LDFLAGS_WASM) -o $(WASM_DEBUG_JS)

@@ -229,6 +229,8 @@ proc buildDesktop() =
     " --passL:-lz" &
     " --passL:-lssl" &
     " --passL:-lnghttp2" &
+    " --passL:-lXrandr" &
+    " --passL:-lGL" &
     " " & getBuildModeFlags() &
     " " & getOptimizationFlags() &
     " --hotCodeReloading:on" & 

@@ -576,7 +576,7 @@ shared: binding-version binding-types libraylib_desktop wgutils_desktop ensure_o
 		$(DESKTOP_SRCS) \
 		$(INCLUDES) \
 		$(LIBRAYLIB_DESKTOP_ARCHIVE) $(WGUTILS_DESKTOP_ARCHIVE) \
-		-lcurl -lnghttp2 -lssl -lcrypto -lz -lm -lpthread -ldl -lX11
+		-lcurl -lnghttp2 -lssl -lcrypto -lz -lm -lpthread -ldl -lX11 -lXrandr -lGL
 	@echo "Built: $(LIBRL_SHARED_SO)"
 
 # Desktop Lua module for require("rl"), linked against librl.so

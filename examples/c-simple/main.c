@@ -240,7 +240,9 @@ int rt_init(void *user_data) {
 
   rl_logger_set_level(RL_LOGGER_LEVEL_WARN);
   rl_set_target_fps(60);
-  (void)rl_fs_clear();
+  
+  // debugging
+  // (void)rl_fs_clear();
 
   rl_enable_lighting();
   rl_set_light_direction(-0.6f, -1.0f, -0.5f);

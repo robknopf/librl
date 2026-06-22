@@ -211,7 +211,8 @@ proc onInit(): int {.rlAsync.} =
   # move the window to the other screen 
   rl_window_set_monitor(1)
 
-  discard rl_fs_clear()
+  #debug, empty the local fs
+  #discard rl_fs_clear()
 
   rl_enable_lighting()
   rl_set_light_direction(-0.6, -1.0, -0.5)

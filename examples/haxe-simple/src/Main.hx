@@ -120,7 +120,8 @@ class MainScript extends Script {
 
 		Window.setMonitor(1);
 
-		Fs.clear();
+		// debug, clear the fs
+		//Fs.clear();
 
 		setupScene();
 

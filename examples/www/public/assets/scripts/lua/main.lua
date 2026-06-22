@@ -80,7 +80,7 @@ local function on_init()
   end
 
   rl.set_target_fps(60)
-  rl.fs_clear()
+  -- rl.fs_clear()  -- debug only: wipes the IDBFS asset cache, forcing a re-fetch every boot
 
   setup_scene()
 

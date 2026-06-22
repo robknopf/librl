@@ -114,7 +114,8 @@ class MainScript extends Script {
 
 		Debug.enableFps(10, 10, DEBUG_FONT_SIZE, ctx.greyAlphaColor);
 
-		Fs.clear();
+		// debugging, clear out the fs
+		//Fs.clear();
 
 		Window.setMonitor(1);
 		resizeWindow();

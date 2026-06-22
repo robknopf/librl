@@ -368,7 +368,7 @@ int rt_boot(void) {
   }
 
   // debugging, clear the cache first
-  rl_fs_clear();
+  //rl_fs_clear();
 
   // load the lua runtime module
   if (load_runtime_module(runtime, error, sizeof(error)) != 0) {

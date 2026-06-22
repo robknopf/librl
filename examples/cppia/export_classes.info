@@ -53,6 +53,7 @@ class rl.Window
 class rl.RLKeyboardState
 class rl._Types.RLHandle_Impl_
 class rl.Texture
+class rl.Text3d
 class rl.Text2d
 class rl.Text
 class rl.Sprite3d
@@ -285,6 +286,7 @@ file rl/Sprite2d.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl
 file rl/Sprite3d.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Sprite3d.hx
 file rl/Text.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Text.hx
 file rl/Text2d.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Text2d.hx
+file rl/Text3d.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Text3d.hx
 file rl/Texture.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Texture.hx
 file rl/Types.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Types.hx
 file rl/Window.hx /home/rknopf/projects/whirlinggizmo/experiments/raylib/librl/bindings/haxe/rl/Window.hx

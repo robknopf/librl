@@ -18,7 +18,7 @@ Committed near-term work — pick up when Now is clear.
 
 ### Bindings and docs
 
-- **Binding parity** — 247 public C functions in `docs/API.md` (excludes scratch/SAB and logger macros); JS/Haxe/Nim/Lua 247/247. Re-run `python3 tools/audit_binding_parity.py` after C API or binding changes.
+- **Binding parity** — audit split by backend, with the public C inventory parsed from `include/rl*.h`: JS `246/246`, Haxe JS `246/246`, Haxe cpp `246/246`, Nim JS `246/246`, Nim native `246/246`, Lua `246/246`. `rl_init_values*`, scratch/SAB bridge symbols, logger macros, and `rl_fs_read_free` are intentionally excluded from binding parity because they are binding-internal or non-public helper surfaces. Re-run `python3 tools/audit_binding_parity.py` after C API or binding changes.
 
 - Binding tooling for agents/maintainers — see `docs/MAINTAINER.md` § Tools (Python-first policy; generators, parity audit, `make binding-types` / `binding-version`).
 - remove scratch/ABI bindings from non-JS bindings — done for `scratch_refresh` / `scratchRefresh` / `rl_scratch_refresh` (commented in sources; see `docs/BINDINGS.md`); audit for any other `*_to_scratch` / `*_from_scratch` if added later

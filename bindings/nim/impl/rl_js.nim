@@ -7,12 +7,14 @@ when defined(js):
 
   import std/asyncjs
   import std/jsffi
+  import std/options
 
   include ../gen/rl_version
 
   # Module-level handle to the loaded rl.js binding object.
   # Set by rl_boot(); all other procs assume it is non-null.
   {.emit: "var __gRl = null;".}
+  {.emit: "var __gRlNimEventWrappers = [];".}
 
   # ---------------------------------------------------------------------------
   # Types (plain objects — no C header pragmas on the JS backend)
@@ -43,6 +45,7 @@ when defined(js):
     RLMouseState* = object
       x*, y*, wheel*: cint
       left*, right*, middle*: cint
+      dx*, dy*: cint
 
     RLKeyboardState* = object
       max_num_keys*: cint
@@ -58,6 +61,7 @@ when defined(js):
     RLLogCallback* = proc(message: string)
     RLLocateFileCallback* = proc(path: string, prefix: string): string
     RLFileioClosureCallback* = proc(path: string) {.closure.}
+    RLEventListenerFn* = proc(payload: pointer, userData: pointer) {.cdecl.}
 
   type RLBootConfig* = object
     bindingsPath*: string
@@ -78,6 +82,11 @@ when defined(js):
     windowFlags*: RLWindowFlags
     assetHost*: string
     fsRootDir*: string
+
+  type RLSprite3dTransform* = object
+    positionX*, positionY*, positionZ*: float
+    rotationX*, rotationY*, rotationZ*: float
+    scaleX*, scaleY*, scaleZ*: float
 
   # ---------------------------------------------------------------------------
   # Constants
@@ -294,8 +303,14 @@ async function __rlEnsureBindings(bindingsPath) {
   proc rl_fs_init*(baseDir: string = ""): Future[int] =
     rl_fs_init_impl(baseDir.cstring)
 
+  proc rl_fs_init_async_impl(baseDir: cstring): int {.importjs: "__gRl.fs.initAsync(#)".}
+  proc rl_fs_init_async*(baseDir: string = ""): int =
+    rl_fs_init_async_impl(baseDir.cstring)
+
   proc rl_fs_deinit*(): Future[void] =
     {.emit: "return (async function() { await __gRl.fs.deinit(); })();".}
+
+  proc rl_fs_deinit_async*(): RLHandle {.importjs: "__gRl.fs.deinitAsync()".}
 
   # ---------------------------------------------------------------------------
   # Synchronous API
@@ -337,6 +352,7 @@ async function __rlEnsureBindings(bindingsPath) {
   proc rl_window_set_monitor*(monitor: int) {.importjs: "__gRl.window.setMonitor(#)".}
   proc rl_window_get_monitor_width*(monitor: int): int {.importjs: "__gRl.window.getMonitorWidth(#)".}
   proc rl_window_get_monitor_height*(monitor: int): int {.importjs: "__gRl.window.getMonitorHeight(#)".}
+  proc rl_window_get_monitor_position*(monitor: int): Vec2 {.importjs: "__gRl.window.getMonitorPosition(#)".}
   proc rl_window_set_position*(x, y: int) {.importjs: "__gRl.window.setPosition(#, #)".}
 
   # Render
@@ -574,6 +590,8 @@ async function __rlEnsureBindings(bindingsPath) {
   proc rl_sprite3d_is_pickable*(sprite: RLHandle): bool {.
     importjs: "__gRl.sprite3d.isPickable(#)".}
   proc rl_sprite3d_set_tint*(sprite: RLHandle, color: RLHandle = 0): bool {.importjs: "__gRl.sprite3d.setTint(#,#)".}
+  proc rl_sprite3d_get_default_texture*(): RLHandle {.importjs: "__gRl.sprite3d.getDefaultTexture()".}
+  proc rl_sprite3d_get_transform_raw*(sprite: RLHandle): JsObject {.importjs: "__gRl.sprite3d.getTransform(#)".}
   proc rl_sprite3d_draw*(sprite: RLHandle) {.importjs: "__gRl.sprite3d.draw(#)".}
   proc rl_sprite3d_destroy*(sprite: RLHandle) {.importjs: "__gRl.sprite3d.destroy(#)".}
   proc rl_pick_sprite3d*(camera, sprite3d: RLHandle, mouseX, mouseY: float): RLPickResult {.
@@ -582,6 +600,11 @@ async function __rlEnsureBindings(bindingsPath) {
     importjs: "__gRl.pick.shape(#,#,#,#)".}
   proc rl_pick_text3d*(camera, text3d: RLHandle, mouseX, mouseY: float): RLPickResult {.
     importjs: "__gRl.pick.text3d(#,#,#,#)".}
+  proc rl_pick_reset_stats*() {.importjs: "__gRl.resetPickStats()".}
+  proc rl_pick_get_broadphase_tests*(): int {.importjs: "__gRl.helpers.getPickStats().broadphaseTests".}
+  proc rl_pick_get_broadphase_rejects*(): int {.importjs: "__gRl.helpers.getPickStats().broadphaseRejects".}
+  proc rl_pick_get_narrowphase_tests*(): int {.importjs: "__gRl.helpers.getPickStats().narrowphaseTests".}
+  proc rl_pick_get_narrowphase_hits*(): int {.importjs: "__gRl.helpers.getPickStats().narrowphaseHits".}
 
   # Sprite2D
   proc rl_sprite2d_create*(texture: RLHandle): RLHandle {.importjs: "__gRl.sprite2d.create(#)".}
@@ -600,6 +623,7 @@ async function __rlEnsureBindings(bindingsPath) {
   proc rl_sprite2d_is_pickable*(sprite: RLHandle): bool {.
     importjs: "__gRl.sprite2d.isPickable(#)".}
   proc rl_sprite2d_set_tint*(sprite: RLHandle, color: RLHandle = 0): bool {.importjs: "__gRl.sprite2d.setTint(#,#)".}
+  proc rl_sprite2d_get_default_texture*(): RLHandle {.importjs: "__gRl.sprite2d.getDefaultTexture()".}
   proc rl_sprite2d_draw*(sprite: RLHandle) {.importjs: "__gRl.sprite2d.draw(#)".}
   proc rl_sprite2d_destroy*(sprite: RLHandle) {.importjs: "__gRl.sprite2d.destroy(#)".}
 
@@ -671,6 +695,15 @@ async function __rlEnsureBindings(bindingsPath) {
   proc rl_sound_is_playing*(sound: RLHandle): bool {.importjs: "__gRl.sound.isPlaying(#)".}
 
   # Fileio
+  proc rl_js_is_nil(value: JsObject): bool {.importjs: "(# == null)".}
+  proc rl_js_len(value: JsObject): int {.importjs: "(# ? #.length : 0)".}
+  proc rl_js_byte_at(value: JsObject, idx: int): int {.importjs: "#[#]".}
+  proc rl_js_transform_field(value: JsObject, field: cstring): float {.importjs: "#[#]".}
+  proc rl_fs_read_raw*(filename: cstring): JsObject {.importjs: "__gRl.fs.read(#)".}
+  proc rl_fs_write_raw*(path: cstring, data: seq[byte]): int {.importjs: "__gRl.fs.write(#,#)".}
+  proc rl_fs_mkdir_raw*(path: cstring): int {.importjs: "__gRl.fs.mkdir(#)".}
+  proc rl_fs_rmdir_raw*(path: cstring): int {.importjs: "__gRl.fs.rmdir(#)".}
+  proc rl_fs_normalize_path_raw*(path: cstring): cstring {.importjs: "__gRl.fs.normalizePath(#)".}
   proc rl_fs_is_initialized*(): bool {.importjs: "__gRl.fs.isInitialized()".}
   proc rl_fs_is_ready*(): bool {.importjs: "__gRl.fs.isReady()".}
   proc rl_fs_flush*(): int {.importjs: "__gRl.fs.flush()".}
@@ -683,6 +716,24 @@ async function __rlEnsureBindings(bindingsPath) {
     rl_fs_remove(filename.cstring)
   proc rl_fs_clear*(): int {.importjs: "__gRl.fs.clear()".}
   proc rl_fs_restore_async*(): RLHandle {.importjs: "__gRl.fs.restoreAsync()".}
+  proc rl_fs_read*(filename: string): seq[byte] =
+    let data = rl_fs_read_raw(filename.cstring)
+    if rl_js_is_nil(data):
+      return @[]
+    result = newSeq[byte](rl_js_len(data))
+    for idx in 0 ..< result.len:
+      result[idx] = rl_js_byte_at(data, idx).byte
+  proc rl_fs_write*(path: string, data: openArray[byte]): int =
+    var bytes = newSeq[byte](data.len)
+    for idx, value in data:
+      bytes[idx] = value
+    rl_fs_write_raw(path.cstring, bytes)
+  proc rl_fs_mkdir*(path: string): int =
+    rl_fs_mkdir_raw(path.cstring)
+  proc rl_fs_rmdir*(path: string): int =
+    rl_fs_rmdir_raw(path.cstring)
+  proc rl_fs_normalize_path*(path: string): string =
+    $rl_fs_normalize_path_raw(path.cstring)
   proc rl_asset_ensure*(localPath: string, src: string = ""): Future[int] =
     let localPathCstr = localPath.cstring
     let srcCstr = if src.len == 0: cstring(nil) else: src.cstring
@@ -729,6 +780,22 @@ async function __rlEnsureBindings(bindingsPath) {
     let hostPtr = if assetHost.len == 0: cstring(nil) else: assetHost.cstring
     rl_asset_ping_host(hostPtr)
 
+  proc rl_sprite3d_get_transform*(sprite: RLHandle): Option[RLSprite3dTransform] =
+    let value = rl_sprite3d_get_transform_raw(sprite)
+    if rl_js_is_nil(value):
+      return none(RLSprite3dTransform)
+    some(RLSprite3dTransform(
+      positionX: rl_js_transform_field(value, "positionX").float,
+      positionY: rl_js_transform_field(value, "positionY").float,
+      positionZ: rl_js_transform_field(value, "positionZ").float,
+      rotationX: rl_js_transform_field(value, "rotationX").float,
+      rotationY: rl_js_transform_field(value, "rotationY").float,
+      rotationZ: rl_js_transform_field(value, "rotationZ").float,
+      scaleX: rl_js_transform_field(value, "scaleX").float,
+      scaleY: rl_js_transform_field(value, "scaleY").float,
+      scaleZ: rl_js_transform_field(value, "scaleZ").float,
+    ))
+
   # Logger
   # rl_log.nim calls these with a printf-style format string + message arg;
   # the JS binding takes (level, message) directly, so we emit raw JS to skip the format param.
@@ -737,10 +804,67 @@ async function __rlEnsureBindings(bindingsPath) {
     {.emit: "__gRl.logger.message(`level`, `message`);".}
   proc rl_logger_message_source*(level: int, sourceFile: cstring, sourceLine: int,
                                 format: cstring, message: cstring) =
-    {.emit: "__gRl.logger.message(`level`, `message`);".}
+    {.emit: "__gRl.logger.messageSource(`level`, `sourceFile`, `sourceLine`, `message`);".}
 
   # Events
+  proc rl_event_on*(eventName: cstring, listener: RLEventListenerFn, userData: pointer): int {.
+    importjs: """(function(eventName, listener, userData) {
+      if (listener == null) return -1;
+      var wrapped = function(payload) { listener(payload, userData); };
+      var entry = { eventName: eventName, listener: listener, userData: userData, wrapped: wrapped };
+      var rc = __gRl.event.on(eventName, wrapped);
+      if ((rc | 0) === 0) {
+        __gRlNimEventWrappers.push(entry);
+      }
+      return rc | 0;
+    })(#, #, #)""".}
+  proc rl_event_once*(eventName: cstring, listener: RLEventListenerFn, userData: pointer): int {.
+    importjs: """(function(eventName, listener, userData) {
+      if (listener == null) return -1;
+      var entry = null;
+      var wrapped = function(payload) {
+        for (var i = __gRlNimEventWrappers.length - 1; i >= 0; --i) {
+          if (__gRlNimEventWrappers[i] === entry) {
+            __gRlNimEventWrappers.splice(i, 1);
+            break;
+          }
+        }
+        listener(payload, userData);
+      };
+      entry = { eventName: eventName, listener: listener, userData: userData, wrapped: wrapped };
+      var rc = __gRl.event.once(eventName, wrapped);
+      if ((rc | 0) === 0) {
+        __gRlNimEventWrappers.push(entry);
+      }
+      return rc | 0;
+    })(#, #, #)""".}
+  proc rl_event_off*(eventName: cstring, listener: RLEventListenerFn, userData: pointer): int {.
+    importjs: """(function(eventName, listener, userData) {
+      if (listener == null) return -1;
+      for (var i = __gRlNimEventWrappers.length - 1; i >= 0; --i) {
+        var entry = __gRlNimEventWrappers[i];
+        if (entry.eventName === eventName && entry.listener === listener && entry.userData === userData) {
+          var rc = __gRl.event.off(eventName, entry.wrapped);
+          if ((rc | 0) === 0) {
+            __gRlNimEventWrappers.splice(i, 1);
+          }
+          return rc | 0;
+        }
+      }
+      return 0;
+    })(#, #, #)""".}
+  proc rl_event_off_all*(eventName: cstring): int {.
+    importjs: """(function(eventName) {
+      var rc = __gRl.event.clearListeners(eventName);
+      if ((rc | 0) === 0) {
+        __gRlNimEventWrappers = __gRlNimEventWrappers.filter(function(entry) {
+          return entry.eventName !== eventName;
+        });
+      }
+      return rc | 0;
+    })(#)""".}
   proc rl_event_emit*(eventName: cstring, payload: int): int {.importjs: "__gRl.event.emit(#,#)".}
+  proc rl_event_listener_count*(eventName: cstring): int {.importjs: "__gRl.event.getListenerCount(#)".}
 
   # ---------------------------------------------------------------------------
   # Task group (mirrors the native RLTaskGroup API using JS primitives)

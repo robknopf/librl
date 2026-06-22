@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-API_MD = ROOT / "docs" / "API.md"
+INCLUDE_DIR = ROOT / "include"
 BINDINGS_DOC = ROOT / "docs" / "BINDINGS.md"
 
 # Scratch bridge exports map to their semantic C API (JS wraps these; not gaps).
@@ -41,21 +41,63 @@ FFI_INTERNAL: set[str] = set()
 
 FN_RE = re.compile(r"\brl_[a-z0-9_]+\s*\(")
 RL_SYM_RE = re.compile(r"\brl_[a-z0-9_]+\b")
+HEADER_FN_RE = re.compile(r"\b(rl_[a-z0-9_]+)\s*\([^;{}]*\)\s*;")
 
+HAXE_IMPL_SPECIAL_TO_C = {
+    "init": "rl_init_values",
+    "initAsync": "rl_init_values_async",
+    "isInitialized": "rl_is_initialized",
+    "getPlatform": "rl_get_platform",
+    "handleKind": "rl_handle_get_kind",
+    "versionMajor": "rl_version_major",
+    "versionMinor": "rl_version_minor",
+    "versionPatch": "rl_version_patch",
+    "versionLabel": "rl_version_label",
+    "versionNumber": "rl_version_number",
+    "versionString": "rl_version_string",
+    "fsRestoreAsync": "rl_fs_restore_async",
+    "fsInit": "rl_fs_init",
+    "fsInitAsync": "rl_fs_init_async",
+    "fsDeinit": "rl_fs_deinit",
+    "fsDeinitAsync": "rl_fs_deinit_async",
+    "fsIsInitialized": "rl_fs_is_initialized",
+    "fsIsReady": "rl_fs_is_ready",
+    "fsFlush": "rl_fs_flush",
+    "assetEnsureAsync": "rl_asset_ensure_async",
+    "assetEnsure": "rl_asset_ensure",
+    "assetEnsureGroupAsync": "rl_asset_ensure_many_async",
+    "assetPollTask": "rl_asset_poll_task",
+    "assetFinishTask": "rl_asset_finish_task",
+    "assetGetTaskPath": "rl_asset_get_task_path",
+    "fsRead": "rl_fs_read",
+    "fsWrite": "rl_fs_write",
+    "fsMkdir": "rl_fs_mkdir",
+    "fsRmdir": "rl_fs_rmdir",
+    "assetFreeTask": "rl_asset_free_task",
+    "fsExists": "rl_fs_exists",
+    "assetPingHost": "rl_asset_ping_host",
+    "assetSetHost": "rl_asset_set_host",
+    "assetGetHost": "rl_asset_get_host",
+    "fsGetRootDir": "rl_fs_get_root_dir",
+    "fsNormalizePath": "rl_fs_normalize_path",
+    "assetTick": "rl_asset_tick",
+    "fsClear": "rl_fs_clear",
+    "fsRemove": "rl_fs_remove",
+    "assetAddTask": "rl_asset_add_task",
+    "loggerMessage": "rl_logger_message",
+    "loggerMessageSource": "rl_logger_message_source",
+    "loggerSetLevel": "rl_logger_set_level",
+    "sprite3dGetTransform": "rl_sprite3d_get_transform",
+}
 
-def in_c_block(lines: list[str]) -> list[str]:
-    out: list[str] = []
-    in_block = False
-    for line in lines:
-        if line.strip().startswith("```c"):
-            in_block = True
-            continue
-        if in_block and line.strip() == "```":
-            in_block = False
-            continue
-        if in_block:
-            out.append(line)
-    return out
+HAXE_IMPL_NO_C = {
+    "boot",
+    "scratchRefresh",
+    "assetTaskInvalid",
+    "assetTaskIsValid",
+    "helpersWaitForTask",
+    "helpersWaitForFsReady",
+}
 
 
 def should_exclude_symbol(name: str) -> str | None:
@@ -65,32 +107,25 @@ def should_exclude_symbol(name: str) -> str | None:
         return "examples/remote only"
     if name == "rl_fs_read_free":
         return "binding-internal ownership helper; fs_read wrappers copy/own returned bytes"
+    if name in ("rl_init_values", "rl_init_values_async"):
+        return "binding-internal init bridge; public bindings expose init(config) / initAsync(config)"
     if name.startswith("rl_scratch_") or "_to_scratch" in name or "_from_scratch" in name:
         return "scratch/SAB bridge"
     return None
 
 
-def parse_c_api_from_api_md() -> tuple[list[str], list[str]]:
-    text = API_MD.read_text(encoding="utf-8")
-    lines = text.splitlines()
+def strip_c_comments(text: str) -> str:
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.DOTALL)
+    text = re.sub(r"//.*", "", text)
+    return text
 
-    filtered: list[str] = []
-    skip_scratch = False
-    for line in lines:
-        if line.startswith("## Scratch Area"):
-            skip_scratch = True
-            continue
-        if skip_scratch:
-            if line.startswith("## ") and not line.startswith("## Scratch"):
-                skip_scratch = False
-            else:
-                continue
-        filtered.append(line)
 
+def parse_c_api_from_headers() -> tuple[list[str], list[str]]:
     raw: set[str] = set()
-    for line in in_c_block(filtered):
-        for m in FN_RE.finditer(line):
-            raw.add(m.group(0).rstrip("(").strip())
+    for path in sorted(INCLUDE_DIR.glob("rl*.h")):
+        text = strip_c_comments(path.read_text(encoding="utf-8"))
+        for m in HEADER_FN_RE.finditer(text):
+            raw.add(m.group(1))
 
     audited: list[str] = []
     excluded: list[str] = []
@@ -146,10 +181,9 @@ def parse_js_bindings() -> set[str]:
     return covered
 
 
-def parse_haxe_bindings() -> set[str]:
+def parse_haxe_bindings(paths: list[Path]) -> set[str]:
     covered: set[str] = set()
-    impl_dir = ROOT / "bindings/haxe/rl/impl"
-    for path in impl_dir.glob("*.hx"):
+    for path in paths:
         text = path.read_text(encoding="utf-8")
         for m in re.finditer(r'@:native\("rl_[a-z0-9_]+"\)', text):
             covered.add(m.group(0).split('"')[1])
@@ -164,23 +198,65 @@ def parse_haxe_bindings() -> set[str]:
     return covered
 
 
-def parse_nim_bindings() -> set[str]:
+def parse_haxe_public_methods(path: Path) -> set[str]:
+    text = path.read_text(encoding="utf-8")
+    return set(re.findall(r"public static function\s+([A-Za-z0-9_]+)(?:<[^>]+>)?\s*\(", text))
+
+
+def parse_haxe_extern_native_map(path: Path) -> dict[str, str]:
+    text = path.read_text(encoding="utf-8")
+    return {
+        method: symbol
+        for symbol, method in re.findall(
+            r'@:native\("((?:rl|RL)_[A-Za-z0-9_]+)"\)\s+static function\s+([A-Za-z0-9_]+)\s*\(',
+            text,
+        )
+        if symbol.startswith("rl_")
+    }
+
+
+def haxe_public_method_to_c_symbol(method: str, extern_map: dict[str, str]) -> str | None:
+    if method in HAXE_IMPL_NO_C:
+        return None
+    if method in HAXE_IMPL_SPECIAL_TO_C:
+        return HAXE_IMPL_SPECIAL_TO_C[method]
+    if method in extern_map:
+        return extern_map[method]
+    if f"{method}Native" in extern_map:
+        return extern_map[f"{method}Native"]
+    return None
+
+
+def parse_haxe_js_bindings(js_path: Path, cpp_path: Path) -> set[str]:
+    extern_map = parse_haxe_extern_native_map(cpp_path)
+    js_methods = parse_haxe_public_methods(js_path)
     covered: set[str] = set()
-    for rel in ("bindings/nim/impl/rl_native.nim", "bindings/nim/impl/rl_js.nim"):
-        text = (ROOT / rel).read_text(encoding="utf-8")
-        for m in re.finditer(r"proc (rl_[a-z0-9_]+)", text):
-            sym = m.group(1)
-            if sym.endswith("_raw") or sym.endswith("_impl") or sym.endswith("_c"):
-                base = sym
-                for suffix in ("_raw", "_impl", "_c"):
-                    if sym.endswith(suffix):
-                        base = sym[: -len(suffix)]
-                        break
-                covered.add(base)
-            else:
-                covered.add(sym)
-        for m in re.finditer(r'importc:\s*"(rl_[a-z0-9_]+)"', text):
-            covered.add(m.group(1))
+    for method in js_methods:
+        sym = haxe_public_method_to_c_symbol(method, extern_map)
+        if sym is None:
+            continue
+        if should_exclude_symbol(sym):
+            continue
+        covered.add(sym)
+    return covered
+
+
+def parse_nim_bindings(path: Path) -> set[str]:
+    covered: set[str] = set()
+    text = path.read_text(encoding="utf-8")
+    for m in re.finditer(r"proc (rl_[a-z0-9_]+)", text):
+        sym = m.group(1)
+        if sym.endswith("_raw") or sym.endswith("_impl") or sym.endswith("_c"):
+            base = sym
+            for suffix in ("_raw", "_impl", "_c"):
+                if sym.endswith(suffix):
+                    base = sym[: -len(suffix)]
+                    break
+            covered.add(base)
+        else:
+            covered.add(sym)
+    for m in re.finditer(r'importc:\s*"(rl_[a-z0-9_]+)"', text):
+        covered.add(m.group(1))
 
     if "rl_asset_finish_c" in covered:
         covered.add("rl_asset_finish_task")
@@ -282,8 +358,19 @@ def load_documented_omissions() -> list[str]:
         "`rl_asset_ensure_many_from_scratch_async` — wasm scratch path; covered by JS `ensureGroupAsync` → `rl_asset_ensure_many_async`",
         "Logger convenience macros (`rl_logger_trace`, …) — bindings expose `setLevel` / message helpers instead",
         "`rl_fs_read_free` — binding-internal ownership helper; Haxe/Lua `fs_read` copy bytes into managed values and free native buffers internally",
+        "`rl_init_values` / `rl_init_values_async` — binding-internal init bridge; public bindings expose `init(config)` / `initAsync(config)`",
     ]
     return items
+
+
+AUDIT_COLUMNS = (
+    ("js", "JS (`bindings/js/src/rl.ts`)"),
+    ("haxe_js", "Haxe JS (`bindings/haxe/rl/impl/RLImpl.js.hx`)"),
+    ("haxe_cpp", "Haxe cpp (`bindings/haxe/rl/impl/RLImpl.cpp.hx`, `RLFileioImpl.cpp.hx`)"),
+    ("nim_js", "Nim JS (`bindings/nim/impl/rl_js.nim`)"),
+    ("nim_native", "Nim native (`bindings/nim/impl/rl_native.nim`)"),
+    ("lua", "Lua (`bindings/lua/`)"),
+)
 
 
 def render_roadmap_block(audited: list[str], gaps: list[dict]) -> str:
@@ -294,18 +381,13 @@ def render_roadmap_block(audited: list[str], gaps: list[dict]) -> str:
         "### Binding parity (audit snapshot)",
         "",
         "Generated by `python3 tools/audit_binding_parity.py`. "
-        f"**{len(audited)}** public C functions in `docs/API.md` "
+        f"**{len(audited)}** public C functions parsed from `include/rl*.h` "
         "(excludes scratch/SAB, logger macros, `examples/remote/`).",
         "",
         "| Binding | Covered | Gaps |",
         "|---------|--------:|-----:|",
     ]
-    for key, label in (
-        ("js", "JS (`bindings/js/src/rl.ts`)"),
-        ("haxe", "Haxe (`bindings/haxe/rl/*`)"),
-        ("nim", "Nim (`bindings/nim/`)"),
-        ("lua", "Lua (`bindings/lua/`)"),
-    ):
+    for key, label in AUDIT_COLUMNS:
         n = len(miss(key))
         lines.append(f"| {label} | {len(audited) - n}/{len(audited)} | {n} |")
 
@@ -319,8 +401,15 @@ def render_roadmap_block(audited: list[str], gaps: list[dict]) -> str:
         ]
     )
 
-    binding_order = ("nim", "haxe", "lua", "js")
-    labels = {"nim": "Nim", "haxe": "Haxe", "lua": "Lua", "js": "JS"}
+    binding_order = ("nim_native", "nim_js", "haxe_cpp", "haxe_js", "lua", "js")
+    labels = {
+        "nim_native": "Nim native",
+        "nim_js": "Nim JS",
+        "haxe_cpp": "Haxe cpp",
+        "haxe_js": "Haxe JS",
+        "lua": "Lua",
+        "js": "JS",
+    }
     for binding in binding_order:
         missing = miss(binding)
         if not missing:
@@ -351,10 +440,20 @@ def render_roadmap_block(audited: list[str], gaps: list[dict]) -> str:
 
 
 def main() -> int:
-    audited, excluded = parse_c_api_from_api_md()
+    audited, excluded = parse_c_api_from_headers()
     js = parse_js_bindings()
-    haxe = parse_haxe_bindings()
-    nim = parse_nim_bindings()
+    haxe_js = parse_haxe_js_bindings(
+        ROOT / "bindings/haxe/rl/impl/RLImpl.js.hx",
+        ROOT / "bindings/haxe/rl/impl/RLImpl.cpp.hx",
+    )
+    haxe_cpp = parse_haxe_bindings(
+        [
+            ROOT / "bindings/haxe/rl/impl/RLImpl.cpp.hx",
+            ROOT / "bindings/haxe/rl/impl/RLFileioImpl.cpp.hx",
+        ]
+    )
+    nim_js = parse_nim_bindings(ROOT / "bindings/nim/impl/rl_js.nim")
+    nim_native = parse_nim_bindings(ROOT / "bindings/nim/impl/rl_native.nim")
     lua = parse_lua_bindings()
 
     gaps: list[dict] = []
@@ -362,12 +461,14 @@ def main() -> int:
         row = {
             "symbol": sym,
             "js": sym in js,
-            "haxe": sym in haxe,
-            "nim": sym in nim,
+            "haxe_js": sym in haxe_js,
+            "haxe_cpp": sym in haxe_cpp,
+            "nim_js": sym in nim_js,
+            "nim_native": sym in nim_native,
             "lua": sym in lua,
             "notes": notes_for(sym),
         }
-        if not all((row["js"], row["haxe"], row["nim"], row["lua"])):
+        if not all(row[key] for key, _label in AUDIT_COLUMNS):
             gaps.append(row)
 
     def count_missing(binding: str) -> int:
@@ -382,18 +483,20 @@ def main() -> int:
     print(f"  C symbols excluded:      {len(excluded)}")
     print(f"  Gaps (any binding):      {len(gaps)}")
     print(f"  JS gaps:                 {count_missing('js')}")
-    print(f"  Haxe gaps:               {count_missing('haxe')}")
-    print(f"  Nim gaps:                {count_missing('nim')}")
+    print(f"  Haxe JS gaps:            {count_missing('haxe_js')}")
+    print(f"  Haxe cpp gaps:           {count_missing('haxe_cpp')}")
+    print(f"  Nim JS gaps:             {count_missing('nim_js')}")
+    print(f"  Nim native gaps:         {count_missing('nim_native')}")
     print(f"  Lua gaps:                {count_missing('lua')}")
     print()
 
     print("Gap table")
-    print("C symbol | JS | Haxe | Nim | Lua | priority/notes")
-    print("---|:---:|:---:|:---:|:---:|---")
+    print("C symbol | JS | Haxe JS | Haxe cpp | Nim JS | Nim native | Lua | priority/notes")
+    print("---|:---:|:---:|:---:|:---:|:---:|:---:|---")
     mark = lambda ok: "✓" if ok else "—"
     for g in gaps:
         print(
-            f"`{g['symbol']}` | {mark(g['js'])} | {mark(g['haxe'])} | {mark(g['nim'])} | {mark(g['lua'])} | {g['notes']}"
+            f"`{g['symbol']}` | {mark(g['js'])} | {mark(g['haxe_js'])} | {mark(g['haxe_cpp'])} | {mark(g['nim_js'])} | {mark(g['nim_native'])} | {mark(g['lua'])} | {g['notes']}"
         )
 
     print()

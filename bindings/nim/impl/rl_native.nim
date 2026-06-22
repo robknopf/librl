@@ -544,6 +544,8 @@ proc rl_shape_create*(): RLHandle {.importc, cdecl, header: "rl_shape.h".}
 proc rl_shape_destroy*(shape: RLHandle) {.importc, cdecl, header: "rl_shape.h".}
 proc rl_shape_set_visible*(shape: RLHandle, visible: bool): bool {.importc, cdecl, header: "rl_shape.h".}
 proc rl_shape_is_visible*(shape: RLHandle): bool {.importc, cdecl, header: "rl_shape.h".}
+proc rl_shape_set_pickable*(shape: RLHandle, pickable: bool): bool {.importc, cdecl, header: "rl_shape.h".}
+proc rl_shape_is_pickable*(shape: RLHandle): bool {.importc, cdecl, header: "rl_shape.h".}
 proc rl_shape_set_transform_c*(
   shape: RLHandle,
   positionX: cfloat, positionY: cfloat, positionZ: cfloat,
@@ -668,6 +670,18 @@ proc rl_pick_sprite3d*(
   mouseX: cfloat,
   mouseY: cfloat
 ): RLPickResult {.importc, cdecl, header: "rl_pick.h".}
+proc rl_pick_shape*(
+  camera: RLHandle,
+  shape: RLHandle,
+  mouseX: cfloat,
+  mouseY: cfloat
+): RLPickResult {.importc, cdecl, header: "rl_pick.h".}
+proc rl_pick_text3d*(
+  camera: RLHandle,
+  text3d: RLHandle,
+  mouseX: cfloat,
+  mouseY: cfloat
+): RLPickResult {.importc, cdecl, header: "rl_pick.h".}
 proc rl_pick_reset_stats*() {.importc, cdecl, header: "rl_pick.h".}
 proc rl_pick_get_broadphase_tests*(): cint {.importc, cdecl, header: "rl_pick.h".}
 proc rl_pick_get_broadphase_rejects*(): cint {.importc, cdecl, header: "rl_pick.h".}
@@ -778,6 +792,34 @@ proc rl_text2d_set_content*(handle: RLHandle, content: string) {.inline.} =
   rl_text2d_set_content_c(handle, content.cstring)
 proc rl_text2d_set_position*(handle: RLHandle, x: float, y: float) {.inline.} =
   rl_text2d_set_position_c(handle, x.cfloat, y.cfloat)
+
+# Text3D
+proc rl_text3d_create_c(font: RLHandle, size: cfloat): RLHandle {.importc: "rl_text3d_create", cdecl, header: "rl_text3d.h".}
+proc rl_text3d_set_font*(handle: RLHandle, font: RLHandle) {.importc, cdecl, header: "rl_text3d.h".}
+proc rl_text3d_set_size_c(handle: RLHandle, size: cfloat) {.importc: "rl_text3d_set_size", cdecl, header: "rl_text3d.h".}
+proc rl_text3d_set_content_c(handle: RLHandle, content: cstring) {.importc: "rl_text3d_set_content", cdecl, header: "rl_text3d.h".}
+proc rl_text3d_set_transform_c(handle: RLHandle, x, y, z, rx, ry, rz: cfloat): bool {.importc: "rl_text3d_set_transform", cdecl, header: "rl_text3d.h".}
+proc rl_text3d_set_color*(handle: RLHandle, color: RLHandle) {.importc, cdecl, header: "rl_text3d.h".}
+proc rl_text3d_set_facing*(handle: RLHandle, facing: cint): bool {.importc, cdecl, header: "rl_text3d.h".}
+proc rl_text3d_set_visible*(handle: RLHandle, visible: bool): bool {.importc, cdecl, header: "rl_text3d.h".}
+proc rl_text3d_set_pickable*(handle: RLHandle, pickable: bool): bool {.importc, cdecl, header: "rl_text3d.h".}
+proc rl_text3d_is_visible*(handle: RLHandle): bool {.importc, cdecl, header: "rl_text3d.h".}
+proc rl_text3d_is_pickable*(handle: RLHandle): bool {.importc, cdecl, header: "rl_text3d.h".}
+proc rl_text3d_get_bounds*(handle: RLHandle): Vec2 {.importc, cdecl, header: "rl_text3d.h".}
+proc rl_text3d_draw*(handle: RLHandle) {.importc, cdecl, header: "rl_text3d.h".}
+proc rl_text3d_draw_text_c(text: cstring, font: RLHandle, x, y, z, size: cfloat, color: RLHandle) {.importc: "rl_text3d_draw_text", cdecl, header: "rl_text3d.h".}
+proc rl_text3d_destroy*(handle: RLHandle) {.importc, cdecl, header: "rl_text3d.h".}
+
+proc rl_text3d_create*(font: RLHandle, size: float): RLHandle {.inline.} =
+  rl_text3d_create_c(font, size.cfloat)
+proc rl_text3d_set_size*(handle: RLHandle, size: float) {.inline.} =
+  rl_text3d_set_size_c(handle, size.cfloat)
+proc rl_text3d_set_content*(handle: RLHandle, content: string) {.inline.} =
+  rl_text3d_set_content_c(handle, content.cstring)
+proc rl_text3d_set_transform*(handle: RLHandle, x, y, z, rx, ry, rz: float): bool {.inline.} =
+  rl_text3d_set_transform_c(handle, x.cfloat, y.cfloat, z.cfloat, rx.cfloat, ry.cfloat, rz.cfloat)
+proc rl_text3d_draw_text*(text: string, font: RLHandle, x, y, z, size: float, color: RLHandle) {.inline.} =
+  rl_text3d_draw_text_c(text.cstring, font, x.cfloat, y.cfloat, z.cfloat, size.cfloat, color)
 
 proc rl_get_time*(): float {.inline.} =
   rl_get_time_raw().float

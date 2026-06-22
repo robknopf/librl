@@ -140,7 +140,7 @@ Notes:
 - Binding/core alignment: `make binding-version` (runs with `desktop` / `shared` / `wasm` / `rl_lua`) writes `bindings/*/gen/*` from `include/rl_version.h`. Each binding queries `rl_version_*` from librl, compares to its stamp, logs both versions, and applies local policy (`validate_version()` / `validateVersion()` / `rl_validate_version()` return `0` ok, `1` patch drift, `< 0` fatal). Checks run at load/boot (not `init`): Lua on `require("rl")` and `rl.boot()`; JS after wasm load; Nim/Haxe on `rl_boot()` / `RL.boot()`.
 - JS TypeScript declarations: `make binding-types` (runs with `desktop` / `shared` / `wasm`) esbuild-bundles `bindings/js/src/rl.ts` → `bindings/js/dist/rl.js` and emits `bindings/js/dist/rl.d.ts` from `bindings/js/src/types.ts` via `npm run build --prefix bindings/js`. Do not hand-edit generated outputs. After adding or renaming JS binding methods/constants, update `bindings/js/src/types.ts` when signatures change, then run `make binding-types` (or any of those build targets).
 - **Binding tooling (maintainers/agents):** full table, platform policy, and workflow in `docs/MAINTAINER.md` § Tools.
-  - `python3 tools/audit_binding_parity.py` — gap report vs `docs/API.md`; update `docs/ROADMAP.md` after binding work
+  - `python3 tools/audit_binding_parity.py` — gap report vs public C headers in `include/rl*.h`; update `docs/ROADMAP.md` after binding work
   - `make binding-version` → `tools/gen_binding_versions.py`
   - `make binding-types` → `npm run build --prefix bindings/js` (esbuild bundle + `tsc` declarations from `bindings/js/src/types.ts`)
   - `python3 tools/gen_haxe_public_sections.py` — Haxe section façades

@@ -412,7 +412,7 @@ Python helpers under `tools/` — use these instead of hand-editing generated bi
 
 | Script | Make target | Purpose |
 |--------|-------------|---------|
-| `tools/audit_binding_parity.py` | — | Compare `docs/API.md` C functions to JS/Haxe/Nim/Lua public surfaces; prints gap table and ROADMAP-ready markdown. **Run after binding or API changes.** |
+| `tools/audit_binding_parity.py` | — | Compare public C functions parsed from `include/rl*.h` to JS/Haxe/Nim/Lua public surfaces; prints gap table and ROADMAP-ready markdown. **Run after binding or API changes.** |
 | `tools/gen_binding_versions.py` | `make binding-version` | Regenerate version stamps in `bindings/*/gen/` from `include/rl_version.h`. Runs automatically with `make desktop` / `wasm` / `shared`. |
 | `npm run build --prefix bindings/js` | `make binding-types` | esbuild bundle of `src/rl.ts` → `dist/rl.js`; `tsc` emits `dist/rl.d.ts` from `src/types.ts`. |
 | `tools/gen_haxe_public_sections.py` | — | Regenerate Haxe section façade files (`bindings/haxe/rl/Fs.hx`, `Asset.hx`, …) from the `SECTIONS` map. Run after adding RLImpl methods; then review/commit generated output. |
@@ -424,4 +424,3 @@ Python helpers under `tools/` — use these instead of hand-editing generated bi
 One-off migration scripts (`migrate_fileio_to_fs_asset.py`, `rename_fileio_public_api.py`) are historical; do not run unless explicitly reviving a migration.
 
 Other dev scripts (not binding parity): `show_wasm_sources.py`, `generate_devtools_workspace.py`.
-

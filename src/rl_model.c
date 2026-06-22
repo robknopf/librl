@@ -1066,6 +1066,10 @@ void rl_model_draw_pass(rl_handle_t handle, rl_render_pass_t pass)
             continue;
         }
 
+        /* `material` is a shallow copy: material.maps still points at the asset's
+         * shared map array, so writing the tinted color mutates the asset. We apply
+         * the tint for this draw and restore the original below, otherwise the color
+         * would be multiplied by tint/255 every frame and decay toward black. */
         diffuse = material.maps[MATERIAL_MAP_DIFFUSE].color;
         material.maps[MATERIAL_MAP_DIFFUSE].color.r = (unsigned char)(((int)diffuse.r * (int)tint.r) / 255);
         material.maps[MATERIAL_MAP_DIFFUSE].color.g = (unsigned char)(((int)diffuse.g * (int)tint.g) / 255);
@@ -1103,6 +1107,9 @@ void rl_model_draw_pass(rl_handle_t handle, rl_render_pass_t pass)
         }
 
         DrawMesh(asset->model->meshes[i], material, model_transform);
+
+        /* Restore the shared material's untinted diffuse color (see note above). */
+        material.maps[MATERIAL_MAP_DIFFUSE].color = diffuse;
     }
 }
 

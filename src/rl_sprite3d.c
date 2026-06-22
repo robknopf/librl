@@ -99,10 +99,13 @@ static void draw_textured_quad(const Texture2D *texture, const Vector3 points[4]
     rlSetTexture(texture->id);
     rlBegin(RL_QUADS);
     rlColor4ub(tint.r, tint.g, tint.b, tint.a);
-    rlTexCoord2f(0, 0); rlVertex3f(points[0].x, points[0].y, points[0].z);
-    rlTexCoord2f(1, 0); rlVertex3f(points[1].x, points[1].y, points[1].z);
-    rlTexCoord2f(1, 1); rlVertex3f(points[2].x, points[2].y, points[2].z);
-    rlTexCoord2f(0, 1); rlVertex3f(points[3].x, points[3].y, points[3].z);
+    /* points[0..3] run bottom-left, bottom-right, top-right, top-left (world +Y up).
+     * raylib textures sample v=0 at the top row, so the world-bottom vertices take
+     * v=1 and the world-top vertices take v=0 (matches DrawBillboardPro). */
+    rlTexCoord2f(0, 1); rlVertex3f(points[0].x, points[0].y, points[0].z);
+    rlTexCoord2f(1, 1); rlVertex3f(points[1].x, points[1].y, points[1].z);
+    rlTexCoord2f(1, 0); rlVertex3f(points[2].x, points[2].y, points[2].z);
+    rlTexCoord2f(0, 0); rlVertex3f(points[3].x, points[3].y, points[3].z);
     rlEnd();
     rlSetTexture(0);
 }

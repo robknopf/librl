@@ -42,7 +42,7 @@ class ScriptableHost {
 	#else
 
 	/** script_watcher static host; adjust for your LAN. */
-	final ASSET_HOST:String = "https://192.168.1.100:9001";
+	final ASSET_HOST:String = "https://192.168.1.200:9001";
 	#end
 
 	// final LOADER_CACHE_DIR:String = "/haxetest";
@@ -62,7 +62,7 @@ class ScriptableHost {
 	 * Desktop script watcher (Bun {@code script_watcher}). Leave empty to disable.
 	 * {@link ws.WebSocket#poll} is required every frame while enabled.
 	 */
-	static inline final SCRIPT_WATCHER_URL:String = "wss://192.168.1.100:9001/ws";
+	static inline final SCRIPT_WATCHER_URL:String = "wss://192.168.1.200:9001/ws";
 
 	var scriptWatcherClient:Null<ScriptWatcherClient> = null;
 
